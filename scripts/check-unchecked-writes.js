@@ -24,6 +24,9 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const BASELINE = path.join(__dirname, "unchecked-writes-baseline.json");
 const WRITE_METHODS = ["upsert", "insert", "update", "delete"];
+// Helpers that take a query and inspect its error themselves. A write handed
+// to one of these is checked, just not inline.
+const CHECKED_WRAPPERS = ["mustWrite"];
 // How far past the statement to look for the error being handled. A checked
 // write usually tests it on the next line or two.
 const LOOKAHEAD_LINES = 3;
@@ -116,6 +119,14 @@ function violationsIn(file) {
     // `.then(...).catch(...)` is an explicit decision to handle it elsewhere.
     const handledAsPromise = /\.catch\s*\(/.test(stmtMasked);
     if (handledAsPromise) continue;
+
+    // Passed to a wrapper that inspects the error on the caller's behalf. The
+    // check belongs somewhere; it does not have to be at every call site, and
+    // requiring that would push people toward the least readable option.
+    // The wrapper's name sits BEFORE the statement slice, because walking back
+    // from `.from(` stops at the wrapper's own open paren, so look behind it.
+    const before = src.slice(Math.max(0, start - 60), start);
+    if (CHECKED_WRAPPERS.some(w => before.includes(w + "(") || stmtMasked.includes(w + "("))) continue;
 
     // Is the result captured at all? A bare `await supabase.from(...)` has
     // nothing to inspect, so no amount of lookahead can redeem it. Checking

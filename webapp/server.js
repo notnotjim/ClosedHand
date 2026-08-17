@@ -542,6 +542,17 @@ app.post("/api/login", async (req, res) => {
 // --- Wizard write APIs (the wizard fills forms; nobody edits files) ---------
 
 // Choose (or change) the dashboard password. Setting it also logs you in.
+// A write whose success is about to be reported to the user. The supabase
+// client resolves with { error } rather than throwing, so an unchecked write
+// lets the wizard say "connected" over a database that never changed: a
+// launch-day user gets a dead bot and no reason for it. Throwing routes into
+// the endpoint's existing catch, which already answers with a 500 the page
+// knows how to show.
+async function mustWrite(what, query) {
+  const { error } = await query;
+  if (error) throw new Error(`${what} (${error.message})`);
+}
+
 app.post("/api/setup/password", async (req, res) => {
   try {
     if (!(await requireSetupAccess(req, res))) return;
@@ -681,7 +692,7 @@ app.post("/api/setup/provider", async (req, res) => {
       settings.llm_provider = provider;
       settings[`${provider}_api_key`] = apiKey;
     }
-    await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId());
+    await mustWrite("could not save that", supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId()));
 
     // Machinery for complete providers, from the same key. The embedder is
     // locked once chosen: vectors indexed with one model are unreadable by
@@ -900,14 +911,14 @@ app.post("/api/setup/imap", async (req, res) => {
     }
 
     const { encryptTokens } = require("./crypto-tokens");
-    await supabase.from("connections").upsert({
+    await mustWrite("could not save the mailbox connection", supabase.from("connections").upsert({
       user_id: getAdminUserId(),
       service: "imap",
       tokens: encryptTokens({ app_password: appPassword }),
       config: { imap_host, imap_port, smtp_host, smtp_port, aliases },
       metadata: { email, method: "app_password" },
       updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id,service" });
+    }, { onConflict: "user_id,service" }));
     res.json({ success: true, email });
   } catch (e) {
     console.error("IMAP setup error:", e.message);
@@ -938,14 +949,14 @@ app.post("/api/setup/ics", async (req, res) => {
       return res.status(400).json({ error: "That address didn't return a calendar feed. In Google Calendar: Settings, pick the calendar, then copy the 'Secret address in iCal format'." });
     }
     const { encryptTokens } = require("./crypto-tokens");
-    await supabase.from("connections").upsert({
+    await mustWrite("could not save the calendar feed", supabase.from("connections").upsert({
       user_id: getAdminUserId(),
       service: "ics_calendar",
       tokens: encryptTokens({ ics_url: icsUrl }),
       config: {},
       metadata: { label: "Calendar (ICS)", method: "secret_url" },
       updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id,service" });
+    }, { onConflict: "user_id,service" }));
     res.json({ success: true });
   } catch (e) {
     console.error("ICS setup error:", e.message);
@@ -961,17 +972,17 @@ app.post("/api/setup/whatsapp-linked", async (req, res) => {
     if (!(await requireSetupAccess(req, res))) return;
     const enable = !!req.body?.enable;
     if (enable) {
-      await supabase.from("connections").upsert({
+      await mustWrite("could not enable WhatsApp linking", supabase.from("connections").upsert({
         user_id: getAdminUserId(),
         service: "whatsapp_linked",
         tokens: {},
         config: { enabled: true },
         metadata: { linked: false, qr: null },
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id,service" });
+      }, { onConflict: "user_id,service" }));
     } else {
-      await supabase.from("connections").delete()
-        .eq("user_id", getAdminUserId()).eq("service", "whatsapp_linked");
+      await mustWrite("could not disable WhatsApp linking", supabase.from("connections").delete()
+        .eq("user_id", getAdminUserId()).eq("service", "whatsapp_linked"));
     }
     res.json({ success: true, enabled: enable });
   } catch (e) {
@@ -1012,7 +1023,7 @@ app.post("/api/setup/google-open-signin", async (req, res) => {
     const cur = settings.google_browser_job;
     if (cur && (cur.status === "requested" || cur.status === "running")) return res.json({ success: true, skipped: true });
     settings.google_browser_job = { status: "requested", action: "open_signin", message: "Opening Google's sign-in page…", at: new Date().toISOString() };
-    await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId());
+    await mustWrite("could not save that", supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId()));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "could not open the sign-in page" });
@@ -1026,7 +1037,7 @@ app.post("/api/setup/google-auto", async (req, res) => {
     const settings = profile?.settings || {};
     settings.browser_google = true; // signing in is what makes this possible
     settings.google_browser_job = { status: "requested", message: "Waiting for ClosedHand to pick this up…", at: new Date().toISOString() };
-    await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId());
+    await mustWrite("could not save that", supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId()));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "could not start the setup run" });
@@ -1042,7 +1053,7 @@ app.post("/api/setup/browser-google", async (req, res) => {
     const { data: profile } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).single();
     const settings = profile?.settings || {};
     settings.browser_google = !!req.body?.done;
-    await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId());
+    await mustWrite("could not save that", supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", getAdminUserId()));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "could not save that" });
