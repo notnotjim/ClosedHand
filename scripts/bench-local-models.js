@@ -1,62 +1,99 @@
-// scripts/bench-local-models.js — measure the local fallback models on THIS
-// machine, so README claims are numbers, not vibes. Downloads on first run
-// (same path production takes), then times embedding throughput and rerank
-// latency. Run: node scripts/bench-local-models.js [nTexts]
+#!/usr/bin/env node
+// scripts/bench-local-models.js — report every dimension at once, always.
 //
-// No DB required: status writes fail silently and the models still load.
+// This exists because of a repeated mistake, not because benchmarking is hard.
+// Twice in one week a setting was changed having measured a single dimension:
+//
+//   enableCpuMemArena: false   measured memory (saved ~800MB), shipped.
+//                              Nobody measured latency. It costs about 2x.
+//   dtype: fp16                measured latency (2x faster) and memory (half),
+//                              shipped-ready. Nobody measured OUTPUT. Every
+//                              vector was NaN.
+//
+// Both look like good decisions if you see one column. Neither survives seeing
+// four. So there is no "latency check" or "memory check" here: there is one
+// command that prints correctness, latency, memory and event-loop availability
+// together, and the rule is that a change to model precision, thread count,
+// arena, runtime or worker layout pastes this output into its commit message.
+//
+// A CI check cannot do this. It needs the model on disk, a quiet machine, and a
+// human to judge the trade. What it can do is remove the excuse for looking at
+// one number, which is what the mistakes actually had in common.
+//
+//   docker exec -w /app closedhand-bot node scripts/bench-local-models.js
+//
+// Env overrides work as normal, so a candidate change can be measured without
+// editing code: LOCAL_EMBED_DTYPE=fp32 LOCAL_ORT_THREADS=2 node scripts/...
 
-process.env.STORAGE_DIR = process.env.STORAGE_DIR || require("path").join(__dirname, "..", "data");
+const SINGLE = "title: none | text: the filing deadline is 31 January and we need your statements";
+const OTHER = "title: none | text: weekly aviation news, new routes and reader photography";
 
-const N = parseInt(process.argv[2], 10) || 200;
-
-function makeTexts(n) {
-  const bits = [
-    "Invoice for August: hosting renewal is due on the 28th, total 42.50, pay via the usual account.",
-    "Flight confirmation LH717 departing Tokyo Haneda 09:40, arriving Frankfurt 15:20, seat 34K, booking ref K9X2LP.",
-    "Dentist moved the checkup to Thursday 14:00; bring the insurance card and arrive ten minutes early.",
-    "Quarterly report draft attached; the revenue table on page 4 still needs the September numbers before Friday.",
-    "Reminder: the gym membership auto-renews next week. Cancel two days before if you don't want the annual plan.",
-  ];
-  return Array.from({ length: n }, (_, i) => `${bits[i % bits.length]} (variant ${i})`);
+function meter() {
+  let ticks = 0;
+  const h = setInterval(() => { ticks++; }, 5);
+  const t0 = Date.now();
+  return () => {
+    clearInterval(h);
+    const ms = Date.now() - t0;
+    return { ms, pct: Math.min(100, Math.round((ticks / Math.max(1, Math.floor(ms / 5))) * 100)) };
+  };
 }
+const rss = () => Math.round(process.memoryUsage().rss / 1048576);
+const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 
 (async () => {
-  const { localEmbed, localRerankScores } = require("../lib/local-models");
+  const lm = require("../lib/local-models");
+  const baseRss = rss();
 
-  console.log("=== Local embedder (EmbeddingGemma-300M q8) ===");
-  let t0 = Date.now();
-  await localEmbed(["warm-up"], { query: true });
-  console.log(`load+first-embed: ${((Date.now() - t0) / 1000).toFixed(1)}s (includes download on first run)`);
+  console.log(`dtype   : ${process.env.LOCAL_EMBED_DTYPE || "(default)"}`);
+  console.log(`threads : ${process.env.LOCAL_ORT_THREADS || "(default)"}`);
+  console.log(`cores   : ${require("os").cpus().length}`);
+  console.log("");
 
-  const texts = makeTexts(N);
-  t0 = Date.now();
-  const BATCH = 16;
-  let vecs = [];
-  for (let i = 0; i < texts.length; i += BATCH) {
-    vecs = vecs.concat(await localEmbed(texts.slice(i, i + BATCH)));
+  // 1. CORRECTNESS. First, and fatal, because everything below is meaningless
+  //    if the numbers coming out are not numbers.
+  const [a, b] = await lm.localEmbed([SINGLE, OTHER], { dims: 1536 });
+  const nan = a.filter(Number.isNaN).length;
+  const norm = Math.sqrt(a.reduce((s, x) => s + x * x, 0));
+  const cosAB = a.reduce((s, x, i) => s + x * b[i], 0);
+  const ok = !nan && Number.isFinite(norm) && Math.abs(norm - 1) < 0.01 && cosAB < 0.999;
+  console.log(`CORRECTNESS  ${ok ? "ok" : "BROKEN"}  (NaN ${nan}, norm ${Number.isFinite(norm) ? norm.toFixed(4) : "NaN"}, cosine between two texts ${Number.isFinite(cosAB) ? cosAB.toFixed(4) : "NaN"})`);
+  if (!ok) {
+    console.error("\nOutput is not usable. Every number below would be the speed of producing garbage.");
+    process.exit(1);
   }
-  const embedSecs = (Date.now() - t0) / 1000;
-  console.log(`${N} docs embedded in ${embedSecs.toFixed(1)}s = ${(N / embedSecs).toFixed(1)} texts/s`);
-  console.log(`dims: ${vecs[0].length} (zero-padded), norm: ${Math.sqrt(vecs[0].reduce((s, v) => s + v * v, 0)).toFixed(4)}`);
 
-  // Sanity: a query should rank its own subject above unrelated docs.
-  const q = await localEmbed(["when is the dentist appointment"], { query: true });
-  const cos = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
-  const sims = vecs.slice(0, 5).map((v, i) => ({ i, sim: cos(q[0], v) })).sort((a, b) => b.sim - a.sim);
-  console.log(`retrieval sanity (top for dentist query should be doc 2): doc ${sims[0].i} (sim ${sims[0].sim.toFixed(3)})`);
+  // 2. LATENCY, single (the hot path) and batched (indexing).
+  const singles = [];
+  for (let i = 0; i < 7; i++) {
+    const t = Date.now();
+    await lm.localEmbed([`${SINGLE} ${i}`], { dims: 1536 });
+    singles.push(Date.now() - t);
+  }
+  const tB = Date.now();
+  await lm.localEmbed(Array.from({ length: 8 }, (_, i) => `${SINGLE} batch ${i}`), { dims: 1536 });
+  const batchMs = Date.now() - tB;
+  console.log(`LATENCY      single median ${median(singles)}ms (min ${Math.min(...singles)}, max ${Math.max(...singles)}) | batch of 8 ${batchMs}ms = ${Math.round(batchMs / 8)}ms each`);
 
-  console.log("\n=== Local reranker (jina-reranker-v1-turbo-en q8) ===");
-  t0 = Date.now();
-  await localRerankScores("warm-up", ["warm-up"]);
-  console.log(`load+first-score: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  // 3. MEMORY.
+  console.log(`MEMORY       rss ${rss()}MB (baseline before models ${baseRss}MB, delta +${rss() - baseRss}MB)`);
 
-  const docs20 = makeTexts(20).map((t) => t.substring(0, 512));
-  t0 = Date.now();
-  const scores = await localRerankScores("when is the dentist appointment", docs20);
-  const rerankMs = Date.now() - t0;
-  const best = scores.indexOf(Math.max(...scores));
-  console.log(`rerank 20 docs: ${rerankMs}ms (${(rerankMs / 20).toFixed(0)}ms/pair); top doc index ${best} (dentist variants are 2,7,12,17)`);
+  // 4. RESPONSIVENESS. What fraction of the time the process could have done
+  //    anything else, like answer a message.
+  const stop = meter();
+  await lm.localEmbed(Array.from({ length: 12 }, (_, i) => `${SINGLE} loop ${i}`), { dims: 1536 });
+  const loop = stop();
+  console.log(`RESPONSIVE   event loop free ${loop.pct}% during a batch of 12 (${loop.ms}ms)`);
 
-  console.log("\nRSS after both models:", Math.round(process.memoryUsage().rss / 1048576), "MB");
+  // Reranker, same treatment.
+  const docs = Array.from({ length: 20 }, (_, i) => `document ${i} discussing the filing deadline and bank statements`);
+  const stopR = meter();
+  const scores = await lm.localRerankScores("what did the accountant say about the deadline", docs);
+  const r = stopR();
+  const finite = scores.filter(Number.isFinite).length;
+  console.log(`RERANKER     ${r.ms}ms for 20 docs | loop free ${r.pct}% | ${finite}/${scores.length} finite scores`);
+
+  console.log("\nPaste this into the commit message of any change to precision, threads,");
+  console.log("arena, runtime or worker layout. One column is how the last two mistakes happened.");
   process.exit(0);
-})().catch((e) => { console.error("BENCH FAIL:", e.message); process.exit(1); });
+})().catch((e) => { console.error("bench failed:", e.message); process.exit(1); });
