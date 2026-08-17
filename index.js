@@ -141,6 +141,11 @@ const { resumeAgents } = require("./lib/agents");
 
 // --- Start ---
 async function main() {
+  // Schema first: an install created before a change shipped has no other way
+  // to receive it (the baseline schema is applied once, on an empty volume).
+  // No-ops on the hosted driver and never throws, so a bad migration cannot
+  // stop the bot booting.
+  await require("./lib/migrations").runPendingMigrations();
   // Single-tenant: ensure the one admin exists before pulse/data-sync enumerate users.
   await require("./lib/admin").ensureAdmin();
   await connectAllMCPServers();
