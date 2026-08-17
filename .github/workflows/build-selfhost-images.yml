@@ -12,9 +12,7 @@ name: Build self-host images
 
 on:
   push:
-    # main is the public repo's default branch; oss is the branch this lived on
-    # while it was still a branch of the private repo.
-    branches: [oss, main]
+    branches: [main]
     paths:
       - 'Dockerfile'
       - 'webapp/Dockerfile'

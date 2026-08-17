@@ -2,7 +2,7 @@ name: Build Sandbox Image
 
 on:
   push:
-    branches: [cloud, main, oss]
+    branches: [main]
     paths:
       - 'sandbox-image/**'
   # A published image can be broken without its source changing: the 16 Aug
