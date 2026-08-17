@@ -2456,7 +2456,8 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
   const { data: pRow } = await supabase.from("profiles").select("settings").eq("id", userId).single();
   const sett = pRow?.settings || {};
   sett.onboarding_step = "name_bot";
-  await supabase.from("profiles").update({ settings: sett }).eq("id", userId);
+  const { error: settingsErr } = await supabase.from("profiles").update({ settings: sett }).eq("id", userId);
+  if (settingsErr) console.error(`[settings] could not save: ${settingsErr.message}`);
 
   // Send welcome Flex Message + onboarding prompt via LINE push
   const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -2535,7 +2536,7 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
     updated_at: new Date().toISOString(),
   };
   if (metadata) row.metadata = metadata;
-  await supabase.from("connections").upsert(row, { onConflict: "user_id,service" });
+  await mustWrite("could not save the connection", supabase.from("connections").upsert(row, { onConflict: "user_id,service" }));
 }
 
 // Fetch account metadata after OAuth for display on settings page
@@ -2941,10 +2942,10 @@ app.delete("/api/threads/:id", async (req, res) => {
     await supabase.from("data_vectors").delete()
       .eq("user_id", userId).eq("service", "memory")
       .eq("external_id", `thread_${req.params.id}`);
-    await supabase.from("data_vectors").delete()
+    await mustWrite("could not clear that conversation's memory", supabase.from("data_vectors").delete()
       .eq("user_id", userId).eq("service", "memory")
       .in("item_type", ["conversation_summary", "thread_summary"])
-      .eq("source_metadata->>thread_id", req.params.id);
+      .eq("source_metadata->>thread_id", req.params.id));
 
     // If it was active, create new
     if (data[0].is_active) {
@@ -2962,7 +2963,7 @@ app.delete("/api/threads", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
-    await supabase.from("conversation_threads").delete().eq("user_id", userId);
+    await mustWrite("could not delete those conversations", supabase.from("conversation_threads").delete().eq("user_id", userId));
     // Every thread is going, so every distilled conversation memory goes with
     // it. Scoped by item_type so fact mirrors sharing the service survive.
     await supabase.from("data_vectors").delete()
@@ -2982,10 +2983,10 @@ app.post("/api/chat/clear", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
-    await supabase.from("web_messages").delete().eq("user_id", userId);
+    await mustWrite("could not delete your messages", supabase.from("web_messages").delete().eq("user_id", userId));
     // Also clear all threads
     try {
-      await supabase.from("conversation_threads").delete().eq("user_id", userId);
+      await mustWrite("could not delete your conversations", supabase.from("conversation_threads").delete().eq("user_id", userId));
       await supabase.from("conversation_threads")
         .insert({ user_id: userId, is_active: true, platform: "web" });
     } catch (e) {
@@ -3102,7 +3103,7 @@ app.post("/api/chat/activity/delete", async (req, res) => {
 
   try {
     if (type === "brain") {
-      await supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory").ilike("content", text.substring(0, 50) + "%");
+      await mustWrite("could not forget that memory", supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory").ilike("content", text.substring(0, 50) + "%"));
     } else if (type === "team") {
     } else if (type === "chat") {
       // Delete web messages matching this preview text
@@ -3355,7 +3356,7 @@ app.get("/api/connections", async (req, res) => {
           if (decrypted?.access_token) {
             const metadata = await fetchAccountMetadata(c.service, SERVICES[c.service], { access_token: decrypted.access_token });
             if (metadata) {
-              await supabase.from("connections").update({ metadata }).eq("user_id", userId).eq("service", c.service);
+              await mustWrite("could not update the connection", supabase.from("connections").update({ metadata }).eq("user_id", userId).eq("service", c.service));
               console.log(`Backfilled metadata for ${c.service}`);
             }
           }
@@ -3420,7 +3421,7 @@ app.post("/api/connect-shopify-token", async (req, res) => {
       metadata: { shopDomain: domain, name: shopName, email: shopEmail, method: "api_key" },
       updated_at: new Date().toISOString(),
     };
-    await supabase.from("connections").upsert(row, { onConflict: "user_id,service" });
+    await mustWrite("could not save the connection", supabase.from("connections").upsert(row, { onConflict: "user_id,service" }));
 
     res.json({ success: true, shopName, domain });
   } catch (e) {
@@ -3481,7 +3482,7 @@ app.post("/api/disconnect", async (req, res) => {
     try {
       const { data: row } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", service).single();
       if (row?.tokens) await revokeGoogleGrant(row.tokens);
-      await supabase.from("connections").delete().eq("user_id", userId).eq("service", service);
+      await mustWrite("could not disconnect that service", supabase.from("connections").delete().eq("user_id", userId).eq("service", service));
       return res.json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: "Failed to disconnect" });
@@ -3506,7 +3507,7 @@ app.post("/api/disconnect", async (req, res) => {
         }
         await supabase.from("connections").delete().eq("user_id", userId).like("service", "google%");
       } else {
-        await supabase.from("connections").delete().eq("user_id", userId).eq("service", service);
+        await mustWrite("could not disconnect that service", supabase.from("connections").delete().eq("user_id", userId).eq("service", service));
       }
       res.setHeader("Set-Cookie", "ch_user=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
       return res.json({ success: true, signout: true });
@@ -4896,10 +4897,10 @@ app.post("/api/mcps/:id/test", async (req, res) => {
     const tools = data.result?.tools || data.tools || [];
     const toolNames = tools.map(t => t.name);
 
-    await supabase.from("user_mcps").update({
+    await mustWrite("could not save the MCP server", supabase.from("user_mcps").update({
       status: "connected",
       tools_discovered: toolNames
-    }).eq("id", mcp.id);
+    }).eq("id", mcp.id));
 
     res.json({ success: true, tools: toolNames });
   } catch (e) {
@@ -4947,7 +4948,7 @@ app.post("/api/mcps/:id/fix", async (req, res) => {
             const updateData = { auth_token: tokens.access_token };
             if (tokens.refresh_token) updateData.oauth_refresh_token = tokens.refresh_token;
             if (tokens.expires_in) updateData.oauth_token_expiry = Date.now() + (tokens.expires_in * 1000);
-            await supabase.from("user_mcps").update(updateData).eq("id", mcp.id);
+            await mustWrite("could not save the MCP server", supabase.from("user_mcps").update(updateData).eq("id", mcp.id));
             mcp.auth_token = tokens.access_token;
             if (tokens.refresh_token) mcp.oauth_refresh_token = tokens.refresh_token;
             console.log(`[MCP Fix] Token refreshed for ${mcp.name}`);
@@ -5310,7 +5311,7 @@ app.put("/api/api-key", async (req, res) => {
       const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
       const settings = profile?.settings || {};
       settings.llm_provider = prov;
-      await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
+      await mustWrite("could not save your settings", supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId));
       return res.json({ success: true, provider: prov });
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -5334,7 +5335,7 @@ app.put("/api/api-key", async (req, res) => {
         delete currentSettings.custom_model;
         delete currentSettings.custom_api_key;
         if (currentSettings.llm_provider === "custom") delete currentSettings.llm_provider;
-        await supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId);
+        await mustWrite("could not save your settings", supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId));
         return res.json({ success: true, removed: true });
       }
       const cleanUrl = String(baseUrl || "").trim().replace(/\/+$/, "");
@@ -5375,7 +5376,7 @@ app.put("/api/api-key", async (req, res) => {
       if (apiKey && apiKey.trim()) currentSettings.custom_api_key = apiKey.trim();
       else delete currentSettings.custom_api_key;
       currentSettings.llm_provider = "custom";
-      await supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId);
+      await mustWrite("could not save your settings", supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId));
       return res.json({ success: true });
     }
 
@@ -5383,7 +5384,7 @@ app.put("/api/api-key", async (req, res) => {
       delete currentSettings[keyField];
       if (currentSettings.llm_provider === prov) delete currentSettings.llm_provider;
       delete currentSettings.byok_models;
-      await supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId);
+      await mustWrite("could not save your settings", supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId));
       return res.json({ success: true, removed: true });
     }
 
@@ -5427,7 +5428,7 @@ app.put("/api/api-key", async (req, res) => {
     const resolvedModels = await resolveByokModels(prov, apiKey.trim());
     if (resolvedModels) currentSettings.byok_models = resolvedModels;
     else delete currentSettings.byok_models;
-    await supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId);
+    await mustWrite("could not save your settings", supabase.from("profiles").update({ settings: currentSettings, updated_at: new Date().toISOString() }).eq("id", userId));
     res.json({ success: true, models: resolvedModels || undefined });
   } catch (err) {
     console.error("API key save error:", err.message);
@@ -5673,9 +5674,9 @@ app.put("/api/rules/:id", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
     const { active } = req.body;
-    await supabase.from("user_rules")
+    await mustWrite("could not save that rule", supabase.from("user_rules")
       .update({ active: !!active })
-      .eq("id", req.params.id).eq("user_id", userId);
+      .eq("id", req.params.id).eq("user_id", userId));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -5701,7 +5702,7 @@ app.delete("/api/rules/:id", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
-    await supabase.from("user_rules").delete().eq("id", req.params.id).eq("user_id", userId);
+    await mustWrite("could not delete that rule", supabase.from("user_rules").delete().eq("id", req.params.id).eq("user_id", userId));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -5969,7 +5970,7 @@ app.delete("/api/files/:id", async (req, res) => {
       .eq("user_id", userId).eq("attachment_id", req.params.id).single();
     if (!row) return res.status(404).json({ error: "Not found" });
     await supabase.storage.from("attachments").remove([row.storage_path]);
-    await supabase.from("attachments").delete().eq("user_id", userId).eq("attachment_id", req.params.id);
+    await mustWrite("could not delete that file", supabase.from("attachments").delete().eq("user_id", userId).eq("attachment_id", req.params.id));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Delete failed" });
@@ -6036,7 +6037,7 @@ app.delete("/api/datasets/:id", async (req, res) => {
   try {
     const { data: ds } = await supabase.from("datasets").select("id").eq("id", req.params.id).eq("user_id", userId).single();
     if (!ds) return res.status(404).json({ error: "Dataset not found" });
-    await supabase.from("datasets").delete().eq("id", ds.id);
+    await mustWrite("could not delete that dataset", supabase.from("datasets").delete().eq("id", ds.id));
     res.json({ success: true });
   } catch (err) {
     console.error("Dataset delete error:", err.message);
@@ -6109,7 +6110,10 @@ app.delete("/api/rag/sources/:id", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const { data } = await supabase.from("rag_sources").select("id").eq("id", req.params.id).eq("user_id", userId).single();
   if (!data) return res.status(404).json({ error: "Source not found" });
-  await supabase.from("rag_sources").delete().eq("id", data.id);
+  const { error: delErr } = await supabase.from("rag_sources").delete().eq("id", data.id);
+  // No try/catch in this handler, so answer directly rather than throwing into
+  // nothing: an async throw in Express 4 leaves the request hanging.
+  if (delErr) return res.status(500).json({ error: `could not remove that source (${delErr.message})` });
   res.json({ success: true });
 });
 
@@ -6308,7 +6312,8 @@ app.post("/api/rag/residency", async (req, res) => {
   const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
   const settings = profile?.settings || {};
   settings.rag_residency = level;
-  await supabase.from("profiles").update({ settings }).eq("id", userId);
+  const { error: saveErr } = await supabase.from("profiles").update({ settings }).eq("id", userId);
+  if (saveErr) return res.status(500).json({ error: `could not save your settings (${saveErr.message})` });
   res.json({ success: true, level });
 });
 
@@ -7533,9 +7538,9 @@ app.post("/api/bridge/sync-cache", async (req, res) => {
         .order("received_at", { ascending: false, nullsFirst: false }).limit(100);
       if (keep && keep.length >= 100) {
         const keepIds = keep.map(r => r.id);
-        await supabase.from("data_cache").delete()
+        await mustWrite("could not clear that cached data", supabase.from("data_cache").delete()
           .eq("user_id", userId).eq("source", src)
-          .not("id", "in", `(${keepIds.join(",")})`);
+          .not("id", "in", `(${keepIds.join(",")})`));
       }
     }
 

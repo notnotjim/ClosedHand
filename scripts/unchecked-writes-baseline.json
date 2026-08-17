@@ -11,7 +11,6 @@
   "lib/platforms/web.js": 2,
   "lib/platforms/whatsapp-linked.js": 3,
   "lib/proactive.js": 1,
-  "lib/sandbox.js": 3,
   "lib/scheduling.js": 2,
   "lib/services/bridge-relay.js": 1,
   "lib/services/data-sync.js": 4,
@@ -23,5 +22,5 @@
   "webapp/admin.js": 3,
   "webapp/config.js": 1,
   "webapp/rag-processor.js": 13,
-  "webapp/server.js": 70
+  "webapp/server.js": 45
 }

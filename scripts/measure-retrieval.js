@@ -21,7 +21,19 @@ const DEFAULT_QUERIES = [
   "flight booking confirmation",
 ];
 
-function ms(t) { return ((Date.now() - t)).toFixed(0).padStart(5) + "ms"; }
+// An identifier is a token a semantic model cannot help with: digits mixed with
+// letters or separators, or a bare run of digits. Generic queries are answered
+// perfectly well by the vector arm alone, so a run made only of them measures
+// the old system and says nothing about the lexical arm.
+const IDENTIFIER = /^(?=.*\d)[A-Za-z0-9][A-Za-z0-9._\/-]{3,}$/;
+function looksLikeIdentifier(q) {
+  return q.split(/\s+/).some(w => IDENTIFIER.test(w));
+}
+
+// No helper that reads the clock at print time: the previous version did, so
+// "search" was measured AFTER reranking finished and came out larger than the
+// total it was part of. Every duration below is a difference between two marks
+// taken at the moment the stage ended.
 
 (async () => {
   const { supabase } = require("../user-store");
@@ -50,6 +62,13 @@ function ms(t) { return ((Date.now() - t)).toFixed(0).padStart(5) + "ms"; }
   console.log();
 
   const queries = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_QUERIES;
+  if (!queries.some(looksLikeIdentifier)) {
+    console.log("NOTE: none of these queries contains an identifier, so this run does not");
+    console.log("      exercise keyword-only retrieval, which is the reason hybrid exists.");
+    console.log("      Pass real references from your own mail, e.g.:");
+    console.log("        node scripts/measure-retrieval.js \"INV-000012\" \"booking 783760395\"");
+    console.log();
+  }
   for (const q of queries) {
     const t0 = Date.now();
     const r = await usi.search(userId, q, { threshold: 0.25, maxResults: 20 });
@@ -61,7 +80,9 @@ function ms(t) { return ((Date.now() - t)).toFixed(0).padStart(5) + "ms"; }
     const arms = fused.reduce((a, x) => { a[x._arms] = (a[x._arms] || 0) + 1; return a; }, {});
     console.log("=".repeat(76));
     console.log(`QUERY: ${q}`);
-    console.log(`  search ${ms(t0).trim()} | rerank ${(tRank - tSearch)}ms | total ${tRank - t0}ms`);
+    const searchMs = tSearch - t0;
+    const rerankMs = tRank - tSearch;
+    console.log(`  search ${searchMs}ms + rerank ${rerankMs}ms = total ${searchMs + rerankMs}ms`);
     console.log(`  fused ${fused.length} (${JSON.stringify(arms)}) -> final ${ranked.length}, unique ${new Set(ranked.map(x => x.id)).size}`);
     ranked.slice(0, 7).forEach((x, i) => {
       // Subjects are the user's own mail: print a short label, never the body.
