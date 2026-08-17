@@ -35,3 +35,6 @@ jobs:
 
       - name: Vendored copies have not drifted
         run: node scripts/check-vendored-identical.js
+
+      - name: No count-gated reranking
+        run: node scripts/check-rerank-callers.js
