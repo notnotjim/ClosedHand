@@ -78,7 +78,13 @@ async function refreshGoogleToken(userId, serviceKey = "google") {
   const data = await resp.json();
   if (!data.access_token) throw new Error("Google token refresh failed");
   const newTokens = { ...tokens, access_token: data.access_token };
-  await supabase.from("connections").update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", serviceKey);
+  // Checked, not fire-and-forget: the refreshed token is returned either way,
+  // so a failed write leaves the caller working and the NEXT call using a
+  // stale token. That surfaces later as an auth error with no connection to
+  // its cause.
+  const { error: tokenWriteError } = await supabase.from("connections")
+    .update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", serviceKey);
+  if (tokenWriteError) console.error(`[rag] Google token refreshed but NOT saved: ${tokenWriteError.message}. The next call will use a stale token.`);
   return data.access_token;
 }
 
@@ -99,7 +105,13 @@ async function refreshMicrosoftToken(userId, serviceKey = "microsoft") {
   const data = await resp.json();
   if (!data.access_token) throw new Error("Microsoft token refresh failed");
   const newTokens = { ...tokens, access_token: data.access_token };
-  await supabase.from("connections").update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", "microsoft");
+  // Checked, not fire-and-forget: the refreshed token is returned either way,
+  // so a failed write leaves the caller working and the NEXT call using a
+  // stale token. That surfaces later as an auth error with no connection to
+  // its cause.
+  const { error: tokenWriteError } = await supabase.from("connections")
+    .update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", "microsoft");
+  if (tokenWriteError) console.error(`[rag] Microsoft token refreshed but NOT saved: ${tokenWriteError.message}. The next call will use a stale token.`);
   return data.access_token;
 }
 
