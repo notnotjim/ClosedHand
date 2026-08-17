@@ -105,8 +105,12 @@ async function getSetupState() {
     // local-model download progress for the wizard.
     roles: {
       memory: { mode: memoryMode, model: memoryMode === "hosted" ? (embedModel || "Qwen/Qwen3-Embedding-4B") : embedModel || null },
+      // Mirrors rerankMode() in lib/services/reranker.js: local is the default
+      // when there is no hosted key, so reporting "off" here would describe a
+      // state the bot no longer has.
       rerank: String(envOr("RERANK_MODEL") || "").startsWith("local:") ? { mode: "local", model: envOr("RERANK_MODEL") }
-        : (envOr("DEEPINFRA_API_KEY") ? { mode: "hosted", model: "Qwen/Qwen3-Reranker" } : { mode: "off", model: null }),
+        : (envOr("DEEPINFRA_API_KEY") ? { mode: "hosted", model: "Qwen/Qwen3-Reranker" }
+          : { mode: "local", model: "local:jina-reranker-v1-turbo" }),
       vision: envOr("VISION_MODEL") ? { mode: "hosted", model: envOr("VISION_MODEL") }
         : (envOr("DEEPINFRA_API_KEY") ? { mode: "hosted", model: "Qwen/Qwen3-VL" } : { mode: "off", model: null }),
       light: { mode: "hosted", model: envOr("ENRICH_MODEL") || (envOr("DEEPINFRA_API_KEY") ? "deepseek-ai/DeepSeek-V4-Flash" : null) },

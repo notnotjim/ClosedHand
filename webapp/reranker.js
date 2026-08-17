@@ -3,7 +3,12 @@
 // local cross-encoder. Reranking is the largest single contributor to recall
 // quality, so "no key" must not mean "no reranking".
 
-function _rconf(k) { return require("../config").getConfCached(k); }
+// Defensive: the two webapp services do not both ship a runtime-config module,
+// and a reranker that cannot load is a reranker that silently is not there.
+// Falling back to env is exactly how the hosted build is configured anyway.
+function _rconf(k) {
+  try { return require("./config").getConfCached(k); } catch (_) { return undefined; }
+}
 const DEEPINFRA_API_KEY = () => process.env.DEEPINFRA_API_KEY || _rconf("DEEPINFRA_API_KEY");
 const RERANK_URL = process.env.RERANK_API_URL || "https://api.deepinfra.com/v1/inference/Qwen/Qwen3-Reranker-8B";
 const RERANK_MODEL = () => process.env.RERANK_MODEL || _rconf("RERANK_MODEL") || "";
@@ -15,7 +20,7 @@ const isLocalRerank = () => String(RERANK_MODEL()).startsWith("local:");
 let _localAvailable = null;
 function localRerankAvailable() {
   if (_localAvailable === null) {
-    try { require.resolve("../local-models"); _localAvailable = true; }
+    try { require.resolve("./local-models"); _localAvailable = true; }
     catch (_) { _localAvailable = false; }
   }
   return _localAvailable;
@@ -90,7 +95,7 @@ async function rerank(query, documents, topK = 10) {
       // a capped candidate set keep the added latency bounded on weak CPUs.
       const docTexts = documents.map(d => (d.content || JSON.stringify(d)).substring(0, 512));
       const cap = Math.min(documents.length, 20);
-      const { localRerankScores } = require("../local-models");
+      const { localRerankScores } = require("./local-models");
       const localScores = await localRerankScores(query, docTexts.slice(0, cap));
       scores = docTexts.map((_, i) => (i < cap ? localScores[i] : -1));
     } else {

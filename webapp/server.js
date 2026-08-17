@@ -6208,7 +6208,10 @@ app.get("/api/rag/search", async (req, res) => {
     // Rerank for better relevance (graceful fallback if reranker unavailable)
     if (results.length > 1) {
       try {
-        const { rerank } = require("../lib/services/reranker");
+        // Vendored, not imported from lib/: the webapp is a separate service and
+        // its container has no lib/ at all, so this require always threw and
+        // File Search results were never reranked, silently.
+        const { rerank } = require("./reranker");
         results = await rerank(query, results, 30);
       } catch (e) {
         results = results.slice(0, 30);
