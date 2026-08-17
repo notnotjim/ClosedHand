@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Chrome
+Comment=Browse the Web
+Exec=/usr/local/bin/chromium-launcher %U
+Icon=/usr/share/pixmaps/chrome-icon.png
+Type=Application
+Categories=Network;WebBrowser;

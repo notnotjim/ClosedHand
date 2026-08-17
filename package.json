@@ -1,0 +1,36 @@
+{
+  "name": "closedhand-bot",
+  "version": "3.0.0",
+  "license": "MIT",
+  "description": "Personal AI agent with MCP tools, scheduling, and persistent memory",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "setup": "bash setup.sh"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@googleworkspace/cli": "^0.22.3",
+    "@huggingface/transformers": "^4.2.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@supabase/supabase-js": "^2.97.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "adm-zip": "^0.5.16",
+    "cheerio": "^1.2.0",
+    "cron-parser": "^4.9.0",
+    "discord.js": "^14.25.1",
+    "dotenv": "^16.4.7",
+    "imapflow": "^1.7.1",
+    "mailparser": "^3.9.15",
+    "mammoth": "^1.8.0",
+    "node-cron": "^3.0.3",
+    "node-ical": "^0.27.1",
+    "node-telegram-bot-api": "^0.66.0",
+    "nodemailer": "^8.0.2",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.22.0",
+    "tsdav": "^2.1.8",
+    "ws": "^8.19.0",
+    "xlsx": "^0.18.5"
+  }
+}

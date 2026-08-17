@@ -1,0 +1,86 @@
+name: Build self-host images
+
+# The self-host compose file boots from pre-built images so nobody has to
+# compile anything to try ClosedHand. That promise is only true if these get
+# published, which is what this does. The installer falls back to building
+# from source when a pull fails, so a missing image is slow rather than fatal.
+#
+# NOTE after the first successful run: GitHub packages are PRIVATE by default.
+# Open each package (bot, webapp, sandbox) under the account's Packages tab,
+# Package settings, Change visibility, Public. Until then anonymous pulls get
+# "not found", which reads exactly like a missing image.
+
+on:
+  push:
+    # main is the public repo's default branch; oss is the branch this lived on
+    # while it was still a branch of the private repo.
+    branches: [oss, main]
+    paths:
+      - 'Dockerfile'
+      - 'webapp/Dockerfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'webapp/package.json'
+      - 'webapp/package-lock.json'
+      - 'index.js'
+      - 'lib/**'
+      - 'webapp/**'
+      - 'migrations/**'
+      - '.github/workflows/build-selfhost-images.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      # One failing image should not hide whether the other built.
+      fail-fast: false
+      matrix:
+        include:
+          - name: bot
+            context: .
+            dockerfile: Dockerfile
+          - name: webapp
+            context: ./webapp
+            dockerfile: webapp/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # These runners are Intel, so a plain build produces amd64 only and an
+      # Apple Silicon machine pulling it gets "no matching manifest for
+      # linux/arm64". QEMU lets one runner emulate the other architecture.
+      - uses: docker/setup-qemu-action@v3
+
+      # The default docker driver cannot export a build cache (nor build more
+      # than one architecture at a time), which is what "Cache export is not
+      # supported for the docker driver" means. The container driver can.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          # Both architectures self-hosters actually run: cloud VPSes are
+          # Intel, laptops are increasingly Apple Silicon.
+          platforms: linux/amd64,linux/arm64
+          # :latest is what compose pulls; the sha tag makes a bad release
+          # rollback-able without waiting for a rebuild.
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:latest
+            ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

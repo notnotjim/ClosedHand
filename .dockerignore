@@ -1,0 +1,26 @@
+# Root build context = the bot image. Keep it to what index.js needs.
+node_modules
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+data
+attachments
+config.json
+.DS_Store
+
+# The webapp is its own image (build context ./webapp) — not needed in the bot.
+webapp
+
+# Not needed at runtime.
+sandbox-image
+bridge-app
+tasks
+reference
+mcp-library
+.claude
+.mcp.json
+*.md
+Dockerfile
+docker-compose.yml

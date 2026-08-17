@@ -1,0 +1,109 @@
+# ClosedHand self-host — one-command boot: `docker compose up -d` (pulls
+# pre-built images; nobody compiles anything to try the app).
+# Building from source instead:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# Brings up Postgres+pgvector (schema auto-loaded from migrations/), the bot, and
+# the webapp. Copy .env.example to .env first; it boots with nothing configured
+# (setup mode) and you add model/platform keys there or via the dashboard.
+#
+# Dashboard: http://localhost:3000 (WEBAPP_PORT). The bot is exposed on
+# http://localhost:3001 (BOT_PORT) so the browser's web-chat WebSocket reaches it.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-closedhand}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Auto-applies the full schema on FIRST init (empty data volume only).
+      - ./migrations/000_baseline_schema.sql:/docker-entrypoint-initdb.d/000_baseline_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-closedhand}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  bot:
+    image: ghcr.io/notnotjim/closedhand-bot:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      DB_DRIVER: pg
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-closedhand}
+      STORAGE_DIR: /data/storage
+      WS_AUTH_SECRET: ${WS_AUTH_SECRET:-change-me-dev-secret}
+      SANDBOX_URL: http://sandbox:8080
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
+      PORT: "3000"
+    ports:
+      - "${BOT_PORT:-3001}:3000" # exposed for the browser's /chat WebSocket
+    volumes:
+      - storage:/data/storage # shared with the webapp (attachments + logos)
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  webapp:
+    image: ghcr.io/notnotjim/closedhand-webapp:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      DB_DRIVER: pg
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-closedhand}
+      STORAGE_DIR: /data/storage
+      WS_AUTH_SECRET: ${WS_AUTH_SECRET:-change-me-dev-secret}
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+      BOT_WS_URL: ${BOT_WS_URL:-http://localhost:3001}
+      PORT: "3000"
+    ports:
+      - "${WEBAPP_PORT:-3000}:3000"
+    volumes:
+      - storage:/data/storage # same volume as the bot
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  # Code/browser tools: one fixed sandbox container (the hosted product
+  # provisions one per user on Railway; self-host is single-tenant, so one
+  # static box). The bot reaches it as http://sandbox:8080; open
+  # localhost:6080 to watch ClosedHand's computer work.
+  sandbox:
+    image: ghcr.io/notnotjim/closedhand-sandbox:latest
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
+      PORT: "8080"
+      GATEWAY_URL: http://bot:3000
+      USER_ID: admin
+    ports:
+      - "${SANDBOX_VNC_PORT:-6080}:6080"
+    volumes:
+      - sandbox-workspace:/workspace # files + browser profile survive restarts
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/health',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  storage:
+  sandbox-workspace:

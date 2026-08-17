@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set up ClosedHand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text-primary: rgba(255,255,255,0.92);
+      --text-secondary: rgba(255,255,255,0.65);
+      --text-tertiary: rgba(255,255,255,0.40);
+      --bg-raised: rgba(25, 28, 40, 0.55);
+      --bg-input: #0b0c12;
+      --border-default: rgba(255,255,255,0.10);
+      --border-faint: rgba(255,255,255,0.06);
+      --accent: #6ee7a8;
+      --accent-dim: rgba(110,231,168,0.15);
+      --accent-faint: rgba(110,231,168,0.07);
+      --warn: #e7b76e;
+      --warn-dim: rgba(231,183,110,0.18);
+      --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+      --font-display: 'Fraunces', ui-serif, Georgia, serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --rail-w: 84px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #040406;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background: radial-gradient(560px 380px at 12% -6%, rgba(110,231,168,0.055), transparent 70%);
+      pointer-events: none;
+    }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 44px 28px 96px; position: relative; }
+
+    header.top {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 60px; gap: 16px;
+    }
+    .wordmark {
+      font-family: var(--font-display);
+      font-weight: 600; font-size: 19px; letter-spacing: 0.01em;
+      color: var(--text-primary); text-decoration: none;
+    }
+    .wordmark span { color: var(--accent); }
+    .watch-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-tertiary); white-space: nowrap;
+    }
+    .watch-chip .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 8px rgba(110,231,168,0.8);
+      animation: breathe 2.6s ease-in-out infinite;
+    }
+    .watch-chip.is-offline .dot { background: var(--warn); box-shadow: 0 0 8px rgba(231,183,110,0.8); animation: none; }
+    @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .hero { margin-bottom: 20px; }
+    .kicker {
+      font-size: 11.5px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--text-tertiary); margin-bottom: 14px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 480; font-size: clamp(34px, 6vw, 50px);
+      line-height: 1.08; letter-spacing: -0.01em; margin-bottom: 18px;
+    }
+    h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+    .hero p { color: var(--text-secondary); max-width: 56ch; }
+
+    .summary {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      margin: 34px 0 46px; padding: 14px 18px;
+      border: 1px solid var(--border-faint); border-radius: 12px;
+      background: var(--bg-raised); backdrop-filter: blur(6px);
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .summary .count { font-family: var(--font-display); font-size: 17px; color: var(--text-primary); }
+    .summary .count b { color: var(--accent); font-weight: 600; }
+    .summary .next-chip {
+      margin-left: auto; padding: 4px 12px; border-radius: 99px;
+      border: 1px solid var(--accent-dim); background: var(--accent-faint);
+      color: var(--accent); font-size: 12px; white-space: nowrap;
+    }
+    .summary .next-chip:empty { display: none; }
+
+    .ready {
+      display: none; margin: 0 0 46px; padding: 26px 26px 24px;
+      border: 1px solid var(--accent-dim); border-radius: 16px;
+      background: linear-gradient(140deg, rgba(110,231,168,0.10), rgba(110,231,168,0.02) 55%);
+    }
+    .ready.is-on { display: block; animation: rise 0.5s ease both; }
+    .ready h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin-bottom: 8px; }
+    .ready h2 span { color: var(--accent); }
+    .ready p { color: var(--text-secondary); max-width: 52ch; margin-bottom: 18px; }
+    .ready .go {
+      display: inline-block; padding: 11px 22px; border-radius: 10px;
+      background: var(--accent); color: #06241a; font-weight: 600; font-size: 14px;
+      text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ready .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
+
+    ol.spine { list-style: none; }
+    .step {
+      display: grid; grid-template-columns: var(--rail-w) 1fr;
+      position: relative;
+      opacity: 0; animation: rise 0.55s ease both;
+    }
+    .step:nth-child(1) { animation-delay: 0.05s; }
+    .step:nth-child(2) { animation-delay: 0.13s; }
+    .step:nth-child(3) { animation-delay: 0.21s; }
+    .step:nth-child(4) { animation-delay: 0.29s; }
+    .step:nth-child(5) { animation-delay: 0.37s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    .rail { position: relative; padding-top: 6px; }
+    .rail::before {
+      content: ""; position: absolute; top: 0; bottom: 0; left: 13px;
+      width: 1px; background: rgba(255,255,255,0.08);
+    }
+    .step:first-child .rail::before { top: 14px; }
+    .step:last-child .rail::before { bottom: auto; height: 14px; }
+    .step.is-done .rail::before { background: linear-gradient(to bottom, var(--accent), rgba(110,231,168,0.25)); }
+    .node {
+      position: absolute; top: 10px; left: 9px;
+      width: 9px; height: 9px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.25); background: #040406;
+      transition: all 0.3s ease;
+    }
+    .step.is-next .node { border-color: var(--text-primary); }
+    .step.is-done .node { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(110,231,168,0.6); }
+    .step.just-done .node { animation: detected 1.1s ease-out; }
+    @keyframes detected {
+      0%   { box-shadow: 0 0 0 0 rgba(110,231,168,0.55); }
+      100% { box-shadow: 0 0 0 22px rgba(110,231,168,0); }
+    }
+    .num {
+      position: absolute; left: 30px; top: -6px;
+      font-family: var(--font-display); font-style: italic; font-weight: 350;
+      font-size: 30px; color: rgba(255,255,255,0.22);
+      font-variation-settings: "SOFT" 100;
+      transition: color 0.3s ease;
+    }
+    .step.is-next .num { color: var(--text-primary); }
+    .step.is-done .num { color: var(--accent); }
+
+    .card {
+      margin: 0 0 26px; border: 1px solid var(--border-faint); border-radius: 14px;
+      background: var(--bg-raised); backdrop-filter: blur(6px);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+    .step.is-next .card { border-color: rgba(110,231,168,0.28); box-shadow: 0 0 0 1px rgba(110,231,168,0.08), 0 12px 40px rgba(0,0,0,0.35); }
+    .step.is-done .card { background: transparent; }
+    .step.just-done .card { animation: cardflash 1.1s ease-out; }
+    @keyframes cardflash {
+      0% { border-color: rgba(110,231,168,0.6); }
+      100% { border-color: var(--border-faint); }
+    }
+
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      width: 100%; padding: 18px 20px; cursor: pointer;
+      background: none; border: none; text-align: left; font-family: inherit; color: inherit;
+    }
+    .card-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+    .card-head h2 {
+      font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: 0.005em;
+    }
+    .whisper { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+    .step.is-done .whisper { display: none; }
+    .done-note { display: none; font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+    .step.is-done .done-note { display: block; }
+
+    .state-chip {
+      flex-shrink: 0; padding: 3px 11px; border-radius: 99px; font-size: 11.5px; letter-spacing: 0.02em;
+      border: 1px solid var(--border-default); color: var(--text-tertiary); white-space: nowrap;
+    }
+    .step.is-done .state-chip { border-color: var(--accent-dim); background: var(--accent-faint); color: var(--accent); }
+    .step.is-next .state-chip { border-color: rgba(255,255,255,0.2); color: var(--text-secondary); }
+    .step.is-skipped .state-chip { font-style: italic; }
+
+    .card-body { display: none; padding: 2px 20px 22px; }
+    .step.is-next .card-body, .step.is-open .card-body { display: block; }
+    .card-body p { color: var(--text-secondary); font-size: 14px; max-width: 60ch; margin-bottom: 14px; }
+    .card-body p.note { font-size: 13px; color: var(--text-tertiary); border-left: 2px solid var(--accent-dim); padding-left: 12px; }
+    .card-body a { color: var(--accent); text-decoration: none; }
+    .card-body a:hover { text-decoration: underline; }
+    .card-body ol.mini { margin: 0 0 14px 18px; color: var(--text-secondary); font-size: 14px; }
+    .card-body ol.mini li { margin-bottom: 6px; }
+    .card-body ol.mini li::marker { color: var(--text-tertiary); }
+
+    /* Forms: the wizard writes config itself; nobody edits files. */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 6px; }
+    .field input, .field select {
+      width: 100%; max-width: 480px; padding: 10px 13px;
+      background: var(--bg-input); border: 1px solid var(--border-default); border-radius: 9px;
+      color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .field select { font-family: var(--font-body); font-size: 14px; }
+    .field input:focus, .field select:focus { border-color: var(--accent-dim); }
+    .save-btn {
+      padding: 9px 20px; border: none; border-radius: 9px; margin: 4px 0 6px;
+      background: var(--accent); color: #06241a; font-family: inherit; font-size: 13.5px;
+      font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
+    }
+    .save-btn:hover { transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .form-msg { display: none; font-size: 13px; margin: 6px 0 2px; max-width: 60ch; }
+    .form-msg.err { color: var(--warn); }
+    .form-msg.ok { color: var(--accent); }
+
+    .qr-row { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; }
+    .qr { border-radius: 10px; background: #e9f6ee; padding: 6px; flex-shrink: 0; }
+    .qr-row > div { flex: 1; min-width: 220px; }
+    .memory-note {
+      display: none; margin-top: 16px; padding: 14px 16px;
+      border: 1px solid var(--warn-dim); border-radius: 10px;
+      background: rgba(231,183,110,0.05);
+    }
+    .memory-note.is-on { display: block; }
+    .memory-note p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 10px; }
+
+    .skip {
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      font-size: 12.5px; color: var(--text-tertiary); text-decoration: underline;
+      text-underline-offset: 3px; padding: 0; margin-top: 4px;
+    }
+    #google-fallback { margin-top: 18px; }
+    .fb-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line, rgba(255,255,255,0.08)); }
+    .fb-block h3 { font-size: 15px; margin: 0 0 6px; }
+    .fb-block input[type="email"], .fb-block input[type="password"], .fb-block input[type="text"] {
+      display: block; width: 100%; box-sizing: border-box; margin: 6px 0;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--line, rgba(255,255,255,0.12));
+      border-radius: 8px; padding: 9px 12px; color: inherit; font-family: inherit; font-size: 13.5px;
+    }
+    .fb-block .cta { margin-top: 8px; }
+    .fb-manual { margin-top: 18px; font-size: 13px; color: var(--text-tertiary); }
+    .fb-manual > summary { cursor: pointer; padding: 6px 0; }
+    .fb-adv { margin: 6px 0; font-size: 12.5px; color: var(--text-tertiary); }
+    .fb-adv summary { cursor: pointer; }
+    .fb-done { font-size: 11px; color: #4ade80; border: 1px solid rgba(74,222,128,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+    .skip:hover { color: var(--text-secondary); }
+    .manual-link {
+      display: block; background: none; border: none; cursor: pointer; font-family: inherit;
+      font-size: 12.5px; color: var(--text-tertiary); text-decoration: none;
+      padding: 0; margin-top: 14px;
+    }
+    .manual-link:hover { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
+
+    .cta {
+      display: inline-block; padding: 9px 18px; border-radius: 9px; margin-bottom: 14px;
+      border: 1px solid var(--accent-dim); background: var(--accent-faint);
+      color: var(--accent); font-size: 13.5px; font-weight: 500; text-decoration: none;
+    }
+    .cta:hover { background: var(--accent-dim); text-decoration: none; }
+
+    footer {
+      margin-top: 70px; padding-top: 22px; border-top: 1px solid var(--border-faint);
+      display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+      font-size: 12.5px; color: var(--text-tertiary);
+    }
+    footer em { font-family: var(--font-display); font-style: italic; }
+    footer a { color: var(--text-secondary); text-decoration: none; }
+    footer a:hover { color: var(--text-primary); }
+
+    @media (max-width: 620px) {
+      :root { --rail-w: 52px; }
+      .num { display: none; }
+      .wrap { padding: 30px 18px 72px; }
+      header.top { margin-bottom: 42px; }
+      .summary .next-chip { margin-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .step, .ready.is-on { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <a class="wordmark" href="/">Closed<span>Hand</span></a>
+    <span class="watch-chip" id="watch-chip" role="status" aria-live="polite">
+      <span class="dot"></span><span id="watch-text">watching your install</span>
+    </span>
+  </header>
+
+  <section class="hero">
+    <p class="kicker">Self-host setup</p>
+    <h1>Bring ClosedHand <em>online.</em></h1>
+    <p>Everything runs on your machine and answers to you alone. Only the first two,
+       a database and a model key, are required; each step after them is labelled for
+       what it is and can wait. Fill a step in, press save, and ClosedHand applies it
+       live; there are no files to edit and nothing to restart.</p>
+  </section>
+
+  <section class="ready" id="ready-banner">
+    <h2>ClosedHand is <span>alive.</span></h2>
+    <p id="ready-line">The required pieces are running.</p>
+    <a class="go" id="ready-cta" href="/dashboard">Open the dashboard</a>
+    <p class="note" id="ready-cta-note" style="display:none;margin-top:10px;"></p>
+  </section>
+
+  <div class="summary">
+    <span class="count"><b id="done-count">0</b> of <span id="total-count">5</span> unlocked</span>
+    <span id="summary-note">checking your install…</span>
+    <span class="next-chip" id="next-chip"></span>
+  </div>
+
+  <ol class="spine" id="spine">
+
+    <li class="step" data-step="database" id="step-database">
+      <div class="rail"><span class="node"></span><span class="num">01</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Database</h2>
+            <p class="whisper">Your own Postgres, where everything ClosedHand learns lives.</p>
+          </span>
+          <span class="state-chip">Required</span>
+        </button>
+        <div class="card-body">
+          <p>ClosedHand keeps memories, mail indexes and settings in a database that belongs
+             to you. It arrives with the install and starts on its own, so this step usually
+             lights up before you ever see it.</p>
+          <p class="note">Not lit yet? The database can take a minute on first boot. If it stays
+             dark, something went wrong with the install itself; re-running the installer is
+             the quickest fix.</p>
+        </div>
+      </article>
+    </li>
+
+    <li class="step" data-step="model" id="step-model">
+      <div class="rail"><span class="node"></span><span class="num">02</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Model provider</h2>
+            <p class="whisper">Bring a key; ClosedHand arranges what it covers.</p>
+            <p class="done-note" id="model-done-note"></p>
+          </span>
+          <span class="state-chip">Required</span>
+        </button>
+        <div class="card-body">
+          <p>Paste an API key. ClosedHand works out which provider it belongs to and runs the
+             best models that key can reach.</p>
+          <form id="model-form">
+            <div class="field" id="f-key">
+              <label for="model-key" id="model-key-label">API key</label>
+              <input type="password" id="model-key" autocomplete="off" spellcheck="false" placeholder="paste the key here">
+            </div>
+            <p class="note" id="detect-line">ClosedHand identifies the provider from the key itself.</p>
+            <div class="field" id="f-provider" style="display:none;">
+              <label for="provider-select">Provider</label>
+              <select id="provider-select">
+                <option value="deepinfra">DeepInfra</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="groq">Groq</option>
+                <option value="xai">xAI (Grok)</option>
+                <option value="ollama">Ollama (local)</option>
+                <option value="custom">Another OpenAI-compatible endpoint</option>
+              </select>
+              <p class="note" id="cap-line" style="margin-top:8px;"></p>
+            </div>
+            <div class="field" id="f-base-url" style="display:none;">
+              <label for="base-url" id="base-url-label">Endpoint URL</label>
+              <input type="text" id="base-url" spellcheck="false" placeholder="https://host/v1">
+            </div>
+            <div class="field" id="f-custom-model" style="display:none;">
+              <label for="custom-model">Model name</label>
+              <input type="text" id="custom-model" spellcheck="false" placeholder="the model this endpoint serves">
+            </div>
+            <button class="save-btn" type="submit" id="model-save">Save and connect</button>
+            <p class="form-msg" id="model-msg"></p>
+            <button class="manual-link" type="button" id="manual-toggle">Choose the provider manually (Ollama, custom endpoints)</button>
+          </form>
+        </div>
+      </article>
+    </li>
+
+    <li class="step" data-step="admin_password" id="step-admin_password">
+      <div class="rail"><span class="node"></span><span class="num">03</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Dashboard password</h2>
+            <p class="whisper">You choose it here, and it locks everything but this wizard.</p>
+          </span>
+          <span class="state-chip">Recommended</span>
+        </button>
+        <div class="card-body">
+          <p>The dashboard holds everything ClosedHand knows about you. Pick a password and
+             from then on the dashboard asks for it; there is no username, because this
+             instance has exactly one owner.</p>
+          <form id="password-form">
+            <div class="field">
+              <label for="pw-input">Choose a password (8 characters or more)</label>
+              <input type="password" id="pw-input" autocomplete="new-password">
+            </div>
+            <button class="save-btn" type="submit">Set password</button>
+            <p class="form-msg" id="pw-msg"></p>
+          </form>
+          <button class="skip" type="button">Skip for now, I'm on localhost</button>
+        </div>
+      </article>
+    </li>
+    <li class="step" data-step="google" id="step-google">
+      <div class="rail"><span class="node"></span><span class="num">04</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Google</h2>
+            <p class="whisper">The inbox and calendar you already live in.</p>
+          </span>
+          <span class="state-chip">Recommended</span>
+        </button>
+        <div class="card-body">
+          <p class="wizard-only">Connecting Google lets ClosedHand index your mail and calendar in the background
+             and answer questions about them the moment you ask. A guided wizard walks you
+             through Google's console page by page and finishes right back here.</p>
+          <a class="cta wizard-only" href="/setup/google">Open the Google wizard</a>
+          <p class="note wizard-only">About ten minutes, and it buys the full version: calendar changes at
+             API speed, Drive, your send-as aliases found automatically, and nothing that can break
+             when Google redesigns a page. Skip it and mail and calendar still work, through your
+             own mailbox and ClosedHand's browser.</p>
+          <button class="skip" type="button">Skip for now</button>
+
+          <div id="google-fallback" style="display:none;" data-wa-anchor="1">
+            <p>No console needed. One app password gives ClosedHand your mail and your calendar,
+               read and write. It takes about thirty seconds.</p>
+
+            <div class="fb-block">
+              <h3>Mail and calendar <span class="fb-done" id="fb-imap-done" style="display:none;">connected</span></h3>
+              <p class="note">Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>,
+                 type <strong>ClosedHand</strong>, press Create, and paste the sixteen characters here. It opens
+                 this mailbox and its calendar and nothing else, it is kept encrypted on your server, and you
+                 can revoke it on that same page at any time.</p>
+              <input id="fb-email" type="email" placeholder="you@gmail.com" autocomplete="off">
+              <input id="fb-password" type="password" placeholder="app password (sixteen characters)" autocomplete="off">
+              <input id="fb-aliases" type="text" placeholder="other addresses you send from, comma-separated (optional)" autocomplete="off">
+              <details class="fb-adv"><summary>Not Gmail? Set the server details</summary>
+                <input id="fb-imap-host" type="text" placeholder="IMAP host">
+                <input id="fb-imap-port" type="text" placeholder="IMAP port (993)">
+                <input id="fb-smtp-host" type="text" placeholder="SMTP host">
+                <input id="fb-smtp-port" type="text" placeholder="SMTP port (465)">
+              </details>
+              <button class="cta" type="button" id="fb-imap-save">Connect mail and calendar</button>
+              <p class="note" id="fb-imap-status"></p>
+            </div>
+
+            <details class="fb-manual">
+              <summary>Extras: browser access, and calendars kept somewhere else</summary>
+
+              <div class="fb-block">
+                <h3>Sign in to Google on ClosedHand's computer <span class="fb-done" id="fb-browser-done" style="display:none;">signed in</span></h3>
+                <p class="note">This is for anything ClosedHand has to do in a browser as you, such as opening
+                   one of your Drive files on Google's own site. Mail and calendar do not need it, and Drive
+                   as something ClosedHand can search and read on its own still needs the wizard.
+                   This screen is ClosedHand's own computer, running on
+                   your server; only you can see it, your password goes straight to Google, and you stay
+                   signed in on this machine until you sign out.</p>
+                <p class="note" id="fb-browser-gate" style="display:none;color:var(--warn);">Finish the first two
+                   steps first: without a database and a model key ClosedHand cannot do anything with
+                   the account you sign in here.</p>
+                <iframe id="fb-vnc" style="width:100%;aspect-ratio:16/9;border:1px solid var(--line, #333);border-radius:10px;background:#000;display:block;"></iframe>
+                <p class="note" style="margin-top:6px;">The screen is 1920x1080, shrunk to fit this column.
+                   <a id="fb-vnc-big" href="#">Open it full size in a new tab</a>
+                   if you would rather sign in there; it closes itself and brings you back here.</p>
+                <p class="note" id="fb-auto-status"></p>
+              </div>
+
+              <div class="fb-block">
+                <h3>Calendar feed (ICS) <span class="fb-done" id="fb-ics-done" style="display:none;">connected</span></h3>
+                <p class="note">Read-only, for a calendar that is not on the mailbox above. In Google
+                   Calendar: Settings, pick the calendar, copy the "Secret address in iCal format".</p>
+                <input id="fb-ics-url" type="text" placeholder="https://…/basic.ics" autocomplete="off">
+                <button class="cta" type="button" id="fb-ics-save">Connect calendar feed</button>
+                <p class="note" id="fb-ics-status"></p>
+              </div>
+            </details>
+          </div>
+
+        </div>
+      </article>
+    </li>
+    <li class="step" data-step="chat" id="step-chat">
+      <div class="rail"><span class="node"></span><span class="num">05</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Chat apps</h2>
+            <p class="whisper">Where you talk to ClosedHand. WhatsApp on your own number, or Telegram.</p>
+            <p class="done-note" id="tg-done-note"></p>
+          </span>
+          <span class="state-chip">Recommended</span>
+        </button>
+        <div class="card-body">
+          <div class="fb-block" id="wa-linked-block">
+            <h3>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></h3>
+            <p class="note">ClosedHand joins your WhatsApp as a linked device, like WhatsApp Web. You talk
+               to it in your "Message Yourself" chat, and it can recall your recent chat history. It never
+               speaks in any other conversation. Honest trade: this method is against WhatsApp's terms,
+               the small ban risk lands on your own number, and anything it sends comes from you.</p>
+            <button class="cta" type="button" id="wa-enable">Link WhatsApp</button>
+            <button class="skip" type="button" id="wa-disable" style="display:none;">Unlink and turn this off</button>
+            <div id="wa-qr-wrap" style="display:none;margin-top:10px;">
+              <p class="note">On your phone: WhatsApp, Settings, Linked devices, Link a device, then scan this.</p>
+              <img id="wa-qr" alt="WhatsApp pairing QR" style="width:240px;height:240px;border-radius:10px;background:#fff;padding:8px;">
+            </div>
+            <p class="note" id="wa-status"></p>
+          </div>
+        
+          <div class="fb-block">
+            <h3>Telegram</h3>
+            <p class="note">A separate bot identity instead of your own number. Three taps in BotFather.</p>
+
+          <div id="tg-setup">
+            <div class="qr-row">
+              <img class="qr" src="/api/setup/qr?target=botfather" alt="QR code opening BotFather in Telegram" width="120" height="120">
+              <div>
+                <ol class="mini" style="margin-bottom:8px;">
+                  <li>Scan to open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, or tap it if you're on this device.</li>
+                  <li>Send <strong>/newbot</strong> and answer its two questions.</li>
+                  <li>Paste the token it gives you below.</li>
+                </ol>
+                <p class="note" style="margin:0;">Telegram has no way to create a bot for you, so this part is yours. It takes about a minute.</p>
+              </div>
+            </div>
+            <form id="tg-form">
+              <div class="field">
+                <label for="tg-token">Bot token</label>
+                <input type="password" id="tg-token" autocomplete="off" spellcheck="false" placeholder="123456:paste the whole line">
+              </div>
+              <button class="save-btn" type="submit">Connect Telegram</button>
+              <p class="form-msg" id="tg-msg"></p>
+            </form>
+          </div>
+          <div id="tg-claim" style="display:none;">
+            <div class="qr-row">
+              <img class="qr" id="tg-qr" src="" alt="QR code opening your ClosedHand bot in Telegram" width="140" height="140">
+              <div>
+                <p style="margin-bottom:6px;">Scan this, then send your bot any message. That locks it
+                   to your Telegram account: it answers you and refuses everyone else.</p>
+                <p class="note" style="margin:0;">On this device instead? <a id="tg-link" href="#" target="_blank" rel="noopener">Open your bot</a>.</p>
+              </div>
+            </div>
+          </div>
+        
+          </div>
+          <p class="note">Discord, Slack, LINE and the web chat connect any time from the dashboard.</p>
+          <button class="skip" type="button">Skip for now</button>
+        </div>
+      </article>
+    </li>
+
+
+
+
+
+
+
+  </ol>
+
+  <div class="memory-note" id="memory-note">
+    <p><strong id="memory-note-title">About memory.</strong> <span id="memory-note-lead"></span></p>
+    <form id="memory-form">
+      <div class="field">
+        <input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="API key for memory">
+      </div>
+      <button class="save-btn" type="submit" id="memory-btn">Enable memory</button>
+      <p class="form-msg" id="memory-msg"></p>
+    </form>
+  </div>
+
+  <footer>
+    <span><em>ClosedHand</em> · self-host edition</span>
+    <a href="/dashboard">Dashboard</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var POLL_MS = 2500;
+  var lastDone = {};
+  var firstLoad = true;
+  var lastState = null;
+
+  // Only optional steps can hold a skip. The filter also heals stale
+  // localStorage from a build where a styling-class collision let the manual
+  // toggle write a bogus skip for the (required) model step.
+  var SKIPPABLE = { admin_password: 1, chat: 1, google: 1 };
+  var skips = {};
+  // Skips are per install, not per browser: the same localhost answered for
+  // every install this machine has ever run, so a skip clicked in a previous
+  // one silently marked the step Skipped in the next. The key is filled in
+  // from the status payload, and until then nothing is treated as skipped.
+  var _skipKey = null;
+  skips = {};
+  Object.keys(skips).forEach(function (k) { if (!SKIPPABLE[k]) delete skips[k]; });
+  function saveSkips() { try { if (_skipKey) localStorage.setItem(_skipKey, JSON.stringify(skips)); } catch (e) {} }
+  function loadSkipsFor(installId) {
+    if (!installId) return false;
+    var key = "ch-setup-skips:" + installId;
+    if (_skipKey === key) return false;
+    _skipKey = key;
+    try { skips = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { skips = {}; }
+    Object.keys(skips).forEach(function (k) { if (!SKIPPABLE[k]) delete skips[k]; });
+    return true;
+  }
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function setChip(text, offline) {
+    $("#watch-text").textContent = text;
+    $("#watch-chip").classList.toggle("is-offline", !!offline);
+  }
+
+  // --- Shared form helper: post JSON, show the result inline ---------------
+  function postJSON(url, method, body, msgEl, btn, onOk) {
+    msgEl.className = "form-msg"; msgEl.style.display = "none";
+    if (btn) btn.disabled = true;
+    fetch(url, { method: method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
+      .then(function (r) {
+        if (btn) btn.disabled = false;
+        if (r.ok) {
+          msgEl.className = "form-msg ok"; msgEl.style.display = "block";
+          msgEl.textContent = (onOk && onOk(r.j)) || "Saved.";
+          poll();
+        } else {
+          msgEl.className = "form-msg err"; msgEl.style.display = "block";
+          msgEl.textContent = (r.j && r.j.error) || "That didn't save. Try again.";
+        }
+      })
+      .catch(function () {
+        if (btn) btn.disabled = false;
+        msgEl.className = "form-msg err"; msgEl.style.display = "block";
+        msgEl.textContent = "Could not reach the server.";
+      });
+  }
+
+  // --- Model provider form -------------------------------------------------
+  // Key-first: the key itself says whose it is. Pasting one probes the
+  // candidates (the same models call that verifies a key), shows what was
+  // detected plus what that key covers, and the save runs on the detection.
+  // Manual mode exists for Ollama (no key), custom endpoints (undetectable),
+  // and the escape hatch when detection gets it wrong.
+  var CAP_LINES = {
+    deepinfra: "Chat, memory and vision all run on this key.",
+    openai: "Chat, memory and vision all run on this key.",
+    gemini: "Chat, memory and vision all run on this key.",
+    anthropic: "Chat runs on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
+    groq: "Chat runs on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
+    xai: "Chat and vision run on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
+    ollama: "Everything stays on your machine: chat from Ollama, memory from your pulled embedding model or ClosedHand's built-in one.",
+    custom: "Chat runs through your endpoint. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
+  };
+  var providerSel = $("#provider-select");
+  var manualMode = false;
+  var detected = null; // { provider, label, ... } from /api/setup/detect
+
+  function refreshProviderFields() {
+    var p = providerSel.value;
+    $("#cap-line").textContent = CAP_LINES[p] || "";
+    $("#f-key").style.display = p === "ollama" ? "none" : "";
+    $("#f-base-url").style.display = (manualMode && (p === "custom" || p === "ollama")) ? "" : "none";
+    $("#base-url-label").textContent = p === "ollama"
+      ? "Ollama address (usually http://localhost:11434; from Docker: http://host.docker.internal:11434)"
+      : "Endpoint URL";
+    $("#base-url").placeholder = p === "ollama" ? "http://localhost:11434" : "https://host/v1";
+    $("#f-custom-model").style.display = (manualMode && p === "custom") ? "" : "none";
+    $("#model-key-label").textContent = p === "custom" ? "API key (leave empty for a local endpoint)" : "API key";
+  }
+  providerSel.addEventListener("change", refreshProviderFields);
+
+  $("#manual-toggle").addEventListener("click", function () {
+    manualMode = !manualMode;
+    $("#f-provider").style.display = manualMode ? "" : "none";
+    $("#detect-line").style.display = manualMode ? "none" : "";
+    this.textContent = manualMode
+      ? "Back to automatic detection"
+      : "Choose the provider manually (Ollama, custom endpoints)";
+    refreshProviderFields();
+  });
+
+  // Detection: debounced probe as the key is pasted. No silent fallbacks; a
+  // key nobody claims says so plainly.
+  var _detectTimer = null;
+  var _detectSeq = 0;
+  $("#model-key").addEventListener("input", function () {
+    if (_detectTimer) clearTimeout(_detectTimer);
+    detected = null;
+    var key = this.value.trim();
+    if (!key || manualMode) { $("#detect-line").textContent = "ClosedHand identifies the provider from the key itself."; return; }
+    // A bare UUID is a key ID from a provider console, not an API key (xAI
+    // lists keys by exactly this shape). Say so instantly, no probing.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) {
+      $("#detect-line").textContent = "That looks like a key ID from your provider's console, not the API key itself. The key is a longer string (xAI's start with xai-, OpenAI's with sk-) shown once when you create it.";
+      return;
+    }
+    $("#detect-line").textContent = "Checking whose key this is…";
+    _detectTimer = setTimeout(function () {
+      var seq = ++_detectSeq;
+      fetch("/api/setup/detect", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key }),
+      }).then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (j) {
+          if (seq !== _detectSeq || manualMode) return;
+          if (j && j.detected) {
+            detected = j;
+            $("#detect-line").textContent = j.label + " key. " + (CAP_LINES[j.provider] || "");
+          } else if (j && j.hint && j.hintStatuses) {
+            // Name what the provider actually answered instead of a mystery.
+            var st = j.hintStatuses.key || j.hintStatuses.models;
+            var why = st === 403 ? "the key may be disabled, restricted, or out of credits, so check your provider console"
+              : st === 401 || st === 400 ? "it looks mistyped or revoked, so re-copy it from your provider console"
+              : st === 0 ? "the provider couldn't be reached from this install"
+              : "status " + st;
+            $("#detect-line").textContent = "This looks like " + (j.hintLabel ? "a " + j.hintLabel : "a") + " key, but the provider answered " + (st || "nothing") + ": " + why + ". Or choose manually below.";
+          } else {
+            $("#detect-line").textContent = "No provider recognised this key. Check it, or choose manually below.";
+          }
+        })
+        .catch(function () {
+          if (seq === _detectSeq) $("#detect-line").textContent = "Couldn't check the key just now. Save will verify it, or choose manually below.";
+        });
+    }, 700);
+  });
+  refreshProviderFields();
+
+  $("#model-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var msg = $("#model-msg");
+    var btn = $("#model-save");
+    var key = $("#model-key").value.trim();
+    if (manualMode) {
+      var p = providerSel.value;
+      if (p === "custom") {
+        postJSON("/api/api-key", "PUT", { provider: "custom", apiKey: key, baseUrl: $("#base-url").value.trim(), model: $("#custom-model").value.trim() }, msg, btn,
+          function () { return "Endpoint connected. Change models any time in Settings."; });
+      } else {
+        postJSON("/api/setup/provider", "POST", { provider: p, apiKey: key, baseUrl: $("#base-url").value.trim() }, msg, btn,
+          function (j) { return j.note ? j.message + " " + j.note : j.message; });
+      }
+      return;
+    }
+    var prov = detected && detected.provider;
+    if (!prov) {
+      msg.className = "form-msg err"; msg.style.display = "block";
+      msg.textContent = key ? "The key hasn't been recognised yet. Give detection a second, or choose manually below." : "Paste an API key first.";
+      return;
+    }
+    postJSON("/api/setup/provider", "POST", { provider: prov, apiKey: key }, msg, btn,
+      function (j) { return j.note ? j.message + " " + j.note : j.message; });
+  });
+
+  // --- Password form -------------------------------------------------------
+  $("#password-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    postJSON("/api/setup/password", "POST", { password: $("#pw-input").value }, $("#pw-msg"), null,
+      function () { return "Password set. You're logged in on this browser."; });
+  });
+
+  // --- Telegram form -------------------------------------------------------
+  $("#tg-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    postJSON("/api/setup/telegram", "POST", { token: $("#tg-token").value.trim() }, $("#tg-msg"), null,
+      function (j) {
+        return j.username
+          ? "Connected. Open t.me/" + j.username + " and say hello; the first sender becomes the owner."
+          : "Connected. Message your bot to claim it.";
+      });
+  });
+
+  // --- Memory (embeddings) form -------------------------------------------
+  $("#memory-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    postJSON("/api/setup/memory-key", "POST", { apiKey: $("#memory-key").value.trim() }, $("#memory-msg"), null,
+      function () { return "Memory is on. Indexing starts with your first connected service."; });
+  });
+
+  // --- Render --------------------------------------------------------------
+  function render(state) {
+    lastState = state;
+    var doneCount = 0;
+    var next = null;
+
+    state.steps.forEach(function (s) {
+      var li = $("#step-" + s.key);
+      if (!li) return;
+      var chip = $(".state-chip", li);
+      var head = $(".card-head", li);
+
+      if (s.done) doneCount++;
+      var freshlyDone = s.done && lastDone[s.key] === false;
+      lastDone[s.key] = s.done;
+
+      li.classList.toggle("is-done", s.done);
+      li.classList.toggle("is-skipped", !s.done && !!skips[s.key]);
+      if (freshlyDone && !firstLoad) {
+        li.classList.remove("is-open");
+        li.classList.add("just-done");
+        setTimeout(function () { li.classList.remove("just-done"); }, 1200);
+      }
+
+      if (s.done) {
+        chip.textContent = s.key === "google" ? "Connected" : "Done";
+      } else if (skips[s.key]) {
+        chip.textContent = "Skipped, show it";
+        chip.style.cursor = "pointer";
+        chip.title = "Bring this step back";
+        chip.onclick = function (ev) {
+          ev.stopPropagation();
+          skips[s.key] = false;
+          saveSkips();
+          li.classList.add("is-open");
+          if (s.key === "google" && typeof updateGoogleFallback === "function") updateGoogleFallback(true);
+          poll();
+        };
+      } else {
+        chip.style.cursor = "";
+        chip.title = "";
+        chip.onclick = null;
+        chip.textContent = s.required ? "Required" : "Recommended";
+      }
+
+      if (!next && !s.done && !skips[s.key]) next = s;
+      li.classList.toggle("is-next", !!next && next.key === s.key);
+      head.setAttribute("aria-expanded", String(li.classList.contains("is-next") || li.classList.contains("is-open")));
+    });
+
+    // Done-notes: name what's connected without exposing anything secret.
+    var provLabel = state.chatProviderLabel || (state.chatProvider === "deepinfra" ? "DeepInfra" : state.chatProvider);
+    $("#model-done-note").textContent = provLabel
+      ? "Running on " + provLabel + (state.memory ? ", memory included" : ", chat only")
+      : "";
+    $("#tg-done-note").textContent = state.botUsername ? "@" + state.botUsername + " is yours" : "";
+    // Connected: swap the BotFather instructions for a scan-and-say-hello QR.
+    var tgConnected = !!state.botUsername;
+    $("#tg-setup").style.display = tgConnected ? "none" : "";
+    $("#tg-claim").style.display = tgConnected ? "" : "none";
+    if (tgConnected && !$("#tg-qr").getAttribute("src")) {
+      $("#tg-qr").setAttribute("src", "/api/setup/qr?target=bot&v=" + encodeURIComponent(state.botUsername));
+      $("#tg-link").setAttribute("href", "https://t.me/" + state.botUsername + "?start=hello");
+    }
+
+    // The memory panel adapts to the mode. Local: show the honest download
+    // state (progress, errors that will retry) plus the optional hosted
+    // upgrade. Off (rare): the named-provider nudge. Hosted: hidden.
+    var modelDone = state.steps.some(function (s) { return s.key === "model" && s.done; });
+    var showMemoryPanel = false;
+    var lead = "";
+    var title = "About memory.";
+    var showForm = true;
+    if (modelDone && state.memoryMode === "local") {
+      showMemoryPanel = true;
+      title = "Memory runs on this machine.";
+      var emb = (state.localModels || {}).embedder;
+      if (emb && emb.state === "downloading") {
+        lead = "Downloading the local memory model (" + (emb.totalMb ? "~" + emb.totalMb + "MB" : "~300MB") + "), " + (emb.pct || 0) + "% done. Memory switches on when it lands.";
+      } else if (emb && emb.state === "error") {
+        lead = "The model download hit an error (" + (emb.error || "unknown") + "). It retries automatically on the next sync; nothing is lost.";
+      } else if (emb && emb.state === "ready") {
+        lead = "The local memory model is in place; recall runs privately on this machine.";
+      } else {
+        lead = "A compact model (~300MB) downloads when the first sync starts, then everything is recalled privately on this machine.";
+      }
+      // The download size is the number people see, but the working set is what
+      // decides whether a small machine can actually run this: roughly a
+      // gigabyte while indexing, which is more than a 2GB box has spare once
+      // the database and the browser are up.
+      lead += " Indexing needs about a gigabyte of free memory while it runs. You can point memory at a hosted embedder later in Settings.";
+      showForm = false; // onboarding states the fact; Settings owns the choice
+    } else if (modelDone && !state.memory) {
+      $("#memory-btn").textContent = "Enable memory";
+      showMemoryPanel = true;
+      lead = "Memory needs an embedding model to recall your mail and files by meaning, not keywords. Add a key from a provider that offers one, or skip it and chat still works.";
+    }
+    $("#memory-note-title").textContent = title;
+    $("#memory-note-lead").textContent = lead;
+    $("#memory-form").style.display = showForm ? "" : "none";
+    $("#memory-note").classList.toggle("is-on", showMemoryPanel);
+
+    $("#done-count").textContent = String(doneCount);
+    $("#total-count").textContent = String(state.steps.length);
+    $("#next-chip").textContent = next ? ("next: " + next.label.toLowerCase()) : "";
+    $("#summary-note").textContent = state.ready
+      ? (doneCount === state.steps.length ? "everything is connected" : "ready, with more to unlock")
+      : "the required steps come first";
+
+    // Only promise inbox answers once something actually feeds the inbox.
+    var hasData = (state.connections || []).some(function (c) { return /^google|^microsoft/.test(c); });
+    $("#ready-line").textContent = hasData
+      ? "Mail and calendar are connected. Open the dashboard and ask your inbox something."
+      : "Chat is running. Connect Google below and it can start answering from your mail and calendar.";
+    // This banner is where people leave the wizard, so it must not invite
+    // them out through a door that is still unlocked. Until the password step
+    // is either done or deliberately skipped, the button points at it rather
+    // than at the dashboard it protects.
+    var pwStep = (state.steps || []).find(function (s) { return s.key === "admin_password"; });
+    var pwSettled = !!(pwStep && pwStep.done) || !!skips.admin_password;
+    var cta = $("#ready-cta"), ctaNote = $("#ready-cta-note");
+    if (cta) {
+      if (pwSettled) {
+        cta.textContent = "Open the dashboard";
+        cta.setAttribute("href", "/dashboard");
+        cta.removeAttribute("target");
+        cta.onclick = null;
+        if (ctaNote) ctaNote.style.display = "none";
+      } else {
+        cta.textContent = "Choose a dashboard password";
+        cta.setAttribute("href", "#step-admin_password");
+        cta.onclick = function (ev) {
+          ev.preventDefault();
+          var li = document.getElementById("step-admin_password");
+          if (!li) return;
+          li.classList.add("is-open");
+          li.scrollIntoView({ behavior: "smooth", block: "center" });
+          var input = li.querySelector("input");
+          if (input) setTimeout(function () { input.focus(); }, 400);
+        };
+        if (ctaNote) {
+          ctaNote.style.display = "";
+          ctaNote.textContent = "The dashboard holds everything ClosedHand knows about you, and right now it opens to anyone who can reach this address. Set a password, or skip it in step three if you are only ever on this machine.";
+        }
+      }
+    }
+    $("#ready-banner").classList.toggle("is-on", !!state.ready);
+    firstLoad = false;
+  }
+
+  function poll() {
+    fetch("/api/setup/status", { headers: { "Accept": "application/json" } })
+      .then(function (res) {
+        if (!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .then(function (state) {
+        setChip("watching your install", false);
+        loadSkipsFor(state.installId);
+        render(state);
+        if (typeof reflectFallback === "function") reflectFallback(state);
+        if (typeof reflectWa === "function") reflectWa(state);
+      })
+      .catch(function () {
+        setChip("can't reach the server, retrying", true);
+      });
+  }
+
+  ["database", "model", "admin_password", "google", "chat"].forEach(function (k) { lastDone[k] = false; });
+
+  $all(".card-head").forEach(function (head) {
+    head.addEventListener("click", function () {
+      var li = head.closest(".step");
+      li.classList.toggle("is-open");
+      head.setAttribute("aria-expanded", String(li.classList.contains("is-next") || li.classList.contains("is-open")));
+      // Attach the browser frame only once this card is genuinely open.
+      if (li.id === "step-google" && typeof updateGoogleFallback === "function") updateGoogleFallback(li.classList.contains("is-open"));
+    });
+  });
+
+  $all(".skip").forEach(function (btn) {
+    btn.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      var li = btn.closest(".step");
+      var key = li.getAttribute("data-step");
+      if (!SKIPPABLE[key]) return;
+      skips[key] = !skips[key];
+      saveSkips();
+      btn.textContent = skips[key] ? "Changed my mind, show this step" : (key === "admin_password" ? "Skip for now, I'm on localhost" : "Skip for now");
+      // Skipping the Google wizard is not skipping Google: it swaps the card
+      // to the no-console path (mailbox, calendar feed, ClosedHand's computer),
+      // so the card stays open rather than collapsing.
+      if (key === "google") { updateGoogleFallback(true); }
+      else if (skips[key]) li.classList.remove("is-open");
+      poll();
+    });
+    var li = btn.closest(".step");
+    if (skips[li.getAttribute("data-step")]) btn.textContent = "Changed my mind, show this step";
+  });
+
+  // --- The no-console Google path (revealed by skipping the wizard) ---
+  var _fbState = { imap: false, ics: false, browserGoogle: false };
+  var _sandboxVncPort = 6080;
+  // The first two steps are what make anything else work; until they are
+  // done the browser frame stays unattached and the card explains why.
+  var _setupReady = false;
+
+  // Swap the Google card between wizard and no-console path. Two rules learned
+  // the hard way: never force the card open (a remembered skip from a previous
+  // visit then reopened it on every load), and never attach the browser frame
+  // until the user is actually looking at this step. noVNC connects and takes
+  // focus the moment it loads, which yanked the page down to a Google login
+  // while the user was still on step two.
+  function updateGoogleFallback(userOpened) {
+    var fb = $("#google-fallback");
+    if (!fb) return;
+    var on = !!skips.google;
+    fb.style.display = on ? "block" : "none";
+    $all("#step-google .wizard-only").forEach(function (el) { el.style.display = on ? "none" : ""; });
+    var li = $("#step-google");
+    if (on && userOpened) li.classList.add("is-open");
+
+    var gate = $("#fb-browser-gate");
+    var ready = _setupReady;
+    if (gate) gate.style.display = on && !ready ? "block" : "none";
+
+    var vnc = $("#fb-vnc");
+    if (!vnc) return;
+    var visible = on && ready && li.classList.contains("is-open");
+    vnc.style.display = on && ready ? "" : "none";
+    var vncUrl = location.protocol + "//" + location.hostname + ":" + _sandboxVncPort + "/vnc.html?autoconnect=1&resize=scale";
+    var big = $("#fb-vnc-big");
+    if (big) {
+      big.setAttribute("href", vncUrl);
+      // Opened through script rather than target=_blank, so the page keeps a
+      // handle and can close it again; a tab the user has to hunt down and
+      // shut themselves is the opposite of "carries on by itself".
+      big.onclick = function (ev) {
+        ev.preventDefault();
+        window._vncWin = window.open(vncUrl, "closedhand-computer");
+      };
+    }
+    if (visible && !vnc.getAttribute("src")) {
+      vnc.setAttribute("src", vncUrl);
+      // The card says "sign in below", so something has to take that browser
+      // to Google; on its own it shows whatever tab it had open, which after a
+      // restart is a blank page that reads as broken. Once per page load.
+      if (!window._signinOpened) {
+        window._signinOpened = true;
+        fetch("/api/setup/google-open-signin", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+          .then(function () { poll(); })
+          .catch(function () {});
+      }
+    }
+  }
+
+  function reflectFallback(st) {
+    if (st) _setupReady = !!st.ready;
+    if (st && st.sandboxVncPort) _sandboxVncPort = st.sandboxVncPort;
+    if (st && st.fallback) _fbState = st.fallback;
+    var m = { "fb-imap-done": _fbState.imap, "fb-ics-done": _fbState.ics, "fb-browser-done": _fbState.browserGoogle };
+    Object.keys(m).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = m[id] ? "inline-block" : "none";
+    });
+    reflectJob(_fbState.job);
+    updateGoogleFallback(false);
+  }
+
+  function fbPost(url, body, statusId, btn, okText) {
+    var status = document.getElementById(statusId);
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = "Checking…";
+    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (out) {
+        if (btn) btn.disabled = false;
+        if (status) status.textContent = out.ok ? okText : (out.j && out.j.error) || "That didn't work.";
+        if (out.ok) poll();
+        return out.ok;
+      })
+      .catch(function () {
+        if (btn) btn.disabled = false;
+        if (status) status.textContent = "Could not reach the server.";
+        return false;
+      });
+  }
+
+  var _fbImapBtn = $("#fb-imap-save");
+  if (_fbImapBtn) _fbImapBtn.addEventListener("click", function () {
+    fbPost("/api/setup/imap", {
+      email: $("#fb-email").value,
+      app_password: $("#fb-password").value,
+      aliases: $("#fb-aliases").value,
+      imap_host: $("#fb-imap-host").value,
+      imap_port: $("#fb-imap-port").value,
+      smtp_host: $("#fb-smtp-host").value,
+      smtp_port: $("#fb-smtp-port").value,
+    }, "fb-imap-status", _fbImapBtn, "Connected. Mail starts syncing on the next cycle.");
+  });
+
+  var _fbIcsBtn = $("#fb-ics-save");
+  if (_fbIcsBtn) _fbIcsBtn.addEventListener("click", function () {
+    fbPost("/api/setup/ics", { ics_url: $("#fb-ics-url").value },
+      "fb-ics-status", _fbIcsBtn, "Connected. Events appear after the next sync.");
+  });
+
+  // The run happens on ClosedHand's side; the page reports whatever it says,
+  // including the steps it could not finish and what to do about them.
+  function reflectJob(job) {
+    var status = $("#fb-auto-status");
+    if (!status) return;
+    // The full-size window has done its job once the sign-in lands: close it
+    // and put the user back in front of the wizard.
+    if (job && job.status !== "awaiting_signin" && job.status !== "opening" && window._vncWin && !window._vncWin.closed) {
+      try { window._vncWin.close(); } catch (e) {}
+      window._vncWin = null;
+      try { window.focus(); } catch (e) {}
+    }
+    if (!job) { status.textContent = ""; return; }
+    var r = job.results || {};
+    status.textContent = job.status === "awaiting_signin"
+      ? "Waiting for you to sign in on the screen above…"
+      : r.email ? ("Signed in as " + r.email + ". ClosedHand can now act in a browser as you.")
+      : (job.message || "");
+  }
+
+
+  // --- Linked-device WhatsApp card ---
+  var _waState = { enabled: false, linked: false, hasQr: false };
+
+  function reflectWa(st) {
+    if (st && st.waLinked) _waState = st.waLinked;
+    var done = $("#wa-done"), qrWrap = $("#wa-qr-wrap"), qrImg = $("#wa-qr");
+    var enableBtn = $("#wa-enable"), disableBtn = $("#wa-disable"), status = $("#wa-status");
+    if (!enableBtn) return;
+    done.style.display = _waState.linked ? "inline-block" : "none";
+    enableBtn.style.display = _waState.enabled ? "none" : "";
+    disableBtn.style.display = _waState.enabled ? "" : "none";
+    var pairing = _waState.enabled && !_waState.linked;
+    qrWrap.style.display = pairing && _waState.hasQr ? "block" : "none";
+    if (pairing && _waState.hasQr) qrImg.src = "/api/setup/wa-qr?t=" + Date.now();
+    if (status) {
+      status.textContent = _waState.linked ? "Linked. Talk to ClosedHand in your Message Yourself chat."
+        : pairing ? (_waState.hasQr ? "Waiting for the scan…" : "Starting up, the QR appears here in a moment…")
+        : "";
+    }
+  }
+
+  var _waEnableBtn = $("#wa-enable");
+  if (_waEnableBtn) _waEnableBtn.addEventListener("click", function () {
+    fbPost("/api/setup/whatsapp-linked", { enable: true }, "wa-status", _waEnableBtn, "Starting up, the QR appears here in a moment…");
+  });
+  var _waDisableBtn = $("#wa-disable");
+  if (_waDisableBtn) _waDisableBtn.addEventListener("click", function () {
+    if (!confirm("Turn off WhatsApp linking? ClosedHand stops reading and replying there; unlink the device from your phone too (WhatsApp, Settings, Linked devices).")) return;
+    fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Turned off. Also remove the device in WhatsApp on your phone.");
+  });
+
+  updateGoogleFallback(false);
+
+  poll();
+  setInterval(poll, POLL_MS);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) poll(); });
+})();
+</script>
+</body>
+</html>

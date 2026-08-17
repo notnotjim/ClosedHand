@@ -1,0 +1,636 @@
+/* ============================================================
+   ClosedHand — Onboarding Styles
+   ============================================================ */
+
+/* zoom removed - was causing layout issues */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #0a0a0a;
+  color: #e8e8e8;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+}
+
+/* Card */
+.card {
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 40px 32px;
+}
+
+/* Logo */
+.logo {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* Typography */
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tagline {
+  font-size: 16px;
+  color: #888;
+  margin-bottom: 32px;
+}
+
+/* Features grid */
+.features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 36px;
+}
+
+.feature {
+  font-size: 14px;
+  color: #aaa;
+  padding: 10px 12px;
+  background: #1c1c1c;
+  border-radius: 8px;
+  border: 1px solid #252525;
+}
+
+/* Sign-up section */
+.signup-section {
+  padding-top: 0;
+}
+
+.signup-desc {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* Google button */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 24px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-google:hover {
+  background: #f0f0f0;
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+.note {
+  font-size: 12px;
+  color: #555;
+  margin-top: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Error banner */
+.error-banner {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: #2a1010;
+  border: 1px solid #4a2020;
+  border-radius: 8px;
+  color: #ff6b6b;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Dashboard sections */
+.section {
+  border-top: 1px solid #2a2a2a;
+  padding-top: 24px;
+  margin-top: 24px;
+}
+
+/* Connected services */
+.services {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #1c1c1c;
+  border-radius: 10px;
+  border: 1px solid #252525;
+}
+
+.service.connected {
+  border-color: #1a3a1a;
+  background: #111a11;
+}
+
+.service-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.service strong {
+  display: block;
+  font-size: 14px;
+  color: #e8e8e8;
+}
+
+.service-detail {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Activation code */
+.step-desc {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.activation-code {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #ffffff;
+  background: #1c1c1c;
+  border: 2px solid #3a3a3a;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 24px;
+  user-select: all;
+  cursor: pointer;
+}
+
+.activation-code:hover {
+  border-color: #555;
+}
+
+/* Steps */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.4;
+}
+
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #252525;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ccc;
+  flex-shrink: 0;
+}
+
+/* Header row (logo + logout) */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-link {
+  font-size: 13px;
+  color: #555;
+  text-decoration: none;
+}
+
+.logout-link:hover {
+  color: #aaa;
+}
+
+/* Section description */
+.section-desc {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+/* Platform cards */
+.platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.platform-card {
+  padding: 16px;
+  background: #1c1c1c;
+  border: 1px solid #252525;
+  border-radius: 10px;
+}
+
+.platform-card.connected {
+  border-color: #1a3a1a;
+  background: #111a11;
+}
+
+.platform-card.unavailable {
+  opacity: 0.5;
+}
+
+.platform-card.pending {
+  border-color: #3a3a1a;
+  background: #1a1a11;
+}
+
+.platform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.platform-header strong {
+  font-size: 15px;
+  color: #e8e8e8;
+}
+
+.platform-detail {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+/* Badges */
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-connected {
+  background: rgba(110,231,168,0.1);
+  color: #6ee7a8;
+}
+
+.badge-pending {
+  background: #3a3a1a;
+  color: #facc15;
+}
+
+.badge-soon {
+  background: #252525;
+  color: #666;
+}
+
+.badge-none {
+  background: #252525;
+  color: #888;
+}
+
+/* Connect button */
+.btn-connect {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-connect:hover {
+  background: #e0e0e0;
+}
+
+/* Small button (regenerate code) */
+.btn-small {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: transparent;
+  color: #888;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-small:hover {
+  border-color: #555;
+  color: #ccc;
+}
+
+/* Microsoft button */
+.btn-microsoft {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 24px;
+  background: #2f2f2f;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid #444;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 10px;
+}
+
+.btn-microsoft:hover {
+  background: #404040;
+}
+
+/* Available (not yet connected) service cards */
+.service.available {
+  border-color: #2a2a2a;
+  background: #1c1c1c;
+  flex-wrap: wrap;
+}
+
+.service.available a.btn-connect,
+.service.available button.btn-connect {
+  margin-top: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Disconnect button */
+.btn-disconnect {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid #4a2020;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s;
+}
+
+.btn-disconnect:hover {
+  background: #2a1010;
+  border-color: #ff6b6b;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 0 0;
+}
+
+.footer p {
+  font-size: 12px;
+  color: #444;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .container {
+    padding: 16px;
+  }
+  .card {
+    padding: 28px 20px;
+  }
+  .features {
+    grid-template-columns: 1fr;
+  }
+  .activation-code {
+    font-size: 28px;
+    letter-spacing: 4px;
+  }
+}
+
+/* Dashboard wider layout */
+.dashboard-container {
+  max-width: 960px;
+}
+
+/* Pulse section */
+.pulse-level-control {
+  margin-bottom: 24px;
+}
+
+.segmented-control {
+  display: flex;
+  background: #1c1c1c;
+  border: 1px solid #252525;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px 10px;
+  background: transparent;
+  color: #888;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seg-btn:hover {
+  color: #ccc;
+}
+
+.seg-btn.active {
+  background: #ffffff;
+  color: #0a0a0a;
+  font-weight: 600;
+}
+
+.seg-desc {
+  font-size: 12px;
+  font-weight: 400;
+  color: #666;
+  margin-top: 2px;
+}
+
+.seg-btn.active .seg-desc {
+  color: #444;
+}
+
+.pulse-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.pulse-delivery {
+  margin-bottom: 24px;
+}
+
+.platform-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  padding: 10px 20px;
+  background: #1c1c1c;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  color: #888;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pill:hover {
+  border-color: #444;
+  color: #ccc;
+}
+
+.pill.selected {
+  background: rgba(110,231,168,0.1);
+  border-color: rgba(110,231,168,0.25);
+  color: #6ee7a8;
+}
+
+.pulse-no-platforms {
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+}
+
+.pulse-quiet {
+  margin-bottom: 20px;
+}
+
+.quiet-hours-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-select {
+  padding: 12px 16px;
+  background: #1c1c1c;
+  border: 1px solid #252525;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 120px;
+}
+
+.time-select:focus {
+  border-color: #444;
+  outline: none;
+}
+
+.quiet-separator {
+  color: #555;
+  font-size: 14px;
+}
+
+.pulse-note {
+  font-size: 12px;
+  color: #444;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #1a1a1a;
+  line-height: 1.5;
+}

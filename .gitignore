@@ -1,0 +1,48 @@
+# API keys
+.env
+
+# Personal config (name, email accounts, routing)
+config.json
+
+# All user data (tokens, conversations, attachments)
+data/
+
+# Dependencies (thousands of files, re-downloadable)
+node_modules/
+
+# Python environments for MCP servers
+mcp-library/*/venv/
+
+# macOS junk
+.DS_Store
+
+# User attachments
+attachments/
+
+# Claude project overview
+CLOSEDHAND-PROJECT-CONTEXT.md
+.agents/
+reference/
+tasks/CCleek/
+tasks/MEMORY-OVERHAUL.md
+
+# Swift build artifacts (Mac Bridge app)
+bridge-app/.build/
+
+# Local MCP config — carries API keys, never commit (recreate locally)
+.mcp.json
+
+# Supabase CLI residue (contains project ref + pooler URL)
+supabase/.temp/
+
+# Python bytecode
+__pycache__/
+
+# Personal working notes and references (never publish)
+tasks/
+
+# Claude Code local state (vendored skills are symlinks into the user's home)
+.claude/settings.local.json
+.claude/skills/
+.claude/worktrees/
+CLAUDE.local.md
