@@ -1,0 +1,37 @@
+name: Checks
+
+# Cheap, dependency-free guards that run on every push and PR. These exist
+# because of a specific class of bug: failures that are invisible at the moment
+# they happen. An unchecked database write and a vendored file that quietly
+# drifted both look exactly like working code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Every .js file must at least parse. A syntax error here has twice
+      # shipped a dashboard whose entire inline script was dead.
+      - name: Syntax
+        run: |
+          set -e
+          find . -name '*.js' -not -path './node_modules/*' -not -path './.git/*' \
+            -print0 | xargs -0 -n1 node -c
+
+      - name: Dashboard inline scripts parse
+        run: node scripts/check-inline-scripts.js
+
+      - name: No new unchecked database writes
+        run: node scripts/check-unchecked-writes.js
+
+      - name: Vendored copies have not drifted
+        run: node scripts/check-vendored-identical.js

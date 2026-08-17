@@ -1,11 +1,11 @@
-// lib/services/reranker.js — Post-retrieval reranking with a cross-encoder.
+// webapp/reranker.js (vendored from lib/services/reranker.js) — Post-retrieval reranking with a cross-encoder.
 // Hosted (Qwen3-Reranker on DeepInfra) when a key exists, otherwise a small
 // local cross-encoder. Reranking is the largest single contributor to recall
 // quality, so "no key" must not mean "no reranking".
 
-// Defensive: the two webapp services do not both ship a runtime-config module,
-// and a reranker that cannot load is a reranker that silently is not there.
-// Falling back to env is exactly how the hosted build is configured anyway.
+// Defensive: not every service that vendors this file ships a runtime-config
+// module, and a reranker that cannot load is a reranker that silently is not
+// there. Falling back to env is exactly how the hosted build is configured.
 function _rconf(k) {
   try { return require("./config").getConfCached(k); } catch (_) { return undefined; }
 }
