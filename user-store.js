@@ -55,7 +55,7 @@ class UserStore {
     const store = new UserStore(userId);
 
     // Fetch everything in parallel for speed
-    const [convoRes, notesRes, schedRes, attRes, pulseRes, connRes, profileRes, sandboxRes, knowledgeRes, bridgeRes, rulesRes, ragDocsRes] =
+    const [convoRes, notesRes, schedRes, attRes, pulseRes, connRes, profileRes, sandboxRes, bridgeRes, rulesRes, ragDocsRes] =
       await Promise.all([
         supabase
           .from("conversations")
@@ -96,7 +96,6 @@ class UserStore {
           .eq("user_id", userId)
           .eq("status", "active")
           .single(),
-        Promise.resolve({ data: null }), // brain_notes deprecated, replaced by data_vectors
         supabase
           .from("user_bridges")
           .select("status")

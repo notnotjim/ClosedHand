@@ -137,27 +137,6 @@ CREATE TABLE automation_runs (
   CONSTRAINT automation_runs_status_check CHECK ((status = ANY (ARRAY['running'::text, 'pending'::text, 'success'::text, 'failed'::text, 'cancelled'::text])))
 );
 
--- Constraint names are the prod ones (table was renamed from knowledge_nodes).
--- fts is a GENERATED STORED column. The catalog reconstruction rendered it as a
--- DEFAULT, but a DEFAULT cannot reference other columns — Postgres rejects that at
--- CREATE time — so prod must define it as GENERATED. Using GENERATED here also keeps
--- it fresh on UPDATE, which a DEFAULT (populated only on INSERT) would not.
-CREATE TABLE brain_notes (
-  id uuid DEFAULT gen_random_uuid() NOT NULL,
-  user_id uuid NOT NULL,
-  title text NOT NULL,
-  content text DEFAULT ''::text NOT NULL,
-  tags text[] DEFAULT '{}'::text[] NOT NULL,
-  links text[] DEFAULT '{}'::text[] NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  updated_at timestamp with time zone DEFAULT now() NOT NULL,
-  fts tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, ((title || ' '::text) || content))) STORED,
-  embedding vector(768),
-  CONSTRAINT knowledge_nodes_pkey PRIMARY KEY (id),
-  CONSTRAINT knowledge_nodes_user_id_title_key UNIQUE (user_id, title),
-  CONSTRAINT knowledge_nodes_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-);
-
 -- user_id is TEXT here, not uuid, and there is no FK. Faithful to prod.
 CREATE TABLE bridge_requests (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -555,10 +534,6 @@ CREATE INDEX idx_runs_automation ON public.automation_runs USING btree (automati
 CREATE INDEX idx_runs_user ON public.automation_runs USING btree (user_id);
 CREATE INDEX idx_runs_pending ON public.automation_runs USING btree (status) WHERE (status = 'pending'::text);
 
-CREATE INDEX idx_knowledge_nodes_user ON public.brain_notes USING btree (user_id);
-CREATE INDEX idx_knowledge_nodes_fts ON public.brain_notes USING gin (fts);
-CREATE INDEX brain_notes_embedding_idx ON public.brain_notes USING ivfflat (embedding vector_cosine_ops) WITH (lists='20');
-
 CREATE INDEX idx_bridge_requests_status_created ON public.bridge_requests USING btree (status, created_at);
 
 CREATE INDEX bug_reports_open_idx ON public.bug_reports USING btree (status, created_at DESC);
@@ -675,28 +650,6 @@ BEGIN
     AND dc.embedding IS NOT NULL
     AND 1 - (dc.embedding <=> query_embedding) > match_threshold
   ORDER BY dc.embedding <=> query_embedding
-  LIMIT match_count;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.match_brain_notes(
-  query_embedding vector,
-  match_user_id uuid,
-  match_threshold double precision DEFAULT 0.3,
-  match_count integer DEFAULT 5
-)
-RETURNS TABLE(id uuid, title text, content text, tags text[], similarity double precision)
-LANGUAGE plpgsql
-AS $function$
-BEGIN
-  RETURN QUERY
-  SELECT bn.id, bn.title, bn.content, bn.tags,
-         1 - (bn.embedding <=> query_embedding) AS similarity
-  FROM brain_notes bn
-  WHERE bn.user_id = match_user_id
-    AND bn.embedding IS NOT NULL
-    AND 1 - (bn.embedding <=> query_embedding) > match_threshold
-  ORDER BY bn.embedding <=> query_embedding
   LIMIT match_count;
 END;
 $function$;
