@@ -1353,6 +1353,11 @@
   .rag-result-origin.dropbox { background:rgba(0,97,255,0.1); color:#0061ff; }
   .rag-result-origin.cloud { background:rgba(59,130,246,0.1); color:#3b82f6; }
   .rag-result-origin.bridge { background:rgba(245,158,11,0.1); color:#f59e0b; }
+  /* Says why a row sits where it does, not how well it scored. Neutral rather
+     than the score's green, and in the title row rather than beside the
+     percentage, so it reads as a property of the file and never as a second
+     number competing with the one on the right. */
+  .rag-result-why { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:500; background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.55); white-space:nowrap; cursor:help; }
   .rag-result-score { font-size:12px; color:rgba(110,231,168,0.6); font-weight:500; flex-shrink:0; }
   .rag-result-excerpt { font-size:13px; color:rgba(255,255,255,0.45); line-height:1.6; margin-bottom:8px; word-break:break-word; }
   .rag-result-full { display:none; font-size:13px; color:rgba(255,255,255,0.55); line-height:1.6; margin-bottom:8px; word-break:break-word; white-space:pre-wrap; background:rgba(0,0,0,0.15); padding:10px 12px; border-radius:8px; max-height:300px; overflow-y:auto; }
@@ -5727,6 +5732,9 @@ function ragRenderResults(allResults) {
       + '<div class="rag-result-title">'
       + '<span class="rag-result-docname">' + escapeHtml(r.document_name || 'Document') + '</span>'
       + (originLabel ? '<span class="rag-result-origin ' + originClass + '">' + escapeHtml(originLabel) + '</span>' : '')
+      // The name tier can place a row above one with a higher percentage, which
+      // looks wrong without a reason attached. This is that reason.
+      + (r._name_match ? '<span class="rag-result-why" title="The file name matches what you typed, so it is listed above results that scored higher on their contents.">Name match</span>' : '')
       + '</div>'
       // Percentage always shown (it is the honest raw score), greyed when it
       // sits at the noise floor so a number is not mistaken for relevance
