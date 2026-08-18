@@ -5477,10 +5477,18 @@ async function ragLoadSources() {
           s.origin === 'dropbox' ? 'Dropbox' + (s.path === '' ? '' : s.path) :
           s.path) + '</div>'
         + '<div class="rag-source-meta">' + stats + ' - indexed ' + lastIndexed + '</div>'
-        // Completion notes (budget reached, interrupted) surface here rather
-        // than leaving a partial index looking complete
+        // Completion notes (budget reached, files that failed to parse) surface
+        // here rather than leaving a partial index looking complete
         + (s.status !== 'indexing' && s.error_message
             ? '<div class="rag-source-meta" style="color:rgba(245,158,11,0.75);">' + escapeHtml(s.error_message) + '</div>'
+            : '')
+        // Naming them matters more than counting them: which files are missing
+        // is what tells the user whether the gap affects anything they search for
+        + (s.status !== 'indexing' && s.failed_files && s.failed_files.length
+            ? '<div class="rag-source-meta" style="color:rgba(245,158,11,0.55);">'
+              + s.failed_files.slice(0, 5).map(function(f) { return escapeHtml(f.name); }).join(', ')
+              + (s.failed_files.length > 5 ? ' and ' + (s.failed_files.length - 5) + ' more' : '')
+              + '</div>'
             : '')
         + '</div>'
         + '</div>'
@@ -5702,6 +5710,9 @@ function ragRenderResults(allResults) {
     if (r.chunk_index !== undefined && r.chunk_index !== null) metaParts.push('Chunk ' + r.chunk_index);
     if (r.metadata && r.metadata.source_file) metaParts.push(r.metadata.source_file);
     if (r.metadata && r.metadata.chunk_of) metaParts.push(r.chunk_index + ' of ' + r.metadata.chunk_of + ' chunks');
+    // A result is a document now. Say when more of it matched than the passage
+    // shown, so one entry does not read as the whole of what was found.
+    if (r.chunk_matches > 1) metaParts.push(r.chunk_matches + ' matching sections');
 
     var resultIdx = r._origIdx !== undefined ? r._origIdx : i;
     html += '<div class="rag-result">';

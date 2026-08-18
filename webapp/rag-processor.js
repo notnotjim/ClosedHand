@@ -971,21 +971,38 @@ async function processSource(sourceId, userId, origin, folderPath, selectedFiles
     }
 
     // 7. Update source stats
-    const { count: fileCount } = await supabase.from("rag_documents").select("id", { count: "exact", head: true }).eq("source_id", sourceId);
+    //
+    // file_count is the number of files a search can actually reach, not the
+    // number of rows: counting every document made a source with nine failed
+    // files read "71 files, 122 chunks, ready" while nine of them were not in
+    // the index at all. A file that silently is not indexed looks exactly like
+    // one that is, right up until a search comes back empty.
+    const { count: fileCount } = await supabase.from("rag_documents")
+      .select("id", { count: "exact", head: true }).eq("source_id", sourceId).eq("status", "ready");
+    const { count: failedCount } = await supabase.from("rag_documents")
+      .select("id", { count: "exact", head: true }).eq("source_id", sourceId).eq("status", "error");
+
+    // Never truncate silently: whether the budget stopped us or individual
+    // files failed to parse, say so where the user can see it rather than
+    // letting a partial index look complete.
+    const notes = [];
+    if (skippedForBudget > 0) {
+      notes.push(`Indexing budget reached (${totalChunks} chunks). ${skippedForBudget} older file(s) not indexed.`);
+    }
+    if (failedCount > 0) {
+      notes.push(`${failedCount} file(s) could not be indexed and are not searchable. Re-index to retry.`);
+    }
+
     await supabase.from("rag_sources").update({
       status: "ready",
       file_count: fileCount || 0,
       chunk_count: totalChunks,
-      // Never truncate silently: if the budget stopped us, say so where the
-      // user can see it rather than letting the index look complete.
-      error_message: skippedForBudget > 0
-        ? `Indexing budget reached (${totalChunks} chunks). ${skippedForBudget} older file(s) not indexed.`
-        : null,
+      error_message: notes.length > 0 ? notes.join(" ") : null,
       last_indexed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", sourceId);
 
-    console.log(`[RAG] Source ${sourceId}: ready (${fileCount} files, ${totalChunks} chunks${skippedForBudget ? `, ${skippedForBudget} skipped for budget` : ""})`);
+    console.log(`[RAG] Source ${sourceId}: ready (${fileCount} files, ${totalChunks} chunks${failedCount ? `, ${failedCount} failed` : ""}${skippedForBudget ? `, ${skippedForBudget} skipped for budget` : ""})`);
   } catch (e) {
     console.error(`[RAG] processSource failed for ${sourceId}:`, e.message);
     await supabase.from("rag_sources").update({

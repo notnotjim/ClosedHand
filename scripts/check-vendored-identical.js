@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// scripts/check-vendored-identical.js — keep the four copies of the ranking
+// scripts/check-vendored-identical.js — keep the copies of the retrieval
 // logic in step.
 //
-// There are two reranker copies per repo (lib/services/ for the bot,
+// Each vendored module exists twice per repo (lib/services/ for the bot,
 // webapp/ for the dashboard, which is a separate service and cannot import
-// from lib/) and two repos. Four copies of the code that decides what the
-// model sees, and nothing stopping one from drifting. The webapp copy was
-// already dead for months without anyone noticing, which is what drift looks
-// like when it is silent.
+// from lib/) and there are two repos, so four copies of every piece of code
+// that decides what the model sees, and nothing stopping one from drifting.
+// The webapp reranker copy was already dead for months without anyone
+// noticing, which is what drift looks like when it is silent.
 //
 // Within a repo the two copies are compared directly, after normalising the
 // require paths that must differ. Across repos they are compared through a
@@ -31,14 +31,23 @@ const PAIRS = [
     name: "reranker",
     copies: ["lib/services/reranker.js", "webapp/reranker.js"],
   },
+  {
+    name: "lexical",
+    copies: ["lib/services/lexical.js", "webapp/lexical.js"],
+  },
+  {
+    name: "fact-vectors",
+    copies: ["lib/services/fact-vectors.js", "webapp/fact-vectors.js"],
+  },
 ];
 
-function normalise(src) {
-  // The ONLY difference the copies are allowed to have is where they require
-  // from. Everything else, including comments, must match: a comment that
-  // drifts is usually a behaviour that drifted with it.
+function normalise(src, name) {
+  // The ONLY differences the copies are allowed to have are the path in the
+  // header line and where they require from. Everything else, including
+  // comments, must match: a comment that drifts is usually a behaviour that
+  // drifted with it.
   return src
-    .replace(/^\/\/ (?:lib\/services|webapp)\/reranker\.js[^\n]*/m, "// <header>")
+    .replace(new RegExp("^// (?:lib/services|webapp)/" + name + "\\.js[^\\n]*", "m"), "// <header>")
     .replace(/require\(["'](?:\.\.\/|\.\/)config["']\)/g, 'require("<config>")')
     .replace(/require(?:\.resolve)?\(["'](?:\.\.\/|\.\/)local-models["']\)/g, 'require("<local-models>")')
     .replace(/\r\n/g, "\n")
@@ -65,7 +74,7 @@ function main() {
       continue;
     }
 
-    const hashes = present.map(c => ({ file: c, h: hash(normalise(fs.readFileSync(path.join(ROOT, c), "utf8"))) }));
+    const hashes = present.map(c => ({ file: c, h: hash(normalise(fs.readFileSync(path.join(ROOT, c), "utf8"), pair.name)) }));
     const distinct = [...new Set(hashes.map(x => x.h))];
     if (distinct.length > 1) {
       console.error(`DRIFT within this repo for "${pair.name}":`);

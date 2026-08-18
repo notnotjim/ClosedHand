@@ -5713,6 +5713,19 @@ app.delete("/api/rules/:id", async (req, res) => {
 // SAVED NOTES API (pinned facts)
 // ============================================================================
 
+// The dashboard writes pinned facts too, and a fact lives in two stores: the
+// `facts` row the bot reads into its prompt every turn, and a `data_vectors`
+// row that Context Brain lists and passive recall searches. This endpoint set
+// only ever touched the first, so a note edited here kept its old wording in
+// recall and a note deleted here went on surfacing in conversation after it
+// had gone from the list. Shared with the bot's pin_fact via a vendored copy,
+// because the webapp cannot import from lib/.
+const { factVectors, isInternalFactKey } = require("./fact-vectors");
+const _factVectors = factVectors({
+  supabase,
+  embed: (text) => require("./rag-processor").embedSingle(text),
+});
+
 // GET /api/notes — list all user-facing saved notes
 app.get("/api/notes", async (req, res) => {
   try {
@@ -5727,14 +5740,7 @@ app.get("/api/notes", async (req, res) => {
 
     // Filter out internal keys and deserialize metadata
     const notes = (data || [])
-      .filter(row => {
-        var k = row.key;
-        if (k.startsWith("_")) return false;
-        if (k.startsWith("flight-")) return false;
-        // Filter pulse system notes but not user notes that happen to contain "pulse"
-        if (/^pulse[-_ ]/i.test(k) || k === "pulse" || k === "Pulse") return false;
-        return true;
-      })
+      .filter(row => !isInternalFactKey(row.key))
       .map(row => {
         let val = row.value;
         let meta = {};
@@ -5788,7 +5794,17 @@ app.put("/api/notes/:key", async (req, res) => {
       .from("facts")
       .upsert({ user_id: userId, key, value: serialized, updated_at: now }, { onConflict: "user_id,key" });
     if (error) throw error;
-    res.json({ success: true, key });
+
+    // The fact is saved either way; only recall is affected if this fails, and
+    // reporting the save as failed would invite the user to save it again.
+    let recall = "updated";
+    try {
+      await _factVectors.mirrorFact(userId, key, value);
+    } catch (e) {
+      recall = "stale";
+      console.error(`[Notes] Saved "${key}" but could not update its Context Brain entry:`, e.message);
+    }
+    res.json({ success: true, key, recall });
   } catch (e) {
     console.error("Notes save error:", e);
     res.status(500).json({ error: "Failed to save note" });
@@ -5809,6 +5825,14 @@ app.delete("/api/notes/:key", async (req, res) => {
       .select();
     if (error) throw error;
     if (!data || data.length === 0) return res.status(404).json({ error: "Note not found" });
+
+    // A vector left behind here is the visible failure: the note is gone from
+    // the list and the bot still recalls it.
+    try {
+      await _factVectors.removeFactVector(userId, key);
+    } catch (e) {
+      console.error(`[Notes] Deleted "${key}" but its Context Brain entry remains:`, e.message);
+    }
     res.json({ success: true });
   } catch (e) {
     console.error("Notes delete error:", e);
@@ -6101,7 +6125,25 @@ app.get("/api/rag/sources", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const { data } = await supabase.from("rag_sources").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-  res.json(data || []);
+  const sources = data || [];
+
+  // Which files a search cannot reach. The source row carries the count, but a
+  // count on its own leaves the user hunting; the names are what tell them
+  // whether the gap matters, and a failed file is otherwise indistinguishable
+  // from an indexed one until a search comes back empty.
+  if (sources.length > 0) {
+    const { data: failed } = await supabase.from("rag_documents")
+      .select("source_id, name, error_message")
+      .eq("user_id", userId)
+      .eq("status", "error");
+    const bySource = {};
+    for (const d of failed || []) {
+      if (!bySource[d.source_id]) bySource[d.source_id] = [];
+      bySource[d.source_id].push({ name: d.name, error: d.error_message });
+    }
+    for (const s of sources) s.failed_files = bySource[s.id] || [];
+  }
+  res.json(sources);
 });
 
 // DELETE /api/rag/sources/:id - remove source + documents + chunks
@@ -6173,7 +6215,36 @@ app.get("/api/rag/browse", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/rag/search?q=... -- preview search using embeddings
+// The lexical arm of File Search. Reported once: a missing index degrades
+// search rather than breaking it, but it should not do so silently.
+let _ragLexUnavailableReported = false;
+
+async function ragLexicalSearch(userId, tokens) {
+  if (!tokens.length) return [];
+  try {
+    const { data, error } = await supabase.rpc("search_rag_chunks_lexical", {
+      match_user_id: userId,
+      query_tokens: tokens,
+      match_count: 40,
+    });
+    if (error) {
+      if (!_ragLexUnavailableReported) {
+        _ragLexUnavailableReported = true;
+        console.log(`[RAG] Lexical search unavailable (${error.message}); running vector-only. Apply migration 034 to enable it.`);
+      }
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    if (!_ragLexUnavailableReported) {
+      _ragLexUnavailableReported = true;
+      console.log(`[RAG] Lexical search failed (${e.message}); running vector-only.`);
+    }
+    return [];
+  }
+}
+
+// GET /api/rag/search?q=... -- hybrid search over the indexed library
 app.get("/api/rag/search", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -6182,31 +6253,97 @@ app.get("/api/rag/search", async (req, res) => {
   if (!query || query.length < 3) return res.status(400).json({ error: "Query too short (min 3 chars)" });
 
   try {
-    const embedding = await ragProcessor.embedSingle(query);
-    if (!embedding) return res.status(500).json({ error: "Embedding failed" });
+    // Two retrievers over the same library, as passive recall does over mail.
+    //
+    // The filename is the case that was outright broken. It is not in
+    // rag_chunks.content and not in the embedded text, so a photo searched by
+    // its own name came back at rank 9 behind eight other photos, below the
+    // confidence bar. Only the lexical arm reads it.
+    //
+    // Exact terms in the body are a weaker case than they look, and the note
+    // is here so nobody removes this arm on the strength of a small index: the
+    // raw chunk IS part of what gets embedded, so a dense vector alone already
+    // finds an identifier when there are a hundred chunks to choose from. What
+    // it does not give is a guarantee that survives the top-N cut on a library
+    // a thousand times bigger.
+    const { lexicalTokens } = require("./lexical");
+    const tokens = lexicalTokens(query, { corpus: "files" });
 
-    const { data: matches, error } = await supabase.rpc("match_rag_chunks", {
-      query_embedding: JSON.stringify(embedding),
-      match_user_id: userId,
-      match_threshold: 0.25,
-      // Fetch deep once. The expensive parts of a search (embedding the query,
-      // the vector scan) happen per request, not per result, so pulling 40 and
-      // paging client-side costs the same as pulling 10 and is instant for the
-      // user. Re-querying for a second page would repeat the whole thing.
-      match_count: 40,
-    });
+    // Split a filename the way the lexical index does, so "IMG_1038.JPG",
+    // "IMG_1038" and "1038" agree here exactly as they do in Postgres. Whole
+    // tokens only: matching on substrings would make "report" hit
+    // "QualityControlReport20180905" and the tier would stop meaning anything.
+    const nameParts = (s) => String(s || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    const queryNameParts = [...new Set(tokens.flatMap(nameParts))];
+    const isNameMatch = (docName) => {
+      if (queryNameParts.length === 0) return false;
+      const have = new Set(nameParts(docName));
+      return queryNameParts.every(t => have.has(t));
+    };
 
-    if (error) throw new Error(error.message);
+    // Both arms in parallel: the lexical arm is a GIN index scan and the
+    // vector arm is dominated by the query embed, so hybrid costs one round
+    // trip, not the sum of the two.
+    const [embedding, lexRows] = await Promise.all([
+      ragProcessor.embedSingle(query).catch(() => null),
+      ragLexicalSearch(userId, tokens),
+    ]);
+
+    let vecRows = [];
+    if (embedding) {
+      const { data: matches, error } = await supabase.rpc("match_rag_chunks", {
+        query_embedding: JSON.stringify(embedding),
+        match_user_id: userId,
+        match_threshold: 0.25,
+        // Fetch deep once. The expensive parts of a search (embedding the query,
+        // the vector scan) happen per request, not per result, so pulling 40 and
+        // paging client-side costs the same as pulling 10 and is instant for the
+        // user. Re-querying for a second page would repeat the whole thing.
+        match_count: 40,
+      });
+      if (error) throw new Error(error.message);
+      vecRows = matches || [];
+    }
+
+    // A dead embedder no longer means a dead search: lexical alone is a
+    // genuine result set, not a consolation prize.
+    if (!embedding && lexRows.length === 0) {
+      return res.status(500).json({ error: "Embedding failed" });
+    }
+
+    // Reciprocal Rank Fusion, keyed on the chunk. Cosine similarity and
+    // ts_rank_cd are on incomparable, query-dependent scales, so any fixed
+    // blend needs calibration that drifts; RRF reads only ordinal position and
+    // degrades to "whatever the other arm found" when one returns nothing.
+    // This decides which candidates the cross-encoder sees and nothing more:
+    // the reranker below is the only component that reads query and document
+    // together, so it is the only one whose ordering is a quality judgement.
+    const RRF_K = 60;
+    const fused = new Map();
+    const contribute = (m, i, arm) => {
+      const key = m.id || `${arm}:${i}`;
+      const prev = fused.get(key);
+      if (!prev) { fused.set(key, { row: m, score: 1 / (RRF_K + i + 1), arms: new Set([arm]) }); return; }
+      prev.score += 1 / (RRF_K + i + 1);
+      prev.arms.add(arm);
+      // The stored row stays the vector one for a hit both arms found: it is
+      // contributed first and it is the one carrying the similarity the
+      // display path falls back on when the reranker is unavailable.
+    };
+    vecRows.forEach((m, i) => contribute(m, i, "vec"));
+    lexRows.forEach((m, i) => contribute(m, i, "lex"));
+
+    const merged = [...fused.values()].sort((a, b) => b.score - a.score);
 
     // Enrich with document names + origin/path
-    const docIds = [...new Set((matches || []).map(m => m.document_id))];
+    const docIds = [...new Set(merged.map(x => x.row.document_id))];
     let docMap = {};
     if (docIds.length > 0) {
       const { data: docs } = await supabase.from("rag_documents").select("id, name, origin, file_path").in("id", docIds);
       for (const d of docs || []) docMap[d.id] = d;
     }
 
-    let results = (matches || []).map(m => {
+    let results = merged.map(({ row: m, arms }) => {
       const doc = docMap[m.document_id] || {};
       return {
         document_id: m.document_id,
@@ -6214,9 +6351,11 @@ app.get("/api/rag/search", async (req, res) => {
         origin: doc.origin || null,
         file_path: doc.file_path || null,
         content: m.content || "",
+        _chunk_content: m.content || "",
         similarity: m.similarity,
         chunk_index: m.chunk_index,
         metadata: m.metadata || {},
+        _arms: [...arms].join("+"),
       };
     });
 
@@ -6227,10 +6366,49 @@ app.get("/api/rag/search", async (req, res) => {
         // its container has no lib/ at all, so this require always threw and
         // File Search results were never reranked, silently.
         const { rerank } = require("./reranker");
-        results = await rerank(query, results, 30);
-      } catch (e) {
-        results = results.slice(0, 30);
+        // Judge on the name AND the body. For a search by filename the name is
+        // the whole match, and scoring a photo's empty body against its own
+        // name would send every filename hit off the cliff below. The body
+        // goes back afterwards, because the UI shows the name separately.
+        //
+        // Every candidate, not the top 30: the collapse below needs a score
+        // for each chunk to pick the one that represents its document, and a
+        // chunk trimmed here would take its document with it. This costs
+        // nothing extra, the reranker already scores the whole array and
+        // topK only decides how much of it comes back.
+        const judged = await rerank(query, results.map(r => ({ ...r, content: r.document_name + "\n" + r.content })), results.length);
+        results = judged.map(r => ({ ...r, content: r._chunk_content }));
+      } catch (e) { /* unranked, in RRF order; the collapse and cap still apply */ }
+    }
+
+    // A result is a document, not a chunk. Retrieval works on chunks because
+    // that is the unit that gets embedded, but a person searching a library is
+    // looking for a file: one inspection report held ranks 1, 3 and 4 of its
+    // own result page, which reads as three findings and is one, and pushed
+    // the other matching documents off the top.
+    //
+    // Collapsing AFTER the reranker, not before, is the point: the chunk that
+    // represents a document should be chosen by the component that reads the
+    // query and the text together. RRF order would have picked by ordinal
+    // agreement between two retrievers, which is candidate-set bookkeeping and
+    // says nothing about which passage actually answers the question.
+    //
+    // The winning chunk is carried whole (content, chunk_index, metadata), so
+    // Expand, Ask about this, Download and the chunk meta line keep working on
+    // the passage that matched rather than an arbitrary one.
+    {
+      const byDoc = new Map();
+      for (const r of results) {
+        const prev = byDoc.get(r.document_id);
+        if (!prev) { byDoc.set(r.document_id, { ...r, chunk_matches: 1 }); continue; }
+        const matches = prev.chunk_matches + 1;
+        // ?? -Infinity: with the reranker unavailable nothing is scored, and
+        // the first chunk seen wins, which is RRF order rather than arbitrary.
+        const winner = (r._rerank_score ?? -Infinity) > (prev._rerank_score ?? -Infinity) ? { ...r } : prev;
+        winner.chunk_matches = matches;
+        byDoc.set(r.document_id, winner);
       }
+      results = [...byDoc.values()];
     }
 
     // A 0.25 recall threshold is right for feeding the reranker, but wrong as
@@ -6249,23 +6427,59 @@ app.get("/api/rag/search", async (req, res) => {
     const scored = results.map(r => ({
       ...r,
       relevance: r._rerank_score,
+      _name_match: isNameMatch(r.document_name),
       low_confidence: r._rerank_score !== undefined
         ? r._rerank_score < RELEVANT
-        : (r.similarity || 0) < 0.35, // reranker unavailable, fall back to cosine
+        // Reranker unavailable. Cosine is the fallback for a vector hit, but a
+        // lexical-only hit has no cosine and does not need one: the query term
+        // is literally in the text or the filename.
+        : r.similarity === undefined ? false : (r.similarity || 0) < 0.35,
     }));
 
-    // Trim the noise tail rather than padding to 30. Returning a quarter of a
-    // small index guarantees junk on page one, which is what put an empty
-    // date-grid document among photos of people. Keep a few below the cliff so
-    // a poor query still shows its closest content, flagged as weak.
+    // Typing a document's name should return that document, and the
+    // cross-encoder has no way to say so. It ranks topical relevance, and
+    // asked for "EASY IMEX INSPECTION REPORT" it is not wrong about the QC
+    // report whose text mentions Easy Imex inspections throughout; it is
+    // answering a question about the subject rather than the request for a
+    // named file.
+    //
+    // Measured on the same library both ways, because the gap is not a tuning
+    // problem in either: reranking chunk text alone scores the correctly named
+    // documents 0.36 and 0.27 against 1.00 for the QC report, and reranking
+    // the name with the text lifts them to 0.98 against 0.999. Far apart or
+    // nearly equal, the named document loses. So this is a sort tier and not
+    // an adjustment to the score, which would need a different magic number
+    // for each of those distributions and would still be guessing.
+    //
+    // Deliberately narrow: EVERY distinctive token of the query must appear in
+    // the filename, so this fires on "the document called X" and stays out of
+    // the way of "what did the inspection find". A promoted document still has
+    // to clear the noise floor, or a filename coincidence could lead a page of
+    // genuine answers. Within each tier the reranker still decides.
+    scored.sort((a, b) => {
+      const an = a._name_match && (a.relevance === undefined || a.relevance >= PLAUSIBLE);
+      const bn = b._name_match && (b.relevance === undefined || b.relevance >= PLAUSIBLE);
+      if (an !== bn) return an ? -1 : 1;
+      return (b.relevance ?? -Infinity) - (a.relevance ?? -Infinity);
+    });
+
+    // Trim the noise tail rather than padding to a fixed count. Returning a
+    // quarter of a small index guarantees junk on page one, which is what put
+    // an empty date-grid document among photos of people. Keep a few below the
+    // cliff so a poor query still shows its closest content, flagged as weak.
     let out = scored;
     if (scored.some(r => r.relevance !== undefined)) {
       const keep = scored.filter(r => (r.relevance ?? 0) >= PLAUSIBLE);
       out = keep.length >= 3 ? keep : scored.slice(0, 5);
     }
+    out = out.slice(0, 30);
     const noStrongMatches = out.length > 0 && out.every(r => r.low_confidence);
 
-    res.json({ results: out, no_strong_matches: noStrongMatches });
+    // _chunk_content is scaffolding for the rerank round trip, not payload.
+    res.json({
+      results: out.map(({ _chunk_content, ...r }) => r),
+      no_strong_matches: noStrongMatches,
+    });
   } catch (err) {
     console.error("RAG search error:", err.message);
     res.status(500).json({ error: err.message });

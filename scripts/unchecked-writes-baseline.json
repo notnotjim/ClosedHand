@@ -15,7 +15,7 @@
   "lib/services/bridge-relay.js": 1,
   "lib/services/data-sync.js": 4,
   "lib/setup-automation.js": 1,
-  "lib/tools/handlers.js": 9,
+  "lib/tools/handlers.js": 8,
   "lib/user-mcp.js": 4,
   "lib/workspace-cache.js": 1,
   "user-store.js": 19,
