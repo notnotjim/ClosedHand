@@ -513,19 +513,21 @@ class UserStore {
       .eq("service", service);
   }
 
-  // Flag a connection whose refresh token is permanently dead (invalid_grant),
-  // so sync/API paths stop retrying and logging it every cycle. A dashboard
-  // reconnect writes fresh metadata (without this flag), which clears it.
-  async markConnectionReconnectRequired(service) {
+  // Flag a connection that cannot recover on its own, so sync/API paths stop
+  // retrying and logging it every cycle. Two things qualify: a permanently dead
+  // refresh token (invalid_grant), and a grant that is missing scopes the reads
+  // need, since neither changes without the user acting. A dashboard reconnect
+  // writes fresh metadata (without this flag), which clears it.
+  async markConnectionReconnectRequired(service, reason = "dead refresh token") {
     const conn = this.connections[service];
     if (!conn || conn.metadata?.reconnect_required) return; // already flagged
-    conn.metadata = { ...(conn.metadata || {}), reconnect_required: true };
+    conn.metadata = { ...(conn.metadata || {}), reconnect_required: true, reconnect_reason: reason };
     await supabase
       .from("connections")
       .update({ metadata: conn.metadata })
       .eq("user_id", this.userId)
       .eq("service", service);
-    console.log(`[connections] ${service} marked reconnect_required for ${this.userId} (dead refresh token)`);
+    console.log(`[connections] ${service} marked reconnect_required for ${this.userId} (${reason})`);
   }
 
   // Delete a service connection (e.g. user says "disconnect Shopify")
