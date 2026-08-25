@@ -221,17 +221,51 @@ class UserStore {
       }));
     }
 
-    // Attachments — map to same format
+    // Attachments — map to same format.
+    //
+    // The row keeps what a person needs (name, description, where the bytes
+    // are); everything that decides HOW to open the file has to be derived
+    // back, because saveAttachment never wrote it. Without this an attachment
+    // read from the database has ext, isImage, isPdf and isText all undefined,
+    // so view_attachment falls past every branch to "This file type
+    // (undefined) can't be viewed directly" for a plain JPEG, and any agent
+    // that loads a store from Supabase is blind to a picture the user sent it
+    // seconds earlier. The description survives, which is what made it look
+    // like a model failure rather than a missing field.
     if (attRes.data) {
-      store.attachments = attRes.data.map((a) => ({
-        id: a.attachment_id,
-        fileName: a.file_name,
-        description: a.description,
-        mediaType: a.media_type,
-        storagePath: a.storage_path,
-        sizeBytes: a.size_bytes,
-        date: a.created_at,
-      }));
+      const { TEXT_EXTENSIONS, IMAGE_EXTENSIONS, OFFICE_EXTENSIONS, MIME_TYPES } = require("./lib/files");
+      const { ATTACHMENTS_DIR } = require("./lib/attachments");
+      const path = require("path");
+      // Name first: it is what saveAttachment used, so it round-trips exactly.
+      // Media type is the fallback for a name that carries no extension.
+      const extFor = (fileName, mediaType) => {
+        const dot = (fileName || "").lastIndexOf(".");
+        if (dot > 0) return fileName.slice(dot + 1).toLowerCase();
+        const base = (mediaType || "").split(";")[0].trim();
+        return Object.keys(MIME_TYPES).find((k) => MIME_TYPES[k] === base) || "";
+      };
+      store.attachments = attRes.data.map((a) => {
+        const ext = extFor(a.file_name, a.media_type);
+        return {
+          id: a.attachment_id,
+          fileName: a.file_name,
+          description: a.description,
+          mediaType: a.media_type,
+          storagePath: a.storage_path,
+          sizeBytes: a.size_bytes,
+          direction: a.direction,
+          date: a.created_at,
+          ext,
+          isImage: IMAGE_EXTENSIONS.includes(ext),
+          isText: TEXT_EXTENSIONS.includes(ext) || OFFICE_EXTENSIONS.includes(ext),
+          isPdf: ext === "pdf",
+          // Same shape saveAttachment writes. The file is usually absent in
+          // this process, and every reader already falls back to storage, but
+          // a real path lets the local cache work and keeps fs calls off
+          // undefined.
+          filePath: path.join(ATTACHMENTS_DIR, `${a.attachment_id}.${ext}`),
+        };
+      });
     }
 
     // Pulse config - load from pulse_config table as fallback, profile settings override below
