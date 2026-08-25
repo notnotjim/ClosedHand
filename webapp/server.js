@@ -2085,12 +2085,26 @@ async function exchangeOAuthCode(svc, code, redirectUri, storeDomain, codeVerifi
         res.on("data", (c) => chunks.push(c));
         res.on("end", () => {
           const raw = Buffer.concat(chunks).toString();
-          console.log(`[OAuth] Token exchange response for ${url.hostname}: ${raw.substring(0, 200)}`);
-          const data = JSON.parse(raw);
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch (_) {
+            // Size and status only. On the success path this body is mostly
+            // access_token, so there is no prefix of it that is safe to quote.
+            console.error(`[OAuth] Token exchange for ${url.hostname}: unparseable body, ${raw.length} bytes, HTTP ${res.statusCode}`);
+            return reject(new Error(`Token exchange returned a non-JSON body (HTTP ${res.statusCode})`));
+          }
+          // Never the raw body. It is mostly access_token, so logging the first
+          // 200 characters wrote a live credential into Railway and still cut
+          // off before the fields worth having. scope is the one that answers
+          // why a connection can sign in and then 403 on every read, and it was
+          // never recorded anywhere: not here, and not on the connection row.
+          console.log(`[OAuth] Token exchange for ${url.hostname}: ` + (data.error
+            ? `error=${data.error}`
+            : `ok, refresh_token=${data.refresh_token ? "yes" : "no"}, expires_in=${data.expires_in || "?"}, scope=${data.scope || "(not returned)"}`));
           if (data.error) {
             reject(new Error(`${data.error}: ${data.error_description || ""}`));
           } else {
-            console.log(`[OAuth] Got token: ${data.access_token ? data.access_token.substring(0, 10) + '...' : 'NONE'}`);
             resolve({
               access_token: data.access_token,
               refresh_token: data.refresh_token || null,
