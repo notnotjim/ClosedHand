@@ -6658,27 +6658,49 @@
       if (!el) return;
       var html = '';
 
-      // Pinned facts: clean key:value format
+      // Pinned facts, grouped. One flat list put a note about a spouse next to
+      // a company's EORI number, and two notes about the same company could sit
+      // apart with nothing to say they were about the same thing. The row shows
+      // its subject where it has one, because that is what the note is about;
+      // the key is a storage detail.
       if (_memoryFilter !== 'knowledge' && _pinnedFacts.length > 0) {
-        html += '<div class="memory-section-label">Pinned Facts</div>';
-        html += '<div style="display:grid;grid-template-columns:1fr;gap:1px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;margin-bottom:12px;">';
-        for (var i = 0; i < _pinnedFacts.length; i++) {
-          var n = _pinnedFacts[i];
-          var valPreview = (n.value || '').length > 200 ? n.value.substring(0, 200) + '...' : (n.value || '');
-          var accessBadge = n.accessCount ? '<span class="access-badge">' + n.accessCount + 'x</span>' : '';
-          // Format key nicely: replace hyphens/underscores with spaces, title case
-          var displayKey = n.key.replace(/[-_]/g, ' ');
-          html += '<div class="pinned-note-row" onclick="openPinnedNoteEdit(\'' + escapeAttr(n.key) + '\')">';
-          html += '<div style="min-width:120px;max-width:180px;flex-shrink:0;">';
-          html += '<span style="font-size:12px;color:#f59e0b;font-weight:500;">' + escapeHtml(displayKey) + '</span>' + accessBadge;
-          html += '</div>';
-          html += '<div style="flex:1;min-width:0;font-size:13px;color:#ccc;">' + escapeHtml(valPreview) + '</div>';
-          html += '<div class="note-actions">';
-          html += '<button class="note-action-btn delete" onclick="event.stopPropagation();deletePinnedNote(\'' + escapeAttr(n.key) + '\')" title="Delete">&#215;</button>';
-          html += '</div>';
+        var CATEGORY_ORDER = ['profile', 'preference', 'person', 'business', 'topic'];
+        var CATEGORY_LABELS = {
+          profile: 'About You', preference: 'Preferences', person: 'People',
+          business: 'Businesses & Projects', topic: 'Other'
+        };
+        var grouped = {};
+        for (var gi = 0; gi < _pinnedFacts.length; gi++) {
+          var gf = _pinnedFacts[gi];
+          var gc = gf.category || 'topic';
+          if (CATEGORY_ORDER.indexOf(gc) === -1) gc = 'topic';
+          (grouped[gc] = grouped[gc] || []).push(gf);
+        }
+        for (var ci = 0; ci < CATEGORY_ORDER.length; ci++) {
+          var cat = CATEGORY_ORDER[ci];
+          var rows = grouped[cat];
+          if (!rows || rows.length === 0) continue;
+          // Subject first, so several notes on one company read as a set.
+          rows.sort(function(a, b) { return (a.subject || a.key).localeCompare(b.subject || b.key); });
+          html += '<div class="memory-section-label">' + CATEGORY_LABELS[cat] + '</div>';
+          html += '<div style="display:grid;grid-template-columns:1fr;gap:1px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;margin-bottom:12px;">';
+          for (var i = 0; i < rows.length; i++) {
+            var n = rows[i];
+            var valPreview = (n.value || '').length > 200 ? n.value.substring(0, 200) + '...' : (n.value || '');
+            var accessBadge = n.accessCount ? '<span class="access-badge">' + n.accessCount + 'x</span>' : '';
+            var displayKey = n.subject || n.key.replace(/[-_]/g, ' ');
+            html += '<div class="pinned-note-row" onclick="openPinnedNoteEdit(\'' + escapeAttr(n.key) + '\')">';
+            html += '<div style="min-width:120px;max-width:180px;flex-shrink:0;">';
+            html += '<span style="font-size:12px;color:#f59e0b;font-weight:500;">' + escapeHtml(displayKey) + '</span>' + accessBadge;
+            html += '</div>';
+            html += '<div style="flex:1;min-width:0;font-size:13px;color:#ccc;">' + escapeHtml(valPreview) + '</div>';
+            html += '<div class="note-actions">';
+            html += '<button class="note-action-btn delete" onclick="event.stopPropagation();deletePinnedNote(\'' + escapeAttr(n.key) + '\')" title="Delete">&#215;</button>';
+            html += '</div>';
+            html += '</div>';
+          }
           html += '</div>';
         }
-        html += '</div>';
       }
 
       // Context notes: separate pulse/briefing results from organic observations

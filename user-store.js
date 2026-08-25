@@ -64,7 +64,7 @@ class UserStore {
           .single(),
         supabase
           .from("facts")
-          .select("key, value")
+          .select("key, value, category, subject")
           .eq("user_id", userId),
         supabase
           .from("schedules")
@@ -206,6 +206,14 @@ class UserStore {
               val = parsed; // Metadata object
             }
           } catch (e) {} // Not JSON, keep as plain string
+        }
+        // Category and subject live in columns, not in the value blob, so they
+        // can be grouped and looked up in SQL. Carry them onto the in-memory
+        // note so a later save writes back what was read rather than nulling
+        // them, and so the prompt can say which group a note belongs to.
+        if (val && typeof val === "object" && val.value !== undefined) {
+          if (row.category) val.category = row.category;
+          if (row.subject) val.subject = row.subject;
         }
         store.facts[row.key] = val;
       }
@@ -389,6 +397,8 @@ class UserStore {
               value: typeof noteData === "object" && noteData !== null && noteData.value !== undefined
                 ? JSON.stringify(noteData)
                 : String(noteData),
+              category: (noteData && typeof noteData === "object" && noteData.category) || null,
+              subject: (noteData && typeof noteData === "object" && noteData.subject) || null,
               updated_at: new Date().toISOString(),
             })),
             { onConflict: "user_id,key" }
@@ -455,7 +465,14 @@ class UserStore {
       ? JSON.stringify(value)
       : String(value);
     await supabase.from("facts").upsert(
-      { user_id: this.userId, key, value: dbValue, updated_at: new Date().toISOString() },
+      {
+        user_id: this.userId,
+        key,
+        value: dbValue,
+        category: (value && typeof value === "object" && value.category) || null,
+        subject: (value && typeof value === "object" && value.subject) || null,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "user_id,key" }
     );
   }

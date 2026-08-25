@@ -5747,7 +5747,7 @@ app.get("/api/notes", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("facts")
-      .select("key, value, updated_at")
+      .select("key, value, category, subject, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
@@ -5767,7 +5767,16 @@ app.get("/api/notes", async (req, res) => {
             }
           } catch (e) {}
         }
-        return { key: row.key, value: val, updated_at: row.updated_at, ...meta };
+        // Anything saved before categories existed reads as 'topic' rather
+        // than as a gap, so the grouped list has no unlabelled bucket.
+        return {
+          key: row.key,
+          value: val,
+          category: row.category || "topic",
+          subject: row.subject || null,
+          updated_at: row.updated_at,
+          ...meta,
+        };
       });
     res.json(notes);
   } catch (e) {
