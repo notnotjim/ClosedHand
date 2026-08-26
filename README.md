@@ -46,7 +46,7 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Chat that can act.** Ask questions, but also send mail, create events, set reminders, track flights, and run multi-step background agents that report back when they finish.
 
-**Context Brain.** ClosedHand continuously indexes your mail, calendar and files into a knowledge base that recalls by meaning, not keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email".
+**Context Brain.** ClosedHand continuously indexes your mail, calendar and files into a knowledge base that recalls by meaning, not just keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email"; ask for an invoice number and it matches the number itself.
 
 **A real computer.** An isolated sandbox container gives it code execution and its own Chrome, with a persistent workspace and browser profile. Watch it work live at `localhost:6080`.
 

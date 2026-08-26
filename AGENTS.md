@@ -24,8 +24,10 @@ they neither get published nor drift out of step with a second copy.
 ## User-Facing Copy
 - The bot is "ClosedHand", not "your assistant".
 - It's chat-based. Don't call anything "voice control".
-- Key positioning phrase: "recalls by meaning, not keywords" (Context Brain / File Search
-  copy). Reuse it, don't invent variants.
+- Key positioning phrase: "recalls by meaning, not just keywords" (Context Brain / File
+  Search copy). Reuse it, don't invent variants. The "just" is load-bearing: retrieval
+  has been hybrid since August 2026, meaning and exact words fused, so the old phrasing
+  ("not keywords") is false and must not come back.
 - "Knowledge base" is called "Context Brain" (the dashboard knowledge-base feature ONLY);
   the homepage file-retrieval tab is "File Search". Distinct features never share a name.
 - Don't name-drop specific AI models to users. "ClosedHand picks the best model", never
