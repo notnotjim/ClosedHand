@@ -5565,22 +5565,47 @@ app.get("/api/knowledge", async (req, res) => {
   }
 });
 
-// Search memory vectors (MUST be before :title route)
+// Search Context Notes (MUST be before :title route)
 app.get("/api/knowledge/search", async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
+
+    // Deliberately no model in the loop. This box searches Context Notes, a
+    // corpus of short summaries that fits in one fetch, and an embedding call
+    // plus a rerank would add two model round trips to rank a list already in
+    // memory. What the old version lacked was not meaning but competence: it
+    // substring-matched raw letters, so "art" matched "started", it used none
+    // of the shared tokeniser, and it returned rows unranked in table order.
+    //
+    // Now: the same tokens every other ClosedHand search derives, matched
+    // against word starts (typeahead behaviour, without the mid-word hits),
+    // ranked by how much of the query matched, newest first on ties.
+    const { lexicalTokens } = require("./lexical");
+    const wordsOf = (t) => String(t || "").toLowerCase().split(/[^a-z0-9@]+/).filter(Boolean);
+    const queryWords = [...new Set(lexicalTokens(q, { corpus: "files" }).flatMap(wordsOf))];
+    if (queryWords.length === 0) return res.json([]);
+
     const { data, error } = await supabase
       .from("data_vectors")
       .select("id, external_id, content, item_type, source_metadata, updated_at")
       .eq("user_id", userId)
       .eq("service", "memory")
-      .ilike("content", `%${q}%`)
-      .limit(20);
+      .limit(2000);
     if (error) throw error;
-    const nodes = (data || []).map(v => ({
+
+    const scored = [];
+    for (const v of data || []) {
+      const words = wordsOf((v.source_metadata?.title || "") + " " + (v.content || ""));
+      const hits = queryWords.filter(t => words.some(w => w.startsWith(t))).length;
+      if (hits > 0) scored.push({ v, hits });
+    }
+    scored.sort((a, b) => b.hits - a.hits
+      || new Date(b.v.updated_at) - new Date(a.v.updated_at));
+
+    const nodes = scored.slice(0, 20).map(({ v }) => ({
       title: v.source_metadata?.title || v.external_id || (v.content || "").substring(0, 50),
       tags: [v.item_type],
       links: [],
