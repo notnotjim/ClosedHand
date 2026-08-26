@@ -6229,7 +6229,7 @@
     let _brainSim = null;
     let _currentNoteTitle = null;
     var _pinnedFacts = [];
-    var _allPinnedFacts = [];
+    var _allPinnedFacts = []; var _allBrainData = [];
     var _memoryFilter = 'all';
 
     var _brainViewMode = 'graph';
@@ -6318,6 +6318,7 @@
         _pinnedFacts = Array.isArray(notes) ? notes : [];
         _allPinnedFacts = _pinnedFacts.slice();
         _brainData = Array.isArray(nodes) ? nodes : [];
+        _allBrainData = _brainData.slice();
 
         var isEmpty = _pinnedFacts.length === 0 && _brainData.length === 0;
         document.getElementById('brain-empty').style.display = isEmpty ? 'block' : 'none';
@@ -6627,20 +6628,44 @@
       _currentNoteTitle = null;
     }
 
+    // Filtering is instant and local: both halves of Context Brain are already
+    // loaded in full, so typing filters what is in memory with no server round
+    // trip. Matching is on word starts, not substrings, so "invoi" finds an
+    // invoice while "art" no longer matches "started"; results rank by how
+    // much of the query matched.
+    function _memoryWords(text) {
+      return String(text || '').toLowerCase().split(/[^a-z0-9@]+/).filter(function(w) { return w.length > 0; });
+    }
+    function _memoryHits(queryWords, text) {
+      var words = _memoryWords(text);
+      var hits = 0;
+      for (var i = 0; i < queryWords.length; i++) {
+        var t = queryWords[i];
+        for (var j = 0; j < words.length; j++) {
+          if (words[j].indexOf(t) === 0) { hits++; break; }
+        }
+      }
+      return hits;
+    }
     function searchUnifiedMemory(query) {
       if (!query || !query.trim()) {
         _pinnedFacts = _allPinnedFacts.slice();
         loadUnifiedMemory();
         return;
       }
-      var q = query.toLowerCase();
-      _pinnedFacts = _allPinnedFacts.filter(function(n) {
-        return (n.key || '').toLowerCase().includes(q) || (n.value || '').toLowerCase().includes(q);
-      });
-      fetch('/api/knowledge/search?q=' + encodeURIComponent(query)).then(function(r) { return r.json(); }).then(function(nodes) {
-        _brainData = Array.isArray(nodes) ? nodes : [];
-        renderMemoryList();
-      }).catch(function() {});
+      var queryWords = _memoryWords(query);
+      var rank = function(all, textOf) {
+        var scored = [];
+        for (var i = 0; i < all.length; i++) {
+          var h = _memoryHits(queryWords, textOf(all[i]));
+          if (h > 0) scored.push({ n: all[i], h: h });
+        }
+        scored.sort(function(a, b) { return b.h - a.h; });
+        return scored.map(function(x) { return x.n; });
+      };
+      _pinnedFacts = rank(_allPinnedFacts, function(n) { return (n.subject || '') + ' ' + (n.key || '') + ' ' + (n.value || ''); });
+      _brainData = rank(_allBrainData, function(n) { return (n.title || '') + ' ' + (n.content || ''); });
+      renderMemoryList();
     }
 
     function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
