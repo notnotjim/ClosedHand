@@ -30,6 +30,10 @@ they neither get published nor drift out of step with a second copy.
   ("not keywords") is false and must not come back.
 - "Knowledge base" is called "Context Brain" (the dashboard knowledge-base feature ONLY);
   the homepage file-retrieval tab is "File Search". Distinct features never share a name.
+- Memory vocabulary, used exactly and everywhere: "Pinned facts" are the facts ClosedHand
+  pins about the user; "Context Notes" are the distilled summaries of past conversations;
+  both live in "Context Brain". Never "saved memory", bare "notes", or invented synonyms.
+  A destructive action names what it deletes and what it keeps in these terms.
 - Don't name-drop specific AI models to users. "ClosedHand picks the best model", never
   "Opus is working on it".
 - LLM providers are equal. No provider gets special treatment, fallback priority, or

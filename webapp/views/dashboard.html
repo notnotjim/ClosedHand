@@ -2471,12 +2471,12 @@
             <div class="account-action" id="action-clear-conversations">
               <div class="account-action-info">
                 <div class="account-action-title">Clear conversation history</div>
-                <div class="account-action-desc">Erase all messages and summaries. Notes, schedules, and connections are kept.</div>
+                <div class="account-action-desc">Erases every conversation and the Context Notes distilled from them. Pinned facts, schedules, and connections are kept.</div>
               </div>
               <button class="account-action-btn" onclick="startAccountAction('clear-conversations')">Clear</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-conversations">
-              <div class="account-confirm-text">This will permanently delete your entire conversation history. Your saved memory, schedules, and connected services will not be affected.</div>
+              <div class="account-confirm-text">This permanently deletes your entire conversation history everywhere ClosedHand keeps it, including the Context Notes distilled from past conversations. Pinned facts, schedules, and connected services are not affected.</div>
               <div class="account-confirm-actions">
                 <button class="confirm-go confirm-go-neutral enabled" id="go-clear-conversations" data-orig-text="Clear history" onclick="executeAccountAction('clear-conversations')">Clear history</button>
               </div>
@@ -2487,16 +2487,16 @@
             <!-- Reset data -->
             <div class="account-action" id="action-clear-data">
               <div class="account-action-info">
-                <div class="account-action-title">Reset to fresh start</div>
-                <div class="account-action-desc">Delete all conversations, saved memory, schedules, and files. Your profile and connected services stay intact.</div>
+                <div class="account-action-title">Wipe all data</div>
+                <div class="account-action-desc">Deletes conversations, Context Notes, pinned facts, rules, schedules, datasets, automations, and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
               </div>
-              <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Reset</button>
+              <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Wipe</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-data">
-              <div class="account-confirm-text warn">This will permanently erase all your data - conversations, saved memory, schedules, and files. Your profile and connected services will be kept. This cannot be undone.</div>
+              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, pinned facts, rules, schedules, datasets, automations, and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
               <div class="account-confirm-actions">
-                <input class="confirm-type-input" id="input-clear-data" placeholder="Type RESET" oninput="checkConfirmInput('clear-data','RESET')">
-                <button class="confirm-go confirm-go-warn" id="go-clear-data" data-orig-text="Reset everything" onclick="executeAccountAction('clear-data')">Reset everything</button>
+                <input class="confirm-type-input" id="input-clear-data" placeholder="Type WIPE" oninput="checkConfirmInput('clear-data','WIPE')">
+                <button class="confirm-go confirm-go-warn" id="go-clear-data" data-orig-text="Wipe everything" onclick="executeAccountAction('clear-data')">Wipe everything</button>
               </div>
             </div>
 
@@ -2511,7 +2511,7 @@
               <button class="account-action-btn account-action-btn-danger" onclick="startAccountAction('delete-account')">Delete</button>
             </div>
             <div class="account-confirm-inline" id="confirm-delete-account">
-              <div class="account-confirm-text danger">This will permanently delete your entire account - all conversations, saved memory, schedules, files, connections, and your profile. You will be logged out immediately. This cannot be undone.</div>
+              <div class="account-confirm-text danger">This permanently deletes your entire account and every piece of stored data, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-delete-account" placeholder="Type DELETE" oninput="checkConfirmInput('delete-account','DELETE')">
                 <button class="confirm-go confirm-go-danger" id="go-delete-account" data-orig-text="Delete my account" onclick="executeAccountAction('delete-account')">Delete my account</button>

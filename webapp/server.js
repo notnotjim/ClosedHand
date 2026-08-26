@@ -7272,18 +7272,29 @@ app.post("/api/bridge/thumb-upload", _bridgeUpload.single("file"), (req, res) =>
   res.json({ ok: true });
 });
 
-// POST /api/account/clear-conversations — empty conversation history only
+// POST /api/account/clear-conversations — erase conversations everywhere they live
 app.post("/api/account/clear-conversations", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
-    const { error } = await supabase
-      .from("conversations")
-      .update({ messages: [], summary: null })
-      .eq("user_id", userId);
-
-    if (error) throw error;
+    // The same wipe chat's /clear performs. This used to empty only the legacy
+    // conversations table, which the bot does not read once threads exist, so
+    // the button reported success and deleted almost nothing: the next message
+    // reloaded the active thread intact. Conversations live in four places and
+    // all four go: the thread rows, the legacy single-row table, the dashboard
+    // chat transcript, and the Context Notes distilled from past threads.
+    // Scoped by item_type so the wipe cannot touch pinned-fact mirrors sharing
+    // the memory service.
+    const results = await Promise.all([
+      supabase.from("conversation_threads").delete().eq("user_id", userId),
+      supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
+      supabase.from("web_messages").delete().eq("user_id", userId),
+      supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory")
+        .in("item_type", ["conversation_summary", "thread_summary"]),
+    ]);
+    const failed = results.find(x => x && x.error);
+    if (failed) throw new Error(failed.error.message);
     res.json({ success: true });
   } catch (err) {
     console.error("Clear conversations error:", err.message);
@@ -7316,16 +7327,35 @@ app.post("/api/account/clear-data", async (req, res) => {
     const currentSettings = profile?.settings || {};
     const { onboarding_step, preferred_name, bot_name, personality, ...cleanSettings } = currentSettings;
 
-    await Promise.all([
+    // Everything ClosedHand has built up for this user goes. What stays is the
+    // profile, the connected services, and the synced mail and calendar cache
+    // that follows those connections (it re-syncs anyway while they exist, so
+    // deleting it here would only buy a re-embedding bill). The list used to
+    // stop at seven tables and quietly kept every conversation thread, rule,
+    // dataset and indexed file while the copy said "all your data".
+    // rag_documents carries rag_chunks away by cascade; automations carries
+    // its runs; datasets does NOT cascade its rows, so both are named.
+    const wiped = await Promise.all([
+      supabase.from("conversation_threads").delete().eq("user_id", userId),
       supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
+      supabase.from("web_messages").delete().eq("user_id", userId),
       supabase.from("facts").delete().eq("user_id", userId),
+      supabase.from("user_rules").delete().eq("user_id", userId),
       supabase.from("schedules").delete().eq("user_id", userId),
       supabase.from("attachments").delete().eq("user_id", userId),
       supabase.from("pulse_config").delete().eq("user_id", userId),
       supabase.from("agent_tasks").delete().eq("user_id", userId),
+      supabase.from("automations").delete().eq("user_id", userId),
+      supabase.from("dataset_rows").delete().eq("user_id", userId),
+      supabase.from("datasets").delete().eq("user_id", userId),
+      supabase.from("rag_documents").delete().eq("user_id", userId),
+      supabase.from("rag_sources").delete().eq("user_id", userId),
+      supabase.from("canvases").delete().eq("user_id", userId),
       supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory"),
       supabase.from("profiles").update({ settings: cleanSettings, updated_at: new Date().toISOString() }).eq("id", userId),
     ]);
+    const wipeFailed = wiped.find(x => x && x.error);
+    if (wipeFailed) throw new Error(wipeFailed.error.message);
 
     // Clean up storage bucket
     if (storagePaths.length > 0) {
@@ -7353,20 +7383,32 @@ app.delete("/api/account", async (req, res) => {
 
     const storagePaths = (attachments || []).map(a => a.storage_path).filter(Boolean);
 
-    // Delete all user data from every table
-    await Promise.all([
-      supabase.from("conversations").delete().eq("user_id", userId),
-      supabase.from("facts").delete().eq("user_id", userId),
-      supabase.from("schedules").delete().eq("user_id", userId),
-      supabase.from("attachments").delete().eq("user_id", userId),
-      supabase.from("pulse_config").delete().eq("user_id", userId),
-      supabase.from("connections").delete().eq("user_id", userId),
-      supabase.from("chat_links").delete().eq("user_id", userId),
-      supabase.from("agent_tasks").delete().eq("user_id", userId),
-      supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory"),
-      supabase.from("sandboxes").delete().eq("user_id", userId),
-      supabase.from("wa_pending_links").delete().eq("user_id", userId),
-    ]);
+    // Delete all user data from EVERY table that carries a user_id, not a
+    // hand-picked subset. The old list missed conversation_threads, the whole
+    // synced mail cache, the File Search index, datasets, rules and more, so
+    // "delete my account" retained the most sensitive data in the system. It
+    // also deleted only the memory rows of data_vectors, whose FK to profiles
+    // is NO ACTION, so the profile delete below then failed on the email
+    // vectors and the account was never deleted at all.
+    //
+    // Sequential and per-table checked rather than one Promise.all: a table
+    // that does not exist on this install is logged and skipped, but the run
+    // carries on, and the profile goes last so a partial failure can be
+    // retried.
+    const WIPE_TABLES = [
+      "dataset_rows", "datasets", "rag_documents", "rag_sources",
+      "conversation_threads", "conversations", "web_messages",
+      "facts", "user_rules", "schedules", "attachments", "pulse_config",
+      "agent_tasks", "automations", "canvases",
+      "data_vectors", "data_cache", "index_progress",
+      "user_skills", "user_mcps", "user_bridges", "sandboxes",
+      "wa_pending_links", "chat_links", "connections",
+      "bridge_requests", "bug_reports", "token_usage",
+    ];
+    for (const table of WIPE_TABLES) {
+      const { error } = await supabase.from(table).delete().eq("user_id", userId);
+      if (error) console.error(`[Account delete] ${table}: ${error.message}`);
+    }
 
     // Clean up storage bucket
     if (storagePaths.length > 0) {
