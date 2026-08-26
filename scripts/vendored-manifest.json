@@ -1,5 +1,6 @@
 {
   "reranker": "f2a25ed1f2e23f68",
   "lexical": "75c74a7230a13203",
-  "fact-vectors": "a43405b9c6a0900e"
+  "fact-vectors": "a43405b9c6a0900e",
+  "doc-search": "8db4a6dd8e32c00c"
 }

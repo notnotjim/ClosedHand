@@ -39,6 +39,10 @@ const PAIRS = [
     name: "fact-vectors",
     copies: ["lib/services/fact-vectors.js", "webapp/fact-vectors.js"],
   },
+  {
+    name: "doc-search",
+    copies: ["lib/services/doc-search.js", "webapp/doc-search.js"],
+  },
 ];
 
 function normalise(src, name) {
