@@ -255,7 +255,6 @@ CREATE TABLE data_cache (
   synced_at timestamp with time zone DEFAULT now() NOT NULL,
   received_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
-  embedding vector(768),
   CONSTRAINT data_cache_pkey PRIMARY KEY (id)
 );
 
@@ -550,7 +549,6 @@ CREATE UNIQUE INDEX idx_data_cache_user_external ON public.data_cache USING btre
 CREATE INDEX idx_data_cache_user_received ON public.data_cache USING btree (user_id, received_at DESC);
 CREATE INDEX idx_data_cache_user_source_type ON public.data_cache USING btree (user_id, source, type);
 CREATE INDEX idx_data_cache_user_synced ON public.data_cache USING btree (user_id, source, synced_at DESC);
-CREATE INDEX data_cache_embedding_idx ON public.data_cache USING ivfflat (embedding vector_cosine_ops) WITH (lists='50');
 
 CREATE INDEX idx_dv_user ON public.data_vectors USING btree (user_id, service);
 CREATE INDEX idx_dv_embedding ON public.data_vectors USING hnsw (embedding vector_cosine_ops);
@@ -578,7 +576,7 @@ CREATE INDEX idx_user_skills_user ON public.user_skills USING btree (user_id);
 CREATE INDEX idx_web_messages_user_dir ON public.web_messages USING btree (user_id, direction, created_at);
 
 -- ---------------------------------------------------------------------------
--- Functions (the four vector-search RPCs). Note the loose `vector` parameter
+-- Functions (the vector-search RPCs). Note the loose `vector` parameter
 -- type — no width is declared, so one function serves 768 and 1536 callers.
 -- ---------------------------------------------------------------------------
 
@@ -625,31 +623,6 @@ BEGIN
     AND 1 - (sv.embedding <=> query_embedding) > match_threshold
     AND (filter_service IS NULL OR sv.service = filter_service)
   ORDER BY sv.embedding <=> query_embedding
-  LIMIT match_count;
-END;
-$function$;
-
--- This is the one the audit reported as having no committed SQL. It searches
--- data_cache filtered to type='email', NOT a dedicated email table.
-CREATE OR REPLACE FUNCTION public.match_cached_emails(
-  query_embedding vector,
-  match_user_id uuid,
-  match_threshold double precision DEFAULT 0.3,
-  match_count integer DEFAULT 10
-)
-RETURNS TABLE(id uuid, source text, external_id text, data jsonb, similarity double precision)
-LANGUAGE plpgsql
-AS $function$
-BEGIN
-  RETURN QUERY
-  SELECT dc.id, dc.source, dc.external_id, dc.data,
-         1 - (dc.embedding <=> query_embedding) AS similarity
-  FROM data_cache dc
-  WHERE dc.user_id = match_user_id
-    AND dc.type = 'email'
-    AND dc.embedding IS NOT NULL
-    AND 1 - (dc.embedding <=> query_embedding) > match_threshold
-  ORDER BY dc.embedding <=> query_embedding
   LIMIT match_count;
 END;
 $function$;
