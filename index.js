@@ -163,6 +163,7 @@ async function main() {
   // single row, while the wizard reported memory as on.
   try { await require("./lib/config").getConf("EMBED_MODEL"); } catch (_) {}
   startDataSync();
+  require("./lib/services/wa-digest").startWhatsAppDigest();
   require("./lib/sandbox").startSandboxJanitor();
   require("./lib/local-models").preloadIfConfigured();
 
