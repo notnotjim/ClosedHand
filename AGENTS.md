@@ -13,6 +13,10 @@ they neither get published nor drift out of step with a second copy.
 - Use available UI skills for design work. Never code UI from scratch.
 
 ## Code Standards
+- Copy sells what it does for the user, never how it works. "A thousand songs in
+  your pocket", not "512MB of storage": mechanism words (index, background, cache,
+  API, embed) do not belong in user-facing copy; one concrete moment from the
+  user's life does. (2026-08-30)
 - No emdashes anywhere. Use commas, full stops, or rewrite.
 - Simplicity first. Minimal changes. Don't over-engineer.
 - No temporary fixes. Find root causes.
