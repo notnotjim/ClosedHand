@@ -109,10 +109,40 @@ else
   [ "${BUILT_FROM_SOURCE:-0}" = "1" ] || docker compose up -d
 fi
 
+# Take the user to the wizard rather than telling them an address to type.
+# Wait until the dashboard actually answers (first boot includes a database
+# init, usually well under a minute), then open the default browser where a
+# desktop exists. On a headless server there is no browser to open, so the
+# printed address below is the whole story there, and it never only says
+# "opening..." without printing the address, because the open can fail
+# silently in odd environments.
+DASH_URL="http://localhost:3000"
 say ""
-say "ClosedHand is starting. Open http://localhost:3000 and the setup wizard"
-say "takes it from there: one model key, a password you choose, a chat app, and"
-say "an optional Google connection."
+say "ClosedHand is starting. Waiting for the dashboard to come up..."
+tries=0
+while [ "$tries" -lt 45 ]; do
+  if command -v curl >/dev/null 2>&1 && curl -fsS -o /dev/null --max-time 2 "$DASH_URL" 2>/dev/null; then
+    break
+  fi
+  tries=$((tries + 1))
+  sleep 2
+done
+
+OPENED=0
+if command -v open >/dev/null 2>&1; then
+  open "$DASH_URL" 2>/dev/null && OPENED=1
+elif command -v xdg-open >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  xdg-open "$DASH_URL" 2>/dev/null && OPENED=1
+fi
+
+say ""
+if [ "$OPENED" = "1" ]; then
+  say "Opening the setup wizard in your browser: $DASH_URL"
+else
+  say "Open $DASH_URL in a browser to reach the setup wizard."
+fi
+say "It takes it from there: one model key, a password you choose, a chat app,"
+say "and an optional Google connection."
 say ""
 say "ClosedHand's computer, the machine it browses and runs code on, is at"
 say "http://localhost:6080/vnc.html?autoconnect=1 if you ever want to watch"
