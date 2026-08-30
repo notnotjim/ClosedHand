@@ -95,7 +95,7 @@
     .reassure p { color: var(--text-secondary); font-size: 14px; max-width: 62ch; margin: 0; }
     .reassure b { color: var(--text-primary); }
     .project-box {
-      margin: 34px 0 46px; padding: 18px 20px;
+      margin: 16px 0 0; padding: 18px 20px;
       border: 1px solid var(--border-faint); border-radius: 12px;
       background: var(--bg-raised); backdrop-filter: blur(6px);
     }
@@ -230,26 +230,21 @@
   <section class="hero">
     <p class="kicker">Setup · Google</p>
     <h1>A private key to <em>your own inbox.</em></h1>
-    <p>ClosedHand reads your Gmail and Calendar through a Google project that is yours alone,
-       so nothing sits between your data and your machine.</p>
+    <p>This gives ClosedHand permission to reach your Gmail, Calendar and Drive, with a key
+       that is yours alone, so nothing sits between your data and your machine.</p>
   </section>
 
   <div class="reassure">
-    <p><b>Less than it looks.</b> This creates a private key to your own Google account. It is
-       free, only you can use it, and you can delete it later. Six small steps, one action each.</p>
+    <p><b>Less than it looks.</b> Google keeps that permission in a container it calls a
+       <b>project</b>: nothing more than the box your key lives in. It is free, only you can
+       use it, and you can delete it later. Six small steps, one action each, and the steps
+       use Google's own words so your screen always matches this page.</p>
   </div>
 
   <div class="done-banner" id="done-banner">
     <h2>Google is <span>connected.</span></h2>
     <p>ClosedHand is syncing your mail and calendar in the background. Give it a few
        minutes, then ask your inbox something from the <a href="/dashboard">dashboard</a>.</p>
-  </div>
-
-  <div class="project-box">
-    <label for="project-id">Your project id</label>
-    <input type="text" id="project-id" placeholder="paste it after step 01, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false">
-    <p class="hint">Paste this after step 01. The buttons below use it to open the right project.
-       Google shows the id in the top bar after the project is created.</p>
   </div>
 
   <ol class="spine">
@@ -261,8 +256,13 @@
         <p>This screen only creates new projects, so nothing you already have can be touched.
            Name it anything and press <b>Create</b>.</p>
         <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
-        <p class="note">The <b>ID</b> is shown under the name field while you create it. Copy it and
-           paste it into the box above; the steps below unlock and open in the right project.</p>
+        <div class="project-box">
+          <label for="project-id">Then paste your project id here</label>
+          <input type="text" id="project-id" placeholder="e.g. closedhand-4a7f" autocomplete="off" spellcheck="false">
+          <p class="hint">The <b>ID</b> appears under the name field while you create it, and in the
+             console's top bar afterwards. Pasting it unlocks the steps below, each opening in
+             the right project.</p>
+        </div>
       </article>
     </li>
 
@@ -272,7 +272,7 @@
         <h2>Switch on the services</h2>
         <p>One screen enables Gmail, Calendar and Drive together. It names your new project at the
            top; press <b>Next</b>, then <b>Enable</b>.</p>
-        <p class="locked-hint">Add your project id above to open this.</p>
+        <p class="locked-hint">Paste your project id into step 01 to open this.</p>
         <a class="deep" data-deep href="https://console.cloud.google.com/flows/enableapi?apiid=gmail.googleapis.com,calendar-json.googleapis.com,drive.googleapis.com" target="_blank" rel="noopener">Switch on the three services</a>
       </article>
     </li>
@@ -284,7 +284,7 @@
         <p>A short form, a few quick fields: app name <code>ClosedHand</code>, your own email for the
            contact fields, and choose <b>External</b> when asked. Agree to Google's data policy on
            the last screen and press Create.</p>
-        <p class="locked-hint">Add your project id above to open this.</p>
+        <p class="locked-hint">Paste your project id into step 01 to open this.</p>
         <a class="deep" data-deep href="https://console.cloud.google.com/auth/overview/create" target="_blank" rel="noopener">Open the form</a>
       </article>
     </li>
@@ -296,7 +296,7 @@
         <p>Press <b>Create client</b>, choose <b>Web application</b>, and under Authorized redirect
            URIs add exactly this line:</p>
         <div class="code"><button class="copy" type="button">Copy</button><pre id="redirect-uri">http://localhost:3000/auth/google/callback</pre></div>
-        <p class="locked-hint">Add your project id above to open this.</p>
+        <p class="locked-hint">Paste your project id into step 01 to open this.</p>
         <a class="deep" data-deep href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open the Clients page</a>
         <div class="warnbox">Press Create, then click <b>Download JSON</b> before closing the dialog.
            Google shows this file only once. If you miss it, create another client.</div>
@@ -309,7 +309,7 @@
         <h2>Let yourself in</h2>
         <p>While the app is private, only accounts you list can use it. Add the Google address whose
            mail and calendar ClosedHand should read.</p>
-        <p class="locked-hint">Add your project id above to open this.</p>
+        <p class="locked-hint">Paste your project id into step 01 to open this.</p>
         <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Test users list</a>
       </article>
     </li>
