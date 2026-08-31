@@ -7,26 +7,27 @@
 # Idempotent: safe to re-run in place (it never overwrites an existing .env).
 #
 # Overrides (mostly for testing):
-#   CLOSEDHAND_REPO   git URL to clone            (default: the public repo)
-#   CLOSEDHAND_DIR    directory to install into   (default: ./closedhand)
-#   CLOSEDHAND_NO_UP  set to 1 to skip docker compose up
+#   CLOSEDHAND_REPO    git URL to clone            (default: the public repo)
+#   CLOSEDHAND_DIR     directory to install into   (default: ./closedhand)
+#   CLOSEDHAND_NO_UP   set to 1 to skip docker compose up
+#   CLOSEDHAND_PLAIN   set to 1 to force plain output with no drawing
 
 set -eu
 
 REPO="${CLOSEDHAND_REPO:-https://github.com/notnotjim/ClosedHand.git}"
 DIR="${CLOSEDHAND_DIR:-closedhand}"
+_tmp="${TMPDIR:-/tmp}"
+LOG="${_tmp%/}/closedhand-install.log"
 
 say() { printf '%s\n' "$*"; }
 fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 
-# --- Banner ------------------------------------------------------------------
-# Decoration only. The installer proper starts at "Preconditions" below.
+# --- The drawing -------------------------------------------------------------
+# Decoration. The installer proper starts at "Preconditions" below.
 #
-# A hand closing into a fist, cut out of a slab of blocks and drawn to fit the
-# terminal it finds. It is built so it can never be the reason an install
-# fails: it needs a real terminal, awk, and a sleep that understands fractions,
-# it skips itself when any of those are missing, and every error inside it is
-# discarded.
+# A hand that closes as the install advances: open while it fetches the code,
+# a fist by the time the dashboard answers. It is drawn from geometry rather
+# than stored pictures so it fits whatever terminal it finds.
 HAND_AWK='# Renders one frame of the closing hand as a cut-out in a slab of blocks.
 #   W  slab width in columns      H  slab height in rows
 #   P  closing progress, 0 open to 1 fist
@@ -122,15 +123,28 @@ BEGIN {
 }'
 
 hand_frame() {
-  awk -v W="$BSW" -v PAD="$BPAD" -v H="$BH" -v P="$1" -v FI="$BFI" -v SH="$BSH" -v HL="$BHL" \
-      "$HAND_AWK" </dev/null
+  awk -v W="$BSW" -v PAD="$BPAD" -v H="$BH" -v P="$1" \
+      -v FI="$BFI" -v SH="$BSH" -v HL="$BHL" "$HAND_AWK" </dev/null
 }
 
-banner() {
+# --- Progress display --------------------------------------------------------
+# Two modes, and the plain one is the one that has to keep working.
+#
+#   drawn  On a real terminal: the hand and a bar are redrawn in place as each
+#          step completes, and the output of git and docker goes to a log so it
+#          cannot scroll the drawing away. The log is printed if a step fails.
+#   plain  Anywhere else, and whenever anything the drawing needs is missing:
+#          each step announces itself as a line, and git and docker print as
+#          they always did. No cursor tricks, nothing hidden.
+UI=0
+UIDRAWN=0
+
+ui_init() {
+  if [ "${CLOSEDHAND_PLAIN:-0}" = "1" ]; then return 0; fi
   if [ ! -t 1 ] || [ "${TERM:-dumb}" = "dumb" ]; then return 0; fi
   if ! command -v awk >/dev/null 2>&1; then return 0; fi
-  # A shell whose sleep only counts whole seconds would turn this into a
-  # ten-second wait, which is not a flourish any more.
+  # A shell whose sleep only counts whole seconds would stretch every redraw
+  # into a visible stall.
   if ! sleep 0.07 2>/dev/null; then return 0; fi
 
   BW=80; BH=20
@@ -140,20 +154,19 @@ banner() {
     case "$c" in ''|*[!0-9]*) c=80 ;; esac
     case "$l" in ''|*[!0-9]*) l=24 ;; esac
     BW=$((c - 1))
-    BH=$((l - 9))
+    BH=$((l - 11))
   fi
   if [ "$BH" -gt 30 ]; then BH=30; fi
   if [ "$BW" -lt 40 ] || [ "$BH" -lt 12 ]; then return 0; fi
+
   # The hand can only be as big as the terminal is tall, so on a wide terminal
   # a full-width slab would leave it stranded in the middle of a grey field.
   # Size the slab to the hand instead, then centre it in the space available.
   BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
   if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
   BPAD=$(( (BW - BSW) / 2 ))
-  # Where the slab's midline falls, so the wordmark can sit under the drawing
-  # instead of at the left edge of the terminal.
   BCEN=$(( BPAD + BSW / 2 ))
-  BDREW=1
+  BLOCK=$((BH + 6))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
@@ -163,42 +176,95 @@ banner() {
     *) BFI='.'; BSH='#'; BHL=':' ;;
   esac
 
+  UI=1
+  trap 'printf "\033[?25h"' EXIT
   trap 'printf "\033[?25h"; exit 130' INT
   printf '\033[?25l\n'
-  hand_frame 0
-  for p in 0.12 0.25 0.38 0.50 0.63 0.76 0.88 1; do
-    sleep 0.06 2>/dev/null || true
-    printf '\033[%dA' "$BH"
-    hand_frame "$p"
-  done
-  sleep 0.35 2>/dev/null || true
-  printf '\033[?25h'
-  trap - INT
 }
-# Centres one line on the slab's midline. Only used when the slab was drawn:
-# with no drawing above it there is nothing to centre on, and a plain left
-# indent is the right answer.
-centred() {
+
+spaces() {
+  _n=$1; _s=""
+  while [ "$_n" -gt 0 ]; do _s="$_s "; _n=$((_n - 1)); done
+  printf '%s' "$_s"
+}
+
+ui_centred() {
   _t="$1"
   _i=$(( BCEN - ${#_t} / 2 ))
   if [ "$_i" -lt 0 ]; then _i=0; fi
-  _s=""
-  while [ "$_i" -gt 0 ]; do _s="$_s "; _i=$((_i - 1)); done
-  printf '%s%s\n' "$_s" "$_t"
+  printf '%s%s\033[K\n' "$(spaces "$_i")" "$_t"
 }
 
-BDREW=0
-banner 2>/dev/null || true
+ui_bar() {
+  _done=$(( BSW * $1 / 100 ))
+  _left=$(( BSW - _done ))
+  _s=""
+  while [ "$_done" -gt 0 ]; do _s="$_s$BSH"; _done=$((_done - 1)); done
+  while [ "$_left" -gt 0 ]; do _s="$_s$BHL"; _left=$((_left - 1)); done
+  printf '%s%s\033[K\n' "$(spaces "$BPAD")" "$_s"
+}
 
-say ""
-if [ "$BDREW" = "1" ]; then
-  centred "C L O S E D H A N D"
-  centred "A personal AI assistant you actually own."
-else
-  say "  C L O S E D H A N D"
-  say "  A personal AI assistant you actually own."
-fi
-say ""
+ui_draw() {
+  _pct=$1; _label=$2
+  # The drawing takes progress as a fraction; the bar takes it as a percentage.
+  if [ "$_pct" -ge 100 ]; then _frac=1; else _frac=$(printf '0.%02d' "$_pct"); fi
+  if [ "$UIDRAWN" = "1" ]; then printf '\033[%dA' "$BLOCK"; fi
+  hand_frame "$_frac"
+  printf '\033[K\n'
+  ui_centred "C L O S E D H A N D"
+  ui_centred "A personal AI assistant you actually own."
+  printf '\033[K\n'
+  ui_bar "$_pct"
+  printf '%s%3d%%  %s\033[K\n' "$(spaces "$BPAD")" "$_pct" "$_label"
+  UIDRAWN=1
+}
+
+# One step of the install finished. Redraw, or say so, depending on the mode.
+step() {
+  if [ "$UI" = "1" ]; then ui_draw "$1" "$2"; else say "$2"; fi
+}
+
+# Run a command, hiding its output only when there is a drawing it would ruin.
+run() {
+  if [ "$UI" = "1" ]; then "$@" >>"$LOG" 2>&1; else "$@"; fi
+}
+
+# Run a slow command while the bar keeps moving. Downloading the images is the
+# long wait of a first install, and a frozen bar during it reads as a hang.
+run_watched() {
+  _from=$1; _to=$2; _label=$3; shift 3
+  if [ "$UI" != "1" ]; then
+    say "$_label"
+    "$@"
+    return $?
+  fi
+  "$@" >>"$LOG" 2>&1 &
+  _pid=$!
+  _pct=$_from
+  _t0=$(date +%s 2>/dev/null || echo 0)
+  while kill -0 "$_pid" 2>/dev/null; do
+    _now=$(date +%s 2>/dev/null || echo 0)
+    ui_draw "$_pct" "$_label  $((_now - _t0))s"
+    sleep 1
+    if [ "$_pct" -lt "$_to" ]; then _pct=$((_pct + 1)); fi
+  done
+  if wait "$_pid"; then return 0; else return $?; fi
+}
+
+# A step failed. In drawn mode the reason is in the log, so print the end of it
+# rather than leaving the user with nothing but a stalled bar.
+die() {
+  if [ "$UI" = "1" ]; then
+    printf '\033[?25h'
+    say ""
+    say "The end of the log:"
+    tail -n 25 "$LOG" 2>/dev/null || true
+    say ""
+    say "Full log: $LOG"
+    say ""
+  fi
+  fail "$1"
+}
 
 # --- Preconditions -----------------------------------------------------------
 command -v git >/dev/null 2>&1 || fail "git is required. Install it and re-run."
@@ -206,29 +272,33 @@ command -v docker >/dev/null 2>&1 || fail "docker is required. Install Docker (o
 docker compose version >/dev/null 2>&1 || fail "the docker compose plugin is required (docker compose version failed)."
 docker info >/dev/null 2>&1 || fail "the docker daemon isn't running. Start Docker and re-run."
 
+ui_init
+: > "$LOG" 2>/dev/null || true
+
 # --- Clone (or reuse a checkout we're already inside) ------------------------
 if [ -f docker-compose.yml ] && [ -f .env.example ]; then
-  say "Existing ClosedHand checkout detected, installing here."
+  step 5 "Using the checkout you are already in"
 elif [ -d "$DIR" ]; then
   [ -f "$DIR/docker-compose.yml" ] || fail "$DIR exists but doesn't look like a ClosedHand checkout. Remove it or set CLOSEDHAND_DIR."
-  say "Reusing existing checkout in $DIR."
+  step 5 "Reusing the checkout in $DIR"
   cd "$DIR"
   # Re-running the installer doubles as the upgrade path: fast-forward a clean
   # checkout so the rebuild uses current code. Local edits are left alone.
   if git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null; then
-    git pull --ff-only 2>/dev/null && say "Checkout updated." || true
+    run git pull --ff-only 2>/dev/null || true
   fi
 else
-  say "Cloning ClosedHand into $DIR..."
-  git clone --depth 1 "$REPO" "$DIR"
+  step 5 "Getting the code"
+  run git clone --depth 1 "$REPO" "$DIR" || die "could not clone $REPO."
   cd "$DIR"
 fi
+step 20 "Got the code"
 
 # --- .env with generated secrets (first run only) ----------------------------
 # Never regenerate: POSTGRES_PASSWORD must keep matching the existing data
 # volume, and rotating WS/sandbox secrets on re-run would break a live stack.
 if [ -f .env ]; then
-  say "Keeping existing .env."
+  step 28 "Keeping the settings already here"
 else
   cp .env.example .env
   if command -v openssl >/dev/null 2>&1; then
@@ -254,40 +324,40 @@ else
   setkey TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 2>/dev/null || rand)"
   # No ADMIN_PASSWORD here: you choose the dashboard password inside the setup
   # wizard, where you'll actually remember it.
-  say "Created .env with generated secrets."
+  step 28 "Made your settings file, with fresh passwords"
 fi
 
 # --- Up ----------------------------------------------------------------------
 if [ "${CLOSEDHAND_NO_UP:-0}" = "1" ]; then
-  say "CLOSEDHAND_NO_UP=1, skipping docker compose up."
-elif [ "${CLOSEDHAND_BUILD:-0}" = "1" ]; then
-  say "CLOSEDHAND_BUILD=1: building from source (a few minutes)..."
-  if ! docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build; then
-    say ""
-    say "The build hit an error; this is usually a brief registry or network"
-    say "blip. Retrying once in 10 seconds..."
-    sleep 10
-    docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-  fi
+  step 100 "CLOSEDHAND_NO_UP=1, not starting anything"
+  exit 0
+fi
+
+BUILT_FROM_SOURCE=0
+if [ "${CLOSEDHAND_BUILD:-0}" = "1" ]; then
+  run_watched 30 70 "Building from source, one time" \
+    docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
+    || die "the build failed."
+  BUILT_FROM_SOURCE=1
 else
-  say "Downloading pre-built images (first run only) and starting..."
   # One retry for a genuine blip, then build from source. A missing or private
   # image is not a network problem and pulling it again cannot fix it, so the
   # fallback is the thing that actually works: slower, but it always boots.
-  if ! docker compose pull; then
-    say ""
-    say "The download hit an error; this is usually a brief registry or"
-    say "network blip. Retrying once in 10 seconds..."
+  if ! run_watched 30 65 "Downloading ClosedHand, first run only" docker compose pull; then
+    step 30 "Download hit a snag, usually a brief blip. Retrying in 10 seconds"
     sleep 10
-    if ! docker compose pull; then
-      say ""
-      say "Still no luck, so the pre-built images are unavailable to this"
-      say "machine. Building from source instead (a few minutes, one time)."
-      docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+    if ! run_watched 30 65 "Downloading ClosedHand, second attempt" docker compose pull; then
+      run_watched 30 70 "No luck downloading, so building it here instead" \
+        docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
+        || die "both the download and the build failed."
       BUILT_FROM_SOURCE=1
     fi
   fi
-  [ "${BUILT_FROM_SOURCE:-0}" = "1" ] || docker compose up -d
+fi
+
+if [ "$BUILT_FROM_SOURCE" = "0" ]; then
+  step 72 "Starting ClosedHand"
+  run docker compose up -d || die "docker compose up failed."
 fi
 
 # Take the user to the wizard rather than telling them an address to type.
@@ -298,8 +368,7 @@ fi
 # "opening..." without printing the address, because the open can fail
 # silently in odd environments.
 DASH_URL="http://localhost:3000"
-say ""
-say "ClosedHand is starting. Waiting for the dashboard to come up..."
+step 80 "Waiting for the dashboard"
 tries=0
 while [ "$tries" -lt 45 ]; do
   if command -v curl >/dev/null 2>&1 && curl -fsS -o /dev/null --max-time 2 "$DASH_URL" 2>/dev/null; then
@@ -307,7 +376,14 @@ while [ "$tries" -lt 45 ]; do
   fi
   tries=$((tries + 1))
   sleep 2
+  # Creep from 80 to 97 across the wait, so a slow first boot still shows
+  # something moving without ever claiming to be finished.
+  if [ "$UI" = "1" ]; then
+    ui_draw $(( 80 + (tries * 17 / 45) )) "Waiting for the dashboard  $((tries * 2))s"
+  fi
 done
+
+step 100 "Ready"
 
 OPENED=0
 if command -v open >/dev/null 2>&1; then
