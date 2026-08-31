@@ -46,3 +46,6 @@ tasks/
 .claude/skills/
 .claude/worktrees/
 CLAUDE.local.md
+
+# Maintainer working notes, local only
+OSS-PLAN.md
