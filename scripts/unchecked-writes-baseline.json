@@ -4,7 +4,7 @@
   "lib/bridge-server.js": 2,
   "lib/bug-reports.js": 1,
   "lib/config.js": 1,
-  "lib/conversation.js": 15,
+  "lib/conversation.js": 14,
   "lib/engine.js": 1,
   "lib/onboarding.js": 1,
   "lib/platforms/telegram.js": 1,

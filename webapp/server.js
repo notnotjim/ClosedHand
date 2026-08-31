@@ -7272,6 +7272,7 @@ app.post("/api/account/clear-conversations", async (req, res) => {
       supabase.from("conversation_threads").delete().eq("user_id", userId),
       supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
       supabase.from("web_messages").delete().eq("user_id", userId),
+      supabase.from("data_cache").delete().eq("user_id", userId).eq("source", "conversation"),
       supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory")
         .in("item_type", ["conversation_summary", "thread_summary"]),
     ]);
@@ -7321,6 +7322,10 @@ app.post("/api/account/clear-data", async (req, res) => {
       supabase.from("conversation_threads").delete().eq("user_id", userId),
       supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
       supabase.from("web_messages").delete().eq("user_id", userId),
+      // The synced cache stays (it re-syncs from the connections that stay),
+      // but conversation raw is not resyncable from anywhere and belongs to
+      // the conversations this action promises to delete.
+      supabase.from("data_cache").delete().eq("user_id", userId).eq("source", "conversation"),
       supabase.from("facts").delete().eq("user_id", userId),
       supabase.from("user_rules").delete().eq("user_id", userId),
       supabase.from("schedules").delete().eq("user_id", userId),
