@@ -101,7 +101,7 @@ Single-tenant by construction, not by configuration: every request resolves to t
 
 ## Contributing
 
-Issues and PRs welcome. Read [OSS-PLAN.md](OSS-PLAN.md) first: it is the living plan and the most honest onboarding document in the repo, including the decisions, the dead ends, and what is deliberately not built. A genuinely useful first contribution: run `install.sh` on a clean Linux box or WSL and report what breaks.
+Issues and PRs welcome. Open an issue before starting anything sizeable so the approach can be agreed first. A genuinely useful first contribution: run `install.sh` on a clean Linux box or WSL and report what breaks.
 
 ## License
 
