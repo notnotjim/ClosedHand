@@ -150,6 +150,10 @@ banner() {
   BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
   if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
   BPAD=$(( (BW - BSW) / 2 ))
+  # Where the slab's midline falls, so the wordmark can sit under the drawing
+  # instead of at the left edge of the terminal.
+  BCEN=$(( BPAD + BSW / 2 ))
+  BDREW=1
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
@@ -171,11 +175,29 @@ banner() {
   printf '\033[?25h'
   trap - INT
 }
+# Centres one line on the slab's midline. Only used when the slab was drawn:
+# with no drawing above it there is nothing to centre on, and a plain left
+# indent is the right answer.
+centred() {
+  _t="$1"
+  _i=$(( BCEN - ${#_t} / 2 ))
+  if [ "$_i" -lt 0 ]; then _i=0; fi
+  _s=""
+  while [ "$_i" -gt 0 ]; do _s="$_s "; _i=$((_i - 1)); done
+  printf '%s%s\n' "$_s" "$_t"
+}
+
+BDREW=0
 banner 2>/dev/null || true
 
 say ""
-say "  C L O S E D H A N D"
-say "  A personal AI assistant you actually own."
+if [ "$BDREW" = "1" ]; then
+  centred "C L O S E D H A N D"
+  centred "A personal AI assistant you actually own."
+else
+  say "  C L O S E D H A N D"
+  say "  A personal AI assistant you actually own."
+fi
 say ""
 
 # --- Preconditions -----------------------------------------------------------
