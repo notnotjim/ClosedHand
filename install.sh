@@ -20,74 +20,163 @@ say() { printf '%s\n' "$*"; }
 fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 
 # --- Banner ------------------------------------------------------------------
-# A hand closing into a fist. Every frame is padded to the same seven lines so
-# the cursor can jump back up and redraw over the previous one in place. This is
-# decoration, so it is built to never be the reason an install fails: it only
-# animates on a real terminal that can sleep in fractions, degrades to a single
-# still frame in a log file or a CI job, and any error inside it is swallowed.
-frame() {
-  case "$1" in
-    1) cat <<'ART'
-    .--.--.--.--.
-    |  |  |  |  |
-    |  |  |  |  |
-  .-'           |
-  |             |
-  |             |
-   \____________/
-ART
-    ;;
-    2) cat <<'ART'
+# Decoration only. The installer proper starts at "Preconditions" below.
+#
+# A hand closing into a fist, cut out of a slab of blocks and drawn to fit the
+# terminal it finds. It is built so it can never be the reason an install
+# fails: it needs a real terminal, awk, and a sleep that understands fractions,
+# it skips itself when any of those are missing, and every error inside it is
+# discarded.
+HAND_AWK='# Renders one frame of the closing hand as a cut-out in a slab of blocks.
+#   W  slab width in columns      H  slab height in rows
+#   P  closing progress, 0 open to 1 fist
+#   FI field char   SH shadow char   HL highlight char
+#   PAD  columns of blank margin to the left of the slab
+function rr(x, y, x1, y1, x2, y2, rx, ry,   dx, dy, cx, cy) {
+  x1 += rx; x2 -= rx; y1 += ry; y2 -= ry
+  if (x2 < x1) { cx = (x1 + x2) / 2; x1 = cx; x2 = cx }
+  if (y2 < y1) { cy = (y1 + y2) / 2; y1 = cy; y2 = cy }
+  dx = (x < x1 ? x1 - x : (x > x2 ? x - x2 : 0)) / rx
+  dy = (y < y1 ? y1 - y : (y > y2 ? y - y2 : 0)) / ry
+  return (dx * dx + dy * dy) <= 1
+}
 
-    .--.--.--.--.
-    |  |  |  |  |
-  .-'           |
-  |             |
-  |             |
-   \____________/
-ART
-    ;;
-    3) cat <<'ART'
+BEGIN {
+  # As the fingers fold away the hand gets shorter, so it rises as it closes
+  # and the fist ends up sitting where the open hand did rather than
+  # sinking to the bottom of the slab.
+  hh = H - 2
+  oy = 1 - P * 0.20 * hh
+  # A terminal cell is about twice as tall as it is wide, and a hand is a bit
+  # over half as wide as it is long, so it wants about 1.15 columns per row.
+  hw = int(hh * 1.15)
+  if (hw > W - 6) hw = W - 6
+  ox = int((W - hw) / 2)
 
+  rx = hw * 0.06; if (rx < 1.3) rx = 1.3
+  ry = hh * 0.05; if (ry < 0.8) ry = 0.8
 
-    .--.--.--.--.
-  .-'           |
-  |             |
-  |             |
-   \____________/
-ART
-    ;;
-    4) cat <<'ART'
+  palmTop = 0.47 * hh
+  palmX1  = 0.15 * hw
+  palmX2  = hw
+  palmBot = hh * 0.86
+  # A narrower wrist below the palm, running off the bottom edge of the slab
+  # rather than ending in a stump, so the hand reads as attached to an arm.
+  wX1 = 0.36 * hw; wX2 = 0.84 * hw; wY1 = hh * 0.72; wY2 = hh * 1.4
 
+  # Four fingers across the palm, middle longest, little finger shortest. The
+  # gaps have to survive down to two columns or the fingers read as one slab.
+  bandL = palmX1 + 0.03 * hw
+  bandR = palmX2 - 0.02 * hw
+  gap = (bandR - bandL) * 0.10; if (gap < 2) gap = 2
+  fw  = ((bandR - bandL) - 3 * gap) / 4
+  tipOpen[0] = 0.12 * hh
+  tipOpen[1] = 0.01 * hh
+  tipOpen[2] = 0.07 * hh
+  tipOpen[3] = 0.24 * hh
+  tipShut = palmTop - 0.11 * hh
 
-    .--.--.--.--.
-  .-'           |
-  |  ,-------.  |
-  |  '-------'  |
-   \____________/
-ART
-    ;;
-  esac
+  # Thumb: a lobe out to the left when open, folded across the front when shut.
+  tOX1 = 0.00 * hw; tOX2 = 0.34 * hw; tOY1 = 0.50 * hh; tOY2 = 0.76 * hh
+  tSX1 = 0.18 * hw; tSX2 = 0.88 * hw; tSY1 = 0.62 * hh; tSY2 = 0.84 * hh
+  tx1 = tOX1 + P * (tSX1 - tOX1); tx2 = tOX2 + P * (tSX2 - tOX2)
+  ty1 = tOY1 + P * (tSY1 - tOY1); ty2 = tOY2 + P * (tSY2 - tOY2)
+
+  for (y = 0; y < H; y++) {
+    for (x = 0; x < W; x++) {
+      hx = x - ox; hy = y - oy
+      v = 0
+      if (rr(hx, hy, palmX1, palmTop, palmX2, palmBot, rx, ry)) v = 1
+      for (i = 0; i < 4 && !v; i++) {
+        fl = bandL + i * (fw + gap)
+        tp = tipOpen[i] + P * (tipShut - tipOpen[i])
+        if (rr(hx, hy, fl, tp, fl + fw, palmTop + 2 * ry, rx * 0.75, ry)) v = 1
+      }
+      if (!v && rr(hx, hy, wX1, wY1, wX2, wY2, rx, ry)) v = 1
+      if (!v && rr(hx, hy, tx1, ty1, tx2, ty2, rx, ry * 1.2)) v = 1
+      # Groove above the folded thumb, so the fist reads as thumb over fingers.
+      if (v && P > 0.35 && hx > tx1 && hx < tx2 && hy > ty1 - 1.6 && hy < ty1 - 0.2) v = 0
+      cell[y, x] = v
+    }
+  }
+
+  # Light from the top left, so the slab casts a hard edge into the cut-out.
+  margin = ""
+  for (i = 0; i < PAD; i++) margin = margin " "
+  out = ""
+  for (y = 0; y < H; y++) {
+    line = margin
+    for (x = 0; x < W; x++) {
+      if (cell[y, x]) { line = line " "; continue }
+      if ((y > 0 && cell[y - 1, x]) || (x > 0 && cell[y, x - 1]) ||
+          (x > 1 && cell[y, x - 2]) || (y > 0 && x > 0 && cell[y - 1, x - 1]))
+        line = line SH
+      else if ((y < H - 1 && cell[y + 1, x]) || (x < W - 1 && cell[y, x + 1]) ||
+               (x < W - 2 && cell[y, x + 2]))
+        line = line HL
+      else line = line FI
+    }
+    out = out line "\n"
+  }
+  printf "%s", out
+}'
+
+hand_frame() {
+  awk -v W="$BSW" -v PAD="$BPAD" -v H="$BH" -v P="$1" -v FI="$BFI" -v SH="$BSH" -v HL="$BHL" \
+      "$HAND_AWK" </dev/null
 }
 
 banner() {
-  printf '\n'
-  if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ] && sleep 0.12 2>/dev/null; then
-    frame 1
-    for f in 2 3 4; do
-      sleep 0.13 2>/dev/null || true
-      printf '\033[7A'
-      frame "$f"
-    done
-    sleep 0.25 2>/dev/null || true
-  else
-    # A lone still frame has no redraw to line up with, so drop the padding.
-    frame 4 | awk 'NF{p=1} p'
+  if [ ! -t 1 ] || [ "${TERM:-dumb}" = "dumb" ]; then return 0; fi
+  if ! command -v awk >/dev/null 2>&1; then return 0; fi
+  # A shell whose sleep only counts whole seconds would turn this into a
+  # ten-second wait, which is not a flourish any more.
+  if ! sleep 0.07 2>/dev/null; then return 0; fi
+
+  BW=80; BH=20
+  if command -v tput >/dev/null 2>&1; then
+    c=$(tput cols 2>/dev/null || echo 80)
+    l=$(tput lines 2>/dev/null || echo 24)
+    case "$c" in ''|*[!0-9]*) c=80 ;; esac
+    case "$l" in ''|*[!0-9]*) l=24 ;; esac
+    BW=$((c - 1))
+    BH=$((l - 9))
   fi
-  printf '\n   C L O S E D H A N D\n'
-  printf '   A personal AI assistant you actually own.\n\n'
+  if [ "$BH" -gt 30 ]; then BH=30; fi
+  if [ "$BW" -lt 40 ] || [ "$BH" -lt 12 ]; then return 0; fi
+  # The hand can only be as big as the terminal is tall, so on a wide terminal
+  # a full-width slab would leave it stranded in the middle of a grey field.
+  # Size the slab to the hand instead, then centre it in the space available.
+  BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
+  if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
+  BPAD=$(( (BW - BSW) / 2 ))
+
+  # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+    *UTF-8*|*utf-8*|*UTF8*|*utf8*) BFI=$(printf '\342\226\222')
+                                   BSH=$(printf '\342\226\210')
+                                   BHL=$(printf '\342\226\221') ;;
+    *) BFI='.'; BSH='#'; BHL=':' ;;
+  esac
+
+  trap 'printf "\033[?25h"; exit 130' INT
+  printf '\033[?25l\n'
+  hand_frame 0
+  for p in 0.12 0.25 0.38 0.50 0.63 0.76 0.88 1; do
+    sleep 0.06 2>/dev/null || true
+    printf '\033[%dA' "$BH"
+    hand_frame "$p"
+  done
+  sleep 0.35 2>/dev/null || true
+  printf '\033[?25h'
+  trap - INT
 }
 banner 2>/dev/null || true
+
+say ""
+say "  C L O S E D H A N D"
+say "  A personal AI assistant you actually own."
+say ""
 
 # --- Preconditions -----------------------------------------------------------
 command -v git >/dev/null 2>&1 || fail "git is required. Install it and re-run."
