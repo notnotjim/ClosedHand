@@ -1,4 +1,4 @@
-# ClosedHand self-host — one-command boot: `docker compose up -d` (pulls
+# ClosedHand self-host, one-command boot: `docker compose up -d` (pulls
 # pre-built images; nobody compiles anything to try the app).
 # Building from source instead:
 #   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
