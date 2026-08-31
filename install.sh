@@ -277,10 +277,14 @@ ui_init
 
 # --- Clone (or reuse a checkout we're already inside) ------------------------
 if [ -f docker-compose.yml ] && [ -f .env.example ]; then
-  step 5 "Using the checkout you are already in"
+  # Name the directory. This branch adopts wherever you are standing, which is
+  # right for someone who cloned by hand and wrong for someone who ran it from
+  # a checkout they did not mean to install into, and the only cheap defence
+  # against the second case is saying out loud which one it picked.
+  step 5 "Installing into the checkout you are in: $(pwd)"
 elif [ -d "$DIR" ]; then
   [ -f "$DIR/docker-compose.yml" ] || fail "$DIR exists but doesn't look like a ClosedHand checkout. Remove it or set CLOSEDHAND_DIR."
-  step 5 "Reusing the checkout in $DIR"
+  step 5 "Reusing the checkout in $(pwd)/$DIR"
   cd "$DIR"
   # Re-running the installer doubles as the upgrade path: fast-forward a clean
   # checkout so the rebuild uses current code. Local edits are left alone.
