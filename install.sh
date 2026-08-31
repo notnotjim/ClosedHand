@@ -19,6 +19,76 @@ DIR="${CLOSEDHAND_DIR:-closedhand}"
 say() { printf '%s\n' "$*"; }
 fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 
+# --- Banner ------------------------------------------------------------------
+# A hand closing into a fist. Every frame is padded to the same seven lines so
+# the cursor can jump back up and redraw over the previous one in place. This is
+# decoration, so it is built to never be the reason an install fails: it only
+# animates on a real terminal that can sleep in fractions, degrades to a single
+# still frame in a log file or a CI job, and any error inside it is swallowed.
+frame() {
+  case "$1" in
+    1) cat <<'ART'
+    .--.--.--.--.
+    |  |  |  |  |
+    |  |  |  |  |
+  .-'           |
+  |             |
+  |             |
+   \____________/
+ART
+    ;;
+    2) cat <<'ART'
+
+    .--.--.--.--.
+    |  |  |  |  |
+  .-'           |
+  |             |
+  |             |
+   \____________/
+ART
+    ;;
+    3) cat <<'ART'
+
+
+    .--.--.--.--.
+  .-'           |
+  |             |
+  |             |
+   \____________/
+ART
+    ;;
+    4) cat <<'ART'
+
+
+    .--.--.--.--.
+  .-'           |
+  |  ,-------.  |
+  |  '-------'  |
+   \____________/
+ART
+    ;;
+  esac
+}
+
+banner() {
+  printf '\n'
+  if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ] && sleep 0.12 2>/dev/null; then
+    frame 1
+    for f in 2 3 4; do
+      sleep 0.13 2>/dev/null || true
+      printf '\033[7A'
+      frame "$f"
+    done
+    sleep 0.25 2>/dev/null || true
+  else
+    # A lone still frame has no redraw to line up with, so drop the padding.
+    frame 4 | awk 'NF{p=1} p'
+  fi
+  printf '\n   C L O S E D H A N D\n'
+  printf '   A personal AI assistant you actually own.\n\n'
+}
+banner 2>/dev/null || true
+
 # --- Preconditions -----------------------------------------------------------
 command -v git >/dev/null 2>&1 || fail "git is required. Install it and re-run."
 command -v docker >/dev/null 2>&1 || fail "docker is required. Install Docker (or Docker Desktop) and re-run."
