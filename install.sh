@@ -160,10 +160,10 @@ ui_init() {
     case "$c" in ''|*[!0-9]*) c=80 ;; esac
     case "$l" in ''|*[!0-9]*) l=24 ;; esac
     BW=$((c - 1))
-    BH=$((l - 12))
+    BH=$((l - 14))
   fi
   if [ "$BH" -gt 30 ]; then BH=30; fi
-  if [ "$BW" -lt 40 ] || [ "$BH" -lt 12 ]; then return 0; fi
+  if [ "$BW" -lt 40 ] || [ "$BH" -lt 10 ]; then return 0; fi
 
   # The hand can only be as big as the terminal is tall, so on a wide terminal
   # a full-width slab would leave it stranded in the middle of a grey field.
@@ -171,7 +171,7 @@ ui_init() {
   BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
   if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
   BPAD=$(( (BW - BSW) / 2 ))
-  BLOCK=$((BH + 7))
+  BLOCK=$((BH + 9))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
@@ -220,23 +220,38 @@ ui_bar() {
   printf '\033[2K%s%s\n' "$(spaces "$BPAD")" "$_s"
 }
 
-# Something to read while a slow line does its work. Rotated rather than
-# static, so the block is never completely still even between bar ticks.
-UITICK=0
-hint() {
-  case $(( (UITICK / 8) % 6 )) in
-    0) printf 'Ask it what you agreed to in that email last month.' ;;
-    1) printf 'It reads the inbox and calendar you already have.' ;;
-    2) printf 'Talk to it in Telegram, WhatsApp, Slack, Discord or LINE.' ;;
-    3) printf 'It keeps working overnight and tells you what changed.' ;;
-    4) printf 'Everything stays on this machine. No account with us.' ;;
-    5) printf 'Setup is a password you choose and one key you bring.' ;;
-  esac
+# Which images have arrived, so a step that looks frozen still shows what has
+# actually been finished. Names as a person would say them, not as the registry
+# spells them.
+images_line() {
+  awk '$1 == "Image" && ($3 == "Pulling" || $3 == "Pulled") { seen[$2] = 1 }
+       $1 == "Image" && $3 == "Pulled" { got[$2] = 1 }
+       END {
+         n = 0
+         for (k in seen) order[++n] = k
+         for (i = 1; i < n; i++)
+           for (j = i + 1; j <= n; j++)
+             if (order[j] < order[i]) { t = order[i]; order[i] = order[j]; order[j] = t }
+         out = ""
+         for (i = 1; i <= n; i++) {
+           r = order[i]
+           sub(/:[^:\/]*$/, "", r); sub(/^.*\//, "", r); sub(/^closedhand-/, "", r)
+           if (r == "pgvector") r = "database"
+           else if (r == "webapp") r = "dashboard"
+           else if (r == "bot") r = "assistant"
+           else if (r == "sandbox") r = "computer"
+           out = out r " " ((order[i] in got) ? "done" : "...") "   "
+         }
+         print out
+       }' "$LOG" 2>/dev/null
 }
 
+# Functions in sh share one set of variables, so anything ui_draw assigns is
+# also assigned in whatever called it. These names are its own: when they were
+# _pct and _label, a caller that passed "$_label$_detail" got that written back
+# over its own _label and the detail appended again every second.
 ui_draw() {
-  _pct=$1; _label=$2
-  UITICK=$((UITICK + 1))
+  _dpct=$1; _dtext=$2
   # A terminal resized mid-install invalidates every width held here and the
   # redraw would smear again. Notice it and fall back to plain lines rather
   # than try to recover a block that is already wrong.
@@ -245,12 +260,12 @@ ui_draw() {
   if [ -n "$_cols" ] && [ "$((_cols - 1))" -ne "$BW" ]; then
     printf '\033[?25h'
     UI=0
-    say "$_label"
+    say "$_dtext"
     return 0
   fi
 
   # The drawing takes progress as a fraction; the bar takes it as a percentage.
-  if [ "$_pct" -ge 100 ]; then _frac=1; else _frac=$(printf '0.%02d' "$_pct"); fi
+  if [ "$_dpct" -ge 100 ]; then _frac=1; else _frac=$(printf '0.%02d' "$_dpct"); fi
 
   if [ "$UIDRAWN" = "1" ]; then
     printf '\033[%dA' "$BLOCK"
@@ -268,9 +283,11 @@ ui_draw() {
   ui_centred "C L O S E D H A N D"
   ui_centred "A personal AI assistant you actually own."
   ui_line ""
-  ui_bar "$_pct"
-  ui_centred "$_pct%  $_label"
-  ui_centred "$(hint)"
+  ui_bar "$_dpct"
+  ui_centred "$_dpct%  $_dtext"
+  ui_centred "$(images_line)"
+  ui_line ""
+  ui_centred "Everything stays on this machine. No account with us."
   UIDRAWN=1
 }
 
@@ -301,8 +318,15 @@ pull_progress() {
   # The count, not a byte total. Summing the last figure reported per layer
   # looked like a nice live number and disagreed with what docker actually had
   # on disk, and a plausible wrong number is worse than a plain right one.
+  # The layer count can sit still for minutes on one large layer, so carry
+  # docker's own running figure for whatever it is currently receiving.
+  _now=$(awk 'length($1) == 12 && $2 == "Downloading" { v = $3 } END { print v }' "$LOG" 2>/dev/null)
   if [ "${_tot:-0}" -gt 0 ]; then
-    printf '%d %s of %s layers' $(( _don * 100 / _tot )) "$_don" "$_tot"
+    if [ -n "$_now" ]; then
+      printf '%d %s of %s layers, receiving %s' $(( _don * 100 / _tot )) "$_don" "$_tot" "$_now"
+    else
+      printf '%d %s of %s layers' $(( _don * 100 / _tot )) "$_don" "$_tot"
+    fi
   fi
   return 0
 }
@@ -409,6 +433,9 @@ elif [ -d "$DIR" ]; then
 else
   say "Installing into $(pwd)/$DIR"
 fi
+
+say "Raw output: tail -f $LOG"
+say "Or re-run with CLOSEDHAND_PLAIN=1 for no drawing at all."
 
 ui_init
 : > "$LOG" 2>/dev/null || true
