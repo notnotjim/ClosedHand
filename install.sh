@@ -96,7 +96,9 @@ BEGIN {
       if (!v && rr(hx, hy, wX1, wY1, wX2, wY2, rx, ry)) v = 1
       if (!v && rr(hx, hy, tx1, ty1, tx2, ty2, rx, ry * 1.2)) v = 1
       # Groove above the folded thumb, so the fist reads as thumb over fingers.
-      if (v && P > 0.35 && hx > tx1 && hx < tx2 && hy > ty1 - 1.6 && hy < ty1 - 0.2) v = 0
+  # Late, because a groove drawn while the thumb is still crossing cuts a bar
+  # through fingers that are visibly still up.
+      if (v && P > 0.6 && hx > tx1 && hx < tx2 && hy > ty1 - 1.6 && hy < ty1 - 0.2) v = 0
       cell[y, x] = v
     }
   }
@@ -165,7 +167,6 @@ ui_init() {
   BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
   if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
   BPAD=$(( (BW - BSW) / 2 ))
-  BCEN=$(( BPAD + BSW / 2 ))
   BLOCK=$((BH + 6))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
@@ -188,11 +189,22 @@ spaces() {
   printf '%s' "$_s"
 }
 
+# Every line this display prints must fit the terminal. One that does not wraps
+# onto a second physical row, the redraw then moves up by fewer rows than it
+# printed, and from there every frame lands lower than the last and smears the
+# one before it. Text only: ${#} counts bytes in some shells, so the block
+# characters never come through here.
+ui_line() {
+  _t="$1"
+  if [ "${#_t}" -gt "$BW" ]; then _t=$(printf '%s' "$_t" | cut -c1-"$BW"); fi
+  printf '\033[2K%s\n' "$_t"
+}
+
 ui_centred() {
   _t="$1"
-  _i=$(( BCEN - ${#_t} / 2 ))
+  _i=$(( (BW - ${#_t}) / 2 ))
   if [ "$_i" -lt 0 ]; then _i=0; fi
-  printf '%s%s\033[K\n' "$(spaces "$_i")" "$_t"
+  ui_line "$(spaces "$_i")$_t"
 }
 
 ui_bar() {
@@ -201,21 +213,44 @@ ui_bar() {
   _s=""
   while [ "$_done" -gt 0 ]; do _s="$_s$BSH"; _done=$((_done - 1)); done
   while [ "$_left" -gt 0 ]; do _s="$_s$BHL"; _left=$((_left - 1)); done
-  printf '%s%s\033[K\n' "$(spaces "$BPAD")" "$_s"
+  printf '\033[2K%s%s\n' "$(spaces "$BPAD")" "$_s"
 }
 
 ui_draw() {
   _pct=$1; _label=$2
+  # A terminal resized mid-install invalidates every width held here and the
+  # redraw would smear again. Notice it and fall back to plain lines rather
+  # than try to recover a block that is already wrong.
+  _cols=$(tput cols 2>/dev/null) || _cols=""
+  case "$_cols" in ''|*[!0-9]*) _cols="" ;; esac
+  if [ -n "$_cols" ] && [ "$((_cols - 1))" -ne "$BW" ]; then
+    printf '\033[?25h'
+    UI=0
+    say "$_label"
+    return 0
+  fi
+
   # The drawing takes progress as a fraction; the bar takes it as a percentage.
   if [ "$_pct" -ge 100 ]; then _frac=1; else _frac=$(printf '0.%02d' "$_pct"); fi
-  if [ "$UIDRAWN" = "1" ]; then printf '\033[%dA' "$BLOCK"; fi
+
+  if [ "$UIDRAWN" = "1" ]; then
+    printf '\033[%dA' "$BLOCK"
+  else
+    # Wipe the rows the block is about to occupy. The drawing itself comes
+    # straight from awk without clearing codes, so whatever sat to the right
+    # of it would otherwise survive the first frame.
+    _i=$BLOCK
+    while [ "$_i" -gt 0 ]; do printf '\033[2K\n'; _i=$((_i - 1)); done
+    printf '\033[%dA' "$BLOCK"
+  fi
+
   hand_frame "$_frac"
-  printf '\033[K\n'
+  ui_line ""
   ui_centred "C L O S E D H A N D"
   ui_centred "A personal AI assistant you actually own."
-  printf '\033[K\n'
+  ui_line ""
   ui_bar "$_pct"
-  printf '%s%3d%%  %s\033[K\n' "$(spaces "$BPAD")" "$_pct" "$_label"
+  ui_centred "$_pct%  $_label"
   UIDRAWN=1
 }
 
@@ -229,10 +264,23 @@ run() {
   if [ "$UI" = "1" ]; then "$@" >>"$LOG" 2>&1; else "$@"; fi
 }
 
-# Run a slow command while the bar keeps moving. Downloading the images is the
-# long wait of a first install, and a frozen bar during it reads as a hang.
+# docker compose pull names every layer as it starts and again as it finishes,
+# so the share of layers already downloaded is a real measure of the longest
+# wait in an install rather than a guess dressed up as one.
+pull_progress() {
+  _tot=$(awk '$2 == "Pulling" && $3 == "fs" { print $1 }' "$LOG" 2>/dev/null \
+         | sort -u | wc -l | tr -d ' ')
+  _don=$(awk '$2 == "Download" && $3 == "complete" { print $1 }' "$LOG" 2>/dev/null \
+         | sort -u | wc -l | tr -d ' ')
+  if [ "${_tot:-0}" -gt 0 ]; then printf '%d' $(( _don * 100 / _tot )); fi
+  return 0
+}
+
+# Run a slow command while the bar keeps moving. Pass a probe that prints how
+# far along the command is, or "-" when there is nothing to measure, in which
+# case the bar creeps slowly towards the ceiling and never reaches it early.
 run_watched() {
-  _from=$1; _to=$2; _label=$3; shift 3
+  _from=$1; _to=$2; _label=$3; _probe=$4; shift 4
   if [ "$UI" != "1" ]; then
     say "$_label"
     "$@"
@@ -241,12 +289,20 @@ run_watched() {
   "$@" >>"$LOG" 2>&1 &
   _pid=$!
   _pct=$_from
-  _t0=$(date +%s 2>/dev/null || echo 0)
+  _tick=0
   while kill -0 "$_pid" 2>/dev/null; do
-    _now=$(date +%s 2>/dev/null || echo 0)
-    ui_draw "$_pct" "$_label  $((_now - _t0))s"
+    _share=""
+    if [ "$_probe" != "-" ]; then _share=$("$_probe"); fi
+    if [ -n "$_share" ]; then
+      _pct=$(( _from + (_to - _from) * _share / 100 ))
+    else
+      _tick=$((_tick + 1))
+      if [ "$_tick" -ge 3 ] && [ "$_pct" -lt "$_to" ]; then
+        _pct=$((_pct + 1)); _tick=0
+      fi
+    fi
+    ui_draw "$_pct" "$_label"
     sleep 1
-    if [ "$_pct" -lt "$_to" ]; then _pct=$((_pct + 1)); fi
   done
   if wait "$_pid"; then return 0; else return $?; fi
 }
@@ -272,19 +328,29 @@ command -v docker >/dev/null 2>&1 || fail "docker is required. Install Docker (o
 docker compose version >/dev/null 2>&1 || fail "the docker compose plugin is required (docker compose version failed)."
 docker info >/dev/null 2>&1 || fail "the docker daemon isn't running. Start Docker and re-run."
 
+# --- Where this is going -----------------------------------------------------
+# Said on a plain line above the display, before anything is written. The first
+# branch adopts whatever directory you are standing in, which is right for
+# someone who cloned by hand and wrong for someone who ran this from a checkout
+# they did not mean to install into. A path is also the one thing here that
+# must not be shortened to fit a centred line.
+if [ -f docker-compose.yml ] && [ -f .env.example ]; then
+  say "Installing into the checkout you are in: $(pwd)"
+elif [ -d "$DIR" ]; then
+  say "Reusing the checkout in $(pwd)/$DIR"
+else
+  say "Installing into $(pwd)/$DIR"
+fi
+
 ui_init
 : > "$LOG" 2>/dev/null || true
 
 # --- Clone (or reuse a checkout we're already inside) ------------------------
 if [ -f docker-compose.yml ] && [ -f .env.example ]; then
-  # Name the directory. This branch adopts wherever you are standing, which is
-  # right for someone who cloned by hand and wrong for someone who ran it from
-  # a checkout they did not mean to install into, and the only cheap defence
-  # against the second case is saying out loud which one it picked.
-  step 5 "Installing into the checkout you are in: $(pwd)"
+  step 0 "Using this checkout"
 elif [ -d "$DIR" ]; then
   [ -f "$DIR/docker-compose.yml" ] || fail "$DIR exists but doesn't look like a ClosedHand checkout. Remove it or set CLOSEDHAND_DIR."
-  step 5 "Reusing the checkout in $(pwd)/$DIR"
+  step 0 "Updating the checkout"
   cd "$DIR"
   # Re-running the installer doubles as the upgrade path: fast-forward a clean
   # checkout so the rebuild uses current code. Local edits are left alone.
@@ -292,17 +358,17 @@ elif [ -d "$DIR" ]; then
     run git pull --ff-only 2>/dev/null || true
   fi
 else
-  step 5 "Getting the code"
+  step 0 "Getting the code"
   run git clone --depth 1 "$REPO" "$DIR" || die "could not clone $REPO."
   cd "$DIR"
 fi
-step 20 "Got the code"
+step 20 "Code ready"
 
 # --- .env with generated secrets (first run only) ----------------------------
 # Never regenerate: POSTGRES_PASSWORD must keep matching the existing data
 # volume, and rotating WS/sandbox secrets on re-run would break a live stack.
 if [ -f .env ]; then
-  step 28 "Keeping the settings already here"
+  step 28 "Keeping your settings"
 else
   cp .env.example .env
   if command -v openssl >/dev/null 2>&1; then
@@ -328,18 +394,18 @@ else
   setkey TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 2>/dev/null || rand)"
   # No ADMIN_PASSWORD here: you choose the dashboard password inside the setup
   # wizard, where you'll actually remember it.
-  step 28 "Made your settings file, with fresh passwords"
+  step 28 "Settings ready"
 fi
 
 # --- Up ----------------------------------------------------------------------
 if [ "${CLOSEDHAND_NO_UP:-0}" = "1" ]; then
-  step 100 "CLOSEDHAND_NO_UP=1, not starting anything"
+  step 100 "Not starting anything"
   exit 0
 fi
 
 BUILT_FROM_SOURCE=0
 if [ "${CLOSEDHAND_BUILD:-0}" = "1" ]; then
-  run_watched 30 70 "Building from source, one time" \
+  run_watched 30 70 "Building from source" - \
     docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
     || die "the build failed."
   BUILT_FROM_SOURCE=1
@@ -347,11 +413,11 @@ else
   # One retry for a genuine blip, then build from source. A missing or private
   # image is not a network problem and pulling it again cannot fix it, so the
   # fallback is the thing that actually works: slower, but it always boots.
-  if ! run_watched 30 65 "Downloading ClosedHand, first run only" docker compose pull; then
-    step 30 "Download hit a snag, usually a brief blip. Retrying in 10 seconds"
+  if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
+    step 30 "Download stalled, retrying"
     sleep 10
-    if ! run_watched 30 65 "Downloading ClosedHand, second attempt" docker compose pull; then
-      run_watched 30 70 "No luck downloading, so building it here instead" \
+    if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
+      run_watched 30 70 "Building from source" - \
         docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
         || die "both the download and the build failed."
       BUILT_FROM_SOURCE=1
@@ -383,7 +449,7 @@ while [ "$tries" -lt 45 ]; do
   # Creep from 80 to 97 across the wait, so a slow first boot still shows
   # something moving without ever claiming to be finished.
   if [ "$UI" = "1" ]; then
-    ui_draw $(( 80 + (tries * 17 / 45) )) "Waiting for the dashboard  $((tries * 2))s"
+    ui_draw $(( 80 + (tries * 17 / 45) )) "Waiting for the dashboard"
   fi
 done
 
