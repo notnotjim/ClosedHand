@@ -11,6 +11,10 @@
 #   CLOSEDHAND_DIR     directory to install into   (default: ./closedhand)
 #   CLOSEDHAND_NO_UP   set to 1 to skip docker compose up
 #   CLOSEDHAND_PLAIN   set to 1 to force plain output with no drawing
+#   CLOSEDHAND_RESET   set to 1 to tear this install down before rebuilding it.
+#                      DESTROYS the database, stored files and settings. Meant
+#                      for testing from a known-empty state, not for upgrading:
+#                      a plain re-run already upgrades and keeps your data.
 
 set -eu
 
@@ -333,6 +337,26 @@ command -v git >/dev/null 2>&1 || fail "git is required. Install it and re-run."
 command -v docker >/dev/null 2>&1 || fail "docker is required. Install Docker (or Docker Desktop) and re-run."
 docker compose version >/dev/null 2>&1 || fail "the docker compose plugin is required (docker compose version failed)."
 docker info >/dev/null 2>&1 || fail "the docker daemon isn't running. Start Docker and re-run."
+
+# --- Reset (only when asked) -------------------------------------------------
+# Deliberately narrow. It removes the containers and volumes belonging to this
+# one install and the checkout this installer manages, and nothing else on the
+# machine: no other projects, and not the downloaded images, because keeping
+# those is what makes a rebuild quick.
+if [ "${CLOSEDHAND_RESET:-0}" = "1" ]; then
+  if [ -f docker-compose.yml ] && [ -f .env.example ]; then
+    say "Reset: removing this install's containers, volumes and settings."
+    docker compose down -v --remove-orphans >/dev/null 2>&1 || true
+    rm -f .env
+  elif [ -d "$DIR" ] && [ -f "$DIR/docker-compose.yml" ]; then
+    say "Reset: removing this install's containers, volumes and $(pwd)/$DIR."
+    ( cd "$DIR" && docker compose down -v --remove-orphans >/dev/null 2>&1 ) || true
+    rm -rf "$DIR"
+  else
+    say "Reset: nothing installed here to remove."
+  fi
+  say ""
+fi
 
 # --- Where this is going -----------------------------------------------------
 # Said on a plain line above the display, before anything is written. The first
