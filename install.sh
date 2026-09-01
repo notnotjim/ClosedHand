@@ -264,13 +264,19 @@ run() {
   if [ "$UI" = "1" ]; then "$@" >>"$LOG" 2>&1; else "$@"; fi
 }
 
-# docker compose pull names every layer as it starts and again as it finishes,
-# so the share of layers already downloaded is a real measure of the longest
-# wait in an install rather than a guess dressed up as one.
+# docker compose pull writes a line per image layer as it goes, so the share of
+# layers already finished is a real measure of the longest wait in an install
+# rather than a guess dressed up as one.
+#
+# Counted by layer id, which is the first field and always twelve hex digits,
+# rather than by the "Pulling fs layer" announcement: a pull that resumes over
+# layers docker has seen before skips those announcements entirely and the
+# count would come out as nothing to divide by.
 pull_progress() {
-  _tot=$(awk '$2 == "Pulling" && $3 == "fs" { print $1 }' "$LOG" 2>/dev/null \
+  _tot=$(awk 'length($1) == 12 && $1 ~ /^[0-9a-f]+$/ { print $1 }' "$LOG" 2>/dev/null \
          | sort -u | wc -l | tr -d ' ')
-  _don=$(awk '$2 == "Download" && $3 == "complete" { print $1 }' "$LOG" 2>/dev/null \
+  _don=$(awk 'length($1) == 12 && $1 ~ /^[0-9a-f]+$/ &&
+              /Download complete|Pull complete|Already exists/ { print $1 }' "$LOG" 2>/dev/null \
          | sort -u | wc -l | tr -d ' ')
   if [ "${_tot:-0}" -gt 0 ]; then printf '%d' $(( _don * 100 / _tot )); fi
   return 0
