@@ -160,7 +160,7 @@ ui_init() {
     case "$c" in ''|*[!0-9]*) c=80 ;; esac
     case "$l" in ''|*[!0-9]*) l=24 ;; esac
     BW=$((c - 1))
-    BH=$((l - 11))
+    BH=$((l - 12))
   fi
   if [ "$BH" -gt 30 ]; then BH=30; fi
   if [ "$BW" -lt 40 ] || [ "$BH" -lt 12 ]; then return 0; fi
@@ -171,7 +171,7 @@ ui_init() {
   BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
   if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
   BPAD=$(( (BW - BSW) / 2 ))
-  BLOCK=$((BH + 6))
+  BLOCK=$((BH + 7))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
@@ -220,8 +220,23 @@ ui_bar() {
   printf '\033[2K%s%s\n' "$(spaces "$BPAD")" "$_s"
 }
 
+# Something to read while a slow line does its work. Rotated rather than
+# static, so the block is never completely still even between bar ticks.
+UITICK=0
+hint() {
+  case $(( (UITICK / 8) % 6 )) in
+    0) printf 'Ask it what you agreed to in that email last month.' ;;
+    1) printf 'It reads the inbox and calendar you already have.' ;;
+    2) printf 'Talk to it in Telegram, WhatsApp, Slack, Discord or LINE.' ;;
+    3) printf 'It keeps working overnight and tells you what changed.' ;;
+    4) printf 'Everything stays on this machine. No account with us.' ;;
+    5) printf 'Setup is a password you choose and one key you bring.' ;;
+  esac
+}
+
 ui_draw() {
   _pct=$1; _label=$2
+  UITICK=$((UITICK + 1))
   # A terminal resized mid-install invalidates every width held here and the
   # redraw would smear again. Notice it and fall back to plain lines rather
   # than try to recover a block that is already wrong.
@@ -255,6 +270,7 @@ ui_draw() {
   ui_line ""
   ui_bar "$_pct"
   ui_centred "$_pct%  $_label"
+  ui_centred "$(hint)"
   UIDRAWN=1
 }
 
@@ -282,16 +298,25 @@ pull_progress() {
   _don=$(awk 'length($1) == 12 && $1 ~ /^[0-9a-f]+$/ &&
               /Download complete|Pull complete|Already exists/ { print $1 }' "$LOG" 2>/dev/null \
          | sort -u | wc -l | tr -d ' ')
-  if [ "${_tot:-0}" -gt 0 ]; then printf '%d' $(( _don * 100 / _tot )); fi
+  # The count, not a byte total. Summing the last figure reported per layer
+  # looked like a nice live number and disagreed with what docker actually had
+  # on disk, and a plausible wrong number is worse than a plain right one.
+  if [ "${_tot:-0}" -gt 0 ]; then
+    printf '%d %s of %s layers' $(( _don * 100 / _tot )) "$_don" "$_tot"
+  fi
   return 0
 }
 
 # git writes its progress as carriage-return updates on one long line, so the
 # log has to be broken back into lines before the last percentage can be read.
 clone_progress() {
-  _p=$(tr '\r' '\n' < "$LOG" 2>/dev/null \
-       | grep -o 'Receiving objects: *[0-9]*%' | tail -1 | tr -dc '0-9')
-  if [ -n "$_p" ]; then printf '%d' "$_p"; fi
+  _l=$(tr '\r' '\n' < "$LOG" 2>/dev/null | grep 'Receiving objects:' | tail -1)
+  if [ -z "$_l" ]; then return 0; fi
+  # "Receiving objects:  63% (293/464), 10.8 MiB | 38.00 KiB/s"
+  printf '%s' "$_l" | awk '{ p = $3; sub(/%/, "", p)
+                             if (NF >= 9) { u = $9; sub(/,$/, "", u)
+                                            printf "%s %s %s at %s %s", p, $5, $6, $8, u }
+                             else printf "%s", p }'
   return 0
 }
 
@@ -310,8 +335,12 @@ run_watched() {
   _pct=$_from
   _tick=0
   while kill -0 "$_pid" 2>/dev/null; do
-    _share=""
-    if [ "$_probe" != "-" ]; then _share=$("$_probe"); fi
+    _share=""; _detail=""
+    if [ "$_probe" != "-" ]; then _out=$("$_probe"); else _out=""; fi
+    if [ -n "$_out" ]; then
+      _share=${_out%% *}
+      case "$_out" in *' '*) _detail="  (${_out#* })" ;; esac
+    fi
     if [ -n "$_share" ]; then
       _pct=$(( _from + (_to - _from) * _share / 100 ))
     else
@@ -320,7 +349,7 @@ run_watched() {
         _pct=$((_pct + 1)); _tick=0
       fi
     fi
-    ui_draw "$_pct" "$_label"
+    ui_draw "$_pct" "$_label$_detail"
     sleep 1
   done
   if wait "$_pid"; then return 0; else return $?; fi
