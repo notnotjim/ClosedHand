@@ -286,6 +286,15 @@ pull_progress() {
   return 0
 }
 
+# git writes its progress as carriage-return updates on one long line, so the
+# log has to be broken back into lines before the last percentage can be read.
+clone_progress() {
+  _p=$(tr '\r' '\n' < "$LOG" 2>/dev/null \
+       | grep -o 'Receiving objects: *[0-9]*%' | tail -1 | tr -dc '0-9')
+  if [ -n "$_p" ]; then printf '%d' "$_p"; fi
+  return 0
+}
+
 # Run a slow command while the bar keeps moving. Pass a probe that prints how
 # far along the command is, or "-" when there is nothing to measure, in which
 # case the bar creeps slowly towards the ceiling and never reaches it early.
@@ -389,7 +398,11 @@ elif [ -d "$DIR" ]; then
   fi
 else
   step 0 "Getting the code"
-  run git clone --depth 1 "$REPO" "$DIR" || die "could not clone $REPO."
+  # --progress because git stays silent when its output is not a terminal, and
+  # here it is being written to a log. On a slow line this is the difference
+  # between a bar that moves and one that looks hung for ten minutes.
+  run_watched 0 20 "Getting the code" clone_progress \
+    git clone --progress --depth 1 "$REPO" "$DIR" || die "could not clone $REPO."
   cd "$DIR"
 fi
 step 20 "Code ready"
