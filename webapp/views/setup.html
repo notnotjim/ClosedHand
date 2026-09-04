@@ -241,19 +241,9 @@
       font-size: 12.5px; color: var(--text-tertiary); text-decoration: underline;
       text-underline-offset: 3px; padding: 0; margin-top: 4px;
     }
-    #google-fallback { margin-top: 18px; }
     .fb-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line, rgba(255,255,255,0.08)); }
     .fb-block h3 { font-size: 15px; margin: 0 0 6px; }
-    .fb-block input[type="email"], .fb-block input[type="password"], .fb-block input[type="text"] {
-      display: block; width: 100%; box-sizing: border-box; margin: 6px 0;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--line, rgba(255,255,255,0.12));
-      border-radius: 8px; padding: 9px 12px; color: inherit; font-family: inherit; font-size: 13.5px;
-    }
     .fb-block .cta { margin-top: 8px; }
-    .fb-manual { margin-top: 18px; font-size: 13px; color: var(--text-tertiary); }
-    .fb-manual > summary { cursor: pointer; padding: 6px 0; }
-    .fb-adv { margin: 6px 0; font-size: 12.5px; color: var(--text-tertiary); }
-    .fb-adv summary { cursor: pointer; }
     .fb-done { font-size: 11px; color: #4ade80; border: 1px solid rgba(74,222,128,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
     .skip:hover { color: var(--text-secondary); }
     .manual-link {
@@ -423,89 +413,8 @@
         </div>
       </article>
     </li>
-    <li class="step" data-step="google" id="step-google">
-      <div class="rail"><span class="node"></span><span class="num">04</span></div>
-      <article class="card">
-        <button class="card-head" aria-expanded="false">
-          <span>
-            <h2>Google</h2>
-            <p class="whisper">Your mail, calendar and Drive, connected properly.</p>
-          </span>
-          <span class="state-chip">Recommended</span>
-        </button>
-        <div class="card-body">
-          <p class="wizard-only">Connecting Google gives ClosedHand your mail, calendar and Drive. Ask what
-             the accountant said about the deadline and the answer comes back in seconds,
-             even when the thread is years old and you never said the word email. A guided
-             wizard walks you through Google's console page by page and finishes right
-             back here.</p>
-          <a class="cta wizard-only" href="/setup/google">Open the Google wizard</a>
-          <p class="note wizard-only">About ten minutes, and it buys the full version: calendar changes at
-             API speed, Drive, your send-as aliases found automatically, and nothing that can break
-             when Google redesigns a page. Skip it and mail and calendar still work, through your
-             own mailbox and ClosedHand's browser.</p>
-          <button class="skip" type="button">Skip for now</button>
-
-          <div id="google-fallback" style="display:none;" data-wa-anchor="1">
-            <p>No console needed. One app password gives ClosedHand your mail and your calendar,
-               read and write. It takes about thirty seconds.</p>
-
-            <div class="fb-block">
-              <h3>Mail and calendar <span class="fb-done" id="fb-imap-done" style="display:none;">connected</span></h3>
-              <p class="note">Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>,
-                 type <strong>ClosedHand</strong>, press Create, and paste the sixteen characters here. It opens
-                 this mailbox and its calendar and nothing else, it is kept encrypted on your server, and you
-                 can revoke it on that same page at any time.</p>
-              <input id="fb-email" type="email" placeholder="you@gmail.com" autocomplete="off">
-              <input id="fb-password" type="password" placeholder="app password (sixteen characters)" autocomplete="off">
-              <input id="fb-aliases" type="text" placeholder="other addresses you send from, comma-separated (optional)" autocomplete="off">
-              <details class="fb-adv"><summary>Not Gmail? Set the server details</summary>
-                <input id="fb-imap-host" type="text" placeholder="IMAP host">
-                <input id="fb-imap-port" type="text" placeholder="IMAP port (993)">
-                <input id="fb-smtp-host" type="text" placeholder="SMTP host">
-                <input id="fb-smtp-port" type="text" placeholder="SMTP port (465)">
-              </details>
-              <button class="cta" type="button" id="fb-imap-save">Connect mail and calendar</button>
-              <p class="note" id="fb-imap-status"></p>
-            </div>
-
-            <details class="fb-manual">
-              <summary>Extras: browser access, and calendars kept somewhere else</summary>
-
-              <div class="fb-block">
-                <h3>Sign in to Google on ClosedHand's computer <span class="fb-done" id="fb-browser-done" style="display:none;">signed in</span></h3>
-                <p class="note">This is for anything ClosedHand has to do in a browser as you, such as opening
-                   one of your Drive files on Google's own site. Mail and calendar do not need it, and Drive
-                   as something ClosedHand can search and read on its own still needs the wizard.
-                   This screen is ClosedHand's own computer, running on
-                   your server; only you can see it, your password goes straight to Google, and you stay
-                   signed in on this machine until you sign out.</p>
-                <p class="note" id="fb-browser-gate" style="display:none;color:var(--warn);">Finish the first two
-                   steps first: without a database and a model key ClosedHand cannot do anything with
-                   the account you sign in here.</p>
-                <iframe id="fb-vnc" style="width:100%;aspect-ratio:16/9;border:1px solid var(--line, #333);border-radius:10px;background:#000;display:block;"></iframe>
-                <p class="note" style="margin-top:6px;">The screen is 1920x1080, shrunk to fit this column.
-                   <a id="fb-vnc-big" href="#">Open it full size in a new tab</a>
-                   if you would rather sign in there; it closes itself and brings you back here.</p>
-                <p class="note" id="fb-auto-status"></p>
-              </div>
-
-              <div class="fb-block">
-                <h3>Calendar feed (ICS) <span class="fb-done" id="fb-ics-done" style="display:none;">connected</span></h3>
-                <p class="note">Read-only, for a calendar that is not on the mailbox above. In Google
-                   Calendar: Settings, pick the calendar, copy the "Secret address in iCal format".</p>
-                <input id="fb-ics-url" type="text" placeholder="https://…/basic.ics" autocomplete="off">
-                <button class="cta" type="button" id="fb-ics-save">Connect calendar feed</button>
-                <p class="note" id="fb-ics-status"></p>
-              </div>
-            </details>
-          </div>
-
-        </div>
-      </article>
-    </li>
     <li class="step" data-step="chat" id="step-chat">
-      <div class="rail"><span class="node"></span><span class="num">05</span></div>
+      <div class="rail"><span class="node"></span><span class="num">04</span></div>
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
@@ -541,6 +450,7 @@
               <div>
                 <ol class="mini" style="margin-bottom:8px;">
                   <li>Scan to open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, or tap it if you're on this device.</li>
+
                   <li>Send <strong>/newbot</strong> and answer its two questions.</li>
                   <li>Paste the token it gives you below.</li>
                 </ol>
@@ -575,10 +485,26 @@
     </li>
 
 
-
-
-
-
+    <li class="step" data-step="google" id="step-google">
+      <div class="rail"><span class="node"></span><span class="num">05</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Google</h2>
+            <p class="whisper">Your mail, calendar and Drive.</p>
+          </span>
+          <span class="state-chip">Recommended</span>
+        </button>
+        <div class="card-body">
+          <p>Connecting Google gives ClosedHand your mail, calendar and Drive. Ask what
+             the accountant said about the deadline and the answer comes back in seconds,
+             even when the thread is years old and you never said the word email.</p>
+          <a class="cta" href="/setup/google">Connect Google</a>
+          <p class="note">About ten minutes. A guided wizard opens each Google page for you, in
+             order, and brings you back here when it is done.</p>
+        </div>
+      </article>
+    </li>
 
   </ol>
 
@@ -611,7 +537,7 @@
   // Only optional steps can hold a skip. The filter also heals stale
   // localStorage from a build where a styling-class collision let the manual
   // toggle write a bogus skip for the (required) model step.
-  var SKIPPABLE = { admin_password: 1, chat: 1, google: 1 };
+  var SKIPPABLE = { admin_password: 1, chat: 1 };
   var skips = {};
   // Skips are per install, not per browser: the same localhost answered for
   // every install this machine has ever run, so a skip clicked in a previous
@@ -839,7 +765,6 @@
           skips[s.key] = false;
           saveSkips();
           li.classList.add("is-open");
-          if (s.key === "google" && typeof updateGoogleFallback === "function") updateGoogleFallback(true);
           poll();
         };
       } else {
@@ -964,7 +889,6 @@
         setChip("watching your install", false);
         loadSkipsFor(state.installId);
         render(state);
-        if (typeof reflectFallback === "function") reflectFallback(state);
         if (typeof reflectWa === "function") reflectWa(state);
       })
       .catch(function () {
@@ -972,15 +896,13 @@
       });
   }
 
-  ["database", "model", "admin_password", "google", "chat"].forEach(function (k) { lastDone[k] = false; });
+  ["database", "model", "admin_password", "chat", "google"].forEach(function (k) { lastDone[k] = false; });
 
   $all(".card-head").forEach(function (head) {
     head.addEventListener("click", function () {
       var li = head.closest(".step");
       li.classList.toggle("is-open");
       head.setAttribute("aria-expanded", String(li.classList.contains("is-next") || li.classList.contains("is-open")));
-      // Attach the browser frame only once this card is genuinely open.
-      if (li.id === "step-google" && typeof updateGoogleFallback === "function") updateGoogleFallback(li.classList.contains("is-open"));
     });
   });
 
@@ -993,85 +915,12 @@
       skips[key] = !skips[key];
       saveSkips();
       btn.textContent = skips[key] ? "Changed my mind, show this step" : (key === "admin_password" ? "Skip for now, I'm on localhost" : "Skip for now");
-      // Skipping the Google wizard is not skipping Google: it swaps the card
-      // to the no-console path (mailbox, calendar feed, ClosedHand's computer),
-      // so the card stays open rather than collapsing.
-      if (key === "google") { updateGoogleFallback(true); }
-      else if (skips[key]) li.classList.remove("is-open");
+      if (skips[key]) li.classList.remove("is-open");
       poll();
     });
     var li = btn.closest(".step");
     if (skips[li.getAttribute("data-step")]) btn.textContent = "Changed my mind, show this step";
   });
-
-  // --- The no-console Google path (revealed by skipping the wizard) ---
-  var _fbState = { imap: false, ics: false, browserGoogle: false };
-  var _sandboxVncPort = 6080;
-  // The first two steps are what make anything else work; until they are
-  // done the browser frame stays unattached and the card explains why.
-  var _setupReady = false;
-
-  // Swap the Google card between wizard and no-console path. Two rules learned
-  // the hard way: never force the card open (a remembered skip from a previous
-  // visit then reopened it on every load), and never attach the browser frame
-  // until the user is actually looking at this step. noVNC connects and takes
-  // focus the moment it loads, which yanked the page down to a Google login
-  // while the user was still on step two.
-  function updateGoogleFallback(userOpened) {
-    var fb = $("#google-fallback");
-    if (!fb) return;
-    var on = !!skips.google;
-    fb.style.display = on ? "block" : "none";
-    $all("#step-google .wizard-only").forEach(function (el) { el.style.display = on ? "none" : ""; });
-    var li = $("#step-google");
-    if (on && userOpened) li.classList.add("is-open");
-
-    var gate = $("#fb-browser-gate");
-    var ready = _setupReady;
-    if (gate) gate.style.display = on && !ready ? "block" : "none";
-
-    var vnc = $("#fb-vnc");
-    if (!vnc) return;
-    var visible = on && ready && li.classList.contains("is-open");
-    vnc.style.display = on && ready ? "" : "none";
-    var vncUrl = location.protocol + "//" + location.hostname + ":" + _sandboxVncPort + "/vnc.html?autoconnect=1&resize=scale";
-    var big = $("#fb-vnc-big");
-    if (big) {
-      big.setAttribute("href", vncUrl);
-      // Opened through script rather than target=_blank, so the page keeps a
-      // handle and can close it again; a tab the user has to hunt down and
-      // shut themselves is the opposite of "carries on by itself".
-      big.onclick = function (ev) {
-        ev.preventDefault();
-        window._vncWin = window.open(vncUrl, "closedhand-computer");
-      };
-    }
-    if (visible && !vnc.getAttribute("src")) {
-      vnc.setAttribute("src", vncUrl);
-      // The card says "sign in below", so something has to take that browser
-      // to Google; on its own it shows whatever tab it had open, which after a
-      // restart is a blank page that reads as broken. Once per page load.
-      if (!window._signinOpened) {
-        window._signinOpened = true;
-        fetch("/api/setup/google-open-signin", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
-          .then(function () { poll(); })
-          .catch(function () {});
-      }
-    }
-  }
-
-  function reflectFallback(st) {
-    if (st) _setupReady = !!st.ready;
-    if (st && st.sandboxVncPort) _sandboxVncPort = st.sandboxVncPort;
-    if (st && st.fallback) _fbState = st.fallback;
-    var m = { "fb-imap-done": _fbState.imap, "fb-ics-done": _fbState.ics, "fb-browser-done": _fbState.browserGoogle };
-    Object.keys(m).forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.style.display = m[id] ? "inline-block" : "none";
-    });
-    reflectJob(_fbState.job);
-    updateGoogleFallback(false);
-  }
 
   function fbPost(url, body, statusId, btn, okText) {
     var status = document.getElementById(statusId);
@@ -1091,46 +940,6 @@
         return false;
       });
   }
-
-  var _fbImapBtn = $("#fb-imap-save");
-  if (_fbImapBtn) _fbImapBtn.addEventListener("click", function () {
-    fbPost("/api/setup/imap", {
-      email: $("#fb-email").value,
-      app_password: $("#fb-password").value,
-      aliases: $("#fb-aliases").value,
-      imap_host: $("#fb-imap-host").value,
-      imap_port: $("#fb-imap-port").value,
-      smtp_host: $("#fb-smtp-host").value,
-      smtp_port: $("#fb-smtp-port").value,
-    }, "fb-imap-status", _fbImapBtn, "Connected. Mail starts syncing on the next cycle.");
-  });
-
-  var _fbIcsBtn = $("#fb-ics-save");
-  if (_fbIcsBtn) _fbIcsBtn.addEventListener("click", function () {
-    fbPost("/api/setup/ics", { ics_url: $("#fb-ics-url").value },
-      "fb-ics-status", _fbIcsBtn, "Connected. Events appear after the next sync.");
-  });
-
-  // The run happens on ClosedHand's side; the page reports whatever it says,
-  // including the steps it could not finish and what to do about them.
-  function reflectJob(job) {
-    var status = $("#fb-auto-status");
-    if (!status) return;
-    // The full-size window has done its job once the sign-in lands: close it
-    // and put the user back in front of the wizard.
-    if (job && job.status !== "awaiting_signin" && job.status !== "opening" && window._vncWin && !window._vncWin.closed) {
-      try { window._vncWin.close(); } catch (e) {}
-      window._vncWin = null;
-      try { window.focus(); } catch (e) {}
-    }
-    if (!job) { status.textContent = ""; return; }
-    var r = job.results || {};
-    status.textContent = job.status === "awaiting_signin"
-      ? "Waiting for you to sign in on the screen above…"
-      : r.email ? ("Signed in as " + r.email + ". ClosedHand can now act in a browser as you.")
-      : (job.message || "");
-  }
-
 
   // --- Linked-device WhatsApp card ---
   var _waState = { enabled: false, linked: false, hasQr: false };
@@ -1162,8 +971,6 @@
     if (!confirm("Turn off WhatsApp linking? ClosedHand stops reading and replying there; unlink the device from your phone too (WhatsApp, Settings, Linked devices).")) return;
     fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Turned off. Also remove the device in WhatsApp on your phone.");
   });
-
-  updateGoogleFallback(false);
 
   poll();
   setInterval(poll, POLL_MS);

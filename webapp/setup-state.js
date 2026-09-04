@@ -85,8 +85,8 @@ async function getSetupState() {
     { key: "database", label: "Database", done: db, required: true },
     { key: "model", label: "Model provider", done: model, required: true },
     { key: "admin_password", label: "Admin password", done: adminPassword, required: false },
-    { key: "google", label: "Google", done: google, required: false },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
+    { key: "google", label: "Google", done: google, required: false },
   ];
   const nextUnlock = steps.find((s) => !s.done) || null;
 
@@ -131,16 +131,7 @@ async function getSetupState() {
     // changes precisely when "a different install" is true.
     installId: profileCreatedAt,
     googleCreds,
-    // The zero-project fallback tier: what is already connected, so the setup
-    // page can show each block's real state instead of empty forms.
-    fallback: {
-      imap: connections.includes("imap"),
-      ics: connections.includes("ics_calendar"),
-      browserGoogle: !!settings.browser_google,
-      job: settings.google_browser_job || null,
-    },
     waLinked,
-    sandboxVncPort: Number(process.env.SANDBOX_VNC_PORT || 6080),
     // The exact redirect URI the server will send in the Google OAuth flow
     // (mirrors server.js BASE_URL). The Google wizard renders this so the value
     // pasted into the console always matches what the server uses.
