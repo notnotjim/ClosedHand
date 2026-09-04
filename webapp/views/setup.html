@@ -67,6 +67,14 @@
     }
     .watch-chip.is-offline .dot { background: var(--warn); box-shadow: 0 0 8px rgba(231,183,110,0.8); animation: none; }
     @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    /* A note that is waiting on something: a breathing dot in front of it,
+       so a sentence that does not change is still visibly alive. */
+    .note.is-busy::before {
+      content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      margin-right: 9px; vertical-align: 1px;
+      background: var(--accent); box-shadow: 0 0 8px rgba(110,231,168,0.8);
+      animation: breathe 1.4s ease-in-out infinite;
+    }
 
     .hero { margin-bottom: 20px; }
     .kicker {
@@ -427,14 +435,12 @@
         <div class="card-body">
           <div class="fb-block" id="wa-linked-block">
             <h3>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></h3>
-            <p class="note">ClosedHand joins your WhatsApp as a linked device, like WhatsApp Web. You talk
-               to it in your "Message Yourself" chat, and it can recall your recent chat history. It never
-               speaks in any other conversation. Honest trade: this method is against WhatsApp's terms,
-               the small ban risk lands on your own number, and anything it sends comes from you.</p>
+            <p class="note">ClosedHand lives in your "Message Yourself" chat and never speaks in any
+               other conversation.</p>
             <button class="cta" type="button" id="wa-enable">Link WhatsApp</button>
             <button class="skip" type="button" id="wa-disable" style="display:none;">Unlink and turn this off</button>
             <div id="wa-qr-wrap" style="display:none;margin-top:10px;">
-              <p class="note">On your phone: WhatsApp, Settings, Linked devices, Link a device, then scan this.</p>
+              <p class="note">Scan this from WhatsApp's Linked devices screen to link it.</p>
               <img id="wa-qr" alt="WhatsApp pairing QR" style="width:240px;height:240px;border-radius:10px;background:#fff;padding:8px;">
             </div>
             <p class="note" id="wa-status"></p>
@@ -957,14 +963,16 @@
     if (pairing && _waState.hasQr) qrImg.src = "/api/setup/wa-qr?t=" + Date.now();
     if (status) {
       status.textContent = _waState.linked ? "Linked. Talk to ClosedHand in your Message Yourself chat."
-        : pairing ? (_waState.hasQr ? "Waiting for the scan…" : "Starting up, the QR appears here in a moment…")
+        : pairing ? (_waState.hasQr ? "Waiting for the scan…" : "Getting a QR code ready…")
         : "";
+      status.classList.toggle("is-busy", pairing);
     }
   }
 
   var _waEnableBtn = $("#wa-enable");
   if (_waEnableBtn) _waEnableBtn.addEventListener("click", function () {
-    fbPost("/api/setup/whatsapp-linked", { enable: true }, "wa-status", _waEnableBtn, "Starting up, the QR appears here in a moment…");
+    $("#wa-status").classList.add("is-busy");
+    fbPost("/api/setup/whatsapp-linked", { enable: true }, "wa-status", _waEnableBtn, "Getting a QR code ready…");
   });
   var _waDisableBtn = $("#wa-disable");
   if (_waDisableBtn) _waDisableBtn.addEventListener("click", function () {
