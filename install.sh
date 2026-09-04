@@ -29,109 +29,58 @@ fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 # --- The drawing -------------------------------------------------------------
 # Decoration. The installer proper starts at "Preconditions" below.
 #
-# A hand that closes as the install advances: open while it fetches the code,
-# a fist by the time the dashboard answers. It is drawn from geometry rather
-# than stored pictures so it fits whatever terminal it finds.
-HAND_AWK='# Renders one frame of the closing hand as a cut-out in a slab of blocks.
-#   W  slab width in columns      H  slab height in rows
-#   P  closing progress, 0 open to 1 fist
-#   FI field char   SH shadow char   HL highlight char
-#   PAD  columns of blank margin to the left of the slab
-function rr(x, y, x1, y1, x2, y2, rx, ry,   dx, dy, cx, cy) {
-  x1 += rx; x2 -= rx; y1 += ry; y2 -= ry
-  if (x2 < x1) { cx = (x1 + x2) / 2; x1 = cx; x2 = cx }
-  if (y2 < y1) { cy = (y1 + y2) / 2; y1 = cy; y2 = cy }
-  dx = (x < x1 ? x1 - x : (x > x2 ? x - x2 : 0)) / rx
-  dy = (y < y1 ? y1 - y : (y > y2 ? y - y2 : 0)) / ry
-  return (dx * dx + dy * dy) <= 1
-}
+# An open hand that closes into a fist, played once when the display comes up,
+# then held while the install runs. Ten frames, each 32 pixels wide and 28
+# tall, one row per eight hex digits; scripts/hand-frames.py draws them.
+HAND_FRAMES='000000000001c0000003e0000003e7000073ef8000fbef8000fbef8000fbef8020fbef9cf8fbefbefcfbefbefcfbefbefefbefbe7ffbefbe3ffffffe1ffffffe0ffffffe07fffffe03ffffff01ffffff01fffffe01fffffe00fffffe007ffff8000fffc0000fffc0000fffc0000fffc0
+000000000001c0000003e0000003e7000073ef8000fbef8000fbef8000fbef8000fbef9c30fbefbef8fbefbefcfbefbefffbefbe7ffbefbe3ffffffe1ffffffe0ffffffe07fffffe01ffffff01ffffff01fffffe01fffffe00fffffc003ffff8000fffc0000fffc0000fffc0000fffc0
+00000000000080000001c0000003e7000073ef8000fbef8000fbef8000fbef8000fbef9c00fbefbe70fbefbefcfbefbefffbefbefffbefbe7ffffffe3ffffffe0ffffffe07fffffe01fffffe01fffffe01fffffe00fffffe00fffffc003ffff0000fffc0000fffc0000fffc0000fffc0
+00000000000000000001c0000003e2000073ef8000fbef8000fbef8000fbef9c00fbefbe00fbefbe00fbefbe78fbefbe7ffbefbefffbefbefffffffe7ffffffe3ffffffe0ffffffe07fffffe01fffffe01fffffe00fffffe007ffffc001ffff0000fffc0000fffc0000fffc0000fffc0
+00000000000000000001c0000003e0000073e70000fbef8000fbef8000fbef9c00fbefbe00fbefbe00fbefbe03fbefbe7ffbefbe7ffffffefffffffefffffffe7ffffffe3ffffffe07ffffff01fffffe01fffffe00fffffe007ffffc000fffe0000fffc0000fffc0000fffc0000fffc0
+00000000000000000001c0000003e0000073e70000fbef8000fbef8000fbef9c00fbefbe00fbefbe03fbefbe0ffbefbe0ffbefbe7ffffffe7ffffffefffffffe7ffffffe7ffffffe3ffffffe01fffffe00fffffe00fffffc007ffff8000fffc0000fffc0000fffc0000fffc0000fffc0
+0000000000000000000000000001c0000073e70000fbef8000fbef8000fbef9c00fbefbe07fbefbe0ffbefbe1ffbefbe1ffffffe1ffffffe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe1ffffffe00fffffe00fffffc003ffff8000fffc0000fffc0000fffc0000fffc0000fffc0
+0000000000000000000000000001c0000073e70000fbef8000fbef9c00fbefbe0ffbefbe1ffbefbe3ffbefbe3ffbefbe3ffffffe3ffffffe3ffffffe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe1ffffffe007ffffc003ffff0000fffc0000fffc0000fffc0000fffc0000fffc0
+0000000000000000000000000001c0000073e70000fbef8000fbef9c1ffbefbe3ffbefbe3ffbefbe7ffbefbe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe3ffffffe7ffffffe7ffffffe7ffffffe3ffffffc1ffffff8001ffff0000fffc0000fffc0000fffc0000fffc0000fffc0
+0000000000000000000000000001c0000073e70000fbef8000fbef9c1ffbefbe3ffbefbe3ffbefbe7ffbefbe7ffffffe7ffffffe7ffffffe401ffffe1fc001fe3ffffcfe7ffffefe7ffffefe7ffffefe3ffffffc1ffffff8001ffff0000fffc0000fffc0000fffc0000fffc0000fffc0'
 
+HAND_AWK='# One frame of the hand. The frame is 28 rows of 32 pixels, each row eight hex
+# digits; a terminal cell shows two pixels, one above the other, using the
+# half-block characters. K scales the picture, PAD centres it.
+#   FR  the frame as 224 hex digits    K  cells per pixel, sideways
+#   PAD  blank columns on the left     FU full, TP top, BT bottom half
 BEGIN {
-  # As the fingers fold away the hand gets shorter, so it rises as it closes
-  # and the fist ends up sitting where the open hand did rather than
-  # sinking to the bottom of the slab.
-  hh = H - 2
-  oy = 1 - P * 0.20 * hh
-  # A terminal cell is about twice as tall as it is wide, and a hand is a bit
-  # over half as wide as it is long, so it wants about 1.15 columns per row.
-  hw = int(hh * 1.15)
-  if (hw > W - 6) hw = W - 6
-  ox = int((W - hw) / 2)
-
-  rx = hw * 0.06; if (rx < 1.3) rx = 1.3
-  ry = hh * 0.05; if (ry < 0.8) ry = 0.8
-
-  palmTop = 0.47 * hh
-  palmX1  = 0.15 * hw
-  palmX2  = hw
-  palmBot = hh * 0.86
-  # A narrower wrist below the palm, running off the bottom edge of the slab
-  # rather than ending in a stump, so the hand reads as attached to an arm.
-  wX1 = 0.36 * hw; wX2 = 0.84 * hw; wY1 = hh * 0.72; wY2 = hh * 1.4
-
-  # Four fingers across the palm, middle longest, little finger shortest. The
-  # gaps have to survive down to two columns or the fingers read as one slab.
-  bandL = palmX1 + 0.03 * hw
-  bandR = palmX2 - 0.02 * hw
-  gap = (bandR - bandL) * 0.10; if (gap < 2) gap = 2
-  fw  = ((bandR - bandL) - 3 * gap) / 4
-  tipOpen[0] = 0.12 * hh
-  tipOpen[1] = 0.01 * hh
-  tipOpen[2] = 0.07 * hh
-  tipOpen[3] = 0.24 * hh
-  tipShut = palmTop - 0.11 * hh
-
-  # Thumb: a lobe out to the left when open, folded across the front when shut.
-  tOX1 = 0.00 * hw; tOX2 = 0.34 * hw; tOY1 = 0.50 * hh; tOY2 = 0.76 * hh
-  tSX1 = 0.18 * hw; tSX2 = 0.88 * hw; tSY1 = 0.62 * hh; tSY2 = 0.84 * hh
-  tx1 = tOX1 + P * (tSX1 - tOX1); tx2 = tOX2 + P * (tSX2 - tOX2)
-  ty1 = tOY1 + P * (tSY1 - tOY1); ty2 = tOY2 + P * (tSY2 - tOY2)
-
-  for (y = 0; y < H; y++) {
-    for (x = 0; x < W; x++) {
-      hx = x - ox; hy = y - oy
-      v = 0
-      if (rr(hx, hy, palmX1, palmTop, palmX2, palmBot, rx, ry)) v = 1
-      for (i = 0; i < 4 && !v; i++) {
-        fl = bandL + i * (fw + gap)
-        tp = tipOpen[i] + P * (tipShut - tipOpen[i])
-        if (rr(hx, hy, fl, tp, fl + fw, palmTop + 2 * ry, rx * 0.75, ry)) v = 1
-      }
-      if (!v && rr(hx, hy, wX1, wY1, wX2, wY2, rx, ry)) v = 1
-      if (!v && rr(hx, hy, tx1, ty1, tx2, ty2, rx, ry * 1.2)) v = 1
-      # Groove above the folded thumb, so the fist reads as thumb over fingers.
-  # Late, because a groove drawn while the thumb is still crossing cuts a bar
-  # through fingers that are visibly still up.
-      if (v && P > 0.6 && hx > tx1 && hx < tx2 && hy > ty1 - 1.6 && hy < ty1 - 0.2) v = 0
-      cell[y, x] = v
-    }
+  hex = "0123456789abcdef"
+  for (i = 0; i < 16; i++) {
+    v = i
+    for (b = 3; b >= 0; b--) { bit[substr(hex, i + 1, 1), b] = v % 2; v = int(v / 2) }
   }
-
-  # Light from the top left, so the slab casts a hard edge into the cut-out.
+  for (y = 0; y < 28; y++)
+    for (x = 0; x < 32; x++) {
+      d = substr(FR, y * 8 + int(x / 4) + 1, 1)
+      px[x, y] = bit[d, x % 4]
+    }
   margin = ""
   for (i = 0; i < PAD; i++) margin = margin " "
-  out = ""
-  for (y = 0; y < H; y++) {
+  rows = 14 * K
+  for (r = 0; r < rows; r++) {
     line = margin
-    for (x = 0; x < W; x++) {
-      if (cell[y, x]) { line = line " "; continue }
-      if ((y > 0 && cell[y - 1, x]) || (x > 0 && cell[y, x - 1]) ||
-          (x > 1 && cell[y, x - 2]) || (y > 0 && x > 0 && cell[y - 1, x - 1]))
-        line = line SH
-      else if ((y < H - 1 && cell[y + 1, x]) || (x < W - 1 && cell[y, x + 1]) ||
-               (x < W - 2 && cell[y, x + 2]))
-        line = line HL
-      else line = line FI
+    for (c = 0; c < 32 * K; c++) {
+      t = px[int(c / K), int((2 * r) / K)]
+      b = px[int(c / K), int((2 * r + 1) / K)]
+      line = line (t && b ? FU : (t ? TP : (b ? BT : " ")))
     }
-    out = out line "\n"
+    printf "\033[2K%s\n", line
   }
-  printf "%s", out
-}'
-
-hand_frame() {
-  awk -v W="$BSW" -v PAD="$BPAD" -v H="$BH" -v P="$1" \
-      -v FI="$BFI" -v SH="$BSH" -v HL="$BHL" "$HAND_AWK" </dev/null
 }
+'
+
+# Print frame N (1 to 10) of the hand at the size ui_init settled on.
+hand_frame() {
+  _fr=$(printf '%s\n' "$HAND_FRAMES" | sed -n "${1}p")
+  awk -v FR="$_fr" -v K="$BK" -v PAD="$BPAD" \
+      -v FU="$BFU" -v TP="$BTP" -v BT="$BBT" "$HAND_AWK" </dev/null
+}
+HAND_FRAME=10
 
 # --- Progress display --------------------------------------------------------
 # Two modes, and the plain one is the one that has to keep working.
@@ -160,25 +109,30 @@ ui_init() {
     case "$c" in ''|*[!0-9]*) c=80 ;; esac
     case "$l" in ''|*[!0-9]*) l=24 ;; esac
     BW=$((c - 1))
-    BH=$((l - 14))
+    # Rows left for the hand once the nine lines under it are counted. The
+    # notes printed above the drawing may scroll off on a short terminal;
+    # that is better than a hand that does not fit.
+    BH=$((l - 10))
   fi
-  if [ "$BH" -gt 30 ]; then BH=30; fi
-  if [ "$BW" -lt 40 ] || [ "$BH" -lt 10 ]; then return 0; fi
-
-  # The hand can only be as big as the terminal is tall, so on a wide terminal
-  # a full-width slab would leave it stranded in the middle of a grey field.
-  # Size the slab to the hand instead, then centre it in the space available.
-  BSW=$(( ((BH - 2) * 115 / 100) * 23 / 10 ))
-  if [ "$BSW" -gt "$BW" ]; then BSW=$BW; fi
+  # The hand is 32 cells wide and 14 tall, and only ever shown at a whole
+  # multiple of that, so a terminal that cannot fit one copy gets plain lines.
+  BK=$((BH / 14))
+  if [ "$((BW / 32))" -lt "$BK" ]; then BK=$((BW / 32)); fi
+  if [ "$BK" -gt 2 ]; then BK=2; fi
+  if [ "$BK" -lt 1 ] || [ "$BW" -lt 60 ]; then return 0; fi
+  BH=$((BK * 14))
+  BSW=$((BK * 32))
   BPAD=$(( (BW - BSW) / 2 ))
   BLOCK=$((BH + 9))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
-    *UTF-8*|*utf-8*|*UTF8*|*utf8*) BFI=$(printf '\342\226\222')
-                                   BSH=$(printf '\342\226\210')
+    *UTF-8*|*utf-8*|*UTF8*|*utf8*) BFU=$(printf '\342\226\210')
+                                   BTP=$(printf '\342\226\200')
+                                   BBT=$(printf '\342\226\204')
+                                   BSH=$BFU
                                    BHL=$(printf '\342\226\221') ;;
-    *) BFI='.'; BSH='#'; BHL=':' ;;
+    *) BFU='#'; BTP="'"; BBT=','; BSH='#'; BHL=':' ;;
   esac
 
   UI=1
@@ -240,7 +194,7 @@ images_line() {
            else if (r == "webapp") r = "dashboard"
            else if (r == "bot") r = "assistant"
            else if (r == "sandbox") r = "computer"
-           out = out r " " ((order[i] in got) ? "done" : "...") "   "
+           out = out ((order[i] in got) ? "[x] " : "[ ] ") r "   "
          }
          print out
        }' "$LOG" 2>/dev/null
@@ -264,9 +218,6 @@ ui_draw() {
     return 0
   fi
 
-  # The drawing takes progress as a fraction; the bar takes it as a percentage.
-  if [ "$_dpct" -ge 100 ]; then _frac=1; else _frac=$(printf '0.%02d' "$_dpct"); fi
-
   if [ "$UIDRAWN" = "1" ]; then
     printf '\033[%dA' "$BLOCK"
   else
@@ -278,7 +229,7 @@ ui_draw() {
     printf '\033[%dA' "$BLOCK"
   fi
 
-  hand_frame "$_frac"
+  hand_frame "$HAND_FRAME"
   ui_line ""
   ui_centred "C L O S E D H A N D"
   ui_centred "A personal AI assistant you actually own."
@@ -287,8 +238,20 @@ ui_draw() {
   ui_centred "$_dpct%  $_dtext"
   ui_centred "$(images_line)"
   ui_line ""
-  ui_centred "Everything stays on this machine. No account with us."
+  ui_centred "Everything stays on this machine. No ClosedHand account required."
   UIDRAWN=1
+}
+
+# The hand closes once, about a second, before the first step is drawn.
+ui_intro() {
+  if [ "$UI" != "1" ]; then return 0; fi
+  _f=1
+  while [ "$_f" -le 10 ]; do
+    HAND_FRAME=$_f
+    ui_draw 0 "Starting"
+    sleep 0.09 2>/dev/null || true
+    _f=$((_f + 1))
+  done
 }
 
 # One step of the install finished. Redraw, or say so, depending on the mode.
@@ -438,6 +401,7 @@ say "Raw output: tail -f $LOG"
 say "Or re-run with CLOSEDHAND_PLAIN=1 for no drawing at all."
 
 ui_init
+ui_intro
 : > "$LOG" 2>/dev/null || true
 
 # --- Clone (or reuse a checkout we're already inside) ------------------------
