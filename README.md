@@ -38,7 +38,7 @@ docker compose up -d
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
-The installer opens the setup wizard in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). The wizard walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Telegram with a token from BotFather, then connect Google through a guided wizard that opens the exact console pages you need. That part is yours to do because ClosedHand runs on your machine rather than on a company's, and the wizard takes you through it page by page. First conversation is usually under ten minutes in, and Google adds about ten more.
+The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Telegram with a token from BotFather, then connect Google through the Google guide, which opens the exact console pages you need. That part is yours to do because ClosedHand runs on your machine rather than on a company's, and the guide takes you through it page by page. First conversation is usually under ten minutes in, and Google adds about ten more.
 
 Bring whichever model provider you prefer. A single DeepInfra key is the golden path because one key covers chat plus the embedding model, but OpenAI, Anthropic, Gemini, Groq, xAI and any OpenAI-compatible endpoint (including a local Ollama) are all first-class.
 
@@ -97,7 +97,7 @@ Where you run it sets the tier. On a laptop it works while the lid is open and c
 
 ## Security posture
 
-Single-tenant by construction, not by configuration: every request resolves to the one admin. The first platform sender claims the instance and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password in the setup wizard, and it locks every page but the wizard itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
+Single-tenant by construction, not by configuration: every request resolves to the one admin. The first platform sender claims the instance and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
 
 ## Contributing
 

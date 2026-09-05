@@ -526,13 +526,10 @@ fi
 
 say ""
 if [ "$OPENED" = "1" ]; then
-  say "Opening the setup wizard in your browser: $DASH_URL"
+  say "Opening the setup page in your browser: $DASH_URL"
 else
-  say "Open $DASH_URL in a browser to reach the setup wizard."
+  say "Open $DASH_URL in a browser to reach the setup page."
 fi
-say "It takes it from there: one model key, a password you choose, a chat app,"
-say "and an optional Google connection."
 say ""
 say "ClosedHand's computer, the machine it browses and runs code on, is at"
-say "http://localhost:6080 if you ever want to watch it work. The wizard"
-say "shows it when a step needs it, so this is just for curiosity."
+say "http://localhost:6080 if you ever want to watch it work."
