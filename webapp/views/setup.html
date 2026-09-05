@@ -303,10 +303,10 @@
   <section class="hero">
     <p class="kicker">Self-host setup</p>
     <h1>Bring ClosedHand <em>online.</em></h1>
-    <p>Everything runs on your machine and answers to you alone. Only the first two,
-       a database and a model key, are required; each step after them is labelled for
-       what it is and can wait. Fill a step in, press save, and ClosedHand applies it
-       live; there are no files to edit and nothing to restart.</p>
+    <p>Everything runs on your machine and answers to you alone. Three steps are
+       required, a database, a model key and Google; the password and chat apps are
+       labelled for what they are and can wait. Fill a step in, press save, and
+       ClosedHand applies it live; there are no files to edit and nothing to restart.</p>
   </section>
 
   <section class="ready" id="ready-banner">
@@ -421,8 +421,30 @@
         </div>
       </article>
     </li>
-    <li class="step" data-step="chat" id="step-chat">
+    <li class="step" data-step="google" id="step-google">
       <div class="rail"><span class="node"></span><span class="num">04</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2>Google</h2>
+            <p class="whisper">Your mail, calendar and Drive.</p>
+          </span>
+          <span class="state-chip">Recommended</span>
+        </button>
+        <div class="card-body">
+          <p>ClosedHand needs to read your Gmail, Calendar and Drive. Most apps get that
+             access through the company that made them, so your data passes through that
+             company. ClosedHand runs directly on your machine instead, so you have to set up
+             the access yourself by creating a Google "Project" (it's not as complicated as it
+             sounds, trust us). It takes 5-10 minutes, and you can revoke access in your
+             Google account at any time.</p>
+          <a class="cta" href="/setup/google">Connect to Google</a>
+        </div>
+      </article>
+    </li>
+
+    <li class="step" data-step="chat" id="step-chat">
+      <div class="rail"><span class="node"></span><span class="num">05</span></div>
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
@@ -490,28 +512,6 @@
       </article>
     </li>
 
-
-    <li class="step" data-step="google" id="step-google">
-      <div class="rail"><span class="node"></span><span class="num">05</span></div>
-      <article class="card">
-        <button class="card-head" aria-expanded="false">
-          <span>
-            <h2>Google</h2>
-            <p class="whisper">Your mail, calendar and Drive.</p>
-          </span>
-          <span class="state-chip">Recommended</span>
-        </button>
-        <div class="card-body">
-          <p>ClosedHand needs to read your Gmail, Calendar and Drive. Most apps get that
-             access through the company that made them, so your data passes through that
-             company. ClosedHand runs directly on your machine instead, so you have to set up
-             the access yourself by creating a Google "Project" (it's not as complicated as it
-             sounds, trust us). It takes 5-10 minutes, and you can revoke access in your
-             Google account at any time.</p>
-          <a class="cta" href="/setup/google">Connect to Google</a>
-        </div>
-      </article>
-    </li>
 
   </ol>
 
@@ -845,11 +845,10 @@
       ? (doneCount === state.steps.length ? "everything is connected" : "ready, with more to unlock")
       : "the required steps come first";
 
-    // Only promise inbox answers once something actually feeds the inbox.
-    var hasData = (state.connections || []).some(function (c) { return /^google|^microsoft/.test(c); });
-    $("#ready-line").textContent = hasData
-      ? "Mail and calendar are connected. Open the dashboard and ask your inbox something."
-      : "Chat is running. Connect Google below and it can start answering from your mail and calendar.";
+    var chatStep = (state.steps || []).find(function (s) { return s.key === "chat"; });
+    $("#ready-line").textContent = chatStep && chatStep.done
+      ? "Mail and calendar are connected. Say hello in your chat app, or open the dashboard and ask your inbox something."
+      : "Mail and calendar are connected and ClosedHand is reading them. Connect a chat app below and it will introduce itself.";
     // This banner is where people leave the wizard, so it must not invite
     // them out through a door that is still unlocked. Until the password step
     // is either done or deliberately skipped, the button points at it rather
@@ -903,7 +902,7 @@
       });
   }
 
-  ["database", "model", "admin_password", "chat", "google"].forEach(function (k) { lastDone[k] = false; });
+  ["database", "model", "admin_password", "google", "chat"].forEach(function (k) { lastDone[k] = false; });
 
   $all(".card-head").forEach(function (head) {
     head.addEventListener("click", function () {

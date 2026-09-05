@@ -85,15 +85,16 @@ async function getSetupState() {
     { key: "database", label: "Database", done: db, required: true },
     { key: "model", label: "Model provider", done: model, required: true },
     { key: "admin_password", label: "Admin password", done: adminPassword, required: false },
+    { key: "google", label: "Google", done: google, required: true },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
-    { key: "google", label: "Google", done: google, required: false },
   ];
   const nextUnlock = steps.find((s) => !s.done) || null;
 
   return {
-    // Minimally usable = a database + a model provider. Everything else is a
-    // progressive unlock the user can add later or skip.
-    ready: db && model,
+    // Ready = a database, a model provider and Google. Without mail and
+    // calendar ClosedHand is a chat window round a model, so Google is part of
+    // the floor, not an extra. The password and chat apps can follow.
+    ready: db && model && google,
     steps,
     connections,
     nextUnlock: nextUnlock ? nextUnlock.key : null,
