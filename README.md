@@ -38,7 +38,7 @@ docker compose up -d
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
-The installer opens the setup wizard in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). The wizard walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Telegram with a token from BotFather, then connect Google through a guided wizard that opens the exact console pages you need. You make your own Google key there, because there is no company in the middle to hold one for you. First conversation is usually under ten minutes in, and Google adds about ten more.
+The installer opens the setup wizard in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). The wizard walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Telegram with a token from BotFather, then connect Google through a guided wizard that opens the exact console pages you need. That part is yours to do because ClosedHand has no company in between you and Google, and the wizard walks you through every page. First conversation is usually under ten minutes in, and Google adds about ten more.
 
 Bring whichever model provider you prefer. A single DeepInfra key is the golden path because one key covers chat plus the embedding model, but OpenAI, Anthropic, Gemini, Groq, xAI and any OpenAI-compatible endpoint (including a local Ollama) are all first-class.
 
