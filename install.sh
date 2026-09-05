@@ -30,57 +30,67 @@ fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 # Decoration. The installer proper starts at "Preconditions" below.
 #
 # An open hand that closes into a fist, played once when the display comes up,
-# then held while the install runs. Ten frames, each 32 pixels wide and 28
-# tall, one row per eight hex digits; scripts/hand-frames.py draws them.
-HAND_FRAMES='000000000001c0000003e0000003e7000073ef8000fbef8000fbef8000fbef8020fbef9cf8fbefbefcfbefbefcfbefbefefbefbe7ffbefbe3ffffffe1ffffffe0ffffffe07fffffe03ffffff01ffffff01fffffe01fffffe00fffffe007ffff8000fffc0000fffc0000fffc0000fffc0
-000000000001c0000003e0000003e7000073ef8000fbef8000fbef8000fbef8000fbef9c30fbefbef8fbefbefcfbefbefffbefbe7ffbefbe3ffffffe1ffffffe0ffffffe07fffffe01ffffff01ffffff01fffffe01fffffe00fffffc003ffff8000fffc0000fffc0000fffc0000fffc0
-00000000000080000001c0000003e7000073ef8000fbef8000fbef8000fbef8000fbef9c00fbefbe70fbefbefcfbefbefffbefbefffbefbe7ffffffe3ffffffe0ffffffe07fffffe01fffffe01fffffe01fffffe00fffffe00fffffc003ffff0000fffc0000fffc0000fffc0000fffc0
-00000000000000000001c0000003e2000073ef8000fbef8000fbef8000fbef9c00fbefbe00fbefbe00fbefbe78fbefbe7ffbefbefffbefbefffffffe7ffffffe3ffffffe0ffffffe07fffffe01fffffe01fffffe00fffffe007ffffc001ffff0000fffc0000fffc0000fffc0000fffc0
-00000000000000000001c0000003e0000073e70000fbef8000fbef8000fbef9c00fbefbe00fbefbe00fbefbe03fbefbe7ffbefbe7ffffffefffffffefffffffe7ffffffe3ffffffe07ffffff01fffffe01fffffe00fffffe007ffffc000fffe0000fffc0000fffc0000fffc0000fffc0
-00000000000000000001c0000003e0000073e70000fbef8000fbef8000fbef9c00fbefbe00fbefbe03fbefbe0ffbefbe0ffbefbe7ffffffe7ffffffefffffffe7ffffffe7ffffffe3ffffffe01fffffe00fffffe00fffffc007ffff8000fffc0000fffc0000fffc0000fffc0000fffc0
-0000000000000000000000000001c0000073e70000fbef8000fbef8000fbef9c00fbefbe07fbefbe0ffbefbe1ffbefbe1ffffffe1ffffffe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe1ffffffe00fffffe00fffffc003ffff8000fffc0000fffc0000fffc0000fffc0000fffc0
-0000000000000000000000000001c0000073e70000fbef8000fbef9c00fbefbe0ffbefbe1ffbefbe3ffbefbe3ffbefbe3ffffffe3ffffffe3ffffffe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe1ffffffe007ffffc003ffff0000fffc0000fffc0000fffc0000fffc0000fffc0
-0000000000000000000000000001c0000073e70000fbef8000fbef9c1ffbefbe3ffbefbe3ffbefbe7ffbefbe7ffffffe7ffffffe7ffffffe7ffffffe7ffffffe3ffffffe7ffffffe7ffffffe7ffffffe3ffffffc1ffffff8001ffff0000fffc0000fffc0000fffc0000fffc0000fffc0
-0000000000000000000000000001c0000073e70000fbef8000fbef9c1ffbefbe3ffbefbe3ffbefbe7ffbefbe7ffffffe7ffffffe7ffffffe401ffffe1fc001fe3ffffcfe7ffffefe7ffffefe7ffffefe3ffffffc1ffffff8001ffff0000fffc0000fffc0000fffc0000fffc0000fffc0'
+# then held while the install runs. Eight frames of 32 by 28 shaded pixels,
+# run-length coded; scripts/hand-frames.py renders them from a lit model.
+HAND_FRAMES='44a1w1v1m28a1q1y1v1p1h27a1u1w1t1n1f2a1w1v1m17a1w1v1m2a1t1v1s1m1e1a1q1y1v1p1h15a1q1y1v1p1h1a1t1v1s1m1e1a1u1w1t1n1f15a1u1w1t1n1f1a1t1v1s1m1e1a1t1v1s1m1e15a1t1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e15a1t1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e2a1w1v1m6a1x1v1p1k1u1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e1a1q1y1v1p1h4a2x1u1r3v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e1a1u1w1t1n1f4a1m4s2v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e5a1n1q2s1w1u1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e5a1f1n1r1s1v1u1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e1a1t1v1s1m1e6a1g1o1r1t1u1s1m1j1k2v1s1m2k1w1v1s1m2k2v1s1m1j1l1t1o4a1g1o1s1u1s1m1q2w1u1s1n1r1w1x1u1s1n1r2w1u1s1n1q1w1q1f5a1g1p1r1p1o1s1u1v1s2p1t1u1v1t1q1p1t1u1v1s1p1o2s1l1f6a1h1n1o1p1s2t1r1q1r1t2s1r1q1r3s1r1p1q1s1q1l1e7a1h1n1q2t17s1q1l1e8a1j1t1u1t17s1q1l1e8a1o1v1u17s1r1q1l1e8a1q1v1s10q8p1o1l1f8a1r1p3k1p7o1m4j4k1i1f8a1m2e1d1k1t6r1q1l7d3e12a1u1v6t1r1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+76a1x1u1l28a2x1u1p1k2a1n1r1i17a1p1t1j2a1t1v1s1n1e1a1q1y1w1q1h15a1q1y1w1q1h1a1t1v1s1n1e1a1v1w1u1o1g15a1u1w1u1o1f1a1t1v1s1n1e1a1t1v1s1n1e15a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e15a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e2a1x1v1m7a1n2a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1u1y1v1p1j5a1x1w1s1j2v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1u1v1t1n1e4a2x1v2t1w1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e4a1q3s1t1v1u1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e4a1g1h1o1r1s1u1t1s1n1h1k1u1v1s1n1h1k1u1v1s1n1h1k1u1v1s1n2h1l1n3a1j1n1q1s1t1s1n1p2w1v1s1n1q1w1x1v1s1n1q2w1v1s1n1o1v1s1h4a1h1l1p1t1s1p1t1v1w1u1s1p1u1v1w1t1s1p1t1v1w1t1s1o1r1s1l1f5a1f1g1q1p1r2t1u1s2q4t1q1r3t1s1q1p1r1p1k1f7a1i1l1q2s1r1s1r5s1r4s1r1q2r1p1k1e8a1k2s1r16s1r1p1k1e8a1r1u1t1s1t15s1r1p1k1e8a1u1v1t8s9r1q1p1k1f8a1u1t1q14p4o1n1k1f8a1s1n3k5o3n1l6j2k1i1f8a1k2e1d1k1t6r1p1l7d3e12a1t1v6t1q1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+76a1t1v1k28a1u1y1w1q1j23a1n3a1u1w1t1o1e2a1x1u1m16a1p1x1w1q1h1a1t1v1s1n1e1a1w1x1v1p1k15a1v1x1u1p1g1a1t1v1s1n1e1a1t1v1t1n1e15a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e15a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e2a1x1u1m10a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a2x1v1q1k6a1q1i1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1t1o1e5a2x1u1t1w1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e4a1u1x1v1u1t1v1u1s1n1f1k1t1v1s1n1f1k1t1v1s1n1f1k1t1v1s1n1f1g1k1p1a1o1t2s2t1u1s2n1k1w1v1s1n1o1v1w1v1s2n1v1w1v1s1n1l1n1t1j1a1h1g1n1p1r1s1t2r1s1v1w1u1s1p1t2w1u1s1p1t1v1w1u1s1n1q1t1m1f3a1h1i1n1p1r1s3t1v1t2r3u1t2r2u1v1t1r1o1r1p1k1f4a1e1f1j1n1p1r1s3t1r1s4t1r5s1q1p1q1o1k1e6a1e1k1n1o1p1r2s1q11s1q1r1q1o1k1e7a1h1n3r1q1p1r12s1r1q1o1k1e7a1m1t2u1r1q1r13s1r1q1o1k1e7a1p1v1u1t1s14r2q1p1o1k1f7a1q1v1s3p16o1n1k1f7a1s1r1l3k2o6n1l6j2k1i1f7a1m1f2e1d1j1s2r4q1o1k6d4e12a1t1v1t5s1q1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+107a1p1x1u1q1h27a1v1x1v1q1g2a1v1u1l17a1x1u1m2a1t1v1t1o1e1a1u1y1v1q1j15a1w1x1v1q1k1a1t1v1s1n1e1a1u1w1t1o1e15a1t1v1t1o1e1a1t1v1s1n1e1a1t1v1s1n1e15a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1k1x1u1p1g9a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1w1x1v1q1h9a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1t1o1e6a1r1j1a1s1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e5a1w1x1v1t1u1v1s1n2k2v1s1n1l1j2v1s1n1l1j2v1s1n1j1l1t1l1a1u1x1v4u1t1o1p1t1w1v1s1o1s2w1u1s1o1r2w1v1s1n1o1t1n1f1a1o1t2s2t1u1t1s1t1v1x1u1s1r1u2v1u1s1r1u1v1w1u1s1p1q1p1k1f1a1g2m1o1p1r1s2t4u1t1s2u2t2s4t1r1o1p1n1k1e2a3e1k1m1o1q1r1s1t2u1s2t9s1q2p1n1k1e5a2e1i1l1n1p1q1r1s1t1s1q9s2r1p1n1k1e7a1g1j3q2p1q1o1q9s2r1p1n1k1e7a1p1s1u1t1r2q2p7s5r1p1n1k1e7a1s1v1u1s3r2q1r11q1p1n1k1f7a2u1r1p7o11n1m1k1f7a1t1o2l2k5n3m1k6j2k1j1g7a1k2e2d1j1s1r5q1o1h6d4e12a1r1v1t5s1q1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+108a1r1u1k28a1u1y1w1r1j2a1p1t1i17a1v1u1l2a1u1w1u1p1e1a1r1y1w1r1i15a1u1y1v1r1j1a1t1v1s1n1e1a1u1w1u1p1f15a1u1w1t1p1e1a1t1v1s1n1e1a1t1v1s1o1e3a1n11a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1q2w1r1i9a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1v1x1v1q1g9a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1s1n1e1a1t1v1t1o1e9a1t1v1s1n1i1k1u1v1s1n2j2v1s1n1j1k2v1s1n1i1h2n3a1s1o1j1s1v1s2n1v1w1v1s1n1q2w1v1s1n1q2w1v1s1n1m1n1p1g2a1w1x1v1u2v1t2p1u1w1u1s1q1u1v1w1u1s1q1u1v1w1u1s1o1p1q1k1f1a1t1x1w4u2t1u1v1w1u1s1t4u1s1t3u1t1s2p1n1k1f1a1p1t1s1r1s2t7u1v1u3t1s2t2s1t1r2o1n1k1f1a1g3n1o1p1q1r1s2t4u2t8s1q2p1n1k1f2a1f2e1h1k1l1n1o1p1q1r1s3t1s1q6s2r1q1p1n1k1f5a1d1e1h1l1m3n1o1p1q1r1o1p6s2r1q1p1n1k1f6a1g1j1m1p1q1p1o2p1o1n1m1q8r1q1p1n1k1f6a1m1s1v1t2r2q1p1o1n1o3q7p1o1n1k1f6a1p1v1t1p5o14n1m1k1f6a1q1s1m2l2k1m2n5m6j3k1j1f6a1m1g3e1d1j1r2q4p1n1h5d5e12a1p1v1t5s1q1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+109a1l29a1q1w1v1r1i3a1n18a1r1t1k2a1v1x1v1q1g1a1q2w1r1i15a1s1y1w1r1j1a1t1v1t1o1e1a1v1x1v1q1g15a1u1w1u1p1e1a1t1u1s1o1e1a1t1v1t1o1e2a1n1q1i10a1t1v1s1o1e1a1t1u1s1o1e1a1t1u1s1o1e1a1r1y1w1r1i9a1t1u1s1o1e1a1t1u1s1o1e1a1t1u1s1o1e1a1u1x1u1q1f9a1t1u1s1o1h1k2u1s1o1h1k2u1s1o1h1k1u1v1s1o2g2p6a1t1u1s1o1l1k1v1u1s2o2w1u1s1o1n1w1v1u1s1o1k1m1q1g6a1q1u1s1o1q2w1u1s1p1t2w1u1s1p1t1v1w1u1s2o1q1k1g3a1s1p1m1n1w1s1q1s1v1w1u1s1t3v1u1s1t2u1v1t1s2o1n1k1f2a1w1x1w2v1u1t1u1p1v1w1v1t5u6t1s1p1n1m1k1f1a1s1x1w3u5v2u3v1u1t6s1t1r1o1n1m1k1f1a1p2t1r2s3t3u3v3u1t4s2r1q1p1o1m1k1f1a1g1o3n1o1p2q1r2s3t3u1r1q3s3r1q1o1m1k1f2a1f2e1f1i1j1k1l1m1n1o1p2q3r2o1r1s4r1q1o1m1k1f5a2d1f1i1l7m2n1k1o2r4q1p1o1m1k1f6a1h1l1m1o4n4m1k1l7p2o1m1k1f6a1p1t1r4o4n1m1l3n5m1n2m1k1f6a1r1q3l2k4m4l6j3k1j1g6a1l4e1d1j1r1q5p1n1h4d6e12a1o1v1t5s1q1g22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+140a1v1u1l4a1l18a1r1t1k2a1w1y1v1r1k1a1q2w1r1i15a1s1y1w1r1j1a1t1w1t1p1e1a1v1x1v1q1g15a1u1w1u1q1e1a1t1v1s1o1e1a1t1v1t1p1e2a1v1u1m10a1t1v1s1o1e1a1t1u1s1o1e1a1t1u1s1o1e1a1u1y1w1r1j8a1k1t1u1s1o1f1k2u1s1o1f1k2u1s1o1f1k1v1w1u1p2g1m1o5a1j2u1s1o2k1v1u1s1o1m1k1v1u1s1o1l1k2v1s1o1j1l1o1i5a1j2u1s1o1p2w1u1s1p1s2w1u1s1o1r2w1u1s1o1m1p1l1g5a1j2u1s1p1t2w1u2s3v1u1t1s2u1w1u1s1o2n1k1f5a1k1p1u1s1q1u2v1u1t5u1t2u1t1u1t1s1o1n1m1k1f2a1l1s1p2o1q1s1o1p1u1v3u7t2s1t1s1o2m1k1f2a1v1y1w12v3u1t3s1r1s1q1n2m1k1f1a1p1x1w1v2u13v1u1t1s3r1q2o1m1k1f1a1o2t2r3s4t5u2v1u1q1p3r1q1p1o1m1k1f1a1f2o2n3o2p3q3r3s1r1o1n1q2r1q1p1o1m1k1f2a1f2e1f2h1i1j2k2l1m2n3o1n1j1l1p2q2p1o1m1k1f5a1e1d1e1f1g2h1i6k1j1i1h1k5o1n1m1k1f5a1g1k1l1k2j4i3h3g1i2l6m1k1f5a1o1r1o1l3k1j2k1j2i2h1i1h1i4j3k1j1g5a1n1h4e1d1i1o2p4o1n1h4d6e12a1m1v1t5s1q1f22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a
+140a1s1t1k4a1l18a1s1t1k2a1v1y1w1s1k1a1r2w1s1i15a1v1y1w1s1q1k2w1u1q1k1j1y1x1v1s1l1e2a1l10a1o2w1u1q1l1j2t1r1n2i2v1t1p1j1h1r2w1s1i8a1k2t1r1n2h1t1s1q1m1h1i2s1q1m1g1i2x1v1s1l1f7a1h2s1q1m1h1j2u1s1o2k2t1r1n1j1k2v1t1p1j1h1m1l5a1j2u1s1o1n1v1w1u1s1o1r2w1u1s1o1p1x1u1s1q1m2h1j1g5a1j2u1s1o1s2w1u2s2v1w1u1s1r1u2v1t1r1n1k1l1h1f5a1j2u1s1q1u2v3u3v1u1t4u1t1s1o1m1l1h1f5a1j2u1s1r1u1v8u6t1s1o1m1l1h1f5a1k1q1p1t1n3u7t6s1r1o2l1i1f2a1l1r1q9p3v5u1t1s1q1r1q1m1l1m1i1f2a1t1y11w7v1t1q1p1q1p2n1m1j1f1a1o2w1v5u12v1u1p1n1o1q1p1n1m1k1f1a1o1u1t1s3r9s5t1r1n2m2p1n1m1k1f1a1f2p5n6o7p1o1k1h1l1p1o1n1m1k1f2a1f1e3g4h3i4j4k1j1e1f1m2o1n1m1k1f4a4c4d1e9f1e1d1j2l3m1k1g5a1g1i7g1h3g3f2e1g1i1j4k1j1g5a1j1e5d1h7k1j1h3d7e12a1m1v1t5s1q1f22a1u1v1t5s1q1g22a1u1v1t5s1q1g22a1n1h1f7e11a'
 
-HAND_AWK='# One frame of the hand. The frame is 28 rows of 32 pixels, each row eight hex
-# digits; a terminal cell shows two pixels, one above the other, using the
-# half-block characters. K scales the picture, PAD centres it.
-#   FR  the frame as 224 hex digits    K  cells per pixel, sideways
-#   PAD  blank columns on the left     FU full, TP top, BT bottom half
+HAND_AWK='# One frame of the hand. FR is 32x28 pixels of grey level, run-length coded
+# as <count><letter>, a = background and b..y = dark to light. A terminal
+# cell shows two pixels, one above the other, using the half-block glyphs.
+#   K  cells per pixel, sideways     PAD  blank columns on the left
+#   COLOR  1 = 256-colour greys, 0 = shades of block characters
+#   FU TP BT  full, top and bottom half blocks    SH1..SH4  the mono ramp
 BEGIN {
-  hex = "0123456789abcdef"
-  for (i = 0; i < 16; i++) {
-    v = i
-    for (b = 3; b >= 0; b--) { bit[substr(hex, i + 1, 1), b] = v % 2; v = int(v / 2) }
+  n = 0; i = 1; L = length(FR)
+  while (i <= L) {
+    c = ""; ch = substr(FR, i, 1)
+    while (ch >= "0" && ch <= "9") { c = c ch; i++; ch = substr(FR, i, 1) }
+    v = index("abcdefghijklmnopqrstuvwxy", ch) - 1
+    for (k = 0; k < c + 0; k++) { px[n % 32, int(n / 32)] = v; n++ }
+    i++
   }
-  for (y = 0; y < 28; y++)
-    for (x = 0; x < 32; x++) {
-      d = substr(FR, y * 8 + int(x / 4) + 1, 1)
-      px[x, y] = bit[d, x % 4]
-    }
   margin = ""
-  for (i = 0; i < PAD; i++) margin = margin " "
+  for (k = 0; k < PAD; k++) margin = margin " "
   rows = 14 * K
   for (r = 0; r < rows; r++) {
     line = margin
     for (c = 0; c < 32 * K; c++) {
       t = px[int(c / K), int((2 * r) / K)]
       b = px[int(c / K), int((2 * r + 1) / K)]
-      line = line (t && b ? FU : (t ? TP : (b ? BT : " ")))
+      if (COLOR) {
+        if (t && b)       line = line sprintf("\033[38;5;%d;48;5;%dm%s", 231 + t, 231 + b, TP)
+        else if (t)       line = line sprintf("\033[0;38;5;%dm%s", 231 + t, TP)
+        else if (b)       line = line sprintf("\033[0;38;5;%dm%s", 231 + b, BT)
+        else              line = line "\033[0m "
+      } else {
+        a = (t + b) / 2
+        if (a <= 0)       line = line " "
+        else if (a < 7)   line = line SH1
+        else if (a < 13)  line = line SH2
+        else if (a < 19)  line = line SH3
+        else              line = line SH4
+      }
     }
-    printf "\033[2K%s\n", line
+    printf "\033[2K%s\033[0m\n", line
   }
 }
 '
 
-# Print frame N (1 to 10) of the hand at the size ui_init settled on.
+# Print frame N (1 to 8) of the hand at the size ui_init settled on.
 hand_frame() {
   _fr=$(printf '%s\n' "$HAND_FRAMES" | sed -n "${1}p")
-  awk -v FR="$_fr" -v K="$BK" -v PAD="$BPAD" \
-      -v FU="$BFU" -v TP="$BTP" -v BT="$BBT" "$HAND_AWK" </dev/null
+  awk -v FR="$_fr" -v K="$BK" -v PAD="$BPAD" -v COLOR="$BCOLOR" \
+      -v TP="$BTP" -v BT="$BBT" \
+      -v SH1="$BS1" -v SH2="$BS2" -v SH3="$BS3" -v SH4="$BS4" "$HAND_AWK" </dev/null
 }
-HAND_FRAME=10
+HAND_FRAME=8
 
 # --- Progress display --------------------------------------------------------
 # Two modes, and the plain one is the one that has to keep working.
@@ -127,13 +137,23 @@ ui_init() {
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
   case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
-    *UTF-8*|*utf-8*|*UTF8*|*utf8*) BFU=$(printf '\342\226\210')
-                                   BTP=$(printf '\342\226\200')
+    *UTF-8*|*utf-8*|*UTF8*|*utf8*) BTP=$(printf '\342\226\200')
                                    BBT=$(printf '\342\226\204')
-                                   BSH=$BFU
-                                   BHL=$(printf '\342\226\221') ;;
-    *) BFU='#'; BTP="'"; BBT=','; BSH='#'; BHL=':' ;;
+                                   BS1=$(printf '\342\226\221')
+                                   BS2=$(printf '\342\226\222')
+                                   BS3=$(printf '\342\226\223')
+                                   BS4=$(printf '\342\226\210')
+                                   BSH=$BS4
+                                   BHL=$BS1 ;;
+    *) BTP="'"; BBT=','; BS1='.'; BS2=':'; BS3='+'; BS4='#'; BSH='#'; BHL=':' ;;
   esac
+  # The shading wants 256 colours; with fewer, the hand is drawn in four
+  # shades of block character instead.
+  BCOLOR=0
+  _colors=$(tput colors 2>/dev/null || echo 0)
+  case "$_colors" in ''|*[!0-9]*) _colors=0 ;; esac
+  if [ "$_colors" -ge 256 ] || [ -n "${COLORTERM:-}" ]; then BCOLOR=1; fi
+  case "${TERM:-}" in *256color*|*truecolor*|*direct*) BCOLOR=1 ;; esac
 
   UI=1
   trap 'printf "\033[?25h"' EXIT
@@ -246,7 +266,7 @@ ui_draw() {
 ui_intro() {
   if [ "$UI" != "1" ]; then return 0; fi
   _f=1
-  while [ "$_f" -le 10 ]; do
+  while [ "$_f" -le 8 ]; do
     HAND_FRAME=$_f
     ui_draw 0 "Starting"
     sleep 0.09 2>/dev/null || true
