@@ -251,6 +251,15 @@
     }
     .fb-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line, rgba(255,255,255,0.08)); }
     .fb-block h3 { font-size: 15px; margin: 0 0 6px; }
+    /* One chat app open at a time. Two QR codes side by side is a camera
+       picking up the wrong one, so each app unfolds from its heading and
+       opening one folds the other. */
+    .choose { cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 4px 0; }
+    .choose::after { content: "+"; font-weight: 300; font-size: 18px; color: var(--text-tertiary); margin-left: 12px; }
+    .chooser.is-open .choose::after { content: "\2212"; }
+    .choose:hover { color: var(--text-primary); }
+    .choice-body { display: none; margin-top: 8px; }
+    .chooser.is-open .choice-body { display: block; }
     .fb-block .cta { margin-top: 8px; }
     .fb-done { font-size: 11px; color: #4ade80; border: 1px solid rgba(74,222,128,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
     .skip:hover { color: var(--text-secondary); }
@@ -455,21 +464,24 @@
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
-          <div class="fb-block" id="wa-linked-block">
-            <h3>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></h3>
+          <div class="fb-block chooser" id="wa-linked-block">
+            <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></span></h3>
+            <div class="choice-body">
             <p class="note">ClosedHand lives in your "Message Yourself" chat and never speaks in any
                other conversation.</p>
             <button class="cta" type="button" id="wa-enable">Link WhatsApp</button>
-            <button class="skip" type="button" id="wa-disable" style="display:none;">Unlink and turn this off</button>
             <div id="wa-qr-wrap" style="display:none;margin-top:10px;">
               <p class="note">Scan this with the WhatsApp camera to link the device.</p>
               <img id="wa-qr" alt="WhatsApp pairing QR" style="width:240px;height:240px;border-radius:10px;background:#fff;padding:8px;">
             </div>
             <p class="note" id="wa-status"></p>
+            <button class="skip" type="button" id="wa-disable" style="display:none;">Unlink and turn this off</button>
+            </div>
           </div>
         
-          <div class="fb-block">
-            <h3>Telegram</h3>
+          <div class="fb-block chooser" id="tg-block">
+            <h3 class="choose" data-choose="tg"><span>Telegram <span class="fb-done" id="tg-done" style="display:none;">connected</span></span></h3>
+            <div class="choice-body">
             <p class="note">A separate bot identity instead of your own number. Three taps in BotFather.</p>
 
           <div id="tg-setup">
@@ -504,7 +516,7 @@
               </div>
             </div>
           </div>
-        
+          </div>
           </div>
           <p class="note">Discord, Slack, LINE and the web chat connect any time from the dashboard.</p>
           <button class="skip" type="button">Skip for now</button>
@@ -796,6 +808,8 @@
     var tgConnected = !!state.botUsername;
     $("#tg-setup").style.display = tgConnected ? "none" : "";
     $("#tg-claim").style.display = tgConnected ? "" : "none";
+    $("#tg-done").style.display = tgConnected ? "inline-block" : "none";
+    if (tgConnected) autoOpenChooser("tg");
     if (tgConnected && !$("#tg-qr").getAttribute("src")) {
       $("#tg-qr").setAttribute("src", "/api/setup/qr?target=bot&v=" + encodeURIComponent(state.botUsername));
       $("#tg-link").setAttribute("href", "https://t.me/" + state.botUsername + "?start=hello");
@@ -967,7 +981,32 @@
         : "";
       status.classList.toggle("is-busy", pairing);
     }
+    // Before the phone has scanned there is nothing to unlink, only a pairing to stop.
+    disableBtn.textContent = _waState.linked ? "Unlink and turn this off" : "Cancel";
+    if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
   }
+
+  // The chooser: one chat app unfolded at a time. Opening one folds the other,
+  // so a phone camera only ever sees one QR code. The live one (pairing,
+  // linked, or connected) opens itself once per page load.
+  var _chooserAuto = false;
+  function openChooser(which) {
+    $all("#step-chat .chooser").forEach(function (el) {
+      el.classList.toggle("is-open", el.querySelector(".choose").getAttribute("data-choose") === which);
+    });
+  }
+  function autoOpenChooser(which) {
+    if (_chooserAuto) return;
+    _chooserAuto = true;
+    openChooser(which);
+  }
+  $all("#step-chat .choose").forEach(function (h) {
+    h.addEventListener("click", function () {
+      var el = h.closest(".chooser");
+      if (el.classList.contains("is-open")) el.classList.remove("is-open");
+      else openChooser(h.getAttribute("data-choose"));
+    });
+  });
 
   var _waEnableBtn = $("#wa-enable");
   if (_waEnableBtn) _waEnableBtn.addEventListener("click", function () {
