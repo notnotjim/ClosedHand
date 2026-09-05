@@ -541,6 +541,6 @@ else
   say "Open $DASH_URL in a browser to reach the setup page."
 fi
 say ""
-say "ClosedHand browses and runs code on a separate, walled-off computer of its"
-say "own. It cannot see your files or the rest of your machine. Watch it work at"
+say "ClosedHand browses and runs code on its own sandboxed computer. It cannot"
+say "see your files or the rest of your machine. Watch it work at"
 say "http://localhost:6080 whenever you like."
