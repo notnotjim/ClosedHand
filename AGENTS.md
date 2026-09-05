@@ -45,6 +45,11 @@ they neither get published nor drift out of step with a second copy.
 - No staccato ad-copy ("We do X. We don't do Y. No Z."). Plain flowing sentences that
   state facts directly.
 - Connected services sort to the top, not the bottom.
+- The stance is part of the copy: transparent, privacy-first, the user owns the lot.
+  Say plainly where data lives (this machine), that self-host needs no ClosedHand
+  account, and why a step exists when it looks like a chore (you make your own Google
+  key because no company sits between Google and your machine). Brief, readable at a
+  glance, and never a paragraph where two sentences do. (James, 2026-09-05)
 
 ## Workflow
 - Plan first for anything with 3+ steps.
