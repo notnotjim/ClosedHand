@@ -417,7 +417,7 @@
             <button class="save-btn" type="submit">Set password</button>
             <p class="form-msg" id="pw-msg"></p>
           </form>
-          <button class="skip" type="button">Skip for now, I'm on localhost</button>
+          <button class="skip" type="button">Skip for now (only if nobody else can reach this computer)</button>
         </div>
       </article>
     </li>
@@ -878,7 +878,7 @@
         };
         if (ctaNote) {
           ctaNote.style.display = "";
-          ctaNote.textContent = "The dashboard holds everything ClosedHand knows about you, and right now it opens to anyone who can reach this address. Set a password, or skip it in step three if you are only ever on this machine.";
+          ctaNote.textContent = "The dashboard holds everything ClosedHand knows about you, and right now it opens to anyone who can reach this address. Set a password, or skip it in step three only if nobody else can reach this computer.";
         }
       }
     }
@@ -921,7 +921,7 @@
       if (!SKIPPABLE[key]) return;
       skips[key] = !skips[key];
       saveSkips();
-      btn.textContent = skips[key] ? "Changed my mind, show this step" : (key === "admin_password" ? "Skip for now, I'm on localhost" : "Skip for now");
+      btn.textContent = skips[key] ? "Changed my mind, show this step" : (key === "admin_password" ? "Skip for now (only if nobody else can reach this computer)" : "Skip for now");
       if (skips[key]) li.classList.remove("is-open");
       poll();
     });
