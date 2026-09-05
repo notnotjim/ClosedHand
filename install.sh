@@ -188,9 +188,11 @@ ui_bar() {
 
 # Which images have arrived, so a step that looks frozen still shows what has
 # actually been finished. Names as a person would say them, not as the registry
-# spells them.
+# spells them. The ones still coming carry a dot that grows each redraw, so a
+# box that has not been ticked yet is visibly being worked on rather than
+# waiting its turn. $1 is the phase, 0 to 2.
 images_line() {
-  awk '$1 == "Image" && ($3 == "Pulling" || $3 == "Pulled") { seen[$2] = 1 }
+  awk -v PH="$1" '$1 == "Image" && ($3 == "Pulling" || $3 == "Pulled") { seen[$2] = 1 }
        $1 == "Image" && $3 == "Pulled" { got[$2] = 1 }
        END {
          n = 0
@@ -206,7 +208,8 @@ images_line() {
            else if (r == "webapp") r = "dashboard"
            else if (r == "bot") r = "assistant"
            else if (r == "sandbox") r = "computer"
-           out = out ((order[i] in got) ? "[x] " : "[ ] ") r "   "
+           busy = substr("...", 1, PH + 1) substr("   ", 1, 2 - PH)
+           out = out ((order[i] in got) ? "[ x ] " : "[" busy "] ") r "   "
          }
          print out
        }' "$LOG" 2>/dev/null
@@ -216,8 +219,10 @@ images_line() {
 # also assigned in whatever called it. These names are its own: when they were
 # _pct and _label, a caller that passed "$_label$_detail" got that written back
 # over its own _label and the detail appended again every second.
+SPIN=0
 ui_draw() {
   _dpct=$1; _dtext=$2
+  SPIN=$(( (SPIN + 1) % 3 ))
   # A terminal resized mid-install invalidates every width held here and the
   # redraw would smear again. Notice it and fall back to plain lines rather
   # than try to recover a block that is already wrong.
@@ -248,7 +253,7 @@ ui_draw() {
   ui_line ""
   ui_bar "$_dpct"
   ui_centred "$_dpct%  $_dtext"
-  ui_centred "$(images_line)"
+  ui_centred "$(images_line "$SPIN")"
   ui_line ""
   ui_centred "Everything stays on this machine. No ClosedHand account required."
   UIDRAWN=1
@@ -477,7 +482,12 @@ else
   # fallback is the thing that actually works: slower, but it always boots.
   if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
     step 30 "Download stalled, retrying"
-    sleep 10
+    _w=10
+    while [ "$_w" -gt 0 ]; do
+      sleep 1
+      if [ "$UI" = "1" ]; then ui_draw 30 "Download stalled, retrying"; fi
+      _w=$((_w - 1))
+    done
     if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
       run_watched 30 70 "Building from source" - \
         docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
