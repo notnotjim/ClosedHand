@@ -53,11 +53,11 @@ they neither get published nor drift out of step with a second copy.
   persuade, no "the one cost is". The facts speak for themselves. Brief, readable at a
   glance. (James, 2026-09-05)
 - Two tiers share the home page and dashboard, so copy there must be true for the
-  hosted product as well as self-host. The installer, the setup page and the Google
-  guide are self-host only and can say "this machine" outright. (James, 2026-09-05)
+  hosted product as well as self-host. The installer, the setup page and Connect to
+  Google are self-host only and can say "this machine" outright. (James, 2026-09-05)
 - Names: the self-host onboarding at /setup is "the setup page" (never "wizard"); the
-  Google console walkthrough at /setup/google is "the Google guide". Two things, two
-  names. (James, 2026-09-05)
+  Google console walkthrough at /setup/google is "Connect to Google", a thing you do,
+  never a "guide" you read. Two things, two names. (James, 2026-09-05)
 
 ## Workflow
 - Plan first for anything with 3+ steps.
