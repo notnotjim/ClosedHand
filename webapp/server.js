@@ -460,10 +460,8 @@ app.get("/setup", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "setup.html"));
 });
 
-app.get("/setup/google", (req, res) => {
-  res.set("Cache-Control", "no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "views", "setup-google.html"));
-});
+// The Google steps live inside the setup page's Google card now.
+app.get("/setup/google", (req, res) => res.redirect("/setup#step-google"));
 
 // --- Dashboard access: a password chosen in the wizard, a session cookie, ---
 // --- and a login page with no username (there is only one person here). ----
@@ -1477,6 +1475,9 @@ app.get("/auth/:service", async (req, res) => {
     // Explicit "connect an additional Google account" flow (mail/calendar for
     // a second Gmail). Only meaningful for google + a logged-in user.
     extraAccount: (serviceKey === "google" || serviceKey === "microsoft") && req.query.extra === "1" && !!getUserIdFromRequest(req),
+    // The setup page's Connect to Google steps end in this sign-in; land back
+    // on setup afterwards rather than on the home page.
+    returnTo: req.query.return === "setup" ? "/setup" : null,
   };
 
   // Check for WhatsApp magic link cookie
@@ -1833,7 +1834,7 @@ app.get("/auth/:service/callback", async (req, res) => {
         window.close();
       </script><p>Authentication cancelled. You can close this window.</p></body></html>`);
     }
-    return res.redirect(svc?.isSignup ? "/?error=google_denied" : "/dashboard?error=auth_denied");
+    return res.redirect(svc?.isSignup ? (stateData?.returnTo || "/") + "?error=google_denied" : "/dashboard?error=auth_denied");
   }
 
   if (!svc || !stateData) {
@@ -2088,7 +2089,7 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
   // Two-step redirect: first to /dashboard (sets cookie via server-side auth check),
   // then bounce to homepage. The cookie sticks because /dashboard is a server-side route.
   // The homepage's client-side /api/chat/status fetch will then see the cookie.
-  res.redirect("/");
+  res.redirect(stateData?.returnTo || "/");
 }
 
 // Handle: connecting a service for existing user (website flow)

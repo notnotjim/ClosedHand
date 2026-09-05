@@ -260,6 +260,30 @@
     .choose:hover { color: var(--text-primary); }
     .choice-body { display: none; margin-top: 8px; }
     .chooser.is-open .choice-body { display: block; }
+
+    /* Connect to Google: six steps inside the card, one on screen at a time. */
+    .g-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); }
+    .g-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.14); margin-left: 6px; }
+    .g-dots span.on { background: var(--accent); }
+    .g-dots span.done { background: rgba(110,231,168,0.45); }
+    .g-step { display: none; }
+    .g-step.is-on { display: block; }
+    .g-step h3 { font-size: 15px; margin: 0 0 6px; }
+    .deep {
+      display: inline-block; padding: 8px 16px; border-radius: 9px; margin: 4px 8px 12px 0;
+      border: 1px solid var(--accent-dim); background: var(--accent-faint, rgba(110,231,168,0.07));
+      color: var(--accent); font-size: 13.5px; font-weight: 500; text-decoration: none;
+    }
+    .deep:hover { background: var(--accent-dim); text-decoration: none; }
+    .deep.is-locked { pointer-events: none; opacity: 0.35; }
+    .note.warn { border-left-color: var(--warn); color: var(--text-secondary); }
+    .code { position: relative; margin: 0 0 12px; background: #0b0c12; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; }
+    .code pre { padding: 11px 84px 11px 14px; overflow-x: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--text-secondary); margin: 0; }
+    .copy { position: absolute; top: 7px; right: 7px; padding: 3px 10px; font-family: inherit; font-size: 11.5px; color: var(--text-tertiary); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; cursor: pointer; }
+    .copy.did { color: var(--accent); border-color: var(--accent-dim); }
+    .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #0b0c12; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
+    .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    .g-nav .cta:disabled { opacity: 0.4; cursor: default; }
     .fb-block .cta { margin-top: 8px; }
     .fb-done { font-size: 11px; color: #4ade80; border: 1px solid rgba(74,222,128,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
     .skip:hover { color: var(--text-secondary); }
@@ -440,13 +464,71 @@
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
-          <p>ClosedHand needs to read your Gmail, Calendar and Drive. Most apps get that
-             access through the company that made them, so your data passes through that
-             company. ClosedHand runs directly on your machine instead, so you have to set up
-             the access yourself by creating a Google "Project" (it's not as complicated as it
-             sounds, trust us). It takes 5-10 minutes, and you can revoke access in your
-             Google account at any time.</p>
-          <a class="cta" href="/setup/google">Connect to Google</a>
+          <p id="g-intro">ClosedHand needs to read your Gmail, Calendar and Drive. Because it runs on
+             your machine and not through a company, you grant that access yourself by creating
+             a Google "Project" (it's not as complicated as it sounds, trust us).</p>
+          <button class="cta" type="button" id="g-start">Connect to Google</button>
+
+          <div id="g-flow" style="display:none;">
+            <div class="g-head"><span id="g-count">Step 1 of 6</span><span class="g-dots" id="g-dots"></span></div>
+
+            <div class="g-step" data-g="1">
+              <h3>Create your project</h3>
+              <p class="note">Google keeps the access in a free "project" that only you can use and
+                 can delete later. Open the screen, name it anything, press Create, then paste the
+                 project id here. It appears under the name while you create it, and in the
+                 console's top bar afterwards.</p>
+              <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
+              <div class="field"><input type="text" id="g-project" placeholder="project id, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false"></div>
+            </div>
+
+            <div class="g-step" data-g="2">
+              <h3>Switch on the services</h3>
+              <p class="note">One screen enables Gmail, Calendar and Drive together. Press Next, then Enable.</p>
+              <a class="deep" data-deep href="https://console.cloud.google.com/flows/enableapi?apiid=gmail.googleapis.com,calendar-json.googleapis.com,drive.googleapis.com" target="_blank" rel="noopener">Switch on the three services</a>
+            </div>
+
+            <div class="g-step" data-g="3">
+              <h3>Introduce the app</h3>
+              <p class="note">A short form: app name ClosedHand, your own email for the contact fields,
+                 and choose External when asked. Agree to Google's data policy on the last screen
+                 and press Create.</p>
+              <a class="deep" data-deep href="https://console.cloud.google.com/auth/overview/create" target="_blank" rel="noopener">Open the form</a>
+            </div>
+
+            <div class="g-step" data-g="4">
+              <h3>Make the sign-in key</h3>
+              <p class="note">Press Create client, choose Web application, and under Authorized redirect
+                 URIs add exactly this line:</p>
+              <div class="code"><button class="copy" type="button">Copy</button><pre id="g-redirect">http://localhost:3000/auth/google/callback</pre></div>
+              <a class="deep" data-deep href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open the Clients page</a>
+              <p class="note warn">Press Create, then Download JSON before closing the dialog. Google shows
+                 that file only once; if you miss it, create another client.</p>
+            </div>
+
+            <div class="g-step" data-g="5">
+              <h3>Publish the app</h3>
+              <p class="note">While it stays in Testing, Google makes you sign in again every seven days.
+                 Press Publish app and confirm. It still serves only you.</p>
+              <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
+            </div>
+
+            <div class="g-step" data-g="6">
+              <h3>Hand ClosedHand the key</h3>
+              <p class="note">Open the JSON file you downloaded and paste all of it here.</p>
+              <textarea id="g-creds" rows="3" spellcheck="false" placeholder='paste the whole file, it starts {"web":{"client_id": ...'></textarea>
+              <button class="save-btn" type="button" id="g-save">Save</button>
+              <p class="form-msg" id="g-msg"></p>
+              <a class="cta" id="g-connect" href="/auth/google?return=setup" style="display:none;">Sign in with Google</a>
+              <p class="note">Google will warn that the app is unverified, because it is your private one.
+                 Choose Advanced, then Go to ClosedHand, then Continue.</p>
+            </div>
+
+            <div class="g-nav">
+              <button class="skip" type="button" id="g-back">Back</button>
+              <button class="cta" type="button" id="g-next">Next</button>
+            </div>
+          </div>
         </div>
       </article>
     </li>
@@ -907,7 +989,9 @@
       .then(function (state) {
         setChip("watching your install", false);
         loadSkipsFor(state.installId);
+        if (_gKey === null) gLoad(state.installId);
         render(state);
+        reflectGoogle(state);
         if (typeof reflectWa === "function") reflectWa(state);
       })
       .catch(function () {
@@ -983,6 +1067,93 @@
     // Before the phone has scanned there is nothing to unlink, only a pairing to stop.
     disableBtn.textContent = _waState.linked ? "Unlink and turn this off" : "Cancel";
     if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
+  }
+
+  // --- Connect to Google, six steps inside the card ---
+  // One step on screen at a time; progress and the project id survive a
+  // reload, which matters because step six leaves for Google and comes back.
+  var G_TOTAL = 6;
+  var gStep = 0;
+  var _gKey = null;
+  function gLoad(installId) {
+    _gKey = "ch-google-step:" + (installId || "x");
+    try { gStep = parseInt(localStorage.getItem(_gKey) || "0", 10) || 0; } catch (e) { gStep = 0; }
+    try { $("#g-project").value = localStorage.getItem("ch-google-project") || ""; } catch (e) {}
+    gApplyProject();
+    gRender();
+  }
+  function gSave() { try { if (_gKey) localStorage.setItem(_gKey, String(gStep)); } catch (e) {} }
+  function gApplyProject() {
+    var id = $("#g-project").value.trim();
+    try { localStorage.setItem("ch-google-project", id); } catch (e) {}
+    // Every console link carries the project, and stays locked until there is
+    // one: an untargeted link opens whichever project was last active.
+    $all("#g-flow [data-deep]").forEach(function (a) {
+      var base = a.getAttribute("data-base");
+      if (!base) { base = a.getAttribute("href"); a.setAttribute("data-base", base); }
+      if (id) {
+        a.setAttribute("href", base + (base.indexOf("?") === -1 ? "?" : "&") + "project=" + encodeURIComponent(id));
+        a.classList.remove("is-locked");
+      } else {
+        a.setAttribute("href", base);
+        a.classList.add("is-locked");
+      }
+    });
+  }
+  function gRender() {
+    var on = gStep >= 1;
+    $("#g-flow").style.display = on ? "" : "none";
+    $("#g-intro").style.display = on ? "none" : "";
+    $("#g-start").style.display = on ? "none" : "";
+    if (!on) return;
+    $all("#g-flow .g-step").forEach(function (el) { el.classList.toggle("is-on", parseInt(el.getAttribute("data-g"), 10) === gStep); });
+    $("#g-count").textContent = "Step " + gStep + " of " + G_TOTAL;
+    var dots = "";
+    for (var i = 1; i <= G_TOTAL; i++) dots += '<span class="' + (i < gStep ? "done" : i === gStep ? "on" : "") + '"></span>';
+    $("#g-dots").innerHTML = dots;
+    $("#g-back").textContent = gStep === 1 ? "Not now" : "Back";
+    var next = $("#g-next");
+    next.style.display = gStep === G_TOTAL ? "none" : "";
+    next.disabled = gStep === 1 && !$("#g-project").value.trim();
+    if (gStep === 1) setTimeout(function () { $("#g-project").focus(); }, 50);
+  }
+  $("#g-start").addEventListener("click", function () { gStep = 1; gSave(); gRender(); });
+  $("#g-next").addEventListener("click", function () { if (gStep < G_TOTAL) { gStep++; gSave(); gRender(); } });
+  $("#g-back").addEventListener("click", function () { gStep = gStep <= 1 ? 0 : gStep - 1; gSave(); gRender(); });
+  $("#g-project").addEventListener("input", function () { gApplyProject(); gRender(); });
+  $all("#g-flow .copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.parentElement.querySelector("pre");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pre ? pre.textContent : "").then(function () {
+          btn.classList.add("did"); btn.textContent = "Copied";
+          setTimeout(function () { btn.classList.remove("did"); btn.textContent = "Copy"; }, 1600);
+        }).catch(function () {});
+      }
+    });
+  });
+  $("#g-save").addEventListener("click", function () {
+    var msg = $("#g-msg"); msg.className = "form-msg"; msg.style.display = "none";
+    $("#g-save").disabled = true;
+    fetch("/api/setup/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ json: $("#g-creds").value }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) {
+        $("#g-save").disabled = false; msg.style.display = "block";
+        if (r.ok) { msg.className = "form-msg ok"; msg.textContent = "Saved. Now sign in."; $("#g-connect").style.display = "inline-block"; }
+        else { msg.className = "form-msg err"; msg.textContent = (r.j && r.j.error) || "That didn't save."; }
+      })
+      .catch(function () { $("#g-save").disabled = false; msg.style.display = "block"; msg.className = "form-msg err"; msg.textContent = "Could not reach the server."; });
+  });
+  // Server truth on every poll: the exact redirect line, whether the key is
+  // already saved (then the only thing left is the sign-in), and completion.
+  function reflectGoogle(st) {
+    if (st.googleRedirectUri) $("#g-redirect").textContent = st.googleRedirectUri;
+    if (st.googleCreds) {
+      $("#g-connect").style.display = "inline-block";
+      if (gStep >= 1 && gStep < G_TOTAL) { gStep = G_TOTAL; gSave(); gRender(); }
+    }
+    var g = (st.steps || []).find(function (x) { return x.key === "google"; });
+    if (g && g.done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
   }
 
   // The chooser: one chat app unfolded at a time. Opening one folds the other,
