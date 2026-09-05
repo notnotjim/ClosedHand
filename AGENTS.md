@@ -49,7 +49,9 @@ they neither get published nor drift out of step with a second copy.
   Explain a chore by who gets to see your data, in words anyone knows: "other apps
   read your Google data through their own company first; ClosedHand has no company in
   between". Never "key", "credential", "server" or "OAuth" where "your data" and
-  "company" will do. Brief, readable at a glance. (James, 2026-09-05)
+  "company" will do. State what, why and how like a friend would; never sell, never
+  persuade, no "the one cost is". The facts speak for themselves. Brief, readable at a
+  glance. (James, 2026-09-05)
 - Two tiers share the home page and dashboard, so copy there must be true for the
   hosted product as well as self-host. The installer, the setup wizard and the Google
   wizard are self-host only and can say "this machine" outright. (James, 2026-09-05)
