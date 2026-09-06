@@ -124,7 +124,12 @@ ui_init() {
   if [ "$BK" -lt 1 ] || [ "$BW" -lt 60 ]; then return 0; fi
   BH=$((BK * 14))
   BSW=$((BK * 32))
-  BPAD=$(( (BW - BSW) / 2 ))
+  # Centre the fist on the wordmark under it, not the frame on the terminal:
+  # the picture sits 3 pixels in from the frame's left edge and 4 from its
+  # right, so the frame is placed so the picture's own middle (15.5 cells per
+  # size step) lands on the middle of the 21-character wordmark.
+  BPAD=$(( (BW - 21) / 2 + 10 - (31 * BK) / 2 ))
+  if [ "$BPAD" -lt 0 ]; then BPAD=0; fi
   BLOCK=$((BH + 9))
 
   # Block characters need a UTF-8 locale; anywhere else they arrive as rubbish.
