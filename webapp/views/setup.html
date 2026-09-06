@@ -285,6 +285,9 @@
     .copy.did { color: var(--accent); border-color: var(--accent-dim); }
     .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #0b0c12; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
     .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    .g-file { margin: 2px 0 6px; }
+    .g-file .deep { cursor: pointer; margin-bottom: 6px; }
+    .g-step textarea.is-drop { border-color: var(--accent); }
     /* A small picture of the screen a step talks about; click for full size. */
     .peek { display: inline-flex; flex-direction: column; gap: 4px; vertical-align: top; margin: 4px 0 12px; text-decoration: none; color: var(--text-tertiary); font-size: 12px; }
     .peek img { width: 168px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); cursor: zoom-in; display: block; }
@@ -530,8 +533,13 @@
                  before closing the dialog. Google shows that file only once; if you miss it, create
                  another client.</p>
               <a class="peek" href="/setup-google-download-json.png"><img src="/setup-google-download-json.png" alt="The OAuth client created dialog, with Download JSON marked"><span>Where Download JSON is</span></a>
-              <p class="note">Open the file you downloaded and paste all of it here:</p>
-              <textarea id="g-creds" rows="3" spellcheck="false" placeholder='paste the whole file, it starts {"web":{"client_id": ...'></textarea>
+              <p class="note">Then hand ClosedHand the file you downloaded. Pick it here, or drop it on
+                 the box, or open it and paste the contents.</p>
+              <div class="g-file">
+                <label class="deep" for="g-file">Choose the downloaded file</label>
+                <input type="file" id="g-file" accept=".json,application/json" style="display:none;">
+              </div>
+              <textarea id="g-creds" rows="3" spellcheck="false" placeholder='or paste the whole file here, it starts {"web":{"client_id": ...'></textarea>
               <button class="save-btn" type="button" id="g-save">Save</button>
               <p class="form-msg" id="g-msg"></p>
             </div>
@@ -1185,6 +1193,29 @@
         }).catch(function () {});
       }
     });
+  });
+  // The file the console gives you: read it here, no need to open it in
+  // whatever app the computer has decided owns .json files.
+  function gTakeFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      $("#g-creds").value = String(reader.result || "");
+      $("#g-save").click();
+    };
+    reader.onerror = function () {
+      var msg = $("#g-msg"); msg.style.display = "block"; msg.className = "form-msg err"; msg.textContent = "Could not read that file.";
+    };
+    reader.readAsText(file);
+  }
+  $("#g-file").addEventListener("change", function () { gTakeFile(this.files && this.files[0]); this.value = ""; });
+  var gCreds = $("#g-creds");
+  gCreds.addEventListener("dragover", function (ev) { ev.preventDefault(); gCreds.classList.add("is-drop"); });
+  gCreds.addEventListener("dragleave", function () { gCreds.classList.remove("is-drop"); });
+  gCreds.addEventListener("drop", function (ev) {
+    ev.preventDefault(); gCreds.classList.remove("is-drop");
+    var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (f) gTakeFile(f);
   });
   $("#g-save").addEventListener("click", function () {
     var msg = $("#g-msg"); msg.className = "form-msg"; msg.style.display = "none";
