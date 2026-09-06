@@ -530,10 +530,14 @@
                  before closing the dialog. Google shows that file only once; if you miss it, create
                  another client.</p>
               <a class="peek" href="/setup-google-download-json.png"><img src="/setup-google-download-json.png" alt="The OAuth client created dialog, with Download JSON marked"><span>Where Download JSON is</span></a>
+              <p class="note">Open the file you downloaded and paste all of it here:</p>
+              <textarea id="g-creds" rows="3" spellcheck="false" placeholder='paste the whole file, it starts {"web":{"client_id": ...'></textarea>
+              <button class="save-btn" type="button" id="g-save">Save</button>
+              <p class="form-msg" id="g-msg"></p>
             </div>
 
             <div class="g-step" data-g="5">
-              <h3>Publish the app</h3>
+              <h3>Publish the app and sign in</h3>
               <p class="note">While the app stays in "Testing", Google makes you sign in again every
                  seven days, so it needs publishing. Google asks for two web addresses first. Open
                  the Branding page below, scroll down to <strong>App domain</strong>, and fill in:</p>
@@ -544,20 +548,18 @@
                 <li>Click <strong>Save</strong></li>
               </ol>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener">Open the Branding page</a>
-              <p class="note">Then open the Audience page below, click <strong>Publish app</strong> and
-                 confirm. It still serves only you. Come back here and move to the next step.</p>
+              <p class="note">Then open the Audience page below and click <strong>Publish app</strong>.
+                 Google shows a "Push to production?" box saying the app will be available to any
+                 user with a Google Account. That is its standard wording for every published app:
+                 in practice only someone holding the file from step four could use this one, and
+                 that file stays on your machine. You do not need to submit for verification. Click
+                 <strong>Confirm</strong>.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
-            </div>
-
-            <div class="g-step" data-g="6">
-              <h3>Hand ClosedHand the key</h3>
-              <p class="note">Open the JSON file you downloaded and paste all of it here.</p>
-              <textarea id="g-creds" rows="3" spellcheck="false" placeholder='paste the whole file, it starts {"web":{"client_id": ...'></textarea>
-              <button class="save-btn" type="button" id="g-save">Save</button>
-              <p class="form-msg" id="g-msg"></p>
+              <p class="note">Last thing: sign in. Google will warn that the app is unverified, because it
+                 is your private one. Choose <strong>Advanced</strong>, then <strong>Go to
+                 ClosedHand</strong>, then <strong>Continue</strong>.</p>
               <a class="cta" id="g-connect" href="/auth/google?return=setup" style="display:none;">Sign in with Google</a>
-              <p class="note">Google will warn that the app is unverified, because it is your private one.
-                 Choose Advanced, then Go to ClosedHand, then Continue.</p>
+              <p class="note" id="g-nocreds">The sign-in button appears once the file from step four is saved.</p>
             </div>
 
             <div class="g-nav">
@@ -1108,7 +1110,7 @@
   // --- Connect to Google, six steps inside the card ---
   // One step on screen at a time; progress and the project id survive a
   // reload, which matters because step six leaves for Google and comes back.
-  var G_TOTAL = 6;
+  var G_TOTAL = 5;
   var gStep = 0;
   var _gKey = null, _gProjKey = null;
   function gLoad(installId) {
@@ -1191,7 +1193,7 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (r) {
         $("#g-save").disabled = false; msg.style.display = "block";
-        if (r.ok) { msg.className = "form-msg ok"; msg.textContent = "Saved. Now sign in."; $("#g-connect").style.display = "inline-block"; }
+        if (r.ok) { msg.className = "form-msg ok"; msg.textContent = "Saved. Carry on to the next step."; $("#g-connect").style.display = "inline-block"; $("#g-nocreds").style.display = "none"; }
         else { msg.className = "form-msg err"; msg.textContent = (r.j && r.j.error) || "That didn't save."; }
       })
       .catch(function () { $("#g-save").disabled = false; msg.style.display = "block"; msg.className = "form-msg err"; msg.textContent = "Could not reach the server."; });
@@ -1200,10 +1202,8 @@
   // already saved (then the only thing left is the sign-in), and completion.
   function reflectGoogle(st) {
     if (st.googleRedirectUri) $("#g-redirect").textContent = st.googleRedirectUri;
-    if (st.googleCreds) {
-      $("#g-connect").style.display = "inline-block";
-      if (gStep >= 1 && gStep < G_TOTAL) { gStep = G_TOTAL; gSave(); gRender(); }
-    }
+    $("#g-connect").style.display = st.googleCreds ? "inline-block" : "none";
+    $("#g-nocreds").style.display = st.googleCreds ? "none" : "";
     var g = (st.steps || []).find(function (x) { return x.key === "google"; });
     if (g && g.done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
   }
