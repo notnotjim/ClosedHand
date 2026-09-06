@@ -474,7 +474,7 @@
         <div class="card-body">
           <p id="g-intro">ClosedHand needs to read your Gmail, Calendar and Drive. Because it runs on
              your machine and not through a company, you grant that access yourself by creating
-             a Google "Project" (it's not as complicated as it sounds, trust us).</p>
+             a Google dev project (don't worry, it's not as complicated as it sounds).</p>
           <button class="cta" type="button" id="g-start">Connect to Google</button>
 
           <div id="g-flow" style="display:none;">
@@ -1085,18 +1085,21 @@
   // reload, which matters because step six leaves for Google and comes back.
   var G_TOTAL = 6;
   var gStep = 0;
-  var _gKey = null;
+  var _gKey = null, _gProjKey = null;
   function gLoad(installId) {
+    // Both keys carry the install id: a reset must not hand the next setup
+    // the project from the last one.
     _gKey = "ch-google-step:" + (installId || "x");
+    _gProjKey = "ch-google-project:" + (installId || "x");
     try { gStep = parseInt(localStorage.getItem(_gKey) || "0", 10) || 0; } catch (e) { gStep = 0; }
-    try { $("#g-project").value = localStorage.getItem("ch-google-project") || ""; } catch (e) {}
+    try { $("#g-project").value = localStorage.getItem(_gProjKey) || ""; } catch (e) {}
     gApplyProject();
     gRender();
   }
   function gSave() { try { if (_gKey) localStorage.setItem(_gKey, String(gStep)); } catch (e) {} }
   function gApplyProject() {
     var id = $("#g-project").value.trim();
-    try { localStorage.setItem("ch-google-project", id); } catch (e) {}
+    try { if (_gProjKey) localStorage.setItem(_gProjKey, id); } catch (e) {}
     // Every console link carries the project, and stays locked until there is
     // one: an untargeted link opens whichever project was last active.
     $all("#g-flow [data-deep]").forEach(function (a) {
