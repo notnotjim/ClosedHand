@@ -475,9 +475,10 @@
             <div class="g-step" data-g="1">
               <h3>Create your project</h3>
               <p class="note">Google keeps the access in a free "project" that only you can use and
-                 can delete later. Open the screen, name it anything, press Create, then paste the
-                 project id here. It appears under the name while you create it, and in the
-                 console's top bar afterwards.</p>
+                 can delete later. Open the screen, name it anything, leave the second field as
+                 No organization, and press Create. Then paste the Project ID here (it is shown
+                 under the name, and is not the name itself). If Google then shows you a project
+                 you already had, ignore it: every step from here opens the new one.</p>
               <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
               <div class="field"><input type="text" id="g-project" placeholder="project id, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false"></div>
             </div>
@@ -1111,7 +1112,8 @@
     var dots = "";
     for (var i = 1; i <= G_TOTAL; i++) dots += '<span class="' + (i < gStep ? "done" : i === gStep ? "on" : "") + '"></span>';
     $("#g-dots").innerHTML = dots;
-    $("#g-back").textContent = gStep === 1 ? "Not now" : "Back";
+    // Google is required, so the first step has nowhere to go back to.
+    $("#g-back").style.display = gStep === 1 ? "none" : "";
     var next = $("#g-next");
     next.style.display = gStep === G_TOTAL ? "none" : "";
     next.disabled = gStep === 1 && !$("#g-project").value.trim();
@@ -1119,7 +1121,7 @@
   }
   $("#g-start").addEventListener("click", function () { gStep = 1; gSave(); gRender(); });
   $("#g-next").addEventListener("click", function () { if (gStep < G_TOTAL) { gStep++; gSave(); gRender(); } });
-  $("#g-back").addEventListener("click", function () { gStep = gStep <= 1 ? 0 : gStep - 1; gSave(); gRender(); });
+  $("#g-back").addEventListener("click", function () { if (gStep > 1) { gStep--; gSave(); gRender(); } });
   $("#g-project").addEventListener("input", function () { gApplyProject(); gRender(); });
   $all("#g-flow .copy").forEach(function (btn) {
     btn.addEventListener("click", function () {
