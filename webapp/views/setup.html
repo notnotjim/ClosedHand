@@ -1038,7 +1038,10 @@
         if (_gKey === null) gLoad(state.installId);
         render(state);
         reflectGoogle(state);
+        // Nothing live yet: WhatsApp starts unfolded, so the card opens on
+        // the thing most people came for rather than two closed headings.
         if (typeof reflectWa === "function") reflectWa(state);
+        autoOpenChooser("wa");
       })
       .catch(function () {
         setChip("can't reach the server, retrying", true);
