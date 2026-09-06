@@ -270,32 +270,7 @@ const SERVICES = {
     provides: ["LINE"],
   },
 
-  asana: {
-    name: "Asana",
-    description: "Projects, tasks, team workflows",
-    logoUrl: "/logos/asana.svg",
-    clientId: process.env.ASANA_CLIENT_ID,
-    clientSecret: process.env.ASANA_CLIENT_SECRET,
-    authUrl: "https://app.asana.com/-/oauth_authorize",
-    tokenUrl: "https://app.asana.com/-/oauth_token",
-    profileUrl: "https://app.asana.com/api/1.0/users/me",
-    scopes: ["default"],
-    provides: ["Asana"],
-  },
 
-  zoom: {
-    name: "Zoom",
-    description: "Video meetings, scheduling, recordings",
-    logoUrl: "/logos/zoom.svg",
-    clientId: process.env.ZOOM_CLIENT_ID,
-    clientSecret: process.env.ZOOM_CLIENT_SECRET,
-    authUrl: "https://zoom.us/oauth/authorize",
-    tokenUrl: "https://zoom.us/oauth/token",
-    profileUrl: "https://api.zoom.us/v2/users/me",
-    scopes: ["meeting:read", "meeting:write", "user:read", "recording:read"],
-    tokenAuthMethod: "basic",
-    provides: ["Zoom"],
-  },
 
   dropbox: {
     name: "Dropbox",
@@ -331,18 +306,6 @@ const SERVICES = {
   },
 
 
-  mailchimp: {
-    name: "Mailchimp",
-    description: "Email campaigns, audiences, automations",
-    logoUrl: "/logos/mailchimp.svg",
-    clientId: process.env.MAILCHIMP_CLIENT_ID,
-    clientSecret: process.env.MAILCHIMP_CLIENT_SECRET,
-    authUrl: "https://login.mailchimp.com/oauth2/authorize",
-    tokenUrl: "https://login.mailchimp.com/oauth2/token",
-    profileUrl: "https://login.mailchimp.com/oauth2/metadata",
-    scopes: [],
-    provides: ["Mailchimp"],
-  },
 
   hubspot: {
     name: "HubSpot",
@@ -1921,7 +1884,7 @@ async function exchangeOAuthCode(svc, code, redirectUri, storeDomain, codeVerifi
     "Accept": "application/json",
   };
 
-  // Notion/Zoom use Basic auth for token exchange
+  // Notion uses Basic auth for token exchange
   if (svc.tokenAuthMethod === "basic") {
     headers["Authorization"] = "Basic " + Buffer.from(`${svc.clientId}:${svc.clientSecret}`).toString("base64");
   }
@@ -2462,17 +2425,11 @@ async function fetchAccountMetadata(serviceKey, svc, tokens) {
         return meta;
       }
 
-      case "zoom":
-        return { name: `${profile.first_name} ${profile.last_name}`.trim(), email: profile.email };
 
       case "dropbox":
         return { name: profile.name?.display_name, email: profile.email };
 
-      case "asana":
-        return { name: profile.data?.name, email: profile.data?.email };
 
-      case "mailchimp":
-        return { name: profile.accountname || profile.login?.login_name, email: profile.login?.email };
 
       case "spotify":
         return { name: profile.display_name, email: profile.email };
