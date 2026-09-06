@@ -14,6 +14,7 @@ async function getSetupState() {
 
   let settings = {};
   let connections = [];
+  let googleAccount = null;
   let profileCreatedAt = null;
   if (db) {
     try {
@@ -22,8 +23,10 @@ async function getSetupState() {
       profileCreatedAt = (data && data.created_at) || null;
     } catch (_) { /* DB not reachable yet */ }
     try {
-      const { data } = await supabase.from("connections").select("service").eq("user_id", getAdminUserId());
+      const { data } = await supabase.from("connections").select("service, metadata").eq("user_id", getAdminUserId());
       connections = (data || []).map((r) => r.service).filter(Boolean);
+      const g = (data || []).find((r) => r.service === "google");
+      if (g) googleAccount = { name: g.metadata?.name || null, email: g.metadata?.email || null };
     } catch (_) { /* treat as none */ }
   }
   const conf = settings.self_host_config || {};
@@ -132,6 +135,8 @@ async function getSetupState() {
     // changes precisely when "a different install" is true.
     installId: profileCreatedAt,
     googleCreds,
+    // Who is connected (name and address only), so the card can say so.
+    googleAccount,
     waLinked,
     // The exact redirect URI the server will send in the Google OAuth flow
     // (mirrors server.js BASE_URL). The Google wizard renders this so the value

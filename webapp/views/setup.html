@@ -480,6 +480,13 @@
              a Google dev project (don't worry, it's not as complicated as it sounds).</p>
           <button class="cta" type="button" id="g-start">Connect to Google</button>
 
+          <div id="g-connected" style="display:none;">
+            <p><span id="g-account">Connected.</span> ClosedHand is reading your mail, calendar and
+               Drive, and keeps them up to date from here on.</p>
+            <a class="deep" href="/dashboard#connections">Manage in the dashboard</a>
+            <a class="deep" href="/auth/google?return=setup">Connect a different account</a>
+          </div>
+
           <div id="g-flow" style="display:none;">
             <div class="g-head"><span id="g-count">Step 1 of 6</span><span class="g-dots" id="g-dots"></span></div>
 
@@ -565,7 +572,9 @@
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
               <p class="note">Last thing: sign in. Google will warn that the app is unverified, because it
                  is your private one. Choose <strong>Advanced</strong>, then <strong>Go to
-                 ClosedHand</strong>, then <strong>Continue</strong>.</p>
+                 ClosedHand</strong>, then <strong>Continue</strong>. On the permissions screen, tick
+                 every box (there is a <strong>Select all</strong>), then <strong>Continue</strong>.
+                 ClosedHand needs all of them.</p>
               <a class="cta" id="g-connect" href="/auth/google?return=setup" style="display:none;">Sign in with Google</a>
               <p class="note" id="g-nocreds">The sign-in button appears once the file from step four is saved.</p>
             </div>
@@ -655,12 +664,12 @@
   </ol>
 
   <div class="memory-note" id="memory-note">
-    <p><strong id="memory-note-title">About memory.</strong> <span id="memory-note-lead"></span></p>
+    <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
     <form id="memory-form">
       <div class="field">
         <input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="API key for memory">
       </div>
-      <button class="save-btn" type="submit" id="memory-btn">Enable memory</button>
+      <button class="save-btn" type="submit" id="memory-btn">Enable recall</button>
       <p class="form-msg" id="memory-msg"></p>
     </form>
   </div>
@@ -948,31 +957,35 @@
     var modelDone = state.steps.some(function (s) { return s.key === "model" && s.done; });
     var showMemoryPanel = false;
     var lead = "";
-    var title = "About memory.";
+    var title = "About recall.";
     var showForm = true;
+    // "Recall" is the feature (finding your mail and files by meaning);
+    // "RAM" is the hardware. The old copy called both "memory".
+    var what = "ClosedHand recalls your mail, calendar and files by meaning, not just keywords. That needs a small model, and your provider does not offer one, so ClosedHand runs one on this machine.";
     if (modelDone && state.memoryMode === "local") {
       showMemoryPanel = true;
-      title = "Memory runs on this machine.";
+      title = "Recall runs on this machine.";
       var emb = (state.localModels || {}).embedder;
+      var size = emb && emb.totalMb ? "~" + emb.totalMb + "MB" : "~300MB";
       if (emb && emb.state === "downloading") {
-        lead = "Downloading the local memory model (" + (emb.totalMb ? "~" + emb.totalMb + "MB" : "~300MB") + "), " + (emb.pct || 0) + "% done. Memory switches on when it lands.";
+        lead = what + " It is downloading now (" + size + ", " + (emb.pct || 0) + "% done, once only). Chat works already; recall switches on when the download finishes.";
       } else if (emb && emb.state === "error") {
-        lead = "The model download hit an error (" + (emb.error || "unknown") + "). It retries automatically on the next sync; nothing is lost.";
+        lead = what + " The download hit an error (" + (emb.error || "unknown") + "). It retries on the next sync; nothing is lost.";
       } else if (emb && emb.state === "ready") {
-        lead = "The local memory model is in place; recall runs privately on this machine.";
+        lead = what + " The model is in place and recall runs privately here.";
       } else {
-        lead = "A compact model (~300MB) downloads when the first sync starts, then everything is recalled privately on this machine.";
+        lead = what + " It downloads (" + size + ", once only) when the first sync starts.";
       }
       // The download size is the number people see, but the working set is what
       // decides whether a small machine can actually run this: roughly a
       // gigabyte while indexing, which is more than a 2GB box has spare once
       // the database and the browser are up.
-      lead += " Indexing needs about a gigabyte of free memory while it runs. You can point memory at a hosted embedder later in Settings.";
+      lead += " Reading new mail uses about a gigabyte of RAM while it runs. You can switch recall to a provider's model later in Settings.";
       showForm = false; // onboarding states the fact; Settings owns the choice
     } else if (modelDone && !state.memory) {
-      $("#memory-btn").textContent = "Enable memory";
+      $("#memory-btn").textContent = "Enable recall";
       showMemoryPanel = true;
-      lead = "Memory needs an embedding model to recall your mail and files by meaning, not just keywords. Add a key from a provider that offers one, or skip it and chat still works.";
+      lead = "Recall lets ClosedHand find your mail and files by meaning, not just keywords. It needs a model your provider does not offer. Add a key from one that does, or skip it and chat still works.";
     }
     $("#memory-note-title").textContent = title;
     $("#memory-note-lead").textContent = lead;
@@ -1240,6 +1253,17 @@
     $("#g-nocreds").style.display = st.googleCreds ? "none" : "";
     var g = (st.steps || []).find(function (x) { return x.key === "google"; });
     if (g && g.done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
+    // Connected: the pitch and the steps give way to who is connected and
+    // what can be done about it.
+    var done = !!(g && g.done);
+    $("#g-connected").style.display = done ? "" : "none";
+    if (done) {
+      var acct = st.googleAccount || {};
+      $("#g-account").textContent = acct.email ? "Connected as " + acct.email + "." : "Connected.";
+      $("#g-intro").style.display = "none";
+      $("#g-start").style.display = "none";
+      $("#g-flow").style.display = "none";
+    }
   }
 
   // The chooser: one chat app unfolded at a time. Opening one folds the other,
