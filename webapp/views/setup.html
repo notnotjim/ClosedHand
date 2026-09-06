@@ -520,12 +520,16 @@
 
             <div class="g-step" data-g="4">
               <h3>Make the sign-in key</h3>
-              <p class="note">Press Create client, choose Web application, and under Authorized redirect
-                 URIs add exactly this line:</p>
+              <p class="note">Open the Clients page below and click <strong>+ Create client</strong>.
+                 Choose <strong>Web application</strong> from the dropdown (you can leave the
+                 <strong>Name</strong> field as is). Under <strong>Authorized redirect URIs</strong>,
+                 paste this line exactly:</p>
               <div class="code"><button class="copy" type="button">Copy</button><pre id="g-redirect">http://localhost:3000/auth/google/callback</pre></div>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open the Clients page</a>
-              <p class="note warn">Press Create, then Download JSON before closing the dialog. Google shows
-                 that file only once; if you miss it, create another client.</p>
+              <p class="note warn"><strong>Important:</strong> press Create, then click Download JSON
+                 before closing the dialog. Google shows that file only once; if you miss it, create
+                 another client.</p>
+              <a class="peek" href="/setup-google-download-json.png"><img src="/setup-google-download-json.png" alt="The OAuth client created dialog, with Download JSON marked"><span>Where Download JSON is</span></a>
             </div>
 
             <div class="g-step" data-g="5">
@@ -1144,15 +1148,17 @@
     if (gStep === 1) setTimeout(function () { $("#g-project").focus(); }, 50);
   }
   $("#g-start").addEventListener("click", function () { gStep = 1; gSave(); gRender(); });
-  $("#g-peek").addEventListener("click", function (ev) {
-    ev.preventDefault();
-    var box = document.createElement("div");
-    box.className = "lightbox";
-    var img = document.createElement("img");
-    img.src = $("#g-peek img").getAttribute("src"); img.alt = $("#g-peek img").getAttribute("alt");
-    box.appendChild(img);
-    box.addEventListener("click", function () { box.remove(); });
-    document.body.appendChild(box);
+  $all("#g-flow .peek").forEach(function (peek) {
+    peek.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var box = document.createElement("div");
+      box.className = "lightbox";
+      var img = document.createElement("img");
+      img.src = peek.querySelector("img").getAttribute("src"); img.alt = peek.querySelector("img").getAttribute("alt");
+      box.appendChild(img);
+      box.addEventListener("click", function () { box.remove(); });
+      document.body.appendChild(box);
+    });
   });
   $("#g-next").addEventListener("click", function () { if (gStep < G_TOTAL) { gStep++; gSave(); gRender(); } });
   $("#g-back").addEventListener("click", function () { if (gStep > 1) { gStep--; gSave(); gRender(); } });
