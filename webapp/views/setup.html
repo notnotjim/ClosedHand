@@ -283,6 +283,12 @@
     .copy.did { color: var(--accent); border-color: var(--accent-dim); }
     .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #0b0c12; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
     .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    /* A small picture of the screen a step talks about; click for full size. */
+    .peek { display: inline-flex; flex-direction: column; gap: 4px; vertical-align: top; margin: 4px 0 12px; text-decoration: none; color: var(--text-tertiary); font-size: 12px; }
+    .peek img { width: 168px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); cursor: zoom-in; display: block; }
+    .peek:hover img { border-color: rgba(255,255,255,0.3); }
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.86); display: flex; align-items: center; justify-content: center; z-index: 60; cursor: zoom-out; }
+    .lightbox img { max-width: 92vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
     .g-nav .cta:disabled { opacity: 0.4; cursor: default; }
     .fb-block .cta { margin-top: 8px; }
     .fb-done { font-size: 11px; color: #4ade80; border: 1px solid rgba(74,222,128,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
@@ -475,11 +481,13 @@
             <div class="g-step" data-g="1">
               <h3>Create your project</h3>
               <p class="note">Google keeps the access in a free "project" that only you can use and
-                 can delete later. Open the screen, name it anything, leave the second field as
-                 No organization, and press Create. Then paste the Project ID here (it is shown
-                 under the name, and is not the name itself). If Google then shows you a project
-                 you already had, ignore it: every step from here opens the new one.</p>
+                 can delete later. Open the screen, name it anything and leave the second field as
+                 No organization. Before you press Create, copy the Project ID that appears under
+                 the name (it ends in a number) and paste it here. Then press Create. If Google
+                 shows you an older project afterwards, ignore it: every step from here opens the
+                 new one.</p>
               <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
+              <a class="peek" href="/setup-google-project-id.png" id="g-peek"><img src="/setup-google-project-id.png" alt="The New Project screen, with the Project ID line marked"><span>Where the ID is</span></a>
               <div class="field"><input type="text" id="g-project" placeholder="project id, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false"></div>
             </div>
 
@@ -1120,6 +1128,16 @@
     if (gStep === 1) setTimeout(function () { $("#g-project").focus(); }, 50);
   }
   $("#g-start").addEventListener("click", function () { gStep = 1; gSave(); gRender(); });
+  $("#g-peek").addEventListener("click", function (ev) {
+    ev.preventDefault();
+    var box = document.createElement("div");
+    box.className = "lightbox";
+    var img = document.createElement("img");
+    img.src = $("#g-peek img").getAttribute("src"); img.alt = $("#g-peek img").getAttribute("alt");
+    box.appendChild(img);
+    box.addEventListener("click", function () { box.remove(); });
+    document.body.appendChild(box);
+  });
   $("#g-next").addEventListener("click", function () { if (gStep < G_TOTAL) { gStep++; gSave(); gRender(); } });
   $("#g-back").addEventListener("click", function () { if (gStep > 1) { gStep--; gSave(); gRender(); } });
   $("#g-project").addEventListener("input", function () { gApplyProject(); gRender(); });
