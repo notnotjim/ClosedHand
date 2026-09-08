@@ -2232,10 +2232,10 @@
                 <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
               </button>
               <div class="send-via" id="sendVia">
-                <a href="https://wa.me/15551799854" target="_blank" class="via-icon" data-label="WhatsApp"><img src="/logos/whatsapp.svg" alt="WhatsApp"></a>
-                <a href="https://t.me/ClosedHand_Bot" target="_blank" class="via-icon" data-label="Telegram"><img src="/logos/telegram.svg" alt="Telegram"></a>
-                <a href="/auth/slack" class="via-icon" data-label="Slack"><img src="/logos/slack.svg" alt="Slack"></a>
-                <a href="/auth/line" class="via-icon" data-label="LINE"><img src="/logos/line.svg" alt="LINE"></a>
+                <a href="/setup#step-chat" class="via-icon" data-label="WhatsApp" id="viaWhatsApp"><img src="/logos/whatsapp.svg" alt="WhatsApp"></a>
+                <a href="/setup#step-chat" class="via-icon" data-label="Telegram" id="viaTelegram"><img src="/logos/telegram.svg" alt="Telegram"></a>
+                <a href="/auth/slack" class="via-icon" data-label="Slack" id="viaSlack" hidden><img src="/logos/slack.svg" alt="Slack"></a>
+                <a href="/auth/line" class="via-icon" data-label="LINE" id="viaLine" hidden><img src="/logos/line.svg" alt="LINE"></a>
                 <button class="send-via-close" id="sendViaClose" type="button" title="Close">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
@@ -7318,5 +7318,24 @@ function escapeHtml(s) {
   </div>
 </div>
 
+<script>
+// Self-host: the chat icons open YOUR chats. WhatsApp is your own number as a
+// linked device, Telegram is the bot you made; Slack and LINE only appear when
+// their credentials are in .env. Anything not set up yet leads to the setup page.
+(function () {
+  fetch("/api/setup/status", { headers: { Accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (st) {
+      if (!st) return;
+      var wa = document.getElementById("viaWhatsApp"), tg = document.getElementById("viaTelegram");
+      var sl = document.getElementById("viaSlack"), ln = document.getElementById("viaLine");
+      if (wa && st.waLinked && st.waLinked.linked && st.waLinked.number) { wa.href = "https://wa.me/" + st.waLinked.number; wa.target = "_blank"; }
+      if (tg && st.botUsername) { tg.href = "https://t.me/" + st.botUsername; tg.target = "_blank"; }
+      if (sl && st.extraChat && st.extraChat.slack) sl.hidden = false;
+      if (ln && st.extraChat && st.extraChat.line) ln.hidden = false;
+    })
+    .catch(function () {});
+})();
+</script>
 </body>
 </html>

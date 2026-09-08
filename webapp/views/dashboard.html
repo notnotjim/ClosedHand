@@ -2647,7 +2647,9 @@
 
       // New user detection: show onboarding if no chat platform connected
       var hasChatPlatform = Object.values(data.platforms).some(function(p) { return p.connected; });
-      if (!hasChatPlatform && !window._obSkipped) {
+      // Self-host: chat apps are set up on the setup page, which the person
+      // has just come from. The welcome overlay is the hosted product's.
+      if (!hasChatPlatform && !window._obSkipped && !data.selfHost) {
         showOnboarding(data);
         return;
       }
@@ -2669,11 +2671,38 @@
       for (const [key, platform] of Object.entries(data.platforms)) {
         const logo = platformLogo(key);
 
-        if (platform.connected) {
+        if (platform.connected && platform.linkedDevice) {
+          // Your own number, as a linked device: unlinking lives on the setup page.
+          platformsGrid.innerHTML += `
+            <div class="plat-card connected" onclick="window.location.href='/setup#step-chat'" title="Manage on the setup page">
+              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+              <span class="badge badge-connected" style="background:none;border:none;color:#6ee7a8;font-weight:600;padding:0;">Linked &#10003;</span>
+            </div>`;
+        } else if (platform.connected) {
           platformsGrid.innerHTML += `
             <div class="plat-card connected" onclick="platformDisconnectClick(this, '${key}', '${platform.name}')">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <span class="badge badge-connected" style="background:none;border:none;color:#6ee7a8;font-weight:600;padding:0;">Connected &#10003;</span>
+            </div>`;
+        } else if (data.selfHost && key === 'telegram' && platform.configured) {
+          // The bot exists; the person has not said hello to it yet.
+          const tgHref = platform.botUsername ? `https://t.me/${platform.botUsername}?start=hello` : '/setup#step-chat';
+          platformsGrid.innerHTML += `
+            <div class="plat-card pending">
+              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+              <a class="plat-connect-btn" href="${tgHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Say hello to your bot</a>
+            </div>`;
+        } else if (data.selfHost && (key === 'telegram' || key === 'whatsapp')) {
+          platformsGrid.innerHTML += `
+            <div class="plat-card">
+              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+              <a class="plat-connect-btn" href="/setup#step-chat" onclick="event.stopPropagation()">Set up</a>
+            </div>`;
+        } else if (data.selfHost && !platform.available) {
+          platformsGrid.innerHTML += `
+            <div class="plat-card unavailable" title="Add this app's credentials to .env to turn it on">
+              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+              <span class="badge badge-soon">Needs your own app keys</span>
             </div>`;
         } else if (!platform.available) {
           platformsGrid.innerHTML += `

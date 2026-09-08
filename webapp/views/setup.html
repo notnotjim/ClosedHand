@@ -285,6 +285,14 @@
     .copy.did { color: var(--accent); border-color: var(--accent-dim); }
     .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #0b0c12; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
     .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    /* The end of the spine, where the eye is when the last step lands. */
+    .finish { margin: 26px 0 0; padding: 26px 28px; border: 1px solid var(--accent-dim); border-radius: 16px;
+      background: linear-gradient(140deg, rgba(110,231,168,0.10), rgba(110,231,168,0.02) 55%); }
+    .finish h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin: 0 0 8px; }
+    .finish h2 span { color: var(--accent); }
+    .finish p { color: var(--text-secondary); max-width: 60ch; margin: 0 0 16px; }
+    .finish-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .finish-actions .deep { margin: 0; }
     .g-file { margin: 2px 0 6px; }
     .g-file .deep { cursor: pointer; margin-bottom: 6px; }
     .g-step textarea.is-drop { border-color: var(--accent); }
@@ -663,6 +671,17 @@
 
   </ol>
 
+  <section class="finish" id="finish" hidden>
+    <h2>All set. <span>ClosedHand is yours.</span></h2>
+    <p id="finish-line">It is reading your mail and calendar now. Say hello in your chat app, and open
+       the dashboard whenever you want to see what it knows, connect more, or change how it works.</p>
+    <div class="finish-actions">
+      <a class="go" href="/dashboard">Open the dashboard</a>
+      <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
+      <a class="deep" id="finish-tg" href="#" target="_blank" rel="noopener" hidden>Open your Telegram bot</a>
+    </div>
+  </section>
+
   <div class="memory-note" id="memory-note">
     <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
     <form id="memory-form">
@@ -1036,6 +1055,20 @@
       }
     }
     $("#ready-banner").classList.toggle("is-on", !!state.ready);
+
+    // Everything done: the finish card appears at the foot of the spine, and
+    // the page brings it into view once, so the end is not a small footer link.
+    var allDone = doneCount === state.steps.length;
+    var fin = $("#finish");
+    if (allDone) {
+      var wa = $("#finish-wa"), tg = $("#finish-tg");
+      var num = state.waLinked && state.waLinked.linked && state.waLinked.number;
+      wa.hidden = !num; if (num) wa.href = "https://wa.me/" + num;
+      tg.hidden = !state.botUsername; if (state.botUsername) tg.href = "https://t.me/" + state.botUsername;
+      if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
+    } else {
+      fin.hidden = true;
+    }
     firstLoad = false;
   }
 

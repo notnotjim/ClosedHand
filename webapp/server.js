@@ -3113,6 +3113,17 @@ app.get("/api/status", async (req, res) => {
 
     const now = new Date();
     const platforms = {};
+    // Self-host: WhatsApp is the person's own number as a linked device, the
+    // Telegram bot is the one they made in BotFather, and the other apps only
+    // exist if their credentials are in .env.
+    const conf = (k) => process.env[k] || require("./config").getConfCached(k);
+    const waLinkedRow = chatLinks?.find((l) => l.platform === "whatsapp_linked" && l.platform_user_id);
+    const tgUsername = conf("TELEGRAM_BOT_USERNAME") || null;
+    const extraAvailable = {
+      discord: !!process.env.DISCORD_BOT_TOKEN,
+      slack: !!(process.env.SLACK_BOT_TOKEN || process.env.SLACK_CLIENT_ID),
+      line: !!(process.env.LINE_CHANNEL_ACCESS_TOKEN && process.env.LINE_CHANNEL_SECRET),
+    };
     for (const [key, info] of Object.entries(SUPPORTED_PLATFORMS)) {
       const link = chatLinks?.find((l) => l.platform === key);
       const codeExpired = link?.expires_at && new Date(link.expires_at) < now;
@@ -3123,9 +3134,21 @@ app.get("/api/status", async (req, res) => {
         connected: !!(link && link.platform_user_id),
         pendingCode,
       };
+      if (key === "whatsapp" && waLinkedRow) {
+        platforms[key].connected = true;
+        platforms[key].linkedDevice = true;
+        platforms[key].number = String(waLinkedRow.platform_user_id).split("@")[0].split(":")[0];
+      }
+      if (key === "telegram") {
+        platforms[key].botName = tgUsername ? "@" + tgUsername : null;
+        platforms[key].botUsername = tgUsername;
+        platforms[key].configured = !!conf("TELEGRAM_BOT_TOKEN");
+      }
+      if (key in extraAvailable) platforms[key].available = extraAvailable[key];
     }
 
     res.json({
+      selfHost: true,
       name: profile?.display_name || "User",
       email: profile?.email || "",
       settings: profile?.settings || {},

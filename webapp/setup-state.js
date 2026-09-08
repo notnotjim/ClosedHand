@@ -78,7 +78,9 @@ async function getSetupState() {
       const { data } = await supabase.from("connections").select("config, metadata")
         .eq("user_id", getAdminUserId()).eq("service", "whatsapp_linked").single();
       if (!data) return { enabled: false, linked: false, hasQr: false };
-      return { enabled: !!data.config?.enabled, linked: !!data.metadata?.linked, hasQr: !!data.metadata?.qr };
+      // The linked number, so links can open the person's own chat.
+      const number = String(data.metadata?.jid || "").split("@")[0].split(":")[0] || null;
+      return { enabled: !!data.config?.enabled, linked: !!data.metadata?.linked, hasQr: !!data.metadata?.qr, number };
     } catch (_) { return { enabled: false, linked: false, hasQr: false }; }
   })();
 
@@ -138,6 +140,14 @@ async function getSetupState() {
     // Who is connected (name and address only), so the card can say so.
     googleAccount,
     waLinked,
+    // Chat apps beyond Telegram and WhatsApp need the operator's own app
+    // credentials in .env; the dashboard says so rather than offering a
+    // Connect button that cannot work.
+    extraChat: {
+      discord: !!process.env.DISCORD_BOT_TOKEN,
+      slack: !!(process.env.SLACK_BOT_TOKEN || process.env.SLACK_CLIENT_ID),
+      line: !!(process.env.LINE_CHANNEL_ACCESS_TOKEN && process.env.LINE_CHANNEL_SECRET),
+    },
     // The exact redirect URI the server will send in the Google OAuth flow
     // (mirrors server.js BASE_URL). The Google wizard renders this so the value
     // pasted into the console always matches what the server uses.
