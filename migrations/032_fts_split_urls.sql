@@ -47,9 +47,9 @@ DECLARE
   touched int;
 BEGIN
   LOOP
-    SELECT max(id) INTO batch_max FROM (
+    SELECT id INTO batch_max FROM (
       SELECT id FROM data_cache WHERE id > last_id ORDER BY id LIMIT 2000
-    ) b;
+    ) b ORDER BY id DESC LIMIT 1;
     EXIT WHEN batch_max IS NULL;
 
     UPDATE data_cache SET fts = data_cache_fts(data)
