@@ -1330,6 +1330,9 @@ app.get("/dashboard", async (req, res) => {
   // The page carries its own JS inline, so a cached copy means shipped fixes
   // never reach the user until they happen to hard reload.
   res.set("Cache-Control", "no-cache, must-revalidate");
+  // Never cached: a stale copy shows the previous release's dashboard, and
+  // with it whatever that release got wrong.
+  res.set("Cache-Control", "no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "views", "dashboard.html"));
 });
 
