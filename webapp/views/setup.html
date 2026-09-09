@@ -116,12 +116,25 @@
     .ready h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin-bottom: 8px; }
     .ready h2 span { color: var(--accent); }
     .ready p { color: var(--text-secondary); max-width: 52ch; margin-bottom: 18px; }
-    .ready .go {
+    .ready .go, .finish .go {
       display: inline-block; padding: 11px 22px; border-radius: 10px;
       background: var(--accent); color: #06241a; font-weight: 600; font-size: 14px;
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .ready .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
+    .ready .go:hover, .finish .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
+    /* The moment everything is done: a full-screen beat, then the dashboard. */
+    .done-screen { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(700px 500px at 50% 40%, rgba(110,231,168,0.14), rgba(4,4,6,0.98) 70%), #040406;
+      text-align: center; padding: 24px; animation: rise 0.5s ease both; }
+    .done-screen[hidden] { display: none; }
+    .done-screen img { width: 96px; height: 96px; margin-bottom: 22px; animation: done-pop 0.7s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes done-pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+    .done-screen h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(30px, 5vw, 44px); margin: 0 0 10px; }
+    .done-screen h2 span { color: var(--accent); }
+    .done-screen p { color: var(--text-secondary); max-width: 44ch; margin: 0 auto 22px; font-size: 16px; }
+    .done-screen .go { margin: 0 auto; }
+    .done-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .g-tabs { margin: -2px 0 12px; }
 
     ol.spine { list-style: none; }
     .step {
@@ -496,7 +509,8 @@
           </div>
 
           <div id="g-flow" style="display:none;">
-            <div class="g-head"><span id="g-count">Step 1 of 6</span><span class="g-dots" id="g-dots"></span></div>
+            <div class="g-head"><span id="g-count">Step 1 of 5</span><span class="g-dots" id="g-dots"></span></div>
+            <p class="note g-tabs" id="g-tabs">Each step opens Google in a new tab. Do the step, close that tab, come back here.</p>
 
             <div class="g-step" data-g="1">
               <h3>Create your project</h3>
@@ -670,14 +684,24 @@
 
   <section class="finish" id="finish" hidden>
     <h2>All set. <span>ClosedHand is yours.</span></h2>
-    <p id="finish-line">It is reading your mail and calendar now. Say hello in your chat app, and open
-       the dashboard whenever you want to see what it knows, connect more, or change how it works.</p>
+    <p id="finish-line">Your dashboard is the control room: everything ClosedHand knows, everything it
+       is connected to, and every setting live there. Your chat app is where you talk to it.</p>
     <div class="finish-actions">
-      <a class="go" href="/dashboard">Open the dashboard</a>
+      <a class="go" href="/dashboard">Go to your dashboard</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
       <a class="deep" id="finish-tg" href="#" target="_blank" rel="noopener" hidden>Open your Telegram bot</a>
     </div>
   </section>
+
+  <div class="done-screen" id="done-screen" hidden>
+    <canvas id="done-confetti"></canvas>
+    <div>
+      <img src="/logocircle.png" alt="">
+      <h2>ClosedHand is <span>alive.</span></h2>
+      <p id="done-line">Off to your dashboard, the control room for everything it knows and does.</p>
+      <a class="go" href="/dashboard">Go now</a>
+    </div>
+  </div>
 
   <div class="memory-note" id="memory-note">
     <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
@@ -1063,11 +1087,16 @@
     var allDone = doneCount === state.steps.length;
     var fin = $("#finish");
     if (allDone) {
+      // One chat link, for the app that is actually linked: WhatsApp on your
+      // own number if it is, otherwise the Telegram bot.
       var wa = $("#finish-wa"), tg = $("#finish-tg");
       var num = state.waLinked && state.waLinked.linked && state.waLinked.number;
       wa.hidden = !num; if (num) wa.href = "https://wa.me/" + num;
-      tg.hidden = !state.botUsername; if (state.botUsername) tg.href = "https://t.me/" + state.botUsername;
+      tg.hidden = !!num || !state.botUsername; if (state.botUsername) tg.href = "https://t.me/" + state.botUsername;
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
+      // The last step landing while the page is open is the moment: a beat
+      // of celebration, then the dashboard in this tab. Once per install.
+      if (!firstLoad && !celebrated()) celebrate();
     } else {
       fin.hidden = true;
     }
@@ -1084,6 +1113,7 @@
         setChip("watching your install", false);
         loadSkipsFor(state.installId);
         if (_gKey === null) gLoad(state.installId);
+        _celebKey = "ch-celebrated:" + (state.installId || "x");
         render(state);
         reflectGoogle(state);
         // Nothing live yet: WhatsApp starts unfolded, so the card opens on
@@ -1166,6 +1196,45 @@
     if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
   }
 
+  // --- Setup complete: the takeover, then the dashboard ---
+  var _celebKey = null;
+  function celebrated() {
+    try { return !!(_celebKey && localStorage.getItem(_celebKey)); } catch (e) { return false; }
+  }
+  function celebrate() {
+    try { if (_celebKey) localStorage.setItem(_celebKey, "1"); } catch (e) {}
+    var screen = $("#done-screen");
+    screen.hidden = false;
+    confetti($("#done-confetti"));
+    setTimeout(function () { window.location.href = "/dashboard"; }, 3600);
+  }
+  // Small and self-contained: a few hundred flakes in the brand's greens and
+  // whites, falling for a couple of seconds, no library.
+  function confetti(canvas) {
+    if (!canvas || !canvas.getContext) return;
+    var ctx = canvas.getContext("2d");
+    var W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+    var colours = ["#6ee7a8", "#b9f5d6", "#ffffff", "#3ccf85", "#e7b76e"];
+    var flakes = [];
+    for (var i = 0; i < 220; i++) {
+      flakes.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.6, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+        vy: 2 + Math.random() * 3, vx: -1 + Math.random() * 2, rot: Math.random() * Math.PI, vr: -0.1 + Math.random() * 0.2,
+        c: colours[Math.floor(Math.random() * colours.length)] });
+    }
+    var start = Date.now();
+    (function frame() {
+      var t = (Date.now() - start) / 1000;
+      ctx.clearRect(0, 0, W, H);
+      flakes.forEach(function (f) {
+        f.x += f.vx; f.y += f.vy; f.rot += f.vr;
+        ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+        ctx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 2.2));
+        ctx.fillStyle = f.c; ctx.fillRect(-f.w / 2, -f.h / 2, f.w, f.h); ctx.restore();
+      });
+      if (t < 3.4) requestAnimationFrame(frame);
+    })();
+  }
+
   // --- Connect to Google, six steps inside the card ---
   // One step on screen at a time; progress and the project id survive a
   // reload, which matters because step six leaves for Google and comes back.
@@ -1213,6 +1282,7 @@
     $("#g-dots").innerHTML = dots;
     // Google is required, so the first step has nowhere to go back to.
     $("#g-back").style.display = gStep === 1 ? "none" : "";
+    $("#g-tabs").style.display = gStep === 1 ? "" : "none";
     var next = $("#g-next");
     next.style.display = gStep === G_TOTAL ? "none" : "";
     next.disabled = gStep === 1 && !$("#g-project").value.trim();
