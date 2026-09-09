@@ -1330,6 +1330,11 @@
   });
   var _waDisableBtn = $("#wa-disable");
   if (_waDisableBtn) _waDisableBtn.addEventListener("click", function () {
+    // Before the phone has scanned there is nothing linked: just stop.
+    if (!_waState.linked) {
+      fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Stopped.");
+      return;
+    }
     if (!confirm("Turn off WhatsApp linking? ClosedHand stops reading and replying there; unlink the device from your phone too (WhatsApp, Settings, Linked devices).")) return;
     fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Turned off. Also remove the device in WhatsApp on your phone.");
   });
