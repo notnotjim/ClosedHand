@@ -116,12 +116,12 @@
     .ready h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin-bottom: 8px; }
     .ready h2 span { color: var(--accent); }
     .ready p { color: var(--text-secondary); max-width: 52ch; margin-bottom: 18px; }
-    .ready .go, .finish .go {
+    .ready .go, .finish .go, .done-screen .go {
       display: inline-block; padding: 11px 22px; border-radius: 10px;
       background: var(--accent); color: #06241a; font-weight: 600; font-size: 14px;
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .ready .go:hover, .finish .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
+    .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
     /* The moment everything is done: a full-screen beat, then the dashboard. */
     .done-screen { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
       background: radial-gradient(700px 500px at 50% 40%, rgba(110,231,168,0.14), rgba(4,4,6,0.98) 70%), #040406;
@@ -308,6 +308,7 @@
     .finish p { color: var(--text-secondary); max-width: 60ch; margin: 0 0 16px; }
     .finish-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
     .finish-actions .deep { margin: 0; }
+    .finish-actions .deep[hidden] { display: none; }
     .g-file { margin: 2px 0 6px; }
     .g-file .deep { cursor: pointer; margin-bottom: 6px; }
     .g-step textarea.is-drop { border-color: var(--accent); }
@@ -728,6 +729,7 @@
   var POLL_MS = 2500;
   var lastDone = {};
   var firstLoad = true;
+  var lastAllDone = null; // null until the first render, then a boolean
   var lastState = null;
 
   // Only optional steps can hold a skip. The filter also heals stale
@@ -1096,10 +1098,11 @@
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
       // The last step landing while the page is open is the moment: a beat
       // of celebration, then the dashboard in this tab. Once per install.
-      if (!firstLoad && !celebrated()) celebrate();
+      if (lastAllDone === false && !celebrated()) celebrate();
     } else {
       fin.hidden = true;
     }
+    lastAllDone = allDone;
     firstLoad = false;
   }
 
