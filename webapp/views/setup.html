@@ -699,8 +699,8 @@
 
   <section class="finish" id="finish" hidden>
     <h2>All set. <span>ClosedHand is yours.</span></h2>
-    <p id="finish-line">Your dashboard is the control room: everything ClosedHand knows, everything it
-       is connected to, and every setting live there. Your chat app is where you talk to it.</p>
+    <p id="finish-line">Your dashboard is the control room. Everything ClosedHand keeps lives there, yours to
+       read or delete, along with every connection and setting. Your chat app is where you talk to it.</p>
     <div class="finish-actions">
       <a class="go" href="/dashboard">Go to your dashboard</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
@@ -1226,10 +1226,11 @@
     fetch("/api/setup/hello").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
       .then(function (h) {
         var hey = "Hey" + (h.name ? " " + h.name : "") + ". ";
+        var room = "Your dashboard is the control room: see everything I keep, delete any of it, steer me from there.";
         var words = h.fact
-          ? hey + "I have already been reading. One thing I know: <q>" + esc(h.fact) + ".</q> "
-            + (h.count > 1 ? h.count + " things so far, all in" : "It lives in") + " your dashboard, the control room. That is where you steer me."
-          : hey + "I am reading your mail and calendar right now. Everything I learn lives in your dashboard, the control room. That is where you steer me.";
+          ? hey + "Your mail and calendar are in. One thing I picked up: <q>" + esc(h.fact) + ".</q> "
+            + (h.count > 1 ? h.count + " things so far. " : "") + room
+          : hey + "Your mail and calendar are coming in now. " + room;
         typeWords($("#done-words"), words, function () {
           setTimeout(function () { window.location.href = "/dashboard"; }, 3200);
         });
