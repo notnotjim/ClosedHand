@@ -416,6 +416,34 @@ app.get("/api/setup/status", async (req, res) => {
   }
 });
 
+// ClosedHand's first words, for the moment setup completes: one thing it has
+// already picked up from the mail and calendar, if the first read has run.
+// Personal, so it sits behind the same access the setup writes do.
+app.get("/api/setup/hello", async (req, res) => {
+  try {
+    if (!(await requireSetupAccess(req, res))) return;
+    const userId = getAdminUserId();
+    const { data } = await supabase.from("facts").select("key, value").eq("user_id", userId);
+    const facts = {};
+    for (const row of data || []) {
+      let v = row.value;
+      if (typeof v === "string" && v.startsWith("{")) { try { v = JSON.parse(v).value; } catch (e) {} }
+      if (v) facts[row.key] = String(v).trim();
+    }
+    const full = facts["profile-name"] || "";
+    const nick = (full.match(/\(([^)]+)\)/) || [])[1];
+    const name = nick || full.split(/\s+/)[0] || null;
+    const skip = /^(profile-|onboarding|_)/;
+    const pick = ["upcoming-key-event-1", "project-current-1", "profile-company", "profile-job-title"]
+      .find((k) => facts[k]) || Object.keys(facts).find((k) => !skip.test(k));
+    const fact = pick ? facts[pick].replace(/[.\s]+$/, "").slice(0, 140) : null;
+    const count = Object.keys(facts).filter((k) => !/^(profile-email|onboarding|_)/.test(k)).length;
+    res.json({ name, fact, count });
+  } catch (e) {
+    res.json({ name: null, fact: null, count: 0 });
+  }
+});
+
 // The setup wizard renders nothing beyond that endpoint's booleans, so it stays
 // public too; everything it links to (dashboard, connections) sits behind the gate.
 app.get("/setup", (req, res) => {
