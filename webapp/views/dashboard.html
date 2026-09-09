@@ -2326,6 +2326,31 @@
             <div id="model-roles-rows" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#aaa;"></div>
           </div>
 
+          <!-- Reach the dashboard from your phone (self-host only; see phone-access.js) -->
+          <div class="settings-group" id="phone-block" style="display:none;">
+            <div class="settings-group-header">
+              <h2>Your phone</h2>
+              <p class="section-desc">Open this dashboard from your phone, wherever you are. The address is yours alone and only exists while this is on. Your password is the lock.</p>
+            </div>
+            <div style="padding:12px 16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+                <div>
+                  <div id="phone-title" style="font-size:14px;font-weight:600;color:#e8e8e8;">Off</div>
+                  <div id="phone-desc" style="font-size:12.5px;color:#888;margin-top:2px;">Turn it on to get an address and a code to scan.</div>
+                </div>
+                <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Turn on</button>
+              </div>
+              <div id="phone-live" style="display:none;margin-top:14px;gap:18px;align-items:center;flex-wrap:wrap;">
+                <div id="phone-qr" style="width:132px;height:132px;flex:none;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;padding:8px;box-sizing:border-box;"></div>
+                <div style="font-size:13px;color:#aaa;line-height:1.6;min-width:220px;flex:1;">
+                  <div><a id="phone-url" href="#" target="_blank" rel="noopener" style="color:#6ee7a8;word-break:break-all;"></a></div>
+                  <div>Point your phone's camera at the code, then sign in with your password.</div>
+                  <div style="color:#777;">The address changes each time this is turned on. Connecting accounts still happens on this computer.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- AI Model Selection -->
           <div class="settings-group" style="border-color:#1a2433;">
             <div class="settings-group-header">
@@ -4280,6 +4305,49 @@
         document.getElementById('model-roles-rows').innerHTML = rows.join('');
         document.getElementById('model-roles-block').style.display = 'block';
       } catch (e) { /* roles are informational */ }
+      document.getElementById('phone-block').style.display = 'block';
+      loadPhoneAccess();
+    }
+
+    // --- Reach the dashboard from your phone ---
+    var _phone = null, _phonePoll = null;
+    async function loadPhoneAccess() {
+      try {
+        var r = await fetch('/api/phone');
+        if (r.ok) renderPhone(await r.json());
+      } catch (e) { /* card stays as it was */ }
+    }
+    function renderPhone(p) {
+      _phone = p;
+      var title = document.getElementById('phone-title'), desc = document.getElementById('phone-desc');
+      var btn = document.getElementById('phone-btn'), live = document.getElementById('phone-live');
+      clearTimeout(_phonePoll);
+      btn.disabled = false;
+      btn.textContent = p.enabled ? 'Turn off' : 'Turn on';
+      live.style.display = 'none';
+      if (p.state === 'unavailable') {
+        title.textContent = 'Not available yet'; desc.textContent = 'This needs a newer ClosedHand. Re-run the installer to update.'; btn.disabled = true;
+      } else if (p.enabled && p.url) {
+        title.textContent = 'On'; desc.textContent = 'Your dashboard is reachable at the address below.';
+        live.style.display = 'flex';
+        document.getElementById('phone-url').textContent = p.url.replace(/^https:\/\//, '');
+        document.getElementById('phone-url').href = p.url;
+        document.getElementById('phone-qr').innerHTML = '<img src="/api/phone/qr.svg?t=' + Date.now() + '" alt="" style="width:100%;height:100%;display:block;">';
+      } else if (p.enabled) {
+        title.textContent = p.state === 'error' ? 'Reconnecting' : 'Starting';
+        desc.textContent = p.state === 'error' ? 'The connection dropped. Trying again.' : 'Getting an address. A few seconds.';
+        _phonePoll = setTimeout(loadPhoneAccess, 2000);
+      } else {
+        title.textContent = 'Off'; desc.textContent = 'Turn it on to get an address and a code to scan.';
+      }
+    }
+    async function togglePhoneAccess() {
+      var on = !!(_phone && _phone.enabled);
+      var btn = document.getElementById('phone-btn'); btn.disabled = true;
+      try {
+        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on }) });
+        renderPhone(await r.json());
+      } catch (e) { btn.disabled = false; }
     }
 
     // === Usage tab (BYOK spend) ===

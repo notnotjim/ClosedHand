@@ -515,18 +515,62 @@ app.get("/login", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "login.html"));
 });
 
+// Five wrong passwords lock that address out for fifteen minutes. On a
+// machine only ever reached from localhost this changes nothing; once the
+// dashboard is reachable from a phone it is what stands between a guessed
+// address and a guessed password.
+const _loginFails = new Map(); // ip -> { n, until }
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+function clientIp(req) {
+  return req.headers["cf-connecting-ip"] || req.ip || (req.socket && req.socket.remoteAddress) || "?";
+}
 app.post("/api/login", async (req, res) => {
   try {
+    const ip = clientIp(req);
+    const rec = _loginFails.get(ip) || { n: 0, until: 0 };
+    if (rec.until > Date.now()) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (await checkDashboardPassword((req.body || {}).password)) {
+      _loginFails.delete(ip);
       setAdminSessionCookie(res);
       return res.json({ success: true });
     }
+    rec.n += 1;
+    if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
+    _loginFails.set(ip, rec);
     await new Promise((r) => setTimeout(r, 400)); // slow brute force a little
     return res.status(403).json({ error: "Wrong password" });
   } catch (e) {
     return res.status(500).json({ error: "login failed" });
   }
 });
+
+// --- Reach the dashboard from your phone (see phone-access.js) -------------
+const phoneAccess = require("./phone-access");
+app.get("/api/phone", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  res.json(phoneAccess.status());
+});
+app.post("/api/phone", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  try {
+    if ((req.body || {}).enabled) await phoneAccess.enable(); else await phoneAccess.disable();
+    res.json(phoneAccess.status());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.get("/api/phone/qr.svg", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  const { url } = phoneAccess.status();
+  if (!url) return res.status(404).end();
+  try {
+    const svg = await require("qrcode").toString(url, { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
+    res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-store").send(svg);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+phoneAccess.boot();
 
 // --- Wizard write APIs (the wizard fills forms; nobody edits files) ---------
 
