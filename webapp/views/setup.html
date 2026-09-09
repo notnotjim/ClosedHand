@@ -1228,9 +1228,9 @@
         var hey = "Hey" + (h.name ? " " + h.name : "") + ". ";
         var room = "Your dashboard is the control room: see everything I keep, delete any of it, steer me from there.";
         var words = h.fact
-          ? hey + "Your mail and calendar are in. One thing I picked up: <q>" + esc(h.fact) + ".</q> "
+          ? hey + "Your mail and calendar are synced. One thing I picked up: <q>" + esc(h.fact) + ".</q> "
             + (h.count > 1 ? h.count + " things so far. " : "") + room
-          : hey + "Your mail and calendar are coming in now. " + room;
+          : hey + "Your mail and calendar are syncing now. " + room;
         typeWords($("#done-words"), words, function () {
           setTimeout(function () { window.location.href = "/dashboard"; }, 3200);
         });
