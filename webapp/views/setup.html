@@ -49,14 +49,16 @@
     .wrap { max-width: 760px; margin: 0 auto; padding: 44px 28px 96px; position: relative; }
 
     header.top {
-      display: flex; align-items: baseline; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 60px; gap: 16px;
     }
     .wordmark {
+      display: inline-flex; align-items: center;
       font-family: var(--font-display);
       font-weight: 600; font-size: 19px; letter-spacing: 0.01em;
       color: var(--text-primary); text-decoration: none;
     }
+    .wordmark img { width: 44px; height: 44px; display: block; margin-right: 10px; }
     .wordmark span { color: var(--accent); }
     .watch-chip {
       display: inline-flex; align-items: center; gap: 8px;
@@ -376,7 +378,7 @@
 <div class="wrap">
 
   <header class="top">
-    <a class="wordmark" href="/">Closed<span>Hand</span></a>
+    <a class="wordmark" href="/"><img src="/logocircle.png" alt="">Closed<span>Hand</span></a>
     <span class="watch-chip" id="watch-chip" role="status" aria-live="polite">
       <span class="dot"></span><span id="watch-text">watching your install</span>
     </span>
