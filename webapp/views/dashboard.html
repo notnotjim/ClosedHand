@@ -4265,7 +4265,7 @@
         const res = await fetch('/api/setup/status');
         const s = await res.json();
         if (!s.roles) return;
-        const names = { memory: 'Memory', rerank: 'Reranker', vision: 'Vision', light: 'Light tasks' };
+        const names = { memory: 'Recall', rerank: 'Reranker', vision: 'Vision', light: 'Light tasks' };
         const rows = Object.entries(s.roles).map(function (kv) {
           const mode = kv[1].mode;
           const color = mode === 'local' ? '#e7b76e' : mode === 'hosted' ? '#6ee7a8' : '#555';
@@ -4275,8 +4275,8 @@
         });
         // Download progress, if a local model is mid-fetch
         const emb = (s.localModels || {}).embedder;
-        if (emb && emb.state === 'downloading') rows.push('<span style="color:#e7b76e;">downloading memory model ' + (emb.pct || 0) + '%</span>');
-        if (emb && emb.state === 'error') rows.push('<span style="color:#f87171;">memory model download failed, retrying on next sync</span>');
+        if (emb && emb.state === 'downloading') rows.push('<span style="color:#e7b76e;">downloading recall model ' + (emb.pct || 0) + '%</span>');
+        if (emb && emb.state === 'error') rows.push('<span style="color:#f87171;">recall model download failed, retrying on next sync</span>');
         document.getElementById('model-roles-rows').innerHTML = rows.join('');
         document.getElementById('model-roles-block').style.display = 'block';
       } catch (e) { /* roles are informational */ }
@@ -7442,5 +7442,64 @@
     document.documentElement.classList.add('in-slideover');
   }
   </script>
+<style>
+  /* Getting ready: the first read of your mail and the recall model download,
+     shown once and only while there is something still to finish. */
+  .ready-card { position: fixed; right: 18px; bottom: 18px; z-index: 40; width: 300px; padding: 14px 16px 12px;
+    background: rgba(18,20,28,0.96); border: 1px solid rgba(110,231,168,0.28); border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5); font-size: 13px; color: rgba(255,255,255,0.75); }
+  .ready-card h4 { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .ready-card h4 .dot { width: 7px; height: 7px; border-radius: 50%; background: #6ee7a8; box-shadow: 0 0 8px rgba(110,231,168,0.8); animation: ready-breathe 1.6s ease-in-out infinite; }
+  @keyframes ready-breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .ready-card .row { display: flex; justify-content: space-between; gap: 10px; margin: 6px 0 4px; }
+  .ready-card .row b { color: #6ee7a8; font-weight: 600; }
+  .ready-card .bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .ready-card .fill { height: 100%; background: #6ee7a8; transition: width 0.6s ease; }
+  .ready-card .foot { margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.4); }
+  .ready-card .close { position: absolute; top: 8px; right: 10px; background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
+</style>
+<script>
+  // Self-host only: a small card that says what ClosedHand is still getting
+  // ready, the recall model download and the first read of mail and calendar,
+  // and goes away by itself when there is nothing left to say.
+  (function () {
+    var card = null, dismissed = false;
+    function pct(done, total) { return total > 0 ? Math.max(0, Math.min(100, Math.round(done / total * 100))) : 0; }
+    function row(label, done, total, unit) {
+      var p = pct(done, total);
+      return '<div class="row"><span>' + label + '</span><b>' + (total ? (Math.min(done, total) + ' of ' + total + (unit ? ' ' + unit : '')) : '…') + '</b></div>'
+        + '<div class="bar"><div class="fill" style="width:' + p + '%"></div></div>';
+    }
+    function render(st, progress) {
+      var lines = [];
+      var emb = (st.localModels || {}).embedder;
+      if (st.memoryMode === 'local' && emb && emb.state === 'downloading') {
+        lines.push('<div class="row"><span>Recall model</span><b>' + (emb.pct || 0) + '%</b></div><div class="bar"><div class="fill" style="width:' + (emb.pct || 0) + '%"></div></div>');
+      }
+      (progress || []).forEach(function (r) {
+        var busy = r.status === 'indexing' || (r.phase1_total && r.phase1_done < r.phase1_total);
+        if (!busy) return;
+        var label = r.service === 'email' ? 'Reading your mail' : r.service === 'calendar' ? 'Reading your calendar' : 'Reading ' + r.service;
+        lines.push(row(label, r.phase1_done || 0, r.phase1_total || 0, r.service === 'email' ? 'emails' : r.service === 'calendar' ? 'events' : ''));
+      });
+      if (!lines.length || dismissed) { if (card) { card.remove(); card = null; } return; }
+      if (!card) {
+        card = document.createElement('div'); card.className = 'ready-card';
+        document.body.appendChild(card);
+      }
+      card.innerHTML = '<button class="close" title="Hide" aria-label="Hide">&times;</button><h4><span class="dot"></span>Getting to know your life</h4>'
+        + lines.join('') + '<div class="foot">Chat works already. Recall gets sharper as this fills in.</div>';
+      card.querySelector('.close').onclick = function () { dismissed = true; card.remove(); card = null; };
+    }
+    function tick() {
+      Promise.all([
+        fetch('/api/setup/status', { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; }),
+        fetch('/api/index/progress', { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : []; }),
+      ]).then(function (res) { if (res[0]) render(res[0], res[1]); }).catch(function () {});
+    }
+    tick();
+    setInterval(tick, 6000);
+  })();
+</script>
 </body>
 </html>

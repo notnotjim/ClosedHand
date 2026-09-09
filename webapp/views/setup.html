@@ -245,6 +245,8 @@
     }
     .memory-note.is-on { display: block; }
     .memory-note p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 10px; }
+    .dl-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 2px 0 10px; }
+    .dl-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.6s ease; }
 
     .skip {
       background: none; border: none; cursor: pointer; font-family: inherit;
@@ -354,11 +356,8 @@
 
   <section class="hero">
     <p class="kicker">Self-host setup</p>
-    <h1>Bring ClosedHand <em>online.</em></h1>
-    <p>Everything runs on your machine and answers to you alone. Three steps are
-       required, a database, a model key and Google; the password and chat apps are
-       labelled for what they are and can wait. Fill a step in, press save, and
-       ClosedHand applies it live; there are no files to edit and nothing to restart.</p>
+    <h1>Bring ClosedHand <em>to life.</em></h1>
+    <p>Everything runs on your machine and answers to you alone.</p>
   </section>
 
   <section class="ready" id="ready-banner">
@@ -387,7 +386,7 @@
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>ClosedHand keeps memories, mail indexes and settings in a database that belongs
+          <p>ClosedHand keeps what it learns about you, its index of your mail and your settings in a database that belongs
              to you. It arrives with the install and starts on its own, so this step usually
              lights up before you ever see it.</p>
           <p class="note">Not lit yet? The database can take a minute on first boot. If it stays
@@ -462,7 +461,7 @@
              because this instance has exactly one owner.</p>
           <form id="password-form">
             <div class="field">
-              <label for="pw-input">Choose a password (8 characters or more)</label>
+              <label for="pw-input">Choose a password</label>
               <input type="password" id="pw-input" autocomplete="new-password">
             </div>
             <button class="save-btn" type="submit">Set password</button>
@@ -489,8 +488,9 @@
           <button class="cta" type="button" id="g-start">Connect to Google</button>
 
           <div id="g-connected" style="display:none;">
-            <p><span id="g-account">Connected.</span> ClosedHand is reading your mail, calendar and
-               Drive, and keeps them up to date from here on.</p>
+            <p><span id="g-account">Connected.</span> ClosedHand reads this account's mail, calendar
+               and Drive so it can recall them, and changes nothing unless you ask. Other Google
+               accounts can be added later from the dashboard.</p>
             <a class="deep" href="/dashboard#connections">Manage in the dashboard</a>
             <a class="deep" href="/auth/google?return=setup">Connect a different account</a>
           </div>
@@ -504,8 +504,8 @@
                  can delete later. Click the button below and name the project anything you like.
                  Leave the second field as 'No Organization'.</p>
               <p class="note warn"><strong>Important:</strong> before you click Create on the project
-                 screen, copy the ID that appears under the project name you chose. This is what
-                 goes into the box below.</p>
+                 screen, copy the Project ID shown under the name you chose (often the name itself,
+                 sometimes with numbers added). This is what goes into the box below.</p>
               <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
               <a class="peek" href="/setup-google-project-id.png" id="g-peek"><img src="/setup-google-project-id.png" alt="The New Project screen, with the Project ID line marked"><span>Where the ID is</span></a>
               <div class="field"><input type="text" id="g-project" placeholder="project id, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false"></div>
@@ -562,8 +562,8 @@
             <div class="g-step" data-g="5">
               <h3>Publish the app and sign in</h3>
               <p class="note">While the app stays in "Testing", Google makes you sign in again every
-                 seven days, so it needs publishing. Google asks for two web addresses first. Open
-                 the Branding page below, scroll down to <strong>App domain</strong>, and fill in:</p>
+                 seven days, so it needs publishing. Open the Branding page below, scroll down to
+                 <strong>App domain</strong>, and fill in:</p>
               <ol class="mini">
                 <li><strong>Application home page:</strong> https://closedhand.com</li>
                 <li><strong>Application privacy policy link:</strong> https://closedhand.com/privacy</li>
@@ -571,12 +571,9 @@
                 <li>Click <strong>Save</strong></li>
               </ol>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener">Open the Branding page</a>
-              <p class="note">Then open the Audience page below and click <strong>Publish app</strong>.
-                 Google shows a "Push to production?" box saying the app will be available to any
-                 user with a Google Account. That is its standard wording for every published app:
-                 in practice only someone holding the file from step four could use this one, and
-                 that file stays on your machine. You do not need to submit for verification. Click
-                 <strong>Confirm</strong>.</p>
+              <p class="note">Then open the Audience page below, click <strong>Publish app</strong> and
+                 <strong>Confirm</strong>. The "Push to production?" box is Google's standard wording
+                 for any published app; no verification is needed.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
               <p class="note">Last thing: sign in. Google will warn that the app is unverified, because it
                  is your private one. Choose <strong>Advanced</strong>, then <strong>Go to
@@ -662,7 +659,7 @@
           </div>
           </div>
           </div>
-          <p class="note">Discord, Slack, LINE and the web chat connect any time from the dashboard.</p>
+          <p class="note">Note you can also connect Discord, Slack, LINE and the web chat any time from the dashboard.</p>
           <button class="skip" type="button">Skip for now</button>
         </div>
       </article>
@@ -684,9 +681,10 @@
 
   <div class="memory-note" id="memory-note">
     <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
+    <div class="dl-bar" id="dl-bar" hidden><div class="dl-fill" id="dl-fill"></div></div>
     <form id="memory-form">
       <div class="field">
-        <input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="API key for memory">
+        <input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="API key for recall">
       </div>
       <button class="save-btn" type="submit" id="memory-btn">Enable recall</button>
       <p class="form-msg" id="memory-msg"></p>
@@ -770,14 +768,14 @@
   // Manual mode exists for Ollama (no key), custom endpoints (undetectable),
   // and the escape hatch when detection gets it wrong.
   var CAP_LINES = {
-    deepinfra: "Chat, memory and vision all run on this key.",
-    openai: "Chat, memory and vision all run on this key.",
-    gemini: "Chat, memory and vision all run on this key.",
-    anthropic: "Chat runs on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
-    groq: "Chat runs on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
-    xai: "Chat and vision run on this key. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
-    ollama: "Everything stays on your machine: chat from Ollama, memory from your pulled embedding model or ClosedHand's built-in one.",
-    custom: "Chat runs through your endpoint. Memory runs on ClosedHand's built-in embedder, swappable later in Settings.",
+    deepinfra: "Chat, recall and vision all run on this key.",
+    openai: "Chat, recall and vision all run on this key.",
+    gemini: "Chat, recall and vision all run on this key.",
+    anthropic: "Chat runs on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
+    groq: "Chat runs on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
+    xai: "Chat and vision run on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
+    ollama: "Everything stays on your machine: chat from Ollama, recall from your pulled embedding model or ClosedHand's built-in one.",
+    custom: "Chat runs through your endpoint. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
   };
   var providerSel = $("#provider-select");
   var manualMode = false;
@@ -901,7 +899,7 @@
   $("#memory-form").addEventListener("submit", function (ev) {
     ev.preventDefault();
     postJSON("/api/setup/memory-key", "POST", { apiKey: $("#memory-key").value.trim() }, $("#memory-msg"), null,
-      function () { return "Memory is on. Indexing starts with your first connected service."; });
+      function () { return "Recall is on. It starts reading with your first connected service."; });
   });
 
   // --- Render --------------------------------------------------------------
@@ -956,7 +954,7 @@
     // Done-notes: name what's connected without exposing anything secret.
     var provLabel = state.chatProviderLabel || (state.chatProvider === "deepinfra" ? "DeepInfra" : state.chatProvider);
     $("#model-done-note").textContent = provLabel
-      ? "Running on " + provLabel + (state.memory ? ", memory included" : ", chat only")
+      ? "Running on " + provLabel + (state.memory ? ", recall included" : ", chat only")
       : "";
     $("#tg-done-note").textContent = state.botUsername ? "@" + state.botUsername + " is yours" : "";
     // Connected: swap the BotFather instructions for a scan-and-say-hello QR.
@@ -980,7 +978,7 @@
     var showForm = true;
     // "Recall" is the feature (finding your mail and files by meaning);
     // "RAM" is the hardware. The old copy called both "memory".
-    var what = "ClosedHand recalls your mail, calendar and files by meaning, not just keywords. That needs a small model, and your provider does not offer one, so ClosedHand runs one on this machine.";
+    var what = "Recall is ClosedHand's memory of your life: it finds any mail, event or file by meaning, not just keywords. That needs a small model, and your provider does not offer one, so ClosedHand runs one on this machine.";
     if (modelDone && state.memoryMode === "local") {
       showMemoryPanel = true;
       title = "Recall runs on this machine.";
@@ -999,13 +997,17 @@
       // decides whether a small machine can actually run this: roughly a
       // gigabyte while indexing, which is more than a 2GB box has spare once
       // the database and the browser are up.
-      lead += " Reading new mail uses about a gigabyte of RAM while it runs. You can switch recall to a provider's model later in Settings.";
+      lead += " You can switch recall to a provider's model later in Settings.";
       showForm = false; // onboarding states the fact; Settings owns the choice
     } else if (modelDone && !state.memory) {
       $("#memory-btn").textContent = "Enable recall";
       showMemoryPanel = true;
       lead = "Recall lets ClosedHand find your mail and files by meaning, not just keywords. It needs a model your provider does not offer. Add a key from one that does, or skip it and chat still works.";
     }
+    var dl = $("#dl-bar"), embNow = (state.localModels || {}).embedder;
+    var downloading = modelDone && state.memoryMode === "local" && embNow && embNow.state === "downloading";
+    dl.hidden = !downloading;
+    if (downloading) $("#dl-fill").style.width = Math.max(2, Math.min(100, embNow.pct || 0)) + "%";
     $("#memory-note-title").textContent = title;
     $("#memory-note-lead").textContent = lead;
     $("#memory-form").style.display = showForm ? "" : "none";

@@ -518,7 +518,7 @@ app.post("/api/setup/password", async (req, res) => {
   try {
     if (!(await requireSetupAccess(req, res))) return;
     const pw = String((req.body || {}).password || "");
-    if (pw.length < 8) return res.status(400).json({ error: "Use at least 8 characters" });
+    if (!pw) return res.status(400).json({ error: "Type a password first" });
     if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD environment variable on this install" });
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
     setAdminSessionCookie(res);
