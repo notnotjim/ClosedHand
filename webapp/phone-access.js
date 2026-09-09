@@ -35,7 +35,11 @@ function start() {
   proc = child;
   const onLine = (chunk) => {
     const m = String(chunk).match(URL_RE);
-    if (m && !url) { url = m[0]; state = "on"; console.log(`[Phone] dashboard reachable at ${url}`); }
+    if (m && !url) {
+      url = m[0]; state = "on"; console.log(`[Phone] dashboard reachable at ${url}`);
+      // The bot reads this to build links a phone can open.
+      setConf({ PHONE_ACCESS_URL: url }).catch(() => {});
+    }
   };
   child.stdout.on("data", onLine);
   child.stderr.on("data", onLine);
@@ -47,6 +51,7 @@ function start() {
   });
   child.on("exit", (code) => {
     proc = null; url = null;
+    setConf({ PHONE_ACCESS_URL: null }).catch(() => {});
     if (!wanted || state === "unavailable") { if (state !== "unavailable") state = "off"; return; }
     state = "error"; lastError = `tunnel exited (${code})`;
     console.error(`[Phone] ${lastError}; retrying in 5s`);
@@ -59,6 +64,7 @@ function stop() {
   clearTimeout(retryTimer);
   if (proc) { try { proc.kill(); } catch (_) {} }
   proc = null; url = null; state = "off";
+  setConf({ PHONE_ACCESS_URL: null }).catch(() => {});
 }
 
 async function enable() {

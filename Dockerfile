@@ -30,6 +30,9 @@ RUN npm ci --omit=dev \
 
 # App source (see .dockerignore for exclusions).
 COPY . .
+# The commit this image was built from, for bug reports.
+ARG GIT_SHA=""
+ENV CLOSEDHAND_SHA=$GIT_SHA
 
 # Boot-with-nothing: the bot starts with no keys into setup mode. The port serves
 # /health, the platform webhooks, and the /chat WebSocket (exposed to the host so

@@ -22,6 +22,8 @@ RUN chmod 755 /usr/local/bin/cloudflared \
 
 # App source (context is webapp/; see webapp/.dockerignore).
 COPY . .
+ARG GIT_SHA=""
+ENV CLOSEDHAND_SHA=$GIT_SHA
 
 EXPOSE 3000
 

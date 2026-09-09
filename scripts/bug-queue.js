@@ -45,7 +45,7 @@ async function list() {
   // Supabase costs a moment of silence rather than a stalled session.
   const query = supabase
     .from("bug_reports")
-    .select("id, user_id, platform, comment, screenshots, created_at")
+    .select("id, user_id, platform, comment, screenshots, created_at, source, app_version")
     .eq("status", "open")
     .order("created_at", { ascending: false })
     .limit(25);
@@ -69,7 +69,7 @@ async function list() {
   console.log(`OPEN BUG REPORTS (${data.length}):`);
   const byUser = {};
   for (const r of data) {
-    const key = `${r.user_id.substring(0, 8)} on ${r.platform || "unknown"}`;
+    const key = `${r.source === "self-host" ? "self-host" : r.user_id.substring(0, 8)} on ${r.platform || "unknown"}${r.app_version ? ` (v${r.app_version})` : ""}`;
     (byUser[key] = byUser[key] || []).push(r);
   }
   for (const [who, rows] of Object.entries(byUser)) {
@@ -120,7 +120,7 @@ async function show(short) {
   if (error) return console.error(error.message);
 
   console.log(`REPORT ${r.id}`);
-  console.log(`  user      ${r.user_id}`);
+  console.log(`  user      ${r.source === "self-host" ? `self-host install ${r.install_id || "?"}${r.app_version ? `, v${r.app_version}` : ""}` : r.user_id}`);
   console.log(`  platform  ${r.platform || "unknown"}${r.chat_id ? ` (chat ${r.chat_id})` : ""}`);
   console.log(`  reported  ${r.created_at}  (${ago(r.created_at)})`);
   console.log(`  status    ${r.status}${r.resolution_note ? ` — ${r.resolution_note}` : ""}`);
