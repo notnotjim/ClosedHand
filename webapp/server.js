@@ -692,6 +692,30 @@ app.delete("/api/wallet/:id", async (req, res) => {
 
 // The general spending rules, kept on the profile so the bot reads them with
 // everything else it knows about the person.
+// Places ClosedHand may send data to without asking, built up by "always"
+// answers in chat and edited here.
+app.get("/api/settings/allowed-hosts", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+  res.json({ hosts: (profile && profile.settings && profile.settings.allowed_hosts) || [] });
+});
+app.post("/api/settings/allowed-hosts", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const hosts = Array.isArray(req.body && req.body.hosts) ? req.body.hosts.map((h) => String(h).toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "")).filter((h) => /^[a-z0-9.-]+$/.test(h)) : [];
+    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    const settings = (profile && profile.settings) || {};
+    settings.allowed_hosts = [...new Set(hosts)];
+    const { error } = await supabase.from("profiles").update({ settings }).eq("id", userId);
+    if (error) throw error;
+    res.json({ success: true, hosts: settings.allowed_hosts });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save" });
+  }
+});
+
 app.post("/api/settings/spend-limits", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -4952,6 +4976,33 @@ app.get("/api/reminders", async (req, res) => {
 });
 
 // GET /api/flights — tracked flights from notes
+// Matters in flight: the live picture ClosedHand keeps of things with
+// several people or steps. Shown in Context Brain so the person can see what
+// it thinks is going on, close one, or throw one away.
+app.get("/api/matters", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const { data, error } = await supabase.from("matters")
+    .select("id, title, summary, state, status, expected_end, last_touched, created_at, resolved_at")
+    .eq("user_id", userId).neq("status", "stale").order("last_touched", { ascending: false }).limit(50);
+  if (error) return res.status(500).json({ error: "Could not load matters" });
+  res.json(data || []);
+});
+app.post("/api/matters/:id/resolve", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const { error } = await supabase.from("matters").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("user_id", userId).eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: "Could not update it" });
+  res.json({ success: true });
+});
+app.delete("/api/matters/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const { error } = await supabase.from("matters").delete().eq("user_id", userId).eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: "Could not remove it" });
+  res.json({ success: true });
+});
+
 app.get("/api/bookings", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

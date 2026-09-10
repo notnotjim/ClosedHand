@@ -2549,6 +2549,11 @@
                 <input type="checkbox" id="confirm-sends" checked onchange="saveConfirmSends(this.checked)" style="width:14px;height:14px;margin:0;accent-color:#6ee7a8;">
                 Confirm before sending an email (chat and background agents)
               </label>
+              <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="font-size:13px;color:#ccc;">Places ClosedHand may send your data to</div>
+                <div style="font-size:12px;color:#777;margin:2px 0 6px;">The first time a request would carry your content somewhere new, ClosedHand asks. Answer "always" in chat and the place lands here. Anything connected as a service is not listed; the provider already holds that data.</div>
+                <div id="allowed-hosts" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:13px;color:#555;">Loading...</div>
               </div>
@@ -2635,6 +2640,7 @@
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
             <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned Facts</button>
             <button class="memory-filter" data-filter="knowledge" onclick="setMemoryFilter('knowledge')">Context Notes</button>
+            <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">In Flight</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:#333;color:#666;cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
               <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:#1d1e24;border:1px solid #34363d;border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#aaa;box-shadow:0 8px 24px rgba(0,0,0,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows ClosedHand's working memory; only then are older stretches condensed into notes here. Empty means nothing has been condensed, not that anything is missing.</div>
@@ -4105,6 +4111,7 @@
         renderQuietHours();
         var csBox = document.getElementById("confirm-sends");
         if (csBox) csBox.checked = data.confirmSends !== false;
+        loadAllowedHosts();
       } catch (e) {
         console.error("Failed to load pulse:", e);
       }
@@ -4477,6 +4484,21 @@
         }).join('') : '<div style="color:#666;">Nothing yet.</div>';
       } catch (e) { console.error('wallet load', e); }
     }
+    // ---- Places approved for sending data ----
+    var _allowedHosts = [];
+    async function loadAllowedHosts() {
+      try { var r = await fetch('/api/settings/allowed-hosts'); var d = await r.json(); _allowedHosts = d.hosts || []; } catch (e) { _allowedHosts = []; }
+      var el = document.getElementById('allowed-hosts'); if (!el) return;
+      el.innerHTML = _allowedHosts.length ? _allowedHosts.map(function(h) {
+        return '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;font-size:12.5px;color:#ddd;">' + escHtml(h) + '<button onclick="removeAllowedHost(\'' + escHtml(h) + '\')" title="Remove" style="background:none;border:none;color:#777;cursor:pointer;font-size:14px;padding:0;line-height:1;">&times;</button></span>';
+      }).join('') : '<span style="font-size:12.5px;color:#555;">None yet.</span>';
+    }
+    async function removeAllowedHost(h) {
+      var hosts = _allowedHosts.filter(function(x) { return x !== h; });
+      await fetch('/api/settings/allowed-hosts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hosts: hosts }) });
+      loadAllowedHosts();
+    }
+
     async function saveSpendLimits() {
       var body = {
         per_purchase: document.getElementById('sl-per-purchase').value,
@@ -6691,6 +6713,7 @@
     }
 
     function loadUnifiedMemory() {
+      loadMatters();
       Promise.all([
         fetch('/api/notes').then(function(r) { return r.json(); }).catch(function() { return []; }),
         fetch('/api/knowledge').then(function(r) { return r.json(); }).catch(function() { return []; })
@@ -7060,17 +7083,49 @@
         || tags.indexOf('pulse') !== -1 || tags.indexOf('briefing') !== -1;
     }
 
+    // ---- Matters in flight: the live picture, one card each ----
+    var _matters = [];
+    async function loadMatters() {
+      try { var r = await fetch('/api/matters'); if (r.ok) _matters = await r.json(); } catch (e) {}
+      if (_memoryFilter === 'matters' || _memoryFilter === 'all') renderMemoryList();
+    }
+    function renderMatterCard(m) {
+      var s = m.state || {};
+      var when = new Date(m.last_touched).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      var rows = '';
+      if (s.people && s.people.length) rows += '<div style="margin-top:6px;"><span style="color:#777;">People</span> ' + s.people.map(function(p) { return escHtml(p.name) + (p.position ? ' <span style="color:#6ee7a8;">' + escHtml(p.position) + '</span>' : '') + (p.said ? ' <span style="color:#999;">' + escHtml(p.said) + '</span>' : ''); }).join(' · ') + '</div>';
+      if (s.open && s.open.length) rows += '<div style="margin-top:4px;"><span style="color:#777;">Open</span> ' + s.open.map(escHtml).join(' · ') + '</div>';
+      if (s.decisions && s.decisions.length) rows += '<div style="margin-top:4px;"><span style="color:#777;">Decided</span> ' + s.decisions.map(escHtml).join(' · ') + '</div>';
+      if (s.facts && s.facts.length) rows += '<div style="margin-top:4px;"><span style="color:#777;">Facts</span> ' + s.facts.map(escHtml).join(' · ') + '</div>';
+      var done = m.status === 'resolved';
+      return '<div style="background:rgba(255,255,255,0.03);border:1px solid #2a2b31;border-radius:10px;padding:12px 14px;margin-bottom:8px;font-size:13px;color:#ccc;' + (done ? 'opacity:0.55;' : '') + '">' +
+        '<div style="display:flex;align-items:center;gap:10px;"><span style="font-weight:600;color:#e8e8e8;">' + escHtml(m.title) + '</span><span style="color:#666;font-size:12px;">' + (done ? 'concluded' : 'updated ' + when) + (m.expected_end ? ' · until ' + new Date(m.expected_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '') + '</span><span style="flex:1;"></span>' +
+        (done ? '' : '<button class="conn-btn conn-btn-manage" onclick="resolveMatter(\'' + m.id + '\')">Done</button>') +
+        '<button class="conn-btn conn-btn-disconnect" onclick="deleteMatter(\'' + m.id + '\')">Remove</button></div>' +
+        (m.summary ? '<div style="color:#aaa;margin-top:6px;">' + escHtml(m.summary) + '</div>' : '') + rows + '</div>';
+    }
+    async function resolveMatter(id) { await fetch('/api/matters/' + id + '/resolve', { method: 'POST' }); loadMatters(); }
+    async function deleteMatter(id) { await fetch('/api/matters/' + id, { method: 'DELETE' }); loadMatters(); }
+
     function renderMemoryList() {
       var el = document.getElementById('brain-list');
       if (!el) return;
       var html = '';
+
+      // Things in flight first: the live picture of what is going on now.
+      if ((_memoryFilter === 'matters' || _memoryFilter === 'all') && _matters.length > 0) {
+        html += '<div class="memory-section-label">In Flight</div>';
+        html += _matters.map(renderMatterCard).join('');
+      } else if (_memoryFilter === 'matters') {
+        html += '<div style="text-align:center;padding:24px;color:#555;font-size:13px;">Nothing in flight. When a plan with several people or steps is under way in chat, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
+      }
 
       // Pinned facts, grouped. One flat list put a note about a spouse next to
       // a company's EORI number, and two notes about the same company could sit
       // apart with nothing to say they were about the same thing. The row shows
       // its subject where it has one, because that is what the note is about;
       // the key is a storage detail.
-      if (_memoryFilter !== 'knowledge' && _pinnedFacts.length > 0) {
+      if (_memoryFilter !== 'knowledge' && _memoryFilter !== 'matters' && _pinnedFacts.length > 0) {
         var CATEGORY_ORDER = ['profile', 'preference', 'person', 'business', 'topic'];
         var CATEGORY_LABELS = {
           profile: 'About You', preference: 'Preferences', person: 'People',
@@ -7111,7 +7166,7 @@
       }
 
       // Context notes: separate pulse/briefing results from organic observations
-      if (_memoryFilter !== 'pinned' && _brainData && _brainData.length > 0) {
+      if (_memoryFilter !== 'pinned' && _memoryFilter !== 'matters' && _brainData && _brainData.length > 0) {
         var sorted = _brainData.slice().sort(function(a, b) {
           return new Date(b.updated_at) - new Date(a.updated_at);
         });
