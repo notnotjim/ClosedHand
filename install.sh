@@ -33,6 +33,7 @@ fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 # (webapp/public/fist.png) by scripts/hand-frames.py: a shaded pixel picture,
 # run-length coded, at two sizes.
 HAND_FIST_32='16a4i2a3i17a16i11a22i9a13i1u1t3i2t3i8a8i3u3i2t3i2t1s3i7a3i2v3i3u3i2t3i1t2s3i7a3i2v3i3u3i2t3i3s3i7a3i2v3i2u9i3s3i7a3i1v1u20i7a24i8a11i5t3s5i8a11i4t6s4i7a3i4u1t8i5s1r3i7a3i3u4t7i3s3r2i7a3i2u6t7i1s4r2i7a3i1u7t4s3i5r2i7a3i7t6s1i6r2i7a3i6t7s6r3i8a2i5t7s7r3i8a3i4t6s7r1q3i8a3i3t7s6r2q3i8a3i2t7s7r1q3i10a3i7s7r2q3i10a4i5s7r2q3i12a4i3s7r1q5i13a18i15a15i19a11i11a'
+HAND_FIST_48='25a5i4a2i30a3i2a8i1a7i25a24i16a33i14a19i2u1t12i13a12i2u5i2u2t5i3t5i11a12i4u4i2u2t4i4t1s4i11a4i4v4i4u4i1u3t4i3t2s4i11a4i4v4i4u4i4t4i2t3s4i11a4i4v4i4u4i4t4i1t4s4i11a4i3v1u4i4u4i4t4i5s4i11a4i2v2u4i2u14i5s4i11a4i2v2u4i1u19i1s4i11a4i1v3u29i11a36i13a15i8t3s9i13a16i6t8s6i12a8i1u7i5t11s5i11a4i6u1t11i9s2r4i11a4i5u4t11i6s3r4i11a4i4u6t11i4s4r4i11a4i3u8t10i3s5r4i11a4i2u11t4s5i1s6r4i11a4i1u11t6s4i7r4i11a4i11t8s2i8r4i11a4i10t11s8r4i11a4i9t11s9r4i11a4i8t11s10r4i11a4i7t11s10r4i12a4i6t11s10r1q4i13a4i4t11s11r1q4i13a4i4t10s11r1q5i13a4i3t10s11r2q4i15a4i1t10s11r2q5i15a5i9s11r2q5i17a5i7s11r3q5i17a6i6s10r2q6i19a7i3s10r1q7i21a26i23a24i26a20i30a15i17a'
 HAND_FIST_64='33a6i56a10i2a7i35a7i2a22i32a33i22a6i2a34i20a25i3u17i18a25i4u1t7i3t6i17a16i4u6i3u3t5i5t6i16a15i5u6i2u4t5i5t1s5i15a6i4v6i6u5i1u5t5i4t2s5i15a6i5v5i6u5i6t5i3t3s5i15a5i6v5i6u5i6t5i2t4s5i15a5i6v5i6u5i6t5i2t4s5i15a5i5v1u5i6u5i6t5i1t5s5i15a5i4v2u5i6u5i6t5i6s5i15a5i3v3u5i2u20i6s5i15a5i2v4u5i1u25i2s5i15a6i4u39i15a6i4u39i16a47i17a20i11t4s12i17a21i9t9s9i16a21i8t12s8i15a10i3u9i7t14s6i15a5i8u2t15i12s2r6i14a5i7u5t15i9s3r6i14a5i7u6t15i7s5r5i14a5i6u8t15i5s6r5i14a5i5u10t14i4s7r5i14a5i4u14t1s11i2s8r5i14a5i3u14t7s6i2s8r5i14a5i2u14t9s4i2s9r5i14a5i1u14t10s4i1s10r5i14a5i14t15s10r6i14a5i14t14s11r6i14a5i13t14s12r5i15a6i11t14s13r5i16a5i10t14s14r5i16a5i9t14s14r6i16a5i8t14s15r5i17a5i7t14s15r1q5i17a6i5t15s14r1q6i18a5i4t15s14r2q5i19a6i2t15s14r2q6i19a6i1t15s14r3q6i20a6i14s14r3q6i22a6i12s14r3q6i23a7i10s14r3q7i24a7i8s14r3q7i26a7i6s15r1q8i27a10i2s14r11i28a34i32a31i34a29i37a24i43a18i24a'
 
 HAND_AWK='# The fist. FR is PW pixels wide and twice ROWS tall, one grey level per
@@ -78,7 +79,7 @@ BEGIN {
 
 # Print the fist at the size ui_init settled on.
 hand_frame() {
-  if [ "$BK" -ge 2 ]; then _fr=$HAND_FIST_64; else _fr=$HAND_FIST_32; fi
+  case "$BSW" in 64) _fr=$HAND_FIST_64 ;; 48) _fr=$HAND_FIST_48 ;; *) _fr=$HAND_FIST_32 ;; esac
   awk -v FR="$_fr" -v PW="$BSW" -v ROWS="$BH" -v PAD="$BPAD" -v COLOR="$BCOLOR" \
       -v TP="$BTP" -v BT="$BBT" \
       -v SH1="$BS1" -v SH2="$BS2" -v SH3="$BS3" -v SH4="$BS4" "$HAND_AWK" </dev/null
@@ -116,19 +117,18 @@ ui_init() {
     # that is better than a hand that does not fit.
     BH=$((l - 10))
   fi
-  # The hand is 32 cells wide and 14 tall, and only ever shown at a whole
-  # multiple of that, so a terminal that cannot fit one copy gets plain lines.
-  BK=$((BH / 14))
-  if [ "$((BW / 32))" -lt "$BK" ]; then BK=$((BW / 32)); fi
-  if [ "$BK" -gt 2 ]; then BK=2; fi
-  if [ "$BK" -lt 1 ] || [ "$BW" -lt 60 ]; then return 0; fi
-  BH=$((BK * 14))
-  BSW=$((BK * 32))
+  # The hand comes in two sizes, 32 cells wide by 14 tall and 48 by 21, and a
+  # terminal that cannot fit the small one gets plain lines. The larger one
+  # sat too big over the wordmark at 64 wide, so 48 is the top size.
+  if [ "$BH" -ge 21 ] && [ "$BW" -ge 70 ]; then BSW=48; BH=21; BMID=23
+  elif [ "$BH" -ge 14 ] && [ "$BW" -ge 60 ]; then BSW=32; BH=14; BMID=15
+  else return 0; fi
+  BK=1
   # Centre the fist on the wordmark under it, not the frame on the terminal:
-  # the picture sits 3 pixels in from the frame's left edge and 4 from its
-  # right, so the frame is placed so the picture's own middle (15.5 cells per
-  # size step) lands on the middle of the 21-character wordmark.
-  BPAD=$(( (BW - 21) / 2 + 10 - (31 * BK) / 2 ))
+  # the picture sits a few pixels in from the frame's edges, so the frame is
+  # placed so the picture's own middle column lands on the middle of the
+  # 21-character wordmark.
+  BPAD=$(( (BW - 21) / 2 + 10 - BMID ))
   if [ "$BPAD" -lt 0 ]; then BPAD=0; fi
   BLOCK=$((BH + 9))
 
