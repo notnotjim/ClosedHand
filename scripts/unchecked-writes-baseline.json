@@ -15,11 +15,10 @@
   "lib/services/bridge-relay.js": 1,
   "lib/services/data-sync.js": 4,
   "lib/tools/handlers.js": 8,
-  "lib/user-mcp.js": 4,
   "lib/workspace-cache.js": 1,
   "user-store.js": 19,
   "webapp/admin.js": 3,
   "webapp/config.js": 1,
   "webapp/rag-processor.js": 13,
-  "webapp/server.js": 47
+  "webapp/server.js": 45
 }
