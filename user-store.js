@@ -484,12 +484,12 @@ class UserStore {
   }
 
   // Save a schedule
-  async saveSchedule(name, cronExpression, task, chatId, runOnce = null, timezone = null) {
+  async saveSchedule(name, cronExpression, task, chatId, runOnce = null, timezone = null, platform = null) {
     // Remove existing with same name
     await supabase.from("schedules").delete().eq("user_id", this.userId).eq("name", name);
     const { data } = await supabase
       .from("schedules")
-      .insert({ user_id: this.userId, name, cron_expression: cronExpression, task, enabled: true, chat_id: chatId, run_once: runOnce, timezone })
+      .insert({ user_id: this.userId, name, cron_expression: cronExpression, task, enabled: true, chat_id: chatId, run_once: runOnce, timezone, platform })
       .select()
       .single();
 
@@ -652,7 +652,10 @@ class UserStore {
               timezone: s.timezone,
               _userId: userId,
               _chatId: target,
-              _platform: platformOfChat[`${userId}:${target}`] || "telegram",
+              // The chat app it was set up in, stored with the row; older rows
+              // are inferred from the chat id, and a chat id that is the user's
+              // own id is the web chat.
+              _platform: s.platform || platformOfChat[`${userId}:${target}`] || (target === userId ? "web" : null),
               run_once: s.run_once,
             };
           })
