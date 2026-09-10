@@ -2399,7 +2399,7 @@
                 <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
                 <button class="account-action-btn" id="wallet-add-toggle" onclick="toggleAddCard()">Add a card</button>
                 <div id="wallet-add" style="display:none;margin-top:10px;padding:12px;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;">
-                  <div style="font-size:12.5px;color:#888;margin-bottom:10px;line-height:1.5;">A virtual card from your bank with its own limit is the safest kind to add: it caps what can be spent whatever happens, and cancelling it costs nothing. A real card works too.</div>
+                  <div style="font-size:12.5px;color:#888;margin-bottom:10px;line-height:1.5;">Any card works, real or virtual. Your rules above, and the card's own limits below, are what cap the spending: outside them ClosedHand stops. A virtual card from your bank with its own cap is one more lock, if you want one.</div>
                   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
                     <label class="wallet-field" style="grid-column:1/-1;"><span>Card number</span><input type="text" id="wc-number" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456"></label>
                     <label class="wallet-field"><span>Expiry month</span><input type="text" id="wc-exp-month" inputmode="numeric" placeholder="MM" maxlength="2"></label>
@@ -3140,7 +3140,7 @@
         _disconnectResolve = resolve;
         document.getElementById('disconnect-title').textContent = title;
         document.getElementById('disconnect-body').textContent = body;
-        document.getElementById('disconnect-purge').checked = true;
+        document.getElementById('disconnect-purge').checked = false;
         document.getElementById('disconnect-modal').classList.add('visible');
       });
     }
@@ -7658,8 +7658,8 @@
       <h3 id="disconnect-title">Disconnect</h3>
       <p id="disconnect-body" style="font-size:13px;color:#aaa;line-height:1.55;margin:0 0 14px;"></p>
       <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#ccc;cursor:pointer;margin-bottom:18px;">
-        <input type="checkbox" id="disconnect-purge" checked style="width:14px;height:14px;margin:3px 0 0;accent-color:#6ee7a8;flex:none;">
-        <span>Also delete everything ClosedHand synced from this account: the mail and calendar it kept, and what it learned from them. Recommended. Uncheck to keep that until you reconnect.</span>
+        <input type="checkbox" id="disconnect-purge" style="width:14px;height:14px;margin:3px 0 0;accent-color:#6ee7a8;flex:none;">
+        <span>Also delete everything ClosedHand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
       </label>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>

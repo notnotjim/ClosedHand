@@ -3555,8 +3555,9 @@ app.post("/api/disconnect", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   const { service } = req.body;
-  // Delete what was synced from the account too, unless told not to.
-  const purge = req.body.purge !== false;
+  // Delete what was synced from the account too, only when asked to: kept
+  // data is what makes ClosedHand as good as it was when the account returns.
+  const purge = req.body.purge === true;
 
   // Best-effort revocation of a Google grant at Google's end, so "disconnect"
   // means revoked, not just forgotten. Works with access or refresh token.
