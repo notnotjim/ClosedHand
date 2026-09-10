@@ -547,6 +547,168 @@ app.post("/api/login", async (req, res) => {
 
 // --- Reach the dashboard from your phone (see phone-access.js) -------------
 const phoneAccess = require("./phone-access");
+// ---------------------------------------------------------------------------
+// Wallet: cards ClosedHand may pay with, and the rules for using them.
+//
+// Self-host only. The number and security code are encrypted with the
+// install's own key and never leave this machine except into the checkout
+// the person approved; the model never sees them. What a card may do is the
+// person's rule: per purchase, per day, per month, and whether to ask.
+// ---------------------------------------------------------------------------
+
+function walletAvailable() {
+  const { encryptString } = require("./crypto-tokens");
+  return mcpClient.isSelfHost() && encryptString("probe") !== "probe";
+}
+
+function cardBrand(number) {
+  if (/^4/.test(number)) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(number)) return "Mastercard";
+  if (/^3[47]/.test(number)) return "American Express";
+  if (/^(6011|65|64[4-9])/.test(number)) return "Discover";
+  if (/^(30[0-5]|36|38)/.test(number)) return "Diners";
+  if (/^35/.test(number)) return "JCB";
+  return "Card";
+}
+
+function luhnOk(number) {
+  let sum = 0, alt = false;
+  for (let i = number.length - 1; i >= 0; i--) {
+    let d = Number(number[i]);
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function cleanLimits(l) {
+  const out = {};
+  if (!l || typeof l !== "object") return out;
+  for (const k of ["per_purchase", "per_day", "per_month", "auto_under"]) {
+    if (l[k] === null || l[k] === undefined || l[k] === "") continue;
+    const n = Number(l[k]);
+    if (Number.isFinite(n) && n >= 0) out[k] = n;
+  }
+  if (typeof l.always_ask === "boolean") out.always_ask = l.always_ask;
+  if (l.currency && /^[A-Z]{3}$/.test(String(l.currency).toUpperCase())) out.currency = String(l.currency).toUpperCase();
+  return out;
+}
+
+app.get("/api/wallet", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!mcpClient.isSelfHost()) return res.json({ available: false, reason: "self-host only" });
+  if (!walletAvailable()) return res.json({ available: false, reason: "no encryption key", cards: [], limits: {}, ledger: [] });
+  try {
+    const { data: cards, error } = await supabase.from("wallet_cards")
+      .select("id, label, brand, last4, exp_month, exp_year, holder, limits, is_default, created_at")
+      .eq("user_id", userId).order("is_default", { ascending: false }).order("created_at", { ascending: true });
+    if (error) throw error;
+    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    const { data: ledger } = await supabase.from("spend_ledger")
+      .select("id, merchant, host, title, amount, currency, amount_text, status, approved_via, source, card_id, created_at")
+      .eq("user_id", userId).order("created_at", { ascending: false }).limit(30);
+    res.json({ available: true, cards: cards || [], limits: (profile && profile.settings && profile.settings.spend_limits) || {}, ledger: ledger || [] });
+  } catch (e) {
+    console.error("[wallet] list error:", e.message);
+    res.status(500).json({ error: "Could not load the wallet" });
+  }
+});
+
+app.post("/api/wallet", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for installs you run yourself." });
+  if (!walletAvailable()) return res.status(400).json({ error: "This install has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
+  try {
+    const b = req.body || {};
+    const number = String(b.number || "").replace(/[\s-]/g, "");
+    if (!/^\d{12,19}$/.test(number) || !luhnOk(number)) return res.status(400).json({ error: "That card number does not look right." });
+    const expMonth = Number(b.exp_month), expYearRaw = String(b.exp_year || "").trim();
+    const expYear = expYearRaw.length === 2 ? 2000 + Number(expYearRaw) : Number(expYearRaw);
+    if (!(expMonth >= 1 && expMonth <= 12) || !(expYear >= 2000 && expYear <= 2100)) return res.status(400).json({ error: "Check the expiry date." });
+    const now = new Date();
+    if (expYear < now.getFullYear() || (expYear === now.getFullYear() && expMonth < now.getMonth() + 1)) return res.status(400).json({ error: "That card has expired." });
+    const cvc = String(b.cvc || "").replace(/\D/g, "");
+    if (cvc && !/^\d{3,4}$/.test(cvc)) return res.status(400).json({ error: "The security code is three or four digits." });
+    const { encryptString } = require("./crypto-tokens");
+    const { count } = await supabase.from("wallet_cards").select("id", { count: "exact", head: true }).eq("user_id", userId);
+    const row = {
+      user_id: userId,
+      label: String(b.label || "").trim().slice(0, 60) || null,
+      brand: cardBrand(number),
+      last4: number.slice(-4),
+      exp_month: expMonth,
+      exp_year: expYear,
+      holder: String(b.holder || "").trim().slice(0, 80) || null,
+      enc_number: encryptString(number),
+      enc_cvc: cvc ? encryptString(cvc) : null,
+      billing: b.billing && typeof b.billing === "object" ? { postcode: String(b.billing.postcode || "").slice(0, 16), country: String(b.billing.country || "").slice(0, 2).toUpperCase() } : null,
+      limits: cleanLimits(b.limits),
+      is_default: !count,
+    };
+    const { data, error } = await supabase.from("wallet_cards").insert(row).select("id, label, brand, last4, exp_month, exp_year, holder, limits, is_default").single();
+    if (error) throw error;
+    res.json({ success: true, card: data });
+  } catch (e) {
+    console.error("[wallet] add error:", e.message);
+    res.status(500).json({ error: "Could not save the card" });
+  }
+});
+
+app.patch("/api/wallet/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const b = req.body || {};
+    const patch = { updated_at: new Date().toISOString() };
+    if (b.label !== undefined) patch.label = String(b.label || "").trim().slice(0, 60) || null;
+    if (b.limits !== undefined) patch.limits = cleanLimits(b.limits);
+    if (b.is_default === true) {
+      const { error: e0 } = await supabase.from("wallet_cards").update({ is_default: false }).eq("user_id", userId);
+      if (e0) throw e0;
+      patch.is_default = true;
+    }
+    const { error } = await supabase.from("wallet_cards").update(patch).eq("id", req.params.id).eq("user_id", userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    console.error("[wallet] update error:", e.message);
+    res.status(500).json({ error: "Could not update the card" });
+  }
+});
+
+app.delete("/api/wallet/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const { error } = await supabase.from("wallet_cards").delete().eq("id", req.params.id).eq("user_id", userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Could not remove the card" });
+  }
+});
+
+// The general spending rules, kept on the profile so the bot reads them with
+// everything else it knows about the person.
+app.post("/api/settings/spend-limits", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    const settings = (profile && profile.settings) || {};
+    settings.spend_limits = cleanLimits(req.body || {});
+    if (settings.spend_limits.always_ask === undefined) settings.spend_limits.always_ask = true;
+    const { error } = await supabase.from("profiles").update({ settings }).eq("id", userId);
+    if (error) throw error;
+    res.json({ success: true, limits: settings.spend_limits });
+  } catch (e) {
+    console.error("[wallet] limits error:", e.message);
+    res.status(500).json({ error: "Could not save the spending rules" });
+  }
+});
+
 app.get("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   res.json(phoneAccess.status());
@@ -3372,11 +3534,29 @@ app.post("/api/connect-multiple", (req, res) => {
 });
 
 // Disconnect a service
+// Disconnecting an account used to leave everything synced from it behind:
+// the mail and calendar rows in data_cache, and what recall learned from them
+// in data_vectors. Same as what one hosted assistant was criticised for, with
+// the difference that here it sits in the person's own database. Now the
+// dashboard offers to delete it all, on by default, and this does the work.
+async function purgeSyncedFor(userId, serviceKeys) {
+  const keys = [...new Set((serviceKeys || []).filter(Boolean))];
+  for (const key of keys) {
+    const { error: e1 } = await supabase.from("data_cache").delete().eq("user_id", userId).eq("source", key);
+    if (e1) console.error(`[disconnect] purge data_cache ${key}:`, e1.message);
+    const { error: e2 } = await supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", key);
+    if (e2) console.error(`[disconnect] purge data_vectors ${key}:`, e2.message);
+  }
+  return keys;
+}
+
 app.post("/api/disconnect", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   const { service } = req.body;
+  // Delete what was synced from the account too, unless told not to.
+  const purge = req.body.purge !== false;
 
   // Best-effort revocation of a Google grant at Google's end, so "disconnect"
   // means revoked, not just forgotten. Works with access or refresh token.
@@ -3399,7 +3579,8 @@ app.post("/api/disconnect", async (req, res) => {
       const { data: row } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", service).single();
       if (row?.tokens) await revokeGoogleGrant(row.tokens);
       await mustWrite("could not disconnect that service", supabase.from("connections").delete().eq("user_id", userId).eq("service", service));
-      return res.json({ success: true });
+      const purged = purge ? await purgeSyncedFor(userId, [service]) : [];
+      return res.json({ success: true, purged });
     } catch (err) {
       return res.status(500).json({ error: "Failed to disconnect" });
     }
@@ -3422,8 +3603,10 @@ app.post("/api/disconnect", async (req, res) => {
           if (r.tokens) await revokeGoogleGrant(r.tokens);
         }
         await supabase.from("connections").delete().eq("user_id", userId).like("service", "google%");
+        if (purge) await purgeSyncedFor(userId, (rows || []).map((r) => r.service).concat(["google"]));
       } else {
         await mustWrite("could not disconnect that service", supabase.from("connections").delete().eq("user_id", userId).eq("service", service));
+        if (purge) await purgeSyncedFor(userId, [service]);
       }
       res.setHeader("Set-Cookie", "ch_user=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
       return res.json({ success: true, signout: true });
@@ -3439,8 +3622,9 @@ app.post("/api/disconnect", async (req, res) => {
       .delete()
       .eq("user_id", userId)
       .eq("service", service);
+    const purged = purge ? await purgeSyncedFor(userId, [service]) : [];
 
-    res.json({ success: true });
+    res.json({ success: true, purged });
   } catch (err) {
     console.error("Disconnect error:", err.message);
     res.status(500).json({ error: "Failed to disconnect" });
@@ -4767,6 +4951,29 @@ app.get("/api/reminders", async (req, res) => {
 });
 
 // GET /api/flights — tracked flights from notes
+app.get("/api/bookings", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const since = new Date(Date.now() - 24 * 3600000).toISOString();
+    const { data, error } = await supabase.from("bookings").select("*").eq("user_id", userId)
+      .or(`starts_at.gte.${since},ends_at.gte.${since}`).order("starts_at", { ascending: true }).limit(100);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (e) {
+    console.error("[bookings] list error:", e.message);
+    res.status(500).json({ error: "Could not load bookings" });
+  }
+});
+
+app.delete("/api/bookings/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const { error } = await supabase.from("bookings").delete().eq("user_id", userId).eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: "Could not remove it" });
+  res.json({ success: true });
+});
+
 app.get("/api/flights", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

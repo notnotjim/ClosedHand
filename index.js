@@ -152,6 +152,7 @@ async function main() {
   loadAllSkills();
   registerAllSchedules();
   startFlightTracking();
+  require("./lib/bookings").startBookingsDiscovery();
   resumeAgents();
   await registerAutomationCrons();
   await startPulse();

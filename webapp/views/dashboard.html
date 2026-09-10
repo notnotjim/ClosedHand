@@ -1995,6 +1995,11 @@
           .mcp-logo-item { transition: transform 0.3s, opacity 0.3s; opacity: 0.35; }
           .mcp-logo-item:hover { opacity: 0.8; transform: scale(1.3); }
           .mcp-hero:hover .mcp-logo-item { opacity: 0.5; }
+          .wallet-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#888; }
+          .wallet-field input { padding:7px 10px; background:rgba(18,19,24,0.95); border:1px solid #2e2f35; border-radius:8px; color:#ddd; font-size:13px; outline:none; font-family:inherit; }
+          .wallet-field input:focus { border-color:#3e8f66; }
+          .wallet-card-row { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#16171b; border:1px solid #2e2f35; border-radius:10px; font-size:13px; color:#ddd; }
+          .wallet-card-row .muted { color:#777; font-size:12px; }
           .mcp-pill { position: relative; border-radius: 18px; padding: 2px; overflow: hidden; }
           .mcp-pill::before {
             content: ''; position: absolute; top: 50%; left: 50%; width: 150%; height: 600%;
@@ -2237,12 +2242,13 @@
           <div class="mc-section-label" id="auto-history-label" style="display:none;">Recent Runs</div>
           <div id="auto-history-list"></div>
 
-          <!-- Upcoming: reminders + tracked flights -->
-          <div class="mc-section-label" style="margin-top:24px;">Schedules</div>
+          <!-- Upcoming: reminders + tracked flights + bookings picked out of mail -->
+          <div class="mc-section-label" style="margin-top:24px;">Upcoming</div>
           <div id="reminders-list"></div>
           <div class="flights-loading" id="flights-loading" style="display:none;">Checking flights…</div>
           <div id="flights-list"></div>
-          <div id="flights-empty" style="display:none;font-size:13px;color:#555;padding:8px 0;">Nothing scheduled. One-off reminders, dated actions like a timezone change on a set day, and tracked flights appear here. Anything that repeats is an agent.</div>
+          <div id="bookings-list"></div>
+          <div id="flights-empty" style="display:none;font-size:13px;color:#555;padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, and bookings picked out of your mail (trains, hotels, tickets, tables) appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
 
           <!-- Resources: datasets and skills, both nested under it -->
           <div class="mc-section-label" style="margin-top:24px;">Resources</div>
@@ -2362,6 +2368,61 @@
                 </div>
               </div>
             </div>
+
+          <div class="settings-group" id="wallet-block" style="display:none;">
+            <div class="settings-group-header">
+              <h2>Wallet</h2>
+              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. The number is kept on this machine, typed into the checkout for you, and never read by the model. Every purchase is put to you first unless you say otherwise here.</p>
+            </div>
+            <div style="padding:12px 16px;">
+              <div id="wallet-unavailable" style="display:none;font-size:13px;color:#888;"></div>
+              <div id="wallet-main" style="display:none;">
+                <div style="font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:8px;">Spending rules</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;">
+                  <label class="wallet-field"><span>Per purchase, at most</span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Per day, at most</span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Per month, at most</span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Currency</span><input type="text" id="sl-currency" maxlength="3" placeholder="GBP" style="text-transform:uppercase;"></label>
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;cursor:pointer;margin:4px 0 6px;">
+                  <input type="checkbox" id="sl-always-ask" checked style="width:14px;height:14px;margin:0;accent-color:#6ee7a8;">
+                  Ask me before every purchase
+                </label>
+                <label class="wallet-field" id="sl-auto-wrap" style="max-width:260px;opacity:0.5;"><span>Go ahead without asking under</span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled></label>
+                <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+                  <button class="account-action-btn" onclick="saveSpendLimits()">Save rules</button>
+                  <span id="sl-status" style="font-size:12.5px;color:#888;"></span>
+                </div>
+
+                <hr class="conn-divider" style="margin:16px 0;">
+                <div style="font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:8px;">Cards</div>
+                <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+                <button class="account-action-btn" id="wallet-add-toggle" onclick="toggleAddCard()">Add a card</button>
+                <div id="wallet-add" style="display:none;margin-top:10px;padding:12px;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;">
+                  <div style="font-size:12.5px;color:#888;margin-bottom:10px;line-height:1.5;">A virtual card from your bank with its own limit is the safest kind to add: it caps what can be spent whatever happens, and cancelling it costs nothing. A real card works too.</div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+                    <label class="wallet-field" style="grid-column:1/-1;"><span>Card number</span><input type="text" id="wc-number" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456"></label>
+                    <label class="wallet-field"><span>Expiry month</span><input type="text" id="wc-exp-month" inputmode="numeric" placeholder="MM" maxlength="2"></label>
+                    <label class="wallet-field"><span>Expiry year</span><input type="text" id="wc-exp-year" inputmode="numeric" placeholder="YY" maxlength="4"></label>
+                    <label class="wallet-field"><span>Security code</span><input type="password" id="wc-cvc" inputmode="numeric" autocomplete="off" placeholder="CVC" maxlength="4"></label>
+                    <label class="wallet-field"><span>Name on card</span><input type="text" id="wc-holder" placeholder="As printed"></label>
+                    <label class="wallet-field"><span>Billing postcode</span><input type="text" id="wc-postcode" placeholder="Optional"></label>
+                    <label class="wallet-field"><span>Label</span><input type="text" id="wc-label" placeholder="e.g. Monzo virtual"></label>
+                    <label class="wallet-field"><span>This card, per purchase</span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="use the rules above"></label>
+                    <label class="wallet-field"><span>This card, per month</span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="use the rules above"></label>
+                  </div>
+                  <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+                    <button class="account-action-btn" onclick="addWalletCard()">Save card</button>
+                    <span id="wc-status" style="font-size:12.5px;color:#888;"></span>
+                  </div>
+                </div>
+
+                <hr class="conn-divider" style="margin:16px 0;">
+                <div style="font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:8px;">Purchases</div>
+                <div id="wallet-ledger" style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#aaa;"></div>
+              </div>
+            </div>
+          </div>
           </div>
 
           <!-- AI Model Selection -->
@@ -3071,13 +3132,33 @@
 
     // connectApple is now handled by the bridge pairing flow in the Apple modal
 
+    // One question, with the choice that matters on it: whether what was
+    // synced from the account goes too. Resolves { ok, purge }.
+    var _disconnectResolve = null;
+    function askDisconnect(title, body) {
+      return new Promise(function(resolve) {
+        _disconnectResolve = resolve;
+        document.getElementById('disconnect-title').textContent = title;
+        document.getElementById('disconnect-body').textContent = body;
+        document.getElementById('disconnect-purge').checked = true;
+        document.getElementById('disconnect-modal').classList.add('visible');
+      });
+    }
+    function answerDisconnect(ok) {
+      document.getElementById('disconnect-modal').classList.remove('visible');
+      var purge = document.getElementById('disconnect-purge').checked;
+      var r = _disconnectResolve; _disconnectResolve = null;
+      if (r) r({ ok: ok, purge: purge });
+    }
+
     async function disconnect(service) {
-      if (!confirm(`Disconnect ${service}? Your assistant will lose access to this service.`)) return;
+      var answer = await askDisconnect('Disconnect ' + service + '?', 'ClosedHand will lose access to this service.');
+      if (!answer.ok) return;
 
       const res = await fetch("/api/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service }),
+        body: JSON.stringify({ service, purge: answer.purge }),
       });
 
       if (res.ok) {
@@ -3738,13 +3819,14 @@
 
     async function disconnectFromSettings(service, name, isSignin) {
       const msg = isSignin
-        ? `Disconnect ${name}? This revokes ClosedHand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in. Your synced data stops updating until you reconnect.`
-        : `Disconnect ${name}? Your assistant will lose access to this service.`;
-      if (!confirm(msg)) return;
+        ? `This revokes ClosedHand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in.`
+        : `ClosedHand will lose access to this service.`;
+      var answer = await askDisconnect('Disconnect ' + name + '?', msg);
+      if (!answer.ok) return;
       const res = await fetch("/api/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service }),
+        body: JSON.stringify({ service, purge: answer.purge }),
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -4293,6 +4375,7 @@
         if (typeof loadDatasets === 'function') loadDatasets();
         if (typeof loadFiles === 'function') loadFiles();
         loadFlights();
+        loadBookings();
         loadReminders();
       } else {
         stopAutomationPolling();
@@ -4335,10 +4418,116 @@
       } catch (e) { /* roles are informational */ }
       document.getElementById('phone-block').style.display = 'block';
       loadPhoneAccess();
+      document.getElementById('wallet-block').style.display = 'block';
+      loadWallet();
     }
 
     // --- Reach the dashboard from your phone ---
     var _phone = null, _phonePoll = null;
+    // ---- Wallet ----
+    function money(v, cur) { if (v === null || v === undefined || v === '') return ''; var n = Number(v); if (!isFinite(n)) return ''; return (cur ? cur + ' ' : '') + n.toFixed(2); }
+    function autoUnderToggle() {
+      var ask = document.getElementById('sl-always-ask').checked;
+      document.getElementById('sl-auto-under').disabled = ask;
+      document.getElementById('sl-auto-wrap').style.opacity = ask ? '0.5' : '1';
+    }
+    async function loadWallet() {
+      try {
+        var res = await fetch('/api/wallet');
+        var w = await res.json();
+        var un = document.getElementById('wallet-unavailable');
+        var main = document.getElementById('wallet-main');
+        if (!w.available) {
+          un.style.display = 'block';
+          un.textContent = w.reason === 'no encryption key'
+            ? 'This install has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
+            : 'The Wallet is for installs you run yourself.';
+          main.style.display = 'none';
+          return;
+        }
+        un.style.display = 'none'; main.style.display = 'block';
+        var l = w.limits || {};
+        document.getElementById('sl-per-purchase').value = l.per_purchase ?? '';
+        document.getElementById('sl-per-day').value = l.per_day ?? '';
+        document.getElementById('sl-per-month').value = l.per_month ?? '';
+        document.getElementById('sl-currency').value = l.currency || '';
+        document.getElementById('sl-always-ask').checked = l.always_ask !== false;
+        document.getElementById('sl-auto-under').value = l.auto_under ?? '';
+        document.getElementById('sl-always-ask').onchange = autoUnderToggle;
+        autoUnderToggle();
+        var cards = w.cards || [];
+        document.getElementById('wallet-cards').innerHTML = cards.length ? cards.map(function(c) {
+          var lim = [];
+          if (c.limits && c.limits.per_purchase != null) lim.push('up to ' + money(c.limits.per_purchase, l.currency) + ' a purchase');
+          if (c.limits && c.limits.per_month != null) lim.push(money(c.limits.per_month, l.currency) + ' a month');
+          return '<div class="wallet-card-row">' +
+            '<span style="font-weight:600;">' + escHtml(c.brand || 'Card') + ' •••• ' + escHtml(c.last4) + '</span>' +
+            '<span class="muted">' + String(c.exp_month).padStart(2, '0') + '/' + String(c.exp_year).slice(-2) + (c.label ? ' · ' + escHtml(c.label) : '') + (c.is_default ? ' · default' : '') + (lim.length ? ' · ' + lim.join(', ') : '') + '</span>' +
+            '<span style="flex:1;"></span>' +
+            (c.is_default ? '' : '<button class="conn-btn conn-btn-manage" onclick="setDefaultCard(\'' + c.id + '\')">Make default</button>') +
+            '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletCard(\'' + c.id + '\')">Remove</button>' +
+            '</div>';
+        }).join('') : '<div style="font-size:13px;color:#666;">No cards yet. Until you add one, ClosedHand can only pay on sites that already have a card saved, and still asks you first.</div>';
+        var led = w.ledger || [];
+        document.getElementById('wallet-ledger').innerHTML = led.length ? led.slice(0, 15).map(function(r) {
+          var when = new Date(r.created_at);
+          var st = { completed: '#6ee7a8', auto: '#6ee7a8', approved: '#6ee7a8', asked: '#888', declined: '#facc15', refused: '#f87171', failed: '#f87171' }[r.status] || '#888';
+          var label = { completed: 'paid', auto: 'paid without asking', approved: 'approved', asked: 'asked, no answer', declined: 'you said no', refused: 'blocked by your rules', failed: 'failed' }[r.status] || r.status;
+          return '<div style="display:flex;gap:10px;align-items:baseline;"><span style="color:#666;min-width:88px;">' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</span><span style="color:#ddd;">' + escHtml(r.amount_text || (r.amount != null ? money(r.amount, r.currency) : '?')) + '</span><span>' + escHtml(r.merchant || r.host || '') + '</span><span style="color:' + st + ';">' + label + '</span>' + (r.source === 'agent' ? '<span class="muted">agent</span>' : '') + '</div>';
+        }).join('') : '<div style="color:#666;">Nothing yet.</div>';
+      } catch (e) { console.error('wallet load', e); }
+    }
+    async function saveSpendLimits() {
+      var body = {
+        per_purchase: document.getElementById('sl-per-purchase').value,
+        per_day: document.getElementById('sl-per-day').value,
+        per_month: document.getElementById('sl-per-month').value,
+        currency: document.getElementById('sl-currency').value.trim().toUpperCase() || undefined,
+        always_ask: document.getElementById('sl-always-ask').checked,
+        auto_under: document.getElementById('sl-always-ask').checked ? '' : document.getElementById('sl-auto-under').value,
+      };
+      var st = document.getElementById('sl-status'); st.textContent = 'Saving...';
+      var res = await fetch('/api/settings/spend-limits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var data = await res.json().catch(function() { return {}; });
+      st.textContent = res.ok ? 'Saved.' : (data.error || 'Could not save');
+      setTimeout(function() { st.textContent = ''; }, 3000);
+    }
+    function toggleAddCard() {
+      var el = document.getElementById('wallet-add');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+      if (el.style.display === 'block') document.getElementById('wc-number').focus();
+    }
+    async function addWalletCard() {
+      var st = document.getElementById('wc-status'); st.textContent = 'Saving...';
+      var body = {
+        number: document.getElementById('wc-number').value,
+        exp_month: document.getElementById('wc-exp-month').value,
+        exp_year: document.getElementById('wc-exp-year').value,
+        cvc: document.getElementById('wc-cvc').value,
+        holder: document.getElementById('wc-holder').value,
+        billing: { postcode: document.getElementById('wc-postcode').value },
+        label: document.getElementById('wc-label').value,
+        limits: { per_purchase: document.getElementById('wc-per-purchase').value, per_month: document.getElementById('wc-per-month').value },
+      };
+      var res = await fetch('/api/wallet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) { st.textContent = data.error || 'Could not save the card'; return; }
+      st.textContent = '';
+      ['wc-number','wc-exp-month','wc-exp-year','wc-cvc','wc-holder','wc-postcode','wc-label','wc-per-purchase','wc-per-month'].forEach(function(id) { document.getElementById(id).value = ''; });
+      document.getElementById('wallet-add').style.display = 'none';
+      showToast('Card added');
+      loadWallet();
+    }
+    async function removeWalletCard(id) {
+      if (!confirm('Remove this card from the Wallet?')) return;
+      var res = await fetch('/api/wallet/' + id, { method: 'DELETE' });
+      if (res.ok) { showToast('Removed'); loadWallet(); } else showToast('Could not remove it', true);
+    }
+    async function setDefaultCard(id) {
+      var res = await fetch('/api/wallet/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_default: true }) });
+      if (res.ok) loadWallet();
+    }
+
     async function loadPhoneAccess() {
       try {
         var r = await fetch('/api/phone');
@@ -4636,6 +4825,76 @@
       }
     }
 
+    // ---- Bookings picked out of mail: same card shape as a flight ----
+    var BOOKING_ICON = { train: '&#128646;', hotel: '&#127976;', event: '&#127915;', restaurant: '&#127869;&#65039;', car: '&#128663;', ferry: '&#9973;', bus: '&#128652;', other: '&#128203;' };
+    function fmtBookingTime(iso, tz) {
+      if (!iso) return '';
+      var d = new Date(iso); if (isNaN(d)) return '';
+      try { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz || undefined }); }
+      catch (e) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+    }
+    function fmtBookingDate(iso, tz) {
+      var d = new Date(iso); if (isNaN(d)) return '';
+      try { return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: tz || undefined }); }
+      catch (e) { return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
+    }
+    function renderBookingCard(b) {
+      var det = b.details || {};
+      var icon = BOOKING_ICON[b.kind] || BOOKING_ICON.other;
+      var when = fmtBookingTime(b.starts_at, b.timezone);
+      var until = b.ends_at ? fmtBookingTime(b.ends_at, b.timezone) : '';
+      var sameDay = b.ends_at && fmtBookingDate(b.ends_at, b.timezone) === fmtBookingDate(b.starts_at, b.timezone);
+      var route = det.from && det.to ? escHtml(det.from) + ' &rarr; ' + escHtml(det.to) : (b.location ? escHtml(b.location) : '');
+      var tbc = function(v) { return v ? escHtml(String(v)) : '<span style="color:#555;">TBC</span>'; };
+      var details = [];
+      details.push('<span class="flight-detail">Ref <span>' + tbc(b.reference) + '</span></span>');
+      if (b.kind === 'hotel' && b.ends_at) details.push('<span class="flight-detail">Check-out <span>' + escHtml(fmtBookingDate(b.ends_at, b.timezone)) + '</span></span>');
+      else if (b.ends_at && !sameDay) details.push('<span class="flight-detail">Until <span>' + escHtml(fmtBookingDate(b.ends_at, b.timezone)) + '</span></span>');
+      else if (until) details.push('<span class="flight-detail">Until <span>' + escHtml(until) + '</span></span>');
+      if (det.seat) details.push('<span class="flight-detail">Seat <span>' + escHtml(det.seat) + '</span></span>');
+      if (det.room && String(det.room).trim().toLowerCase() !== String(b.title).trim().toLowerCase()) details.push('<span class="flight-detail">Room <span>' + escHtml(det.room) + '</span></span>');
+      if (det.guests) details.push('<span class="flight-detail">Guests <span>' + escHtml(String(det.guests)) + '</span></span>');
+      if (det.cancel_by) details.push('<span class="flight-detail">Free cancellation until <span>' + escHtml(fmtBookingDate(det.cancel_by, b.timezone)) + '</span></span>');
+      if (det.check_in_url) details.push('<span class="flight-detail"><a href="' + escHtml(det.check_in_url) + '" target="_blank" rel="noopener" style="color:#6ee7a8;">Check in</a></span>');
+      var cancelled = b.status === 'cancelled';
+      return '<div class="flight-card" style="' + (cancelled ? 'opacity:0.55;' : '') + '">' +
+        '<div class="flight-status-bar ' + (cancelled ? 'cancelled' : 'scheduled') + '"></div>' +
+        '<div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+          '<div style="min-width:110px;"><span style="font-size:13px;margin-right:6px;" title="' + escHtml(b.kind) + '">' + icon + '</span><span class="flight-number">' + escHtml(b.title) + '</span>' +
+            (b.provider ? '<div style="font-size:11px;color:#666;">' + escHtml(b.provider) + '</div>' : '') + '</div>' +
+          '<div style="flex:1;min-width:200px;font-size:13px;color:#bbb;">' + route + (when ? '<div style="font-size:11px;color:#777;">' + escHtml(when) + (sameDay && until ? ' to ' + escHtml(until) : '') + '</div>' : '') + '</div>' +
+          '<span class="flight-status-badge ' + (cancelled ? 'cancelled' : 'scheduled') + '">' + (cancelled ? 'Cancelled' : 'Booked') + '</span>' +
+          '<button class="conn-btn conn-btn-manage" title="Not a booking? Remove it" onclick="removeBooking(\'' + b.id + '\')" style="padding:2px 8px;font-size:11px;">&times;</button>' +
+        '</div>' +
+        (details.length ? '<div class="flight-details" style="padding:0 14px 10px;">' + details.join('') + '</div>' : '') +
+      '</div>';
+    }
+    async function loadBookings() {
+      var listEl = document.getElementById('bookings-list');
+      if (!listEl) return;
+      try {
+        var res = await fetch('/api/bookings');
+        if (!res.ok) throw new Error('Failed');
+        var rows = await res.json();
+        if (!rows.length) { listEl.innerHTML = ''; updateUpcomingEmpty(); return; }
+        var groups = {};
+        rows.forEach(function(b) { var k = fmtBookingDate(b.starts_at, b.timezone); (groups[k] = groups[k] || []).push(b); });
+        var html = '';
+        Object.keys(groups).forEach(function(date) {
+          var n = Math.round((new Date(groups[date][0].starts_at) - new Date()) / 86400000);
+          var away = n < 0 ? 'now' : n === 0 ? 'today' : n === 1 ? 'tomorrow' : 'in ' + n + ' days';
+          html += '<div class="flights-date-header">' + date + '<span class="flights-away"> · ' + away + '</span></div>';
+          groups[date].forEach(function(b) { html += renderBookingCard(b); });
+        });
+        listEl.innerHTML = html;
+        updateUpcomingEmpty();
+      } catch (e) { console.error('bookings', e); updateUpcomingEmpty(); }
+    }
+    async function removeBooking(id) {
+      var res = await fetch('/api/bookings/' + id, { method: 'DELETE' });
+      if (res.ok) loadBookings(); else showToast('Could not remove it', true);
+    }
+
     function renderFlightCard(f) {
       const status = getFlightStatusInfo(f);
       const live = f.liveStatus || {};
@@ -4781,9 +5040,10 @@
     function updateUpcomingEmpty() {
       var f = document.getElementById('flights-list');
       var r = document.getElementById('reminders-list');
+      var b = document.getElementById('bookings-list');
       var e = document.getElementById('flights-empty');
       if (!e) return;
-      var empty = (!f || !f.children.length) && (!r || !r.children.length);
+      var empty = (!f || !f.children.length) && (!r || !r.children.length) && (!b || !b.children.length);
       e.style.display = empty ? 'block' : 'none';
     }
 
@@ -7393,6 +7653,20 @@
   </div>
 
   <!-- Note Modal -->
+  <div class="modal-overlay" id="disconnect-modal" onclick="if(event.target===this)answerDisconnect(false)">
+    <div class="modal" role="dialog" aria-labelledby="disconnect-title">
+      <h3 id="disconnect-title">Disconnect</h3>
+      <p id="disconnect-body" style="font-size:13px;color:#aaa;line-height:1.55;margin:0 0 14px;"></p>
+      <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#ccc;cursor:pointer;margin-bottom:18px;">
+        <input type="checkbox" id="disconnect-purge" checked style="width:14px;height:14px;margin:3px 0 0;accent-color:#6ee7a8;flex:none;">
+        <span>Also delete everything ClosedHand synced from this account: the mail and calendar it kept, and what it learned from them. Recommended. Uncheck to keep that until you reconnect.</span>
+      </label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>
+        <button class="conn-btn conn-btn-disconnect" id="disconnect-go" onclick="answerDisconnect(true)">Disconnect</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
     <div class="modal" style="max-width:600px;">
       <h3 id="note-modal-heading">New Note</h3>
