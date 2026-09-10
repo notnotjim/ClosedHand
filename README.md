@@ -52,6 +52,8 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Chat apps, honestly ranked.** Telegram is the easy one: a token from BotFather, no public address needed, works behind your router on a laptop. Discord is nearly as simple. WhatsApp is possible but heavy: Meta requires a Business account, a dedicated number and a public HTTPS address, so it belongs on an always-on server rather than a laptop.
 
+**Any MCP server, any way it is published.** Paste a server's web address, the `npx` or `uvx` command from its README, or its JSON block into the dashboard and ClosedHand connects to it: remote servers with a key or a sign-in, servers that run on your machine, and servers that offer documents and ready-made prompts as well as tools. Everything is scanned for prompt injection and impersonation before it is switched on, an action that deletes or sends is put to you first, and the connection is there for agents, automations and the morning pulse, not only the chat window. Skill files work from the same box.
+
 **Calendar without Google, if you prefer.** A generic CalDAV client covers iCloud, Fastmail, Nextcloud and friends with an app-specific password, no OAuth consent screens involved.
 
 **A dashboard that tells the truth.** Connections, agents, memory, and a usage tab that shows where your key money goes, token by token, feature by feature, from your providers' own numbers.

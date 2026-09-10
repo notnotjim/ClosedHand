@@ -6,6 +6,51 @@
 const XAI_API_KEY = process.env.XAI_API_KEY;
 const SCAN_MODEL = process.env.SCAN_MODEL || "grok-4.5";
 
+// A self-host install has no platform key. The host registers a resolver
+// that says which of the install's own models can do the reading:
+// { wire: "openai", url, key, model } or { wire: "anthropic", key, model }.
+let _resolveBackend = null;
+function configureScanBackend(fn) { _resolveBackend = fn; }
+
+async function callFallbackModel(systemPrompt, userContent) {
+  if (!_resolveBackend) return null;
+  let b = null;
+  try { b = await _resolveBackend(); } catch (e) { console.error("[security-scan] backend resolve failed:", e.message); }
+  if (!b || !b.key || !b.model) return null;
+  try {
+    let text = "";
+    if (b.wire === "anthropic") {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": b.key, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: b.model, max_tokens: 1024, system: systemPrompt, messages: [{ role: "user", content: userContent }] }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!resp.ok) { console.error("[security-scan] fallback API error:", resp.status); return null; }
+      const data = await resp.json();
+      text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text).join("");
+    } else {
+      const resp = await fetch(String(b.url).replace(/\/+$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + b.key },
+        body: JSON.stringify({ model: b.model, max_tokens: 1024, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userContent }], ...(b.extra || {}) }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!resp.ok) { console.error("[security-scan] fallback API error:", resp.status); return null; }
+      const data = await resp.json();
+      text = data.choices?.[0]?.message?.content || "";
+    }
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.risk_level || !parsed.findings) return null;
+    return parsed;
+  } catch (e) {
+    console.error("[security-scan] fallback error:", e.message);
+    return null;
+  }
+}
+
 // Built-in tool names (for impersonation detection)
 const BUILTIN_TOOLS = [
   "add_schedule","list_schedules","remove_schedule","pin_fact","get_facts","delete_fact",
@@ -24,6 +69,7 @@ const BUILTIN_TOOLS = [
   "automation_resume","bridge_calendar_list","bridge_calendar_create","bridge_files_list",
   "bridge_files_read","bridge_files_write","bridge_files_move","bridge_files_delete",
   "bridge_files_search","bridge_shell_run","get_tool_details",
+  "mcp_resources","mcp_prompt","use_skill",
 ];
 
 const FALLBACK_RESULT = {
@@ -34,6 +80,8 @@ const FALLBACK_RESULT = {
 
 async function callScanModel(systemPrompt, userContent) {
   if (!XAI_API_KEY) {
+    const viaOwn = await callFallbackModel(systemPrompt, userContent);
+    if (viaOwn) return viaOwn;
     console.error("[security-scan] No API key configured");
     return null;
   }
@@ -156,4 +204,4 @@ Rules:
   return result || FALLBACK_RESULT;
 }
 
-module.exports = { scanMcpTools, scanSkillContent };
+module.exports = { scanMcpTools, scanSkillContent, configureScanBackend };

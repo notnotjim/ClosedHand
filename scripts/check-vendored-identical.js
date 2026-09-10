@@ -43,6 +43,10 @@ const PAIRS = [
     name: "doc-search",
     copies: ["lib/services/doc-search.js", "webapp/doc-search.js"],
   },
+  {
+    name: "mcp-client",
+    copies: ["lib/mcp-client.js", "webapp/mcp-client.js"],
+  },
 ];
 
 function normalise(src, name) {
@@ -51,7 +55,7 @@ function normalise(src, name) {
   // comments, must match: a comment that drifts is usually a behaviour that
   // drifted with it.
   return src
-    .replace(new RegExp("^// (?:lib/services|webapp)/" + name + "\\.js[^\\n]*", "m"), "// <header>")
+    .replace(new RegExp("^// (?:lib/services|lib|webapp)/" + name + "\\.js[^\\n]*", "m"), "// <header>")
     .replace(/require\(["'](?:\.\.\/|\.\/)config["']\)/g, 'require("<config>")')
     .replace(/require(?:\.resolve)?\(["'](?:\.\.\/|\.\/)local-models["']\)/g, 'require("<local-models>")')
     .replace(/\r\n/g, "\n")

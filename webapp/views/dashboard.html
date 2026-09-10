@@ -2047,14 +2047,14 @@
               <span style="font-size:17px;font-weight:600;color:#eaeaef;letter-spacing:-0.01em;">Add a connection or skill</span>
             </div>
             <div style="text-align:center;margin-bottom:28px;">
-              <span style="font-size: 14px;color:rgba(255,255,255,0.35);">Paste an MCP server URL or a skill link. Works with Notion, Stripe, GitHub, and hundreds more.</span>
+              <span style="font-size: 14px;color:rgba(255,255,255,0.35);">Paste an MCP server's link, the command from its README, or its JSON block. Skill links work too.</span>
               <br><span style="font-size: 13px;color:rgba(255,255,255,0.2);">&#x1f6e1; Everything is scanned for security risks before activation.</span>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <input type="text" id="mcp-url-input" placeholder="Paste an MCP or skill URL..." style="flex:1;padding:0;background:transparent;border:none;color:#eaeaef;font-size:13px;outline:none;font-family:inherit;">
+                <textarea id="mcp-url-input" rows="1" placeholder="Paste a link, a command, or a JSON block..." oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#eaeaef;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -2067,12 +2067,25 @@
 
             <!-- Status messages -->
             <div id="mcp-auth-status" style="display:none;margin-top:10px;font-size: 13px;color:#888;text-align:center;"></div>
-            <div id="mcp-client-id-form" style="display:none;margin-top:12px;">
-              <div style="font-size: 13px;color:rgba(255,255,255,0.35);margin-bottom:6px;text-align:center;">This server requires a client ID. Register an app with the service and enter the credentials:</div>
-              <div style="display:flex;gap:6px;max-width:480px;margin:0 auto;">
-                <input type="text" id="mcp-client-id-input" placeholder="Client ID" style="flex:1;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
-                <input type="text" id="mcp-client-secret-input" placeholder="Client secret (optional)" style="flex:1;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
-                <button onclick="continueOAuthWithClientId()" style="padding:8px 14px;background:#25262b;border:1px solid #333;border-radius:10px;color:#aaa;font-size: 13px;cursor:pointer;font-family:inherit;white-space:nowrap;">Authorize</button>
+            <div id="mcp-credentials" style="display:none;margin-top:12px;max-width:520px;margin-left:auto;margin-right:auto;">
+              <div style="display:flex;gap:6px;">
+                <select id="mcp-header-select" onchange="mcpHeaderChanged(this)" style="padding:8px 10px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 13px;outline:none;font-family:inherit;">
+                  <option value="Authorization">Bearer token</option>
+                  <option value="x-api-key">x-api-key header</option>
+                  <option value="custom">Other header</option>
+                </select>
+                <input type="text" id="mcp-header-custom" placeholder="Header name" style="display:none;width:130px;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
+                <input type="password" id="mcp-key-input" placeholder="Key" autocomplete="off" style="flex:1;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
+              </div>
+              <div id="mcp-oauth-fields" style="display:none;margin-top:8px;">
+                <div style="font-size: 13px;color:rgba(255,255,255,0.35);margin-bottom:6px;text-align:center;">Or sign in through the service with an app you registered there:</div>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" id="mcp-client-id-input" placeholder="Client ID" style="flex:1;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
+                  <input type="password" id="mcp-client-secret-input" placeholder="Client secret (optional)" autocomplete="off" style="flex:1;padding:8px 12px;background:rgba(18,19,24,0.95);border:1px solid #2e2f35;border-radius:10px;color:#ccc;font-size: 14px;outline:none;font-family:inherit;">
+                </div>
+              </div>
+              <div style="text-align:center;margin-top:8px;">
+                <button onclick="submitMcpCredentials()" style="padding:8px 16px;background:#25262b;border:1px solid #333;border-radius:10px;color:#ddd;font-size: 13px;cursor:pointer;font-family:inherit;">Connect</button>
               </div>
             </div>
           </div>
@@ -3342,16 +3355,27 @@
             : MCP_GENERIC_ICON;
           var borderColor = m.status === 'connected' ? '#1a2e24' : '#2e2f35';
           var bgColor = m.status === 'connected' ? '#131a17' : '#1e1f23';
-          var subtitle = toolCount ? toolCount + ' tools' : escHtml(m.server_url);
+          var caps = m.caps || {};
+          var bits = [];
+          if (toolCount) bits.push(toolCount + (toolCount === 1 ? ' tool' : ' tools'));
+          if (caps.resources) bits.push(caps.resources + (caps.resources === 1 ? ' resource' : ' resources'));
+          if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
+          if (m.transport === 'stdio') bits.push('runs on this machine');
+          var subtitle = bits.length ? bits.join(' · ') : escHtml(m.transport === 'stdio' ? (m.command || '') : m.server_url);
           var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
+            : m.status === 'needs_auth'
+            ? '<span style="font-size: 13px;color:#facc15;background:rgba(250,204,21,0.1);padding:2px 6px;border-radius:4px;white-space:nowrap;">Needs sign-in</span>'
             : m.status === 'error'
             ? '<span style="font-size: 13px;color:#ef4444;background:rgba(239,68,68,0.1);padding:2px 6px;border-radius:4px;white-space:nowrap;">Error</span>'
             : '<span style="font-size: 13px;color:#888;background:rgba(136,136,136,0.1);padding:2px 6px;border-radius:4px;white-space:nowrap;">Pending</span>';
 
           // Unfurl detail rows
-          var detailHtml = '<div class="conn-row"><span class="conn-row-label">Server URL</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>';
-          detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + escHtml(m.auth_type || 'None') + '</span></div>';
+          var detailHtml = m.transport === 'stdio'
+            ? '<div class="conn-row"><span class="conn-row-label">Runs</span><span class="conn-row-value" style="word-break:break-all;font-family:ui-monospace,monospace;font-size:12px;">' + escHtml([m.command].concat(m.args || []).join(' ')) + '</span></div>'
+            : '<div class="conn-row"><span class="conn-row-label">Server URL</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>';
+          var authLabel = m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'None';
+          detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + authLabel + '</span></div>';
           detailHtml += '<div class="conn-row"><span class="conn-row-label">Status</span><span class="conn-row-value">' + escHtml(m.status || 'unknown') + '</span></div>';
           if (m.connected_at) {
             var d = new Date(m.connected_at);
@@ -3368,10 +3392,19 @@
             }).join('');
           }
 
+          var prompts = m.prompts_discovered || [];
+          if (prompts.length) {
+            detailHtml += '<hr class="conn-divider">';
+            detailHtml += '<div class="conn-resources-label">Prompts it offers</div>';
+            detailHtml += prompts.map(function(p) {
+              return '<div class="conn-resource"><span>' + escHtml(p.name) + (p.description ? ' <span style="color:#666;">' + escHtml(p.description.split('.')[0]) + '</span>' : '') + '</span></div>';
+            }).join('');
+          }
+
           // Action buttons
           detailHtml += '<div class="conn-drawer-actions">';
           detailHtml += '<button onclick="event.stopPropagation();testMcp(\'' + m.id + '\')" class="conn-btn conn-btn-manage">Test</button>';
-          if (m.status === 'error') {
+          if (m.status === 'error' || m.status === 'needs_auth') {
             detailHtml += '<button onclick="event.stopPropagation();fixMcp(\'' + m.id + '\',this)" class="conn-btn conn-btn-manage" style="background:rgba(250,204,21,0.1);border-color:rgba(250,204,21,0.3);color:#facc15;">Fix</button>';
           }
           detailHtml += '<button onclick="event.stopPropagation();deleteMcp(\'' + m.id + '\')" class="conn-btn conn-btn-disconnect">Remove</button>';
@@ -3392,163 +3425,151 @@
       } catch (e) { console.error('Load MCPs error:', e); }
     }
 
-    // Pending OAuth data (set by probe, used by continueOAuthWithClientId)
-    var _pendingMcpOAuth = null;
+    // What the person pasted, kept while the server asks for more (a key, a
+    // client ID, a nod past a warning) so the retry carries the same input.
+    var _mcpPending = null;
+
+    function mcpStatus(text) {
+      var el = document.getElementById('mcp-auth-status');
+      if (!text) { el.style.display = 'none'; el.textContent = ''; return; }
+      el.style.display = 'block';
+      el.textContent = text;
+    }
+
+    function mcpGrowInput(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+    }
+
+    function mcpInputKey(e) {
+      // Enter connects; Shift+Enter makes a new line for a JSON block.
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addMcpConnection(); }
+    }
 
     async function addMcpConnection() {
-      var url = document.getElementById('mcp-url-input').value.trim();
-      if (!url) return;
+      var box = document.getElementById('mcp-url-input');
+      var input = box.value.trim();
+      if (!input) return;
 
-      // Detect if it's a skill URL (GitHub repo with skill path patterns)
-      if (/github\.com\/.*\/(skill|SKILL|claude-skill|awesome-claude)/i.test(url) || /\.md$/i.test(url) || /raw\.githubusercontent/i.test(url)) {
-        installSkill(false, url);
+      // A skill link goes to the skill installer, which has its own flow.
+      if (/github\.com\/.*\/(skill|SKILL|claude-skill|awesome-claude)/i.test(input) || /\.md$/i.test(input) || /raw\.githubusercontent/i.test(input)) {
+        installSkill(false, input);
         return;
       }
 
-      var name = mcpNameFromUrl(url);
-
-      var statusEl = document.getElementById('mcp-auth-status');
-      var clientForm = document.getElementById('mcp-client-id-form');
-      clientForm.style.display = 'none';
-      statusEl.style.display = 'block';
-      statusEl.textContent = 'Checking server...';
-
-      try {
-        // Probe the URL to check if OAuth is needed
-        var probeRes = await fetch('/api/mcps/probe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ server_url: url })
-        });
-        var probe = await probeRes.json();
-
-        if (probe.error) {
-          statusEl.textContent = probe.error;
-          return;
-        }
-
-        if (!probe.auth_required) {
-          // No auth needed, save with security scan
-          statusEl.textContent = 'Scanning for security issues...';
-          var saveResult = await saveMcpWithScan(name, url, null, null, false);
-          if (saveResult) {
-            statusEl.style.display = 'none';
-            document.getElementById('mcp-url-input').value = '';
-            showToast('Connected');
-            loadMcps();
-          }
-          return;
-        }
-
-        // OAuth required
-        if (probe.needs_client_id) {
-          // Dynamic registration failed, need manual client ID
-          statusEl.textContent = 'OAuth required. Auto-registration not supported by this server.';
-          _pendingMcpOAuth = { server_url: url, name: name, probe: probe };
-          clientForm.style.display = 'block';
-          return;
-        }
-
-        // Auto-registered, redirect to authorize
-        statusEl.textContent = 'Redirecting to authorize...';
-        await startMcpOAuth(url, name, probe.authorization_endpoint, probe.token_endpoint, probe.client_id, probe.client_secret);
-      } catch (e) {
-        statusEl.textContent = 'Error: ' + e.message;
-      }
+      document.getElementById('mcp-credentials').style.display = 'none';
+      _mcpPending = { input: input };
+      var looksLikeCommand = /^(npx|uvx|uv|node|python|deno|bunx?)\b/i.test(input) || /"command"\s*:/.test(input);
+      mcpStatus(looksLikeCommand ? 'Starting the server. The first time downloads it, which can take a minute...' : 'Checking the server...');
+      await connectMcp({});
     }
 
-    // Save MCP with security scan handling
-    async function saveMcpWithScan(name, url, authToken, authType, acceptWarnings) {
-      var statusEl = document.getElementById('mcp-auth-status');
+    // One call does it all; the reply says what, if anything, is still needed.
+    async function connectMcp(extra) {
+      if (!_mcpPending) return;
+      var btn = document.getElementById('mcp-connect-btn');
+      btn.disabled = true;
+      var body = Object.assign({ input: _mcpPending.input }, _mcpPending.extra || {}, extra || {});
+      _mcpPending.extra = body;
       try {
         var res = await fetch('/api/mcps', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, server_url: url, auth_token: authToken, auth_type: authType, accept_warnings: acceptWarnings })
+          body: JSON.stringify(body)
         });
         var data = await res.json();
 
+        if (data.skill) { installSkill(false, data.url); return; }
+
+        if (data.auth_required && data.redirect_url) {
+          var host = ''; try { host = new URL(data.server_url).hostname.replace(/^(www|mcp|api)\./, ''); } catch (e) {}
+          mcpStatus('Sending you to ' + (host || 'the service') + ' to approve...');
+          // The dashboard often sits in a frame; the sign-in page and the
+          // return trip belong to the whole window.
+          (window.top || window).location.href = data.redirect_url;
+          return;
+        }
+
+        if (data.needs_credentials) {
+          mcpStatus(data.message || 'This server wants a key.');
+          var panel = document.getElementById('mcp-credentials');
+          panel.style.display = 'block';
+          document.getElementById('mcp-oauth-fields').style.display = data.oauth_possible ? 'block' : 'none';
+          document.getElementById('mcp-key-input').focus();
+          return;
+        }
+
         if (data.blocked) {
-          statusEl.style.display = 'block';
-          statusEl.innerHTML = '<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:12px;margin-top:4px;">' +
-            '<div style="color:#f87171;font-weight:600;font-size: 14px;margin-bottom:4px;">Blocked: ' + escHtml(data.scan.summary) + '</div>' +
-            '<ul style="margin:0;padding-left:16px;color:#fca5a5;font-size: 13px;list-style:disc;">' +
-            data.scan.findings.map(function(f) { return '<li>' + escHtml(f.description) + '</li>'; }).join('') +
-            '</ul></div>';
-          return false;
+          renderMcpScan(data.scan, false);
+          return;
         }
-
         if (data.needs_confirmation) {
-          statusEl.style.display = 'block';
-          window._pendingMcpSave = { name: name, url: url, authToken: authToken, authType: authType };
-          statusEl.innerHTML = '<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:12px;margin-top:4px;">' +
-            '<div style="color:#fbbf24;font-weight:600;font-size: 14px;margin-bottom:4px;">Warning: ' + escHtml(data.scan.summary) + '</div>' +
-            '<ul style="margin:0;padding-left:16px;color:#fcd34d;font-size: 13px;list-style:disc;">' +
-            data.scan.findings.map(function(f) { return '<li>' + escHtml(f.description) + '</li>'; }).join('') +
-            '</ul>' +
-            '<button onclick="proceedMcpDespiteWarning()" style="margin-top:8px;padding:6px 14px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fbbf24;font-size: 13px;cursor:pointer;font-family:inherit;">Connect anyway</button>' +
-            '</div>';
-          return false;
+          renderMcpScan(data.scan, true);
+          return;
+        }
+        if (!res.ok || data.error) {
+          mcpStatus(data.error || 'Could not connect');
+          return;
         }
 
-        if (!res.ok) { showToast(data.error || 'Failed to connect', true); return false; }
-        return true;
+        var names = (data.connected || []).map(function(c) { return c.name; });
+        var probs = data.problems || [];
+        mcpStatus('');
+        document.getElementById('mcp-url-input').value = '';
+        mcpGrowInput(document.getElementById('mcp-url-input'));
+        document.getElementById('mcp-credentials').style.display = 'none';
+        _mcpPending = null;
+        if (names.length) {
+          showToast('Connected ' + names.join(', '));
+          miniCelebration();
+        }
+        if (probs.length) {
+          mcpStatus(probs.map(function(p) { return p.error; }).join(' '));
+        }
+        loadMcps();
       } catch (e) {
-        statusEl.style.display = 'block';
-        statusEl.textContent = 'Error: ' + e.message;
-        return false;
+        mcpStatus('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
       }
+    }
+
+    function renderMcpScan(scan, canProceed) {
+      var statusEl = document.getElementById('mcp-auth-status');
+      statusEl.style.display = 'block';
+      var tone = canProceed ? { bg: 'rgba(251,191,36,0.08)', bd: 'rgba(251,191,36,0.2)', fg: '#fbbf24', li: '#fcd34d', word: 'Warning' }
+                            : { bg: 'rgba(248,113,113,0.08)', bd: 'rgba(248,113,113,0.2)', fg: '#f87171', li: '#fca5a5', word: 'Blocked' };
+      statusEl.innerHTML = '<div style="background:' + tone.bg + ';border:1px solid ' + tone.bd + ';border-radius:10px;padding:12px;margin-top:4px;text-align:left;">' +
+        '<div style="color:' + tone.fg + ';font-weight:600;font-size: 14px;margin-bottom:4px;">' + tone.word + ': ' + escHtml(scan.summary) + '</div>' +
+        '<ul style="margin:0;padding-left:16px;color:' + tone.li + ';font-size: 13px;list-style:disc;">' +
+        (scan.findings || []).map(function(f) { return '<li>' + escHtml(f.description) + '</li>'; }).join('') +
+        '</ul>' +
+        (canProceed ? '<button onclick="proceedMcpDespiteWarning()" style="margin-top:8px;padding:6px 14px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fbbf24;font-size: 13px;cursor:pointer;font-family:inherit;">Connect anyway</button>' : '') +
+        '</div>';
     }
 
     async function proceedMcpDespiteWarning() {
-      if (!window._pendingMcpSave) return;
-      var p = window._pendingMcpSave;
-      document.getElementById('mcp-auth-status').textContent = 'Connecting...';
-      var ok = await saveMcpWithScan(p.name, p.url, p.authToken, p.authType, true);
-      if (ok) {
-        document.getElementById('mcp-auth-status').style.display = 'none';
-        document.getElementById('mcp-url-input').value = '';
-        showToast('Connected');
-        loadMcps();
-      }
+      mcpStatus('Connecting...');
+      await connectMcp({ accept_warnings: true });
     }
 
-    async function continueOAuthWithClientId() {
-      if (!_pendingMcpOAuth) return;
+    async function submitMcpCredentials() {
+      var key = document.getElementById('mcp-key-input').value.trim();
+      var header = document.getElementById('mcp-header-select').value;
+      if (header === 'custom') header = document.getElementById('mcp-header-custom').value.trim();
       var clientId = document.getElementById('mcp-client-id-input').value.trim();
-      if (!clientId) { showToast('Client ID required', true); return; }
-      var clientSecret = document.getElementById('mcp-client-secret-input').value.trim() || null;
-      var p = _pendingMcpOAuth;
-
-      document.getElementById('mcp-auth-status').textContent = 'Redirecting to authorize...';
-      document.getElementById('mcp-client-id-form').style.display = 'none';
-
-      await startMcpOAuth(p.server_url, p.name, p.probe.authorization_endpoint, p.probe.token_endpoint, clientId, clientSecret);
+      var clientSecret = document.getElementById('mcp-client-secret-input').value.trim();
+      if (!key && !clientId) { showToast('Paste a key or a client ID first', true); return; }
+      var extra = {};
+      if (key) { extra.auth_token = key; extra.header_name = header || 'Authorization'; }
+      if (clientId) { extra.client_id = clientId; if (clientSecret) extra.client_secret = clientSecret; }
+      document.getElementById('mcp-credentials').style.display = 'none';
+      mcpStatus('Connecting...');
+      await connectMcp(extra);
     }
 
-    async function startMcpOAuth(serverUrl, name, authEndpoint, tokenEndpoint, clientId, clientSecret) {
-      try {
-        var res = await fetch('/api/mcps/oauth-start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            server_url: serverUrl,
-            name: name,
-            authorization_endpoint: authEndpoint,
-            token_endpoint: tokenEndpoint,
-            client_id: clientId,
-            client_secret: clientSecret,
-          })
-        });
-        var data = await res.json();
-        if (data.redirect_url) {
-          window.location.href = data.redirect_url;
-        } else {
-          document.getElementById('mcp-auth-status').textContent = data.error || 'Failed to start OAuth';
-        }
-      } catch (e) {
-        document.getElementById('mcp-auth-status').textContent = 'Error: ' + e.message;
-      }
+    function mcpHeaderChanged(sel) {
+      document.getElementById('mcp-header-custom').style.display = sel.value === 'custom' ? '' : 'none';
     }
 
     async function testMcp(id) {
@@ -3556,7 +3577,10 @@
         var res = await fetch('/api/mcps/' + id + '/test', { method: 'POST' });
         var data = await res.json();
         if (data.success) {
-          showToast('Connected. ' + (data.tools?.length || 0) + ' tools found.');
+          var found = [(data.tools?.length || 0) + ' tools'];
+          if (data.resources) found.push(data.resources + ' resources');
+          if (data.prompts?.length) found.push(data.prompts.length + ' prompts');
+          showToast('Connected. ' + found.join(', ') + '.');
           miniCelebration();
         } else {
           showToast('Connection failed: ' + (data.error || 'Unknown error'), true);
@@ -3605,8 +3629,12 @@
           showToast('Fixed. Found ' + (data.tools?.length || 0) + ' tools.');
           miniCelebration();
           loadMcps();
+        } else if (data.needs_reauth && data.redirect_url) {
+          showToast('Sending you to sign in again...');
+          (window.top || window).location.href = data.redirect_url;
+          return;
         } else if (data.needs_reauth) {
-          showToast('Token expired. Please remove and re-connect this service.', true);
+          showToast('It needs signing in again, and the service gave no way to. Remove it and connect again.', true);
         } else {
           showToast('Could not fix: ' + (data.error || 'Unknown issue'), true);
         }

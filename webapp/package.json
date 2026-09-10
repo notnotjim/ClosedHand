@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@supabase/supabase-js": "^2.49.1",
     "adm-zip": "^0.5.17",
     "cheerio": "^1.2.0",

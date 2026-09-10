@@ -28,6 +28,15 @@ RUN npm ci --omit=dev \
       esac; \
     fi
 
+# MCP servers the user connects by command run inside this container. npx is
+# already here with node; uv brings uvx for the Python ones (it fetches its own
+# Python on first use). Their caches sit on the storage volume so a restart
+# does not download everything again.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+ENV npm_config_cache=/data/storage/cache/npm \
+    UV_CACHE_DIR=/data/storage/cache/uv \
+    UV_PYTHON_INSTALL_DIR=/data/storage/cache/uv-python
+
 # App source (see .dockerignore for exclusions).
 COPY . .
 # The commit this image was built from, for bug reports.

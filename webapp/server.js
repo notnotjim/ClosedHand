@@ -20,7 +20,8 @@ const { supabase } = require("./db");
 // Note: startAgent lives in the bot process (lib/agents.js), not importable from webapp.
 // Dashboard agent creation inserts a pending task; the bot picks it up.
 
-const { scanMcpTools, scanSkillContent } = require("./security-scan");
+const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./security-scan");
+const mcpClient = require("./mcp-client");
 
 const app = express();
 app.use("/novnc", express.static(path.join(__dirname, "public", "novnc")));
@@ -571,6 +572,30 @@ app.get("/api/phone/qr.svg", async (req, res) => {
   }
 });
 phoneAccess.boot();
+
+// The MCP and skill security scan reads with the platform's model on the
+// hosted product. A self-host install has no such key, so it reads with the
+// install's own: the internal machinery model the setup page derived, the
+// enrichment model, or the chat key itself.
+configureScanBackend(async () => {
+  const { getConf } = require("./config");
+  const url = await getConf("INTERNAL_LLM_URL"), model = await getConf("INTERNAL_LLM_MODEL"), key = await getConf("INTERNAL_LLM_API_KEY");
+  if (url && model && key) return { wire: "openai", url, key, model };
+  const eu = await getConf("ENRICH_API_URL"), em = await getConf("ENRICH_MODEL"), ek = await getConf("ENRICH_API_KEY");
+  if (eu && em && ek && !/^local:/.test(em)) return { wire: "openai", url: eu, key: ek, model: em };
+  const { data: profile } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).single();
+  const s = (profile && profile.settings) || {};
+  const provider = s.llm_provider || "anthropic";
+  const models = s.byok_models || {};
+  const { PROVIDERS, pickModel } = require("./provider-capabilities");
+  const cap = PROVIDERS[provider];
+  const pick = (role) => models.fast || models.default || (cap && cap[role] && pickModel(cap[role], [])) || (cap && cap.chat && pickModel(cap.chat, [])) || (cap && cap.chatDisplay) || null;
+  const keyField = { anthropic: "anthropic_api_key", openai: "openai_api_key", gemini: "gemini_api_key" }[provider];
+  if (provider === "anthropic" && s.anthropic_api_key) return { wire: "anthropic", key: s.anthropic_api_key, model: pick("enrich") };
+  if (keyField && s[keyField] && cap && cap.base) return { wire: "openai", url: cap.base, key: s[keyField], model: pick("enrich") };
+  if (provider === "custom" && s.custom_api_key && s.custom_base_url) return { wire: "openai", url: s.custom_base_url, key: s.custom_api_key, model: s.custom_model_fast || s.custom_model };
+  return null;
+});
 
 // --- Wizard write APIs (the wizard fills forms; nobody edits files) ---------
 
@@ -1580,274 +1605,242 @@ app.get("/auth/:service", async (req, res) => {
 // ============================================================
 
 // Probe an MCP URL to check if it needs OAuth
-app.post("/api/mcps/probe", async (req, res) => {
+// ---------------------------------------------------------------------------
+// MCP connections: any shape of server the user pastes.
+//
+// One handler does the whole job: read what was pasted (a URL, a command, a
+// JSON block), open it through the same client the bot uses, discover what it
+// offers, scan it, and save. OAuth is driven by the MCP SDK (resource
+// metadata, WWW-Authenticate, dynamic registration, PKCE, scopes, refresh);
+// this file only holds the pending state between the redirect out and the
+// callback in.
+// ---------------------------------------------------------------------------
+
+const MCP_REDIRECT_URL = `${BASE_URL}/auth/mcp-oauth/callback`;
+
+function mcpAuthTypeFor(headerName) {
+  const h = String(headerName || "").trim();
+  if (!h || h.toLowerCase() === "authorization") return "bearer";
+  if (h.toLowerCase() === "x-api-key") return "header";
+  return "header:" + h;
+}
+
+// Opens a row for discovery. Returns { client, transport, transportKind, stderr }
+// or throws; when the server wants OAuth and none has been granted, the
+// throw carries needsAuth and, if the SDK got as far as an authorisation
+// URL, redirectUrl.
+async function mcpOpenForDiscovery(row, { allowOAuth, state } = {}) {
+  let redirectUrl = null;
+  const io = {
+    redirectUrl: MCP_REDIRECT_URL,
+    state,
+    oauth: !!allowOAuth,
+    onRedirect: (u) => { redirectUrl = u; },
+    save: async (patch) => { Object.assign(row, patch); if (row.id) { const { error } = await supabase.from("user_mcps").update(patch).eq("id", row.id); if (error) console.error("[mcp] save failed:", error.message); } },
+    saveVerifier: async (v) => { row.oauth_code_verifier = v; },
+    connectTimeoutMs: row.transport === "stdio" ? 180000 : 20000,
+  };
+  try {
+    return await mcpClient.openClient(row, io);
+  } catch (e) {
+    if (redirectUrl) e.redirectUrl = redirectUrl;
+    throw e;
+  }
+}
+
+async function mcpDiscoverAndScan(client, row, acceptWarnings) {
+  const found = await mcpClient.discover(client);
+  let scan = null;
+  if (found.tools.length > 0) {
+    scan = await scanMcpTools(found.tools);
+    console.log(`[security-scan] MCP "${row.name || row.server_url}": ${scan.risk_level} - ${scan.summary}`);
+    if (scan.risk_level === "blocked") return { found, verdict: { blocked: true, scan } };
+    if (scan.risk_level === "warning" && !acceptWarnings) return { found, verdict: { needs_confirmation: true, scan } };
+  }
+  return { found, verdict: null };
+}
+
+function mcpRowPatchFrom(found) {
+  return {
+    tools_discovered: found.tools.map((t) => t.name),
+    prompts_discovered: found.prompts.map((p) => ({ name: p.name, description: p.description || "" })),
+    caps: {
+      tools: found.tools.length,
+      resources: found.resources.length + found.resourceTemplates.length,
+      prompts: found.prompts.length,
+      server: found.serverInfo ? { name: found.serverInfo.name, version: found.serverInfo.version } : null,
+    },
+  };
+}
+
+async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
+  const toolNames = found.tools.map((t) => t.name);
+  const isStdio = row.transport === "stdio";
+  const record = {
+    user_id: userId,
+    name: String(explicitName || "").trim() || row.name || await resolveMcpName(found.serverInfo, row.server_url, toolNames),
+    logo_url: isStdio ? null : await storeMcpIcon(found.serverInfo, row.server_url),
+    server_url: row.server_url,
+    transport: isStdio ? "stdio" : transportKind,
+    command: row.command || null,
+    args: row.args || null,
+    env: row.env || null,
+    headers: row.headers || null,
+    auth_token: row.auth_token || null,
+    auth_type: row.auth_type || null,
+    oauth_client_id: row.oauth_client_id || null,
+    oauth_client_secret: row.oauth_client_secret || null,
+    oauth_refresh_token: row.oauth_refresh_token || null,
+    oauth_token_expiry: row.oauth_token_expiry || null,
+    oauth_scope: row.oauth_scope || null,
+    status: "connected",
+    installed_via: row.auth_type === "oauth" ? "oauth" : "manual",
+    updated_at: new Date().toISOString(),
+    ...mcpRowPatchFrom(found),
+  };
+  const { data, error } = await supabase
+    .from("user_mcps")
+    .upsert(record, { onConflict: "user_id,server_url" })
+    .select("id, name, server_url, status, transport, caps")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// The one connect handler. Body: { input | server_url, name?, auth_token?,
+// header_name?, client_id?, client_secret?, accept_warnings? }.
+async function connectMcpHandler(req, res) {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    const { server_url } = req.body;
-    if (!server_url) return res.status(400).json({ error: "server_url required" });
+    const body = req.body || {};
+    const parsed = mcpClient.parseServerInput(body.input || body.server_url || "");
+    if (parsed.kind === "skill") return res.json({ skill: true, url: parsed.url });
+    if (parsed.kind === "empty") return res.status(400).json({ error: "Paste something first" });
+    if (parsed.kind === "invalid" || !parsed.entries.length) return res.status(400).json({ error: parsed.error || "Nothing to connect in that" });
 
-    try {
-      const parsed = new URL(server_url);
-      if (parsed.protocol !== "https:") return res.status(400).json({ error: "HTTPS required" });
-    } catch { return res.status(400).json({ error: "Invalid URL" }); }
+    const selfHost = mcpClient.isSelfHost();
+    const connected = [];
+    const problems = [];
 
-    // Try calling tools/list to see if auth is required
-    const baseUrl = server_url.replace(/\/+$/, "");
-    let resp;
-    try {
-      resp = await fetch(baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json, text/event-stream",
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {
-          protocolVersion: "2025-03-26",
-          capabilities: {},
-          clientInfo: { name: "ClosedHand", version: "1.0.0" },
-        } }),
-        signal: AbortSignal.timeout(10000),
-      });
-    } catch (e) {
-      console.log(`[MCP probe] Could not reach ${baseUrl}:`, e.message);
-      return res.json({ error: "Could not reach server: " + e.message });
-    }
+    for (const entry of parsed.entries) {
+      const row = { ...entry, user_id: userId };
+      if (body.name && parsed.entries.length === 1) row.name = String(body.name).trim();
 
-    console.log(`[MCP probe] ${baseUrl} returned ${resp.status}`);
-
-    // No auth needed
-    if (resp.ok) {
-      return res.json({ auth_required: false });
-    }
-
-    // Auth required - discover OAuth endpoints
-    if (resp.status === 401) {
-      const authBase = new URL(server_url).origin;
-      let metadata = null;
-
-      // Try RFC 8414 metadata discovery
-      try {
-        const metaResp = await fetch(`${authBase}/.well-known/oauth-authorization-server`, {
-          headers: { "MCP-Protocol-Version": "2025-03-26" },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (metaResp.ok) {
-          metadata = await metaResp.json();
-        }
-      } catch (e) {
-        console.log("MCP OAuth metadata discovery failed, using fallback:", e.message);
+      if (row.transport === "stdio") {
+        if (!selfHost) { problems.push({ server_url: row.server_url, error: "Command-style servers run on your own machine. This ClosedHand runs on ours, so paste the server's web address instead, or run ClosedHand yourself." }); continue; }
+      } else {
+        let u;
+        try { u = new URL(row.server_url); } catch { problems.push({ server_url: row.server_url, error: "Invalid URL" }); continue; }
+        if (u.protocol !== "https:" && !(selfHost && u.protocol === "http:")) { problems.push({ server_url: row.server_url, error: "HTTPS required for MCP servers" }); continue; }
       }
 
-      // Use discovered or fallback endpoints
-      const authorizationEndpoint = metadata?.authorization_endpoint || `${authBase}/authorize`;
-      const tokenEndpoint = metadata?.token_endpoint || `${authBase}/token`;
-      const registrationEndpoint = metadata?.registration_endpoint || `${authBase}/register`;
-      const scopesSupported = metadata?.scopes_supported || [];
-
-      // Try Dynamic Client Registration (RFC 7591)
-      let clientId = null;
-      let clientSecret = null;
-      let needsClientId = false;
-
-      try {
-        const regResp = await fetch(registrationEndpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_name: "ClosedHand",
-            redirect_uris: [`${BASE_URL}/auth/mcp-oauth/callback`],
-            grant_types: ["authorization_code"],
-            response_types: ["code"],
-            token_endpoint_auth_method: "none",
-          }),
-          signal: AbortSignal.timeout(5000),
-        });
-        if (regResp.ok) {
-          const regData = await regResp.json();
-          clientId = regData.client_id;
-          clientSecret = regData.client_secret || null;
-        } else {
-          needsClientId = true;
-        }
-      } catch (e) {
-        needsClientId = true;
+      if (body.auth_token) {
+        row.auth_token = String(body.auth_token).trim();
+        row.auth_type = mcpAuthTypeFor(body.header_name);
+      }
+      if (body.client_id) {
+        row.oauth_client_id = String(body.client_id).trim();
+        row.oauth_client_secret = body.client_secret ? String(body.client_secret).trim() : null;
       }
 
-      return res.json({
-        auth_required: true,
-        authorization_endpoint: authorizationEndpoint,
-        token_endpoint: tokenEndpoint,
-        registration_endpoint: registrationEndpoint,
-        scopes_supported: scopesSupported,
-        client_id: clientId,
-        client_secret: clientSecret,
-        needs_client_id: needsClientId,
-      });
+      const state = crypto.randomBytes(16).toString("hex");
+      let opened;
+      try {
+        opened = await mcpOpenForDiscovery(row, { allowOAuth: row.transport !== "stdio" && !row.auth_token, state });
+      } catch (e) {
+        if (e.needsAuth && e.redirectUrl) {
+          // Off to the provider. Everything the callback needs rides in the state.
+          oauthStates.set(state, { flow: "mcp-oauth", userId, row: { ...row, auth_type: "oauth" }, name: row.name || null, created: Date.now() });
+          return res.json({ auth_required: true, redirect_url: e.redirectUrl, server_url: row.server_url });
+        }
+        if (e.needsAuth) {
+          const oauthPossible = row.transport !== "stdio" && !e.wantsKey && await mcpClient.oauthMetadataExists(row.server_url);
+          return res.json({
+            needs_credentials: true,
+            server_url: row.server_url,
+            oauth_possible: oauthPossible,
+            message: oauthPossible
+              ? "This server wants you to sign in, but did not let ClosedHand register itself. Register an app with the service and paste its client ID, or paste a key if you have one."
+              : "This server wants a key.",
+          });
+        }
+        const tail = opened && opened.stderr ? opened.stderr() : "";
+        problems.push({ server_url: row.server_url, error: String(e.message || e) + (tail ? " " + tail : "") });
+        continue;
+      }
+
+      try {
+        const { found, verdict } = await mcpDiscoverAndScan(opened.client, row, !!body.accept_warnings);
+        if (verdict) {
+          await mcpClient.closeQuietly(opened.client, opened.transport);
+          return res.json({ ...verdict, server_url: row.server_url });
+        }
+        const saved = await mcpSaveRow(userId, row, found, opened.transportKind, body.name);
+        connected.push(saved);
+      } catch (e) {
+        console.error("[mcp] connect failed:", e);
+        problems.push({ server_url: row.server_url, error: e.message });
+      } finally {
+        await mcpClient.closeQuietly(opened.client, opened.transport);
+      }
     }
 
-    res.json({ error: "Server returned " + resp.status });
+    if (!connected.length && problems.length) return res.status(400).json({ error: problems[0].error, problems });
+    // Backwards compatible shape for a single connection, plus the full list.
+    res.json({ ...(connected[0] || {}), connected, problems });
   } catch (e) {
-    console.error("MCP probe error:", e);
-    res.status(500).json({ error: e.message });
+    console.error("Add MCP error:", e);
+    res.status(500).json({ error: "Failed to add MCP connection" });
   }
-});
+}
 
-// Start MCP OAuth redirect
-app.post("/api/mcps/oauth-start", async (req, res) => {
-  try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-
-    const { server_url, name, authorization_endpoint, token_endpoint, client_id, client_secret } = req.body;
-    if (!server_url || !authorization_endpoint || !token_endpoint || !client_id) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const pkce = generatePKCE();
-    const state = generateOAuthState({
-      flow: "mcp-oauth",
-      userId,
-      serverUrl: server_url,
-      name: name || new URL(server_url).hostname.replace(/^mcp\.|\.com$|\.io$/g, ""),
-      tokenEndpoint: token_endpoint,
-      clientId: client_id,
-      clientSecret: client_secret || null,
-      codeVerifier: pkce.codeVerifier,
-    });
-
-    const redirectUri = `${BASE_URL}/auth/mcp-oauth/callback`;
-    const params = new URLSearchParams({
-      client_id: client_id,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      code_challenge: pkce.codeChallenge,
-      code_challenge_method: "S256",
-      state: state,
-    });
-
-    const authUrl = `${authorization_endpoint}?${params.toString()}`;
-    res.json({ redirect_url: authUrl });
-  } catch (e) {
-    console.error("MCP OAuth start error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
+app.post("/api/mcps/probe", connectMcpHandler);
+app.post("/api/mcps", connectMcpHandler);
 
 // MCP OAuth callback (must be BEFORE /auth/:service/callback to avoid conflict)
 app.get("/auth/mcp-oauth/callback", async (req, res) => {
   const { code, error, state } = req.query;
-
   if (error) {
     console.error("MCP OAuth error:", error);
     return res.redirect("/dashboard?mcp_error=" + encodeURIComponent(error));
   }
-
-  const stateData = consumeOAuthState(state);
-  if (!stateData || stateData.flow !== "mcp-oauth") {
+  const pending = consumeOAuthState(state);
+  if (!pending || pending.flow !== "mcp-oauth" || !pending.row) {
     return res.redirect("/dashboard?mcp_error=invalid_state");
   }
-
+  const row = pending.row;
+  let opened = null;
   try {
-    const redirectUri = `${BASE_URL}/auth/mcp-oauth/callback`;
+    // Finish the code exchange through the SDK, with the verifier and client
+    // registration saved before the redirect, then connect for real.
+    const { StreamableHTTPClientTransport } = require("@modelcontextprotocol/sdk/client/streamableHttp.js");
+    const { SSEClientTransport } = require("@modelcontextprotocol/sdk/client/sse.js");
+    const io = { redirectUrl: MCP_REDIRECT_URL, state, save: async (patch) => { Object.assign(row, patch); }, saveVerifier: async () => {} };
+    const provider = mcpClient.makeOAuthProvider(row, io);
+    const url = new URL(row.server_url);
+    const finisher = row.transport === "sse" ? new SSEClientTransport(url, { authProvider: provider }) : new StreamableHTTPClientTransport(url, { authProvider: provider });
+    await finisher.finishAuth(String(code));
+    await mcpClient.closeQuietly(null, finisher);
+    row.auth_type = "oauth";
 
-    // Exchange code for tokens
-    const tokenBody = new URLSearchParams({
-      grant_type: "authorization_code",
-      code: code,
-      redirect_uri: redirectUri,
-      client_id: stateData.clientId,
-      code_verifier: stateData.codeVerifier,
-    });
-    if (stateData.clientSecret) {
-      tokenBody.set("client_secret", stateData.clientSecret);
+    opened = await mcpOpenForDiscovery(row, { allowOAuth: true, state });
+    const { found, verdict } = await mcpDiscoverAndScan(opened.client, row, false);
+    if (verdict && verdict.blocked) {
+      return res.redirect("/dashboard?mcp_error=" + encodeURIComponent("Blocked: " + verdict.scan.summary));
     }
-
-    const tokenResp = await fetch(stateData.tokenEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: tokenBody.toString(),
-    });
-
-    if (!tokenResp.ok) {
-      const errText = await tokenResp.text();
-      console.error("MCP OAuth token exchange failed:", tokenResp.status, errText);
-      return res.redirect("/dashboard?mcp_error=token_exchange_failed");
+    if (verdict && verdict.needs_confirmation) {
+      // Nothing can be asked mid-redirect; connect and say what was found.
+      console.log(`[security-scan] Warning for OAuth MCP "${row.name || row.server_url}":`, verdict.scan.findings);
     }
-
-    const tokens = await tokenResp.json();
-
-    // Security scan: discover tools and check before saving
-    let declaredInfo = null;
-    let declaredTools = [];
-    try {
-      const scanHeaders = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "Authorization": "Bearer " + tokens.access_token,
-      };
-      const mcpUrl = stateData.serverUrl.replace(/\/+$/, "");
-      const initR = await fetch(mcpUrl, {
-        method: "POST", headers: scanHeaders,
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "ClosedHand", version: "1.0.0" } } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (initR.ok) {
-        const sid = initR.headers.get("mcp-session-id");
-        if (sid) scanHeaders["Mcp-Session-Id"] = sid;
-        declaredInfo = await readServerInfo(initR);
-        const tlR = await fetch(mcpUrl, {
-          method: "POST", headers: scanHeaders,
-          body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-          signal: AbortSignal.timeout(10000),
-        });
-        if (tlR.ok) {
-          const tlD = await tlR.json();
-          const tls = tlD.result?.tools || tlD.tools || [];
-          declaredTools = tls.map((t) => t.name).filter(Boolean);
-          if (tls.length > 0) {
-            const scan = await scanMcpTools(tls);
-            console.log(`[security-scan] OAuth MCP "${stateData.name}": ${scan.risk_level} - ${scan.summary}`);
-            if (scan.risk_level === "blocked") {
-              return res.redirect("/dashboard?mcp_error=" + encodeURIComponent("Blocked: " + scan.summary));
-            }
-            // For warnings on OAuth flow, we allow but log (can't show inline UI during redirect)
-            if (scan.risk_level === "warning") {
-              console.log(`[security-scan] Warning for OAuth MCP "${stateData.name}":`, scan.findings);
-            }
-          }
-        }
-      }
-    } catch (scanErr) {
-      console.log("[security-scan] OAuth MCP scan failed (allowing connection):", scanErr.message);
-    }
-
-    // Upsert into user_mcps
-    const { error: dbError } = await supabase
-      .from("user_mcps")
-      .upsert({
-        user_id: stateData.userId,
-        name: await resolveMcpName(declaredInfo, stateData.serverUrl, declaredTools),
-        logo_url: await storeMcpIcon(declaredInfo, stateData.serverUrl),
-        server_url: stateData.serverUrl,
-        auth_token: tokens.access_token,
-        auth_type: "oauth",
-        oauth_client_id: stateData.clientId,
-        oauth_client_secret: stateData.clientSecret || null,
-        oauth_refresh_token: tokens.refresh_token || null,
-        oauth_token_url: stateData.tokenEndpoint,
-        oauth_token_expiry: tokens.expires_in ? Date.now() + (tokens.expires_in * 1000) : null,
-        status: "connected",
-        installed_via: "oauth",
-      }, { onConflict: "user_id,server_url" });
-
-    if (dbError) throw dbError;
-
-    console.log(`MCP OAuth connected: ${stateData.name} for user ${stateData.userId.substring(0, 8)}`);
-    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(stateData.name));
+    const saved = await mcpSaveRow(pending.userId, row, found, opened.transportKind, pending.name);
+    console.log(`MCP OAuth connected: ${saved.name} for user ${String(pending.userId).substring(0, 8)}`);
+    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(saved.name));
   } catch (e) {
     console.error("MCP OAuth callback error:", e);
     res.redirect("/dashboard?mcp_error=" + encodeURIComponent(e.message));
+  } finally {
+    if (opened) await mcpClient.closeQuietly(opened.client, opened.transport);
   }
 });
 
@@ -4345,13 +4338,23 @@ app.post("/api/skills/install", async (req, res) => {
     if (content.length > 50000) return res.status(400).json({ error: "Skill file too large (max 50KB)" });
     if (!content.trim()) return res.status(400).json({ error: "Empty file" });
 
-    // Extract name and description from frontmatter or first heading
+    // Name and description: the frontmatter where the file has one (the
+    // shape every published skill uses), the first heading and paragraph
+    // otherwise.
     let name = "custom-skill";
     let description = "";
-    const headingMatch = content.match(/^#\s+(.+)/m);
-    if (headingMatch) name = headingMatch[1].trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 50);
-    const descMatch = content.match(/^(?:#+\s+.+\n+)?(.{10,200})/m);
-    if (descMatch) description = descMatch[1].trim().substring(0, 200);
+    const fm = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    const fmName = fm && (fm[1].match(/^name:\s*(.+)$/m) || [])[1];
+    const fmDesc = fm && (fm[1].match(/^description:\s*(.+)$/m) || [])[1];
+    const body = fm ? fm[2] : content;
+    const headingMatch = body.match(/^#\s+(.+)/m);
+    if (fmName) name = fmName.trim().replace(/^["']|["']$/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").substring(0, 50) || name;
+    else if (headingMatch) name = headingMatch[1].trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 50);
+    if (fmDesc) description = fmDesc.trim().replace(/^["']|["']$/g, "").substring(0, 200);
+    else {
+      const descMatch = body.match(/^(?:#+\s+.+\n+)?(.{10,200})/m);
+      if (descMatch) description = descMatch[1].trim().substring(0, 200);
+    }
 
     // AI security scan
     const scan = await scanSkillContent(content);
@@ -4382,7 +4385,7 @@ app.post("/api/skills/install", async (req, res) => {
     res.json({
       success: true,
       skill: { id: data.id, name: data.name, description: data.description },
-      warnings: redFlags.length > 0 ? redFlags : undefined
+      warnings: scan.findings && scan.findings.length > 0 ? scan.findings : undefined
     });
   } catch (e) {
     console.error("Skill install error:", e);
@@ -4417,7 +4420,7 @@ app.get("/api/mcps", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("user_mcps")
-      .select("id, name, server_url, auth_type, status, tools_discovered, installed_via, logo_url, created_at")
+      .select("id, name, server_url, auth_type, status, tools_discovered, installed_via, logo_url, created_at, transport, command, args, caps, prompts_discovered, updated_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -4555,6 +4558,14 @@ function mcpDisplayName(serverInfo, serverUrl) {
 // its own address, because the name the server declares in its initialize
 // handshake is not readable until after OAuth, and the name is needed before it.
 function mcpNameFromUrl(url) {
+  // A command-style server is named after its package: "@scope/server-github"
+  // and "mcp-server-fetch" both read as the product, not the packaging.
+  if (/^stdio:/.test(String(url || ""))) {
+    const parts = String(url).slice(6).split(/\s+/).filter((p) => p && !p.startsWith("-"));
+    const pkg = parts.slice(1).find((p) => /^@?[\w.-]+(\/[\w.-]+)?(@[\w.-]+)?$/.test(p) && /[a-z]/i.test(p)) || parts[0] || "custom";
+    const label = pkg.replace(/^@[^/]+\//, "").replace(/@[\w.-]+$/, "").replace(/^(mcp-server-|server-|mcp-)/, "").replace(/(-mcp-server|-mcp|-server)$/, "");
+    return (label || "custom").replace(/[-_.]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
   try {
     const host = new URL(url).hostname.toLowerCase().replace(/^(www|mcp|api|server|remote)\./, "");
     const label = host.split(".")[0] || "custom";
@@ -4562,90 +4573,7 @@ function mcpNameFromUrl(url) {
   } catch { return "Custom"; }
 }
 
-app.post("/api/mcps", async (req, res) => {
-  try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    const { server_url, auth_token, auth_type } = req.body;
-    if (!server_url) return res.status(400).json({ error: "Server URL required" });
-    // The name is no longer asked for, so an absent one is normal, not an error.
-    // Validate URL
-    try {
-      const parsed = new URL(server_url);
-      if (parsed.protocol !== "https:") return res.status(400).json({ error: "HTTPS required for MCP servers" });
-    } catch { return res.status(400).json({ error: "Invalid URL" }); }
-
-    // Try to discover tools and scan for security issues
-    let scanResult = null;
-    let declaredInfo = null;
-    let declaredTools = [];
-    try {
-      const headers = { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" };
-      if (auth_token) {
-        if ((auth_type || "bearer") === "bearer" || auth_type === "oauth") headers["Authorization"] = "Bearer " + auth_token;
-        else if (auth_type === "header") headers["x-api-key"] = auth_token;
-      }
-      const baseUrl = server_url.trim().replace(/\/+$/, "");
-      // Initialize session
-      const initResp = await fetch(baseUrl, {
-        method: "POST", headers,
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "ClosedHand", version: "1.0.0" } } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (initResp.ok) {
-        const sessionId = initResp.headers.get("mcp-session-id");
-        if (sessionId) headers["Mcp-Session-Id"] = sessionId;
-        declaredInfo = await readServerInfo(initResp);
-        // List tools
-        const toolsResp = await fetch(baseUrl, {
-          method: "POST", headers,
-          body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-          signal: AbortSignal.timeout(10000),
-        });
-        if (toolsResp.ok) {
-          const toolsData = await toolsResp.json();
-          const tools = toolsData.result?.tools || toolsData.tools || [];
-          declaredTools = tools.map((t) => t.name).filter(Boolean);
-          if (tools.length > 0) {
-            scanResult = await scanMcpTools(tools);
-            console.log(`[security-scan] MCP "${mcpDisplayName(declaredInfo, server_url)}" ${server_url}: ${scanResult.risk_level} - ${scanResult.summary}`);
-          }
-        }
-      }
-    } catch (e) {
-      console.log("[security-scan] MCP tool discovery failed (will scan later):", e.message);
-    }
-
-    if (scanResult?.risk_level === "blocked") {
-      return res.json({ blocked: true, scan: scanResult });
-    }
-    if (scanResult?.risk_level === "warning" && !req.body.accept_warnings) {
-      return res.json({ needs_confirmation: true, scan: scanResult });
-    }
-
-    const { data, error } = await supabase
-      .from("user_mcps")
-      .upsert({
-        user_id: userId,
-        // What the server calls itself, or its address if it said nothing.
-        // An explicit name from the caller still wins, for API clients.
-        name: String(req.body.name || "").trim() || await resolveMcpName(declaredInfo, server_url, declaredTools),
-        logo_url: await storeMcpIcon(declaredInfo, server_url),
-        server_url: server_url.trim(),
-        auth_token: auth_token || null,
-        auth_type: auth_type || "bearer",
-        status: "connected",
-        installed_via: "manual",
-      }, { onConflict: "user_id,server_url" })
-      .select("id, name, server_url, status")
-      .single();
-    if (error) throw error;
-    res.json(data);
-  } catch (e) {
-    console.error("Add MCP error:", e);
-    res.status(500).json({ error: "Failed to add MCP connection" });
-  }
-});
+// POST /api/mcps is served by connectMcpHandler, defined with the OAuth routes above.
 
 app.delete("/api/mcps/:id", async (req, res) => {
   try {
@@ -4663,255 +4591,78 @@ app.delete("/api/mcps/:id", async (req, res) => {
   }
 });
 
-app.post("/api/mcps/:id/test", async (req, res) => {
+// Test and Fix share one path: open the saved connection exactly as the bot
+// would, list what it offers, and record the outcome. Fix additionally
+// restarts OAuth when the server has stopped accepting the saved token.
+async function mcpCheckRow(userId, id, { reauth } = {}) {
+  const { data: mcp, error } = await supabase
+    .from("user_mcps")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+  if (error || !mcp) return { status: 404, body: { error: "Not found" } };
+
+  const state = crypto.randomBytes(16).toString("hex");
+  let opened;
   try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    const { data: mcp } = await supabase
-      .from("user_mcps")
-      .select("*")
-      .eq("id", req.params.id)
-      .eq("user_id", userId)
-      .single();
-    if (!mcp) return res.status(404).json({ error: "Not found" });
-
-    // Try to discover tools
-    const buildTestHeaders = (token) => {
-      const h = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-      };
-      if (token) {
-        if (mcp.auth_type === "bearer" || mcp.auth_type === "oauth") {
-          h["Authorization"] = "Bearer " + token;
-        } else if (mcp.auth_type === "header") {
-          h["x-api-key"] = token;
-        }
-      }
-      return h;
+    opened = await mcpOpenForDiscovery(mcp, { allowOAuth: reauth && mcp.transport !== "stdio", state });
+  } catch (e) {
+    if (e.needsAuth && e.redirectUrl && reauth) {
+      oauthStates.set(state, { flow: "mcp-oauth", userId, row: { ...mcp, auth_type: "oauth" }, name: mcp.name, created: Date.now() });
+      return { status: 200, body: { needs_reauth: true, redirect_url: e.redirectUrl } };
+    }
+    const { error: e2 } = await supabase.from("user_mcps").update({ status: e.needsAuth ? "needs_auth" : "error" }).eq("id", id);
+    if (e2) console.error("[mcp] status update failed:", e2.message);
+    return { status: 200, body: { success: false, needs_reauth: !!e.needsAuth, error: e.message } };
+  }
+  try {
+    const found = await mcpClient.discover(opened.client);
+    const patch = { ...mcpRowPatchFrom(found), status: "connected" };
+    if (opened.transportKind !== "stdio" && opened.transportKind !== mcp.transport) patch.transport = opened.transportKind;
+    const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id);
+    if (e3) console.error("[mcp] check update failed:", e3.message);
+    return {
+      status: 200,
+      body: {
+        success: true,
+        fixed: true,
+        transport: opened.transportKind,
+        tools: found.tools.map((t) => t.name),
+        resources: found.resources.length + found.resourceTemplates.length,
+        prompts: found.prompts.map((p) => p.name),
+        server: found.serverInfo || null,
+      },
     };
+  } catch (e) {
+    const { error: e4 } = await supabase.from("user_mcps").update({ status: "error" }).eq("id", id);
+    if (e4) console.error("[mcp] status update failed:", e4.message);
+    return { status: 200, body: { success: false, error: e.message } };
+  } finally {
+    await mcpClient.closeQuietly(opened.client, opened.transport);
+  }
+}
 
-    const baseUrl = mcp.server_url.replace(/\/+$/, "");
-
-    // Parse an MCP response that may be JSON or SSE
-    // SSE streams may stay open indefinitely, so we read incrementally
-    // and return as soon as we get a JSON-RPC result/error.
-    async function parseMcpResp(resp) {
-      const ct = resp.headers.get("content-type") || "";
-      if (ct.includes("text/event-stream")) {
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        const results = [];
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            // Parse any complete "data: ..." lines so far
-            const lines = buffer.split("\n");
-            // Keep the last (possibly incomplete) line in the buffer
-            buffer = lines.pop();
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                try { results.push(JSON.parse(line.slice(6))); } catch (e) {}
-              }
-            }
-            // If we found a JSON-RPC result or error, we are done
-            const match = results.find(r => r.result !== undefined || r.error !== undefined);
-            if (match) {
-              reader.cancel();
-              return match;
-            }
-          }
-        } catch (e) {
-          // reader may throw on cancel, that is fine
-          if (results.length === 0) throw e;
-        }
-        return results.find(r => r.result !== undefined || r.error !== undefined) || results[0] || {};
-      }
-      return resp.json();
-    }
-
-    // Full MCP handshake: initialize -> notify -> tools/list
-    async function mcpHandshake(token) {
-      const headers = buildTestHeaders(token);
-      // Step 1: Initialize
-      const initResp = await fetch(baseUrl, {
-        method: "POST", headers,
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {
-          protocolVersion: "2025-03-26", capabilities: {},
-          clientInfo: { name: "ClosedHand", version: "1.0.0" },
-        }}),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!initResp.ok) return { ok: false, status: initResp.status };
-      // Must consume the body (may be SSE stream)
-      await parseMcpResp(initResp);
-      const sessionId = initResp.headers.get("mcp-session-id");
-      if (sessionId) headers["Mcp-Session-Id"] = sessionId;
-
-      // Step 2: Notify initialized (fire and forget)
-      fetch(baseUrl, {
-        method: "POST", headers,
-        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }),
-        signal: AbortSignal.timeout(5000),
-      }).catch(() => {});
-
-      // Step 3: List tools
-      const toolsResp = await fetch(baseUrl, {
-        method: "POST", headers,
-        body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!toolsResp.ok) return { ok: false, status: toolsResp.status };
-      const data = await parseMcpResp(toolsResp);
-      return { ok: true, data };
-    }
-
-    let result = await mcpHandshake(mcp.auth_token);
-
-    // If auth failed and OAuth, try refreshing the token
-    if (!result.ok && mcp.auth_type === "oauth" && mcp.oauth_refresh_token && mcp.oauth_token_url && mcp.oauth_client_id) {
-      try {
-        const refreshBody = new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: mcp.oauth_refresh_token,
-          client_id: mcp.oauth_client_id,
-        });
-        if (mcp.oauth_client_secret) refreshBody.set("client_secret", mcp.oauth_client_secret);
-
-        const refreshResp = await fetch(mcp.oauth_token_url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: refreshBody.toString(),
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (refreshResp.ok) {
-          const tokens = await refreshResp.json();
-          mcp.auth_token = tokens.access_token;
-          const updateData = { auth_token: tokens.access_token };
-          if (tokens.refresh_token) {
-            mcp.oauth_refresh_token = tokens.refresh_token;
-            updateData.oauth_refresh_token = tokens.refresh_token;
-          }
-          if (tokens.expires_in) {
-            updateData.oauth_token_expiry = Date.now() + (tokens.expires_in * 1000);
-          }
-          await supabase.from("user_mcps").update(updateData).eq("id", mcp.id);
-          console.log(`Refreshed MCP OAuth token for ${mcp.name} during test`);
-
-          // Retry with new token
-          result = await mcpHandshake(mcp.auth_token);
-        }
-      } catch (refreshErr) {
-        console.error("MCP token refresh failed during test:", refreshErr.message);
-      }
-    }
-
-    // If still failing after refresh
-    if (!result.ok) {
-      await supabase.from("user_mcps").update({ status: "error" }).eq("id", mcp.id);
-      return res.json({ success: false, error: "Connection failed (status " + (result.status || "unknown") + "). Try removing and re-adding.", needs_auth: true });
-    }
-
-    const data = result.data || {};
-    const tools = data.result?.tools || data.tools || [];
-    const toolNames = tools.map(t => t.name);
-
-    await mustWrite("could not save the MCP server", supabase.from("user_mcps").update({
-      status: "connected",
-      tools_discovered: toolNames
-    }).eq("id", mcp.id));
-
-    res.json({ success: true, tools: toolNames });
+app.post("/api/mcps/:id/test", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const r = await mcpCheckRow(userId, req.params.id, { reauth: false });
+    res.status(r.status).json(r.body);
   } catch (e) {
     console.error("MCP test error:", e);
-    res.json({ success: false, error: e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 
-// POST /api/mcps/:id/fix — attempt to automatically fix a failing MCP
 app.post("/api/mcps/:id/fix", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    const { data: mcp } = await supabase
-      .from("user_mcps")
-      .select("*")
-      .eq("id", req.params.id)
-      .eq("user_id", userId)
-      .single();
-    if (!mcp) return res.status(404).json({ error: "Not found" });
-
-    const maxAttempts = 3;
-    let lastError = "";
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`[MCP Fix] Attempt ${attempt}/${maxAttempts} for ${mcp.name}`);
-
-      // Step 1: Refresh OAuth token if available
-      if (mcp.auth_type === "oauth" && mcp.oauth_refresh_token && mcp.oauth_token_url && mcp.oauth_client_id) {
-        try {
-          const refreshBody = new URLSearchParams({
-            grant_type: "refresh_token",
-            refresh_token: mcp.oauth_refresh_token,
-            client_id: mcp.oauth_client_id,
-          });
-          if (mcp.oauth_client_secret) refreshBody.set("client_secret", mcp.oauth_client_secret);
-          const refreshResp = await fetch(mcp.oauth_token_url, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: refreshBody.toString(),
-            signal: AbortSignal.timeout(10000),
-          });
-          if (refreshResp.ok) {
-            const tokens = await refreshResp.json();
-            const updateData = { auth_token: tokens.access_token };
-            if (tokens.refresh_token) updateData.oauth_refresh_token = tokens.refresh_token;
-            if (tokens.expires_in) updateData.oauth_token_expiry = Date.now() + (tokens.expires_in * 1000);
-            await mustWrite("could not save the MCP server", supabase.from("user_mcps").update(updateData).eq("id", mcp.id));
-            mcp.auth_token = tokens.access_token;
-            if (tokens.refresh_token) mcp.oauth_refresh_token = tokens.refresh_token;
-            console.log(`[MCP Fix] Token refreshed for ${mcp.name}`);
-          } else {
-            lastError = "Token refresh failed (" + refreshResp.status + ")";
-            console.log(`[MCP Fix] ${lastError}`);
-          }
-        } catch (e) {
-          lastError = "Token refresh error: " + e.message;
-          console.log(`[MCP Fix] ${lastError}`);
-        }
-      }
-
-      // Step 2: Call the test endpoint internally (it has all the SSE/handshake logic)
-      try {
-        const testUrl = `http://localhost:${PORT}/api/mcps/${mcp.id}/test`;
-        const testResp = await fetch(testUrl, {
-          method: "POST",
-          headers: { "Cookie": req.headers.cookie || "" },
-          signal: AbortSignal.timeout(25000),
-        });
-        const testResult = await testResp.json();
-        if (testResult.success) {
-          console.log(`[MCP Fix] Fixed on attempt ${attempt}! Found ${testResult.tools?.length || 0} tools for ${mcp.name}`);
-          return res.json({ success: true, fixed: true, tools: testResult.tools, attempts: attempt });
-        }
-        lastError = testResult.error || "Test failed";
-        console.log(`[MCP Fix] Test failed on attempt ${attempt}: ${lastError}`);
-      } catch (e) {
-        lastError = e.message;
-        console.log(`[MCP Fix] Attempt ${attempt} error: ${lastError}`);
-      }
-    }
-
-    // All attempts failed
-    await supabase.from("user_mcps").update({ status: "error" }).eq("id", mcp.id);
-    const needsReauth = mcp.auth_type === "oauth" && lastError.includes("401");
-    res.json({ success: false, fixed: false, error: lastError, needs_reauth: needsReauth });
+    const r = await mcpCheckRow(userId, req.params.id, { reauth: true });
+    res.status(r.status).json(r.body);
   } catch (e) {
-    console.error("MCP debug error:", e);
+    console.error("MCP fix error:", e);
     res.status(500).json({ error: e.message });
   }
 });
