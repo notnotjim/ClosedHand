@@ -1,0 +1,86 @@
+/* The same voice and proportions carry the setup welcome into the dashboard. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: ch-depart 180ms ease-out both; }
+::view-transition-new(root) { animation: ch-arrive 280ms ease-out both; }
+@keyframes ch-depart { to { opacity: 0; } }
+@keyframes ch-arrive { from { opacity: 0; } }
+
+.ch-welcome {
+  --ch-ink: #eef3ef;
+  --ch-muted: #b5c3bb;
+  --ch-green: #6ee7a8;
+  color: var(--ch-ink);
+  font-family: 'IBM Plex Sans', sans-serif;
+  text-align: left;
+}
+.ch-welcome-voice { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.ch-welcome-voice img { width: 40px; height: 40px; flex: none; }
+.ch-welcome-voice strong { font-size: 15px; font-weight: 600; }
+.ch-welcome-message {
+  background: #11251d;
+  border: 1px solid #2b4b3b;
+  border-radius: 16px 16px 16px 4px;
+  padding: 24px 28px;
+  font-size: 17px;
+  line-height: 1.65;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+.ch-welcome-message p { margin: 0; }
+.ch-welcome-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; margin-top: 24px; }
+.ch-welcome button, .ch-welcome a { font: inherit; cursor: pointer; }
+.ch-welcome-primary {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+  padding: 10px 20px; border: 1px solid transparent; border-radius: 10px;
+  background: var(--ch-green); color: #082719; font-size: 15px; font-weight: 600;
+  text-decoration: none; transition: background 150ms ease-out;
+}
+.ch-welcome-primary:hover { background: #96efbe; }
+.ch-welcome-secondary { background: none; border: 0; padding: 10px 0; min-height: 44px; color: var(--ch-muted); text-decoration: underline; text-underline-offset: 4px; font-size: 14px; }
+.ch-welcome-secondary:hover { color: var(--ch-ink); }
+.ch-welcome :is(a,button):focus-visible { outline: 2px solid var(--ch-green); outline-offset: 4px; }
+.ch-welcome-status { min-height: 1.5em; margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: var(--ch-muted); }
+.ch-welcome-status a { color: inherit; text-underline-offset: 3px; }
+.ch-welcome-status.is-error { color: #ffb8ad; }
+
+dialog.done-screen {
+  position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none;
+  border: 0; margin: 0; padding: max(32px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom));
+  overflow-y: auto; background: #080d0b; color: #eef3ef;
+}
+dialog.done-screen[open] { display: flex; flex-direction: column; align-items: center; }
+dialog.done-screen::backdrop { background: #080d0b; }
+.done-content { width: min(100%, 580px); margin-block: auto; flex: none; }
+.done-content h2 { font-family: 'Fraunces', Georgia, serif; font-size: 36px; font-weight: 500; line-height: 1.2; margin: 0 0 32px; text-wrap: balance; }
+.done-content h2 span { color: #6ee7a8; }
+.done-content .ch-welcome-voice img { width: 48px; height: 48px; }
+.done-content .ch-welcome { animation: ch-welcome-enter 400ms ease-out; }
+@keyframes ch-welcome-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.dashboard-welcome { margin: 20px 0 24px; max-width: 800px; zoom: 1.25; }
+.dashboard-welcome[hidden] { display: none; }
+.dashboard-welcome .ch-welcome-message { padding: 20px 24px; }
+.dashboard-welcome h2 { margin: 0 0 8px !important; font-size: 24px !important; line-height: 1.3; text-transform: none; letter-spacing: normal; text-wrap: balance; }
+.dashboard-welcome .ch-welcome-actions { margin-top: 16px; }
+.ch-welcome-progress { margin-left: auto; font-size: 13px; color: var(--ch-muted); font-variant-numeric: tabular-nums; }
+.welcome-replay { display: block; margin: 12px 0 0 auto; padding: 10px 0; min-height: 44px; font: inherit; font-size: 13px; color: #b5c3bb; background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.welcome-replay:focus-visible { outline: 2px solid #6ee7a8; outline-offset: 3px; }
+@media (max-width: 540px) {
+  dialog.done-screen { padding: 28px 20px; }
+  .done-content h2 { font-size: 30px; margin-bottom: 24px; }
+  .ch-welcome-message { padding: 20px; font-size: 16px; }
+  .ch-welcome-actions { gap: 8px 16px; }
+  .dashboard-welcome .ch-welcome-message { padding: 18px; }
+  .ch-welcome-progress { width: 100%; margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 1ms !important; }
+  .done-content .ch-welcome { animation: none; }
+}
+.welcome-replay[hidden], .ch-welcome [hidden] { display: none !important; }
+.dashboard-welcome .ch-welcome-message { white-space: normal; }
+.ch-welcome ::selection { background: #6ee7a8; color: #082719; }
+
+.done-content h2:focus { outline: none; }
+
+.ch-welcome .ch-welcome-primary { font-size: 15px; font-weight: 600; }

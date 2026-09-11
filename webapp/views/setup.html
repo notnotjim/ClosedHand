@@ -124,32 +124,6 @@
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,168,0.25); }
-    /* The moment everything is done: a full-screen beat, then the dashboard. */
-    .done-screen { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
-      background: radial-gradient(700px 500px at 50% 40%, rgba(110,231,168,0.14), rgba(4,4,6,0.98) 70%), #040406;
-      text-align: center; padding: 24px; animation: rise 0.5s ease both; }
-    .done-screen[hidden] { display: none; }
-    /* The fist beats: ClosedHand's pulse, the thing that makes it alive. */
-    .done-fist { position: relative; width: 96px; height: 96px; margin: 0 auto 22px; }
-    .done-fist img { width: 96px; height: 96px; display: block; position: relative; z-index: 1;
-      animation: done-pop 0.7s cubic-bezier(.2,1.4,.4,1) both, beat 1.6s ease-in-out 0.8s 3; }
-    .done-fist i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); opacity: 0;
-      animation: ring 1.6s ease-out 0.8s 3; }
-    .done-fist i + i { animation-delay: 1.1s; }
-    @keyframes done-pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
-    @keyframes beat { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.08); } 24% { transform: scale(1); } 36% { transform: scale(1.05); } }
-    @keyframes ring { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
-    .done-screen .said { text-align: left; max-width: 46ch; margin: 0 auto 24px; padding: 14px 18px; border-radius: 14px 14px 14px 4px;
-      background: rgba(110,231,168,0.08); border: 1px solid rgba(110,231,168,0.18); font-size: 15.5px; line-height: 1.55; min-height: 3.2em; }
-    .done-screen .said b { color: var(--accent); font-weight: 600; }
-    .done-screen .said q { quotes: none; color: var(--text); }
-    .done-screen .said .cur { display: inline-block; width: 2px; height: 1em; background: var(--accent); vertical-align: -0.15em; margin-left: 2px; animation: blink 0.9s steps(2) infinite; }
-    @keyframes blink { to { opacity: 0; } }
-    @media (prefers-reduced-motion: reduce) { .done-fist img, .done-fist i, .done-screen .said .cur { animation: none; } .done-fist i { display: none; } }
-    .done-screen h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(30px, 5vw, 44px); margin: 0 0 10px; }
-    .done-screen h2 span { color: var(--accent); }
-    .done-screen p { color: var(--text-secondary); max-width: 44ch; margin: 0 auto 22px; font-size: 16px; }
-    .done-screen .go { margin: 0 auto; }
     .g-tabs { margin: -2px 0 12px; }
 
     ol.spine { list-style: none; }
@@ -373,6 +347,7 @@
       .step, .ready.is-on { opacity: 1; }
     }
   </style>
+  <link rel="stylesheet" href="/welcome.css">
 </head>
 <body>
 <div class="wrap">
@@ -708,16 +683,24 @@
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
       <a class="deep" id="finish-tg" href="#" target="_blank" rel="noopener" hidden>Open your Telegram bot</a>
     </div>
+    <button class="welcome-replay" id="welcome-replay" type="button">Read the welcome again</button>
   </section>
 
-  <div class="done-screen" id="done-screen" hidden>
-    <div>
-      <div class="done-fist"><i></i><i></i><img src="/logocircle.png" alt=""></div>
-      <h2>ClosedHand is <span>alive.</span></h2>
-      <p class="said" id="done-said"><b>✊ ClosedHand:</b> <span id="done-words"></span><span class="cur"></span></p>
-      <a class="go" href="/dashboard">Go to your dashboard</a>
+  <dialog class="done-screen" id="done-screen" aria-labelledby="done-title">
+    <div class="done-content">
+      <h2 id="done-title" tabindex="-1" autofocus>ClosedHand is <span>yours.</span></h2>
+      <div class="ch-welcome">
+        <div class="ch-welcome-voice"><img src="/logocircle.png" alt=""><strong>ClosedHand</strong></div>
+        <div class="ch-welcome-message" id="done-words">Getting your welcome ready...</div>
+        <p class="ch-welcome-status" id="done-status" role="status"></p>
+        <div class="ch-welcome-actions">
+          <a class="ch-welcome-primary" href="/?dash=%3Fwelcome%3D1">Show me around</a>
+          <a class="ch-welcome-secondary" href="/?dash=1">I'll explore myself</a>
+          <button class="ch-welcome-secondary" id="done-close" type="button">Back to setup</button>
+        </div>
+      </div>
     </div>
-  </div>
+  </dialog>
 
   <div class="memory-note" id="memory-note">
     <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
@@ -1111,8 +1094,7 @@
       wa.hidden = !num; if (num) wa.href = "https://wa.me/" + num;
       tg.hidden = !!num || !state.botUsername; if (state.botUsername) tg.href = "https://t.me/" + state.botUsername;
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
-      // The last step landing while the page is open is the moment: a beat
-      // of celebration, then the dashboard in this tab. Once per install.
+      // Show the welcome once per install when the last step lands.
       if (lastAllDone === false && !celebrated()) celebrate();
     } else {
       fin.hidden = true;
@@ -1214,52 +1196,47 @@
     if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
   }
 
-  // --- Setup complete: the takeover, then the dashboard ---
-  // No confetti. The fist beats, and ClosedHand says its first words: one
-  // thing it has already picked up, so the first thing it does is prove it has
-  // been paying attention. Then the dashboard, in this tab.
-  var _celebKey = null;
+  // Keep the welcome open until the person chooses where to go next.
+  var _celebKey = null, _welcomeTimer = null, _welcomeRequest = 0;
   function celebrated() {
     try { return !!(_celebKey && localStorage.getItem(_celebKey)); } catch (e) { return false; }
   }
   function celebrate() {
     try { if (_celebKey) localStorage.setItem(_celebKey, "1"); } catch (e) {}
-    $("#done-screen").hidden = false;
-    fetch("/api/setup/hello").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
-      .then(function (h) {
-        var hey = "Hey" + (h.name ? " " + h.name : "") + ". ";
-        var room = "Your dashboard is the control room: see everything I keep, delete any of it, steer me from there.";
-        var words = h.fact
-          ? hey + "Your mail and calendar are synced. One thing I picked up: <q>" + esc(h.fact) + ".</q> "
-            + (h.count > 1 ? h.count + " things so far. " : "") + room
-          : hey + "Your mail and calendar are syncing now. " + room;
-        typeWords($("#done-words"), words, function () {
-          setTimeout(function () { window.location.href = "/dashboard"; }, 3200);
-        });
-      });
-  }
-  function esc(t) { return String(t).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
-  // Types HTML a character at a time, tags landing whole so they never render
-  // half-open. Paced by the clock, not by timer ticks, so a tab the browser is
-  // throttling catches up rather than crawling. Reduced motion shows it all.
-  function typeWords(el, html, done) {
-    var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var toks = [], at = [], t = 0, i = 0;
-    while (i < html.length) {
-      if (html[i] === "<") { var j = html.indexOf(">", i); toks.push(html.slice(i, j + 1)); i = j + 1; at.push(t); continue; }
-      toks.push(html[i]); at.push(t); t += /[.,:]/.test(html[i]) ? 220 : 22; i++;
+    var dialog = $("#done-screen");
+    if (!dialog.open) dialog.showModal();
+    var request = ++_welcomeRequest, attempts = 0;
+    clearTimeout(_welcomeTimer);
+    $("#done-status").textContent = "";
+    async function readWelcome() {
+      try {
+        var response = await fetch("/api/setup/hello", { cache: "no-store" });
+        if (!response.ok) throw new Error("Welcome unavailable");
+        var h = await response.json();
+        if (request !== _welcomeRequest || !dialog.open) return;
+        var linked = h.whatsapp && h.whatsapp.linked;
+        $("#done-words").textContent = (linked && h.text) || (linked
+          ? "Your WhatsApp is connected. I'm getting your first message ready. You can keep going while I send it."
+          : "Hey" + (h.name ? " " + h.name : "") + ". Your dashboard shows what I know, which apps are connected, and the work you ask me to do. Let me show you around, then you can get back to your day.");
+        var pending = linked && !h.whatsapp.sent;
+        $("#done-status").classList.remove("is-error");
+        $("#done-status").textContent = linked && h.whatsapp.sent
+          ? "Sent to your WhatsApp. Look in Message Yourself."
+          : pending ? "Sending to WhatsApp..." : "You can connect a chat app any time from the dashboard.";
+        if (pending && ++attempts < 20) _welcomeTimer = setTimeout(readWelcome, 3000);
+        else if (pending) $("#done-status").textContent = "Your message is taking a little longer. I'll keep trying, you can carry on.";
+      } catch (e) {
+        if (request !== _welcomeRequest || !dialog.open) return;
+        $("#done-words").textContent = "You're ready to explore your dashboard. You can see your connections, look through Context Brain, and check on your agents there.";
+        $("#done-status").classList.add("is-error");
+        $("#done-status").textContent = "I couldn't load your welcome. Close this and choose Read the welcome again to retry.";
+      }
     }
-    if (still) { el.innerHTML = html; if (el.nextSibling) el.nextSibling.remove(); done(); return; }
-    var start = Date.now(), shown = 0;
-    (function tick() {
-      var now = Date.now() - start;
-      while (shown < toks.length && at[shown] <= now) shown++;
-      el.innerHTML = toks.slice(0, shown).join("");
-      if (shown < toks.length) { setTimeout(tick, 24); return; }
-      if (el.nextSibling) el.nextSibling.remove();
-      done();
-    })();
+    readWelcome();
   }
+  $("#welcome-replay").addEventListener("click", celebrate);
+  $("#done-close").addEventListener("click", function () { $("#done-screen").close(); });
+  $("#done-screen").addEventListener("close", function () { ++_welcomeRequest; clearTimeout(_welcomeTimer); });
 
   // --- Connect to Google, six steps inside the card ---
   // One step on screen at a time; progress and the project id survive a

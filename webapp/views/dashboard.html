@@ -1863,6 +1863,7 @@
     .usage-table td.num, .usage-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
     .usage-empty { text-align: center; padding: 40px 20px; color: #555; font-size: 14px; }
   </style>
+  <link rel="stylesheet" href="/welcome.css">
 </head>
 <body>
 <script>
@@ -1963,6 +1964,21 @@
         </div>
         <a href="/logout" class="logout-link">Log out</a>
       </div>
+
+      <section class="ch-welcome dashboard-welcome" id="dashboard-welcome" aria-labelledby="welcome-heading" hidden>
+        <div class="ch-welcome-voice"><img src="/logocircle.png" alt=""><strong>ClosedHand</strong></div>
+        <div class="ch-welcome-message">
+          <h2 id="welcome-heading" tabindex="-1"></h2>
+          <p id="welcome-description"></p>
+        </div>
+        <div class="ch-welcome-actions">
+          <button class="ch-welcome-primary" id="welcome-next" type="button"></button>
+          <button class="ch-welcome-secondary" id="welcome-back" type="button">Back</button>
+          <button class="ch-welcome-secondary" id="welcome-dismiss" type="button">I'll explore myself</button>
+          <span class="ch-welcome-progress" id="welcome-progress"></span>
+        </div>
+      </section>
+      <button class="welcome-replay" id="dashboard-welcome-replay" type="button" hidden>Show me around</button>
 
       <!-- Tab Navigation -->
       <div class="tab-bar">
@@ -2760,6 +2776,56 @@
       return "";
     }
 
+    let welcomeStep = 0, welcomeInitialized = false;
+    const welcomeSteps = [
+      { tab: 'connections', title: 'Your apps, all here.',
+        text: 'This is where you choose what I can work with. Your connected apps are below, and you can add or disconnect them whenever you like.',
+        next: 'Show me Context Brain' },
+      { tab: 'brain', title: 'See what I remember.',
+        text: 'Context Brain holds your Pinned facts and Context Notes. You can read, correct or delete them here. I recall by meaning, not just keywords.',
+        next: 'Show me Agents' },
+      { tab: 'automations', title: 'Keep an eye on my work.',
+        text: 'Agents are the ongoing jobs you give me in chat, like a morning briefing. This is where you can see how they are doing and change what runs. You can carry on talking to me in your chat app.',
+        next: "I'm ready" }
+    ];
+    function showWelcomeStep(focusHeading) {
+      const step = welcomeSteps[welcomeStep];
+      document.getElementById('dashboard-welcome').hidden = false;
+      document.getElementById('dashboard-welcome-replay').hidden = true;
+      document.getElementById('welcome-heading').textContent = step.title;
+      document.getElementById('welcome-description').textContent = step.text;
+      document.getElementById('welcome-next').textContent = step.next;
+      document.getElementById('welcome-back').hidden = welcomeStep === 0;
+      document.getElementById('welcome-progress').textContent = (welcomeStep + 1) + ' of ' + welcomeSteps.length;
+      switchTab(step.tab);
+      if (focusHeading) document.getElementById('welcome-heading').focus({ preventScroll: true });
+    }
+    function dismissDashboardWelcome() {
+      document.getElementById('dashboard-welcome').hidden = true;
+      const replay = document.getElementById('dashboard-welcome-replay');
+      replay.hidden = false;
+      replay.focus({ preventScroll: true });
+    }
+    function initDashboardWelcome(data) {
+      if (welcomeInitialized || !data.selfHost) return;
+      welcomeInitialized = true;
+      const replay = document.getElementById('dashboard-welcome-replay');
+      replay.hidden = false;
+      replay.addEventListener('click', function () { welcomeStep = 0; showWelcomeStep(true); });
+      document.getElementById('welcome-next').addEventListener('click', function () {
+        if (welcomeStep === welcomeSteps.length - 1) dismissDashboardWelcome();
+        else { welcomeStep++; showWelcomeStep(true); }
+      });
+      document.getElementById('welcome-back').addEventListener('click', function () { welcomeStep--; showWelcomeStep(true); });
+      document.getElementById('welcome-dismiss').addEventListener('click', dismissDashboardWelcome);
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('welcome') === '1') {
+        url.searchParams.delete('welcome');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+        showWelcomeStep(false);
+      }
+    }
+
     async function loadStatus() {
       const res = await fetch("/api/status");
       if (res.status === 401) {
@@ -2779,6 +2845,7 @@
         return;
       }
       hideOnboarding();
+      initDashboardWelcome(data);
 
       const connectedServices = data.services || [];
       const allServices = data.availableServices || {};
@@ -4390,6 +4457,12 @@
     }
 
     function switchTab(tabName) {
+      // Choosing another tab leaves the optional introduction without moving focus.
+      const welcome = document.getElementById('dashboard-welcome');
+      if (!welcome.hidden && tabName !== welcomeSteps[welcomeStep].tab) {
+        welcome.hidden = true;
+        document.getElementById('dashboard-welcome-replay').hidden = false;
+      }
       document.querySelectorAll('.tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tabName);
       });

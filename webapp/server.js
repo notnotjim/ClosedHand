@@ -424,7 +424,8 @@ app.get("/api/setup/hello", async (req, res) => {
   try {
     if (!(await requireSetupAccess(req, res))) return;
     const userId = getAdminUserId();
-    const { data } = await supabase.from("facts").select("key, value").eq("user_id", userId);
+    const { data, error: factsError } = await supabase.from("facts").select("key, value").eq("user_id", userId);
+    if (factsError) throw new Error(factsError.message);
     const facts = {};
     for (const row of data || []) {
       let v = row.value;
@@ -439,9 +440,15 @@ app.get("/api/setup/hello", async (req, res) => {
       .find((k) => facts[k]) || Object.keys(facts).find((k) => !skip.test(k));
     const fact = pick ? facts[pick].replace(/[.\s]+$/, "").slice(0, 140) : null;
     const count = Object.keys(facts).filter((k) => !/^(profile-email|onboarding|_)/.test(k)).length;
-    res.json({ name, fact, count });
+    const { data: wa, error: waError } = await supabase.from("connections").select("metadata")
+      .eq("user_id", userId).eq("service", "whatsapp_linked").maybeSingle();
+    if (waError) throw new Error(waError.message);
+    const welcome = wa?.metadata?.welcome;
+    res.set("Cache-Control", "no-store");
+    res.json({ name, fact, count, text: welcome?.text || null,
+      whatsapp: { linked: !!wa?.metadata?.linked, sent: !!welcome?.sentAt } });
   } catch (e) {
-    res.json({ name: null, fact: null, count: 0 });
+    res.status(503).json({ error: "Could not load the welcome. Try again." });
   }
 });
 
