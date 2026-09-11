@@ -4827,7 +4827,10 @@
       if (s.includes('cancel')) return { cls: 'cancelled', label: 'Cancelled' };
       if (live.departed || f.departed) return { cls: 'in-flight', label: 'In Flight' };
       if (s.includes('delay') || (live.delay && live.delay > 15)) return { cls: 'delayed', label: `Delayed ${live.delay ? live.delay + 'm' : ''}`.trim() };
-      if (s.includes('on time') || s.includes('scheduled') || !s) {
+      // No live status yet (or no live tracking at all) is a schedule, not a
+      // promise that the flight is on time.
+      if (!s) return { cls: 'scheduled', label: 'Scheduled' };
+      if (s.includes('on time') || s.includes('scheduled')) {
         const depTime = new Date(f.departure?.dateTime).getTime();
         if (depTime > Date.now()) return { cls: 'on-time', label: 'On Time' };
         return { cls: 'scheduled', label: 'Scheduled' };

@@ -4701,6 +4701,8 @@
             }
           }
         }).catch(function() {});
+      } else if (typeof window._offerSignin === 'function') {
+        window._offerSignin();
       }
     }).catch(function() {});
   }
@@ -4756,21 +4758,25 @@
     }, 200);
   }
 
-  // Sign-in card: auto-show after 2.5s if not authenticated
+  // Sign-in card: offered only once the server has answered "not signed
+  // in". A slow or failed status check used to show it on a 2.5s timer,
+  // which on an install you run yourself (always signed in) meant a card
+  // for a sign-in that does not exist. It moves to body level so it stacks
+  // above every page section: inside #page it shared that section's
+  // stacking context and the features page painted over it.
   var signinCard = document.getElementById('signinCard');
   var signinCardClose = document.getElementById('signinCardClose');
   var signinDismissed = sessionStorage.getItem('signin_dismissed');
+  if (signinCard) document.body.appendChild(signinCard);
   if (signinCardClose) {
     signinCardClose.addEventListener('click', function() {
       signinCard.classList.remove('visible');
       sessionStorage.setItem('signin_dismissed', '1');
     });
   }
-  setTimeout(function() {
-    if (!isAuthenticated && !signinDismissed && signinCard) {
-      signinCard.classList.add('visible');
-    }
-  }, 2500);
+  window._offerSignin = function() {
+    if (!isAuthenticated && !signinDismissed && signinCard) signinCard.classList.add('visible');
+  };
 })();
 </script>
 
