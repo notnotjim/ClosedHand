@@ -445,11 +445,18 @@ app.get("/api/setup/hello", async (req, res) => {
   }
 });
 
-// The setup wizard renders nothing beyond that endpoint's booleans, so it stays
-// public too; everything it links to (dashboard, connections) sits behind the gate.
-app.get("/setup", (req, res) => {
+// First-run setup is open; returning to it requires the same session as its
+// forms and pairing image, otherwise they silently fail behind a public page.
+app.get("/setup", async (req, res) => {
   res.set("Cache-Control", "no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "views", "setup.html"));
+  try {
+    if ((await passwordConfigured()) && !hasAdminSession(req)) {
+      return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/setup"));
+    }
+    res.sendFile(path.join(__dirname, "views", "setup.html"));
+  } catch (e) {
+    res.status(500).send("Could not check setup access. Try again.");
+  }
 });
 
 // The Google steps live inside the setup page's Google card now.
