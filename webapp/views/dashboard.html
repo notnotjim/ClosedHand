@@ -2050,48 +2050,44 @@
             <h2 style="font-size:14px;font-weight:600;color:#999;letter-spacing:0.02em;">Your MCPs</h2>
           </div>
           <div id="mcp-list" style="margin-bottom:12px;"></div>
-          <div class="mcp-hero" style="position:relative;border-radius:20px;padding:40px 28px 36px;background:linear-gradient(160deg,rgba(20,21,30,0.6) 0%,rgba(14,15,22,0.55) 50%,rgba(18,20,30,0.6) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 30px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div class="mcp-hero" style="position:relative;border-radius:20px;background:linear-gradient(160deg,rgba(20,21,30,0.6) 0%,rgba(14,15,22,0.55) 50%,rgba(18,20,30,0.6) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 30px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);">
 
             <!-- Ambient glow blobs -->
             <div style="position:absolute;top:-60px;left:30%;width:180px;height:180px;background:radial-gradient(circle,rgba(110,231,168,0.06) 0%,transparent 70%);pointer-events:none;animation:mcp-float-1 6s ease-in-out infinite;"></div>
             <div style="position:absolute;bottom:-40px;right:20%;width:140px;height:140px;background:radial-gradient(circle,rgba(56,189,248,0.04) 0%,transparent 70%);pointer-events:none;animation:mcp-float-2 8s ease-in-out infinite;"></div>
 
-            <!-- Floating logo cloud -->
-            <div style="display:flex;justify-content:center;align-items:center;gap:28px;flex-wrap:wrap;margin-bottom:32px;padding:0 20px;">
-              <img src="/logos/notion.svg" width="24" height="24" alt="Notion" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-1 5s ease-in-out infinite;">
-              <img src="/logos/stripe.svg" width="24" height="24" alt="Stripe" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-2 6s ease-in-out infinite;">
-              <img src="/logos/github.svg" width="24" height="24" alt="GitHub" class="mcp-logo-item" style="border-radius:5px;filter:invert(0.8);animation:mcp-float-3 5.5s ease-in-out infinite;">
-              <img src="/logos/atlassian.svg" width="24" height="24" alt="Atlassian" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-1 7s ease-in-out infinite;">
-              <img src="/logos/shopify.svg" width="24" height="24" alt="Shopify" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-2 5s ease-in-out infinite;">
-              <img src="/logos/dropbox.svg" width="24" height="24" alt="Dropbox" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-3 6.5s ease-in-out infinite;">
-              <img src="/logos/zoom.svg" width="24" height="24" alt="Zoom" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-1 6s ease-in-out infinite;">
-              <img src="/logos/salesforce.svg" width="24" height="24" alt="Salesforce" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-2 7.5s ease-in-out infinite;">
-              <img src="/logos/asana.svg" width="24" height="24" alt="Asana" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-3 5s ease-in-out infinite;">
-              <img src="/logos/gitlab.svg" width="24" height="24" alt="GitLab" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-1 8s ease-in-out infinite;">
-              <img src="/logos/paypal.svg" width="24" height="24" alt="PayPal" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-2 5.5s ease-in-out infinite;">
-              <img src="/logos/spotify.svg" width="24" height="24" alt="Spotify" class="mcp-logo-item" style="border-radius:5px;animation:mcp-float-3 7s ease-in-out infinite;">
+            <!-- Keep the twelve examples in balanced rows at every width. -->
+            <div class="mcp-logos">
+              <img src="/logos/notion.svg" width="24" height="24" alt="Notion" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/stripe.svg" width="24" height="24" alt="Stripe" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/github.svg" width="24" height="24" alt="GitHub" class="mcp-logo-item" style="border-radius:5px;filter:invert(0.8);">
+              <img src="/logos/atlassian.svg" width="24" height="24" alt="Atlassian" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/shopify.svg" width="24" height="24" alt="Shopify" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/dropbox.svg" width="24" height="24" alt="Dropbox" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/zoom.svg" width="24" height="24" alt="Zoom" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/salesforce.svg" width="24" height="24" alt="Salesforce" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/asana.svg" width="24" height="24" alt="Asana" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/gitlab.svg" width="24" height="24" alt="GitLab" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/paypal.svg" width="24" height="24" alt="PayPal" class="mcp-logo-item" style="border-radius:5px;">
+              <img src="/logos/spotify.svg" width="24" height="24" alt="Spotify" class="mcp-logo-item" style="border-radius:5px;">
             </div>
 
-            <!-- Title -->
-            <div style="text-align:center;margin-bottom:10px;">
-              <span style="font-size:17px;font-weight:600;color:#eaeaef;letter-spacing:-0.01em;">Add a connection or skill</span>
-            </div>
-            <div style="text-align:center;margin-bottom:28px;">
-              <span style="font-size: 14px;color:rgba(255,255,255,0.35);">Paste an MCP server's link, the command from its README, or its JSON block. Skill links work too.</span>
-              <br><span style="font-size: 13px;color:rgba(255,255,255,0.2);">&#x1f6e1; Everything is scanned for security risks before activation.</span>
+            <div class="mcp-copy">
+              <div class="mcp-title">Add a connection or skill</div>
+              <p class="mcp-description">Paste a connection or skill link, a command, or a JSON block.</p>
+              <p class="mcp-security">Checked for security risks before activation.</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="Paste a link, a command, or a JSON block..." oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#eaeaef;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="2" placeholder="Link, command or JSON" aria-label="Connection or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#eaeaef;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
 
-            <div style="text-align:center;margin-top:6px;">
+            <div class="mcp-browse">
               <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:#555;text-decoration:none;">Browse MCP servers &rarr;</a>
-              <span style="color:#333;margin:0 6px;">|</span>
               <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:#555;text-decoration:none;">Browse skills &rarr;</a>
             </div>
 
@@ -2122,7 +2118,7 @@
         </div>
 
         <!-- Skills Library (on Home tab) -->
-        <div class="section" style="margin-top:20px;">
+        <div class="section">
           <div onclick="toggleSkillsLibrary()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
             <span id="skills-disclosure-home" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
             <div class="mc-section-label" style="margin:0;">Skills Library</div>
@@ -2394,6 +2390,8 @@
               </div>
             </div>
 
+          </div>
+
           <div class="settings-group" id="wallet-block" style="display:none;">
             <div class="settings-group-header">
               <h2>Wallet</h2>
@@ -2447,7 +2445,6 @@
                 <div id="wallet-ledger" style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#aaa;"></div>
               </div>
             </div>
-          </div>
           </div>
 
           <!-- AI Model Selection -->
@@ -2653,7 +2650,7 @@
 
       <div class="tab-content" id="tab-brain">
         <div style="padding-top:12px;">
-          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;">
+          <div class="brain-toolbar">
             <input type="text" id="brain-search" placeholder="Search memory..." oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:inherit;">
             <div style="display:flex;gap:2px;">
               <button onclick="switchBrainView('list')" class="brain-view-btn" data-view="list" style="padding:6px 14px;border:1px solid #2e2f35;background:transparent;color:#666;border-radius:6px 0 0 6px;cursor:pointer;font-size:12px;font-family:inherit;">List</button>
@@ -2661,7 +2658,7 @@
             </div>
             <button onclick="openAddPinnedNote()" style="padding:6px 14px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">+ Add Note</button>
           </div>
-          <div id="memory-filters" style="display:flex;gap:4px;margin-bottom:12px;">
+          <div id="memory-filters">
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
             <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned Facts</button>
             <button class="memory-filter" data-filter="knowledge" onclick="setMemoryFilter('knowledge')">Context Notes</button>

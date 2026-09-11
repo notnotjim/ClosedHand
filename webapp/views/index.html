@@ -2978,6 +2978,10 @@
 (function() {
   function fitMobileHero() {
     var hero = document.getElementById('heroSection');
+    var pageTabs = document.getElementById('pageTabs');
+    if (pageTabs && pageTabs.offsetHeight) {
+      document.documentElement.style.setProperty('--workspace-top', (pageTabs.getBoundingClientRect().bottom + window.scrollY) + 'px');
+    }
     if (!hero) return;
     if (window.innerWidth > 600 || document.body.classList.contains('chat-active')) {
       hero.style.height = ''; // desktop / chat mode: hand back to CSS
@@ -2994,6 +2998,11 @@
     var target = vh - 2 * chrome;
     if (target > 0) hero.style.height = target + 'px';
   }
+  // Header rows can change after sign-in or when the available width changes.
+  var headerObserver = new ResizeObserver(fitMobileHero);
+  [document.querySelector('.header'), document.getElementById('pageTabs')].forEach(function(el) {
+    if (el) headerObserver.observe(el);
+  });
   window.fitMobileHero = fitMobileHero;
   window.addEventListener('resize', fitMobileHero);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitMobileHero);
