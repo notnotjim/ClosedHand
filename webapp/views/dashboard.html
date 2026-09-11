@@ -4977,9 +4977,14 @@
       try {
         var res = await fetch('/api/reminders');
         var rows = res.ok ? await res.json() : [];
-        el.innerHTML = rows.map(function(r) {
-          // Completed one-offs stay visible, greyed, with when they ran, so
-          // what ClosedHand did on a schedule can always be looked up.
+        // Completed one-offs are kept, but behind a line, not in the way: a
+        // reminder that ran a month ago is a record, not something upcoming.
+        var live = rows.filter(function(r) { return !r.archived; });
+        var past = rows.filter(function(r) { return !!r.archived; });
+        var showPast = !!window._showPastReminders;
+        var shown = showPast ? live.concat(past) : live;
+        var pastNote = past.length ? '<div style="font-size:12px;color:#555;margin:2px 0 8px;"><a href="#" onclick="window._showPastReminders=!window._showPastReminders;loadReminders();return false;" style="color:#666;">' + (showPast ? 'Hide the ' + past.length + ' that already ran' : 'Show ' + past.length + ' that already ran') + '</a></div>' : '';
+        el.innerHTML = shown.map(function(r) {
           var done = !!r.archived;
           var when = done && r.archived_at ? 'ran ' + new Date(r.archived_at).toLocaleDateString() : (r.next_run || r.cron_expression || '');
           return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #222;border-radius:8px;margin-bottom:6px;' + (done ? 'opacity:0.45;' : '') + '">' +
@@ -4990,7 +4995,7 @@
             '</div>' +
             '<span style="font-size:11px;color:#555;white-space:nowrap;">' + esc(when) + '</span>' +
           '</div>';
-        }).join('');
+        }).join('') + pastNote;
         updateUpcomingEmpty();
       } catch (e) {}
     }
@@ -5065,7 +5070,8 @@
       var b = document.getElementById('bookings-list');
       var e = document.getElementById('flights-empty');
       if (!e) return;
-      var empty = (!f || !f.children.length) && (!r || !r.children.length) && (!b || !b.children.length);
+      var rLive = r ? r.querySelectorAll('div[style*="border-radius:8px"]').length : 0;
+      var empty = (!f || !f.children.length) && !rLive && (!b || !b.children.length);
       e.style.display = empty ? 'block' : 'none';
     }
 
