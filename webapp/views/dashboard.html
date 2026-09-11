@@ -173,6 +173,26 @@
       padding: 3px 8px;
       align-self: flex-start;
     }
+    .plat-card .plat-connect-btn {
+      align-self: flex-start;
+      display: inline-block;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid rgba(110,231,168,0.35);
+      background: rgba(110,231,168,0.08);
+      color: #6ee7a8;
+      text-decoration: none;
+      cursor: pointer;
+      line-height: 1.3;
+    }
+    .plat-card .plat-connect-btn:hover { background: rgba(110,231,168,0.16); }
+    .plat-card .plat-keys-link { font-size: 11px; color: #666; text-decoration: none; }
+    .plat-card .plat-keys-link:hover { color: #aaa; }
+    .agent-tpl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    @media (max-width: 760px) { .agent-tpl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
     /* Pending platform expand */
     .plat-pending-detail {
@@ -2185,7 +2205,7 @@
                 </svg>
               </div>
               <p style="font-size:13px;color:#666;line-height:1.6;margin-bottom:14px;">No agents yet. Pick a template or create your own:</p>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+              <div class="agent-tpl-grid">
                 <div class="auto-template" onclick="loadAgentTemplate('morning-briefing')" style="padding:14px;background:#18191d;border:1px solid #222;border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#444'" onmouseout="this.style.borderColor='#222'">
                   <div style="font-size:20px;margin-bottom:6px;">&#9728;&#65039;</div>
                   <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Morning Briefing</div>
@@ -2804,10 +2824,11 @@
               <a class="plat-connect-btn" href="/setup#step-chat" onclick="event.stopPropagation()">Set up</a>
             </div>`;
         } else if (data.selfHost && !platform.available) {
+          // The app exists once its keys are pasted in; the card opens that.
           platformsGrid.innerHTML += `
-            <div class="plat-card unavailable" title="Add this app's credentials to .env to turn it on">
+            <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-              <span class="badge badge-soon">Needs your own app keys</span>
+              <button class="plat-connect-btn" onclick="event.stopPropagation();openChatAppSetup('${key}')">Set up</button>
             </div>`;
         } else if (!platform.available) {
           platformsGrid.innerHTML += `
@@ -2837,10 +2858,12 @@
               <button class="btn btn-small" onclick="generateCode('${key}')">Generate new code</button>
             </div>`;
         } else {
+          const keysLink = (data.selfHost && platform.keysConfigured) ? `<a href="#" class="plat-keys-link" onclick="event.preventDefault();event.stopPropagation();openChatAppSetup('${key}')">Change keys</a>` : '';
           platformsGrid.innerHTML += `
             <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <button class="plat-connect-btn" onclick="event.stopPropagation();generateCode('${key}')">Connect</button>
+              ${keysLink}
             </div>`;
         }
       }
@@ -7719,6 +7742,93 @@
   </div>
 
   <!-- Note Modal -->
+  <div class="modal-overlay" id="chat-app-modal" onclick="if(event.target===this)closeChatAppSetup()">
+    <div class="modal" role="dialog" aria-labelledby="chat-app-title" id="chat-app-modal-body" style="max-width:480px;"></div>
+  </div>
+  <script>
+    // Every chat app on an install you run yourself is set up the same way:
+    // make the app with the provider, paste its keys here, ClosedHand checks
+    // them and switches the app on. One panel, driven by a short spec per app.
+    var CHAT_APP_SPECS = {
+      discord: {
+        steps: [
+          'Open the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>, press New Application and name it.',
+          'Under Bot, press Reset Token and copy the token. Further down, turn on Message Content Intent.',
+          'Under OAuth2, tick the "bot" scope, open the link it makes and add the bot to any server you are in. Direct messages work after that.'
+        ],
+        fields: [{ key: 'DISCORD_BOT_TOKEN', label: 'Bot token', placeholder: 'Paste the token from the Bot page' }]
+      },
+      slack: {
+        steps: [
+          'Open <a href="https://api.slack.com/apps" target="_blank" rel="noopener">api.slack.com/apps</a>, press Create New App, from scratch, and pick your workspace.',
+          'Under OAuth &amp; Permissions add the bot scopes chat:write, im:history, im:read and im:write, then Install to Workspace and copy the Bot User OAuth Token (it starts with xoxb-).',
+          'Under Event Subscriptions turn events on, paste the address below as the Request URL, and subscribe the bot to message.im. Under App Home, allow the Messages tab.'
+        ],
+        fields: [{ key: 'SLACK_BOT_TOKEN', label: 'Bot User OAuth Token', placeholder: 'xoxb-...' }]
+      },
+      line: {
+        steps: [
+          'Open the <a href="https://developers.line.biz/console/" target="_blank" rel="noopener">LINE Developers console</a> and create a Messaging API channel.',
+          'On the Messaging API tab issue a channel access token (long-lived). The channel secret is on the Basic settings tab.',
+          'Paste the address below as the Webhook URL, turn Use webhook on, and turn the channel\'s auto-reply messages off.'
+        ],
+        fields: [
+          { key: 'LINE_CHANNEL_ACCESS_TOKEN', label: 'Channel access token', placeholder: 'Long-lived token from the Messaging API tab' },
+          { key: 'LINE_CHANNEL_SECRET', label: 'Channel secret', placeholder: 'From Basic settings' }
+        ]
+      }
+    };
+    var _chatAppOpen = null;
+    async function openChatAppSetup(app) {
+      var spec = CHAT_APP_SPECS[app]; if (!spec) return;
+      _chatAppOpen = app;
+      var info = null;
+      try { var r = await fetch('/api/chat-apps'); var j = r.ok ? await r.json() : {}; info = (j.apps || {})[app] || null; } catch (e) {}
+      var name = (info && info.name) || app;
+      var body = document.getElementById('chat-app-modal-body');
+      var html = '<h3 id="chat-app-title" style="margin-bottom:6px;">Set up ' + name + '</h3>';
+      html += '<p style="font-size:13px;color:#aaa;line-height:1.55;margin:0 0 12px;">' + name + ' has no way to make the app for you, so this part is yours. About two minutes.</p>';
+      html += '<ol style="font-size:13px;color:#ccc;line-height:1.55;margin:0 0 14px 18px;padding:0;">' + spec.steps.map(function(t) { return '<li style="margin-bottom:6px;">' + t + '</li>'; }).join('') + '</ol>';
+      if (info && info.webhook) {
+        html += '<div style="font-size:12px;color:#888;margin-bottom:4px;">Address to paste</div>';
+        html += '<div onclick="copyCode(\'' + info.webhook + '\')" title="Click to copy" style="font-family:ui-monospace,monospace;font-size:12px;color:#eaeaef;background:#111;border:1px solid #2a2b31;border-radius:6px;padding:8px 10px;margin-bottom:14px;cursor:pointer;word-break:break-all;">' + info.webhook + '</div>';
+      } else if (info && info.needsPublic) {
+        html += '<p style="font-size:13px;color:#e0b467;line-height:1.5;margin:0 0 14px;">' + name + ' sends messages to ClosedHand over the internet, so this install needs a public address first. Turn on Your phone in Settings, then come back here.</p>';
+      }
+      if (info && info.fromEnv) html += '<p style="font-size:12px;color:#888;margin:0 0 10px;">Some of these keys are set in the .env file, which wins over anything saved here.</p>';
+      spec.fields.forEach(function(f) {
+        html += '<label style="display:block;font-size:12px;color:#888;margin:0 0 4px;">' + f.label + '</label>';
+        html += '<input type="password" autocomplete="off" spellcheck="false" id="chat-app-' + f.key + '" placeholder="' + f.placeholder + '" style="width:100%;box-sizing:border-box;font:inherit;font-size:13px;color:#eaeaef;background:#111;border:1px solid #2a2b31;border-radius:6px;padding:8px 10px;margin-bottom:10px;">';
+      });
+      html += '<p id="chat-app-msg" style="font-size:12px;color:#f87171;min-height:16px;margin:0 0 10px;"></p>';
+      html += '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;">';
+      html += (info && info.configured && !info.fromEnv) ? '<button class="conn-btn conn-btn-disconnect" onclick="removeChatApp()">Remove keys</button>' : '<span></span>';
+      html += '<span style="display:flex;gap:8px;"><button class="conn-btn conn-btn-manage" onclick="closeChatAppSetup()">Cancel</button><button class="conn-btn" id="chat-app-save" onclick="saveChatApp()" style="border-color:rgba(110,231,168,0.4);color:#6ee7a8;">Check and save</button></span></div>';
+      body.innerHTML = html;
+      document.getElementById('chat-app-modal').classList.add('visible');
+    }
+    function closeChatAppSetup() { document.getElementById('chat-app-modal').classList.remove('visible'); _chatAppOpen = null; }
+    async function saveChatApp() {
+      var app = _chatAppOpen; var spec = CHAT_APP_SPECS[app]; if (!spec) return;
+      var keys = {}; spec.fields.forEach(function(f) { keys[f.key] = (document.getElementById('chat-app-' + f.key) || {}).value || ''; });
+      var msg = document.getElementById('chat-app-msg'); var btn = document.getElementById('chat-app-save');
+      msg.style.color = '#888'; msg.textContent = 'Checking with ' + ((CHAT_APP_SPECS[app] && app) || 'the app') + '...'; btn.disabled = true;
+      try {
+        var r = await fetch('/api/chat-apps/' + app, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keys: keys }) });
+        var j = await r.json().catch(function() { return {}; });
+        if (!r.ok) { msg.style.color = '#f87171'; msg.textContent = j.error || 'That did not work.'; btn.disabled = false; return; }
+        closeChatAppSetup();
+        if (typeof showToast === 'function') showToast((j.botName || 'The app') + ' is on. Press Connect to pair your account.');
+        if (typeof loadStatus === 'function') loadStatus();
+      } catch (e) { msg.style.color = '#f87171'; msg.textContent = 'Could not reach ClosedHand.'; btn.disabled = false; }
+    }
+    async function removeChatApp() {
+      var app = _chatAppOpen; if (!app) return;
+      try { await fetch('/api/chat-apps/' + app, { method: 'DELETE' }); } catch (e) {}
+      closeChatAppSetup();
+      if (typeof loadStatus === 'function') loadStatus();
+    }
+  </script>
   <div class="modal-overlay" id="disconnect-modal" onclick="if(event.target===this)answerDisconnect(false)">
     <div class="modal" role="dialog" aria-labelledby="disconnect-title">
       <h3 id="disconnect-title">Disconnect</h3>

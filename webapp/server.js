@@ -402,7 +402,7 @@ const SUPPORTED_PLATFORMS = {
 
 // Middleware
 app.use(express.static(path.join(__dirname, "public")));
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "50mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // Public health check (container healthcheck hits this; must bypass the gate below).
 app.get("/health", (req, res) => res.json({ status: "ok", service: "closedhand-webapp" }));
@@ -1085,6 +1085,102 @@ app.post("/api/setup/telegram", async (req, res) => {
   }
 });
 
+// ------------------------------------------------------------
+// Chat apps on an install you run yourself. Every one works the same way:
+// make the app with the provider, paste its keys here, ClosedHand checks
+// them with the provider and switches the app on (the bot reads runtime
+// config, no restart). Slack and LINE also need a public address to send
+// messages to, which "Your phone" in Settings provides.
+// ------------------------------------------------------------
+const CHAT_APPS = {
+  discord: {
+    name: "Discord", keys: ["DISCORD_BOT_TOKEN"], webhook: false,
+    check: async (k) => {
+      const r = await fetch("https://discord.com/api/v10/users/@me", { headers: { Authorization: `Bot ${k.DISCORD_BOT_TOKEN}` }, signal: AbortSignal.timeout(10000) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error("Discord rejected that token. In the Developer Portal, under Bot, use Reset Token and copy the new one.");
+      return j.username ? `@${j.username}` : "your bot";
+    },
+  },
+  slack: {
+    name: "Slack", keys: ["SLACK_BOT_TOKEN"], webhook: true,
+    check: async (k) => {
+      const r = await fetch("https://slack.com/api/auth.test", { method: "POST", headers: { Authorization: `Bearer ${k.SLACK_BOT_TOKEN}` }, signal: AbortSignal.timeout(10000) });
+      const j = await r.json().catch(() => ({}));
+      if (!j.ok) throw new Error("Slack rejected that token. It should start with xoxb- and come from OAuth & Permissions after installing the app.");
+      return j.user ? `@${j.user}` : "your app";
+    },
+  },
+  line: {
+    name: "LINE", keys: ["LINE_CHANNEL_ACCESS_TOKEN", "LINE_CHANNEL_SECRET"], webhook: true,
+    check: async (k) => {
+      const r = await fetch("https://api.line.me/v2/bot/info", { headers: { Authorization: `Bearer ${k.LINE_CHANNEL_ACCESS_TOKEN}` }, signal: AbortSignal.timeout(10000) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error("LINE rejected that access token. Issue a long-lived one under Messaging API in the LINE Developers console.");
+      return j.displayName || j.basicId || "your channel";
+    },
+  },
+};
+
+async function publicBase() {
+  const phone = await getRuntimeConf("PHONE_ACCESS_URL").catch(() => null);
+  const base = (phone && /^https:\/\//.test(phone)) ? phone : (process.env.WEBAPP_URL || process.env.BASE_URL || "");
+  const ok = /^https:\/\//.test(base) && !/localhost|127\.0\.0\.1/.test(base);
+  return { base: base.replace(/\/$/, ""), ok };
+}
+
+app.get("/api/chat-apps", async (req, res) => {
+  if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!mcpClient.isSelfHost()) return res.json({ apps: {} });
+  const pub = await publicBase();
+  const conf = (k) => process.env[k] || require("./config").getConfCached(k);
+  const apps = {};
+  for (const [key, spec] of Object.entries(CHAT_APPS)) {
+    apps[key] = {
+      name: spec.name,
+      keys: spec.keys,
+      configured: spec.keys.every((k) => !!conf(k)),
+      fromEnv: spec.keys.some((k) => !!process.env[k]),
+      botName: conf(`${key.toUpperCase()}_BOT_NAME`) || null,
+      webhook: spec.webhook ? (pub.ok ? `${pub.base}/webhook/${key}` : null) : null,
+      needsPublic: spec.webhook && !pub.ok,
+    };
+  }
+  res.json({ apps });
+});
+
+app.post("/api/chat-apps/:app", async (req, res) => {
+  if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for installs you run yourself." });
+  const spec = CHAT_APPS[req.params.app];
+  if (!spec) return res.status(404).json({ error: "Unknown app" });
+  const keys = {};
+  for (const k of spec.keys) {
+    const v = String(((req.body || {}).keys || {})[k] || "").trim();
+    if (!v) return res.status(400).json({ error: `${k.replace(/_/g, " ").toLowerCase()} is missing.` });
+    keys[k] = v;
+  }
+  try {
+    const botName = await spec.check(keys);
+    await setRuntimeConf({ ...keys, [`${req.params.app.toUpperCase()}_BOT_NAME`]: botName });
+    res.json({ success: true, botName });
+  } catch (e) {
+    res.status(400).json({ error: e.message || `${spec.name} did not accept those keys.` });
+  }
+});
+
+app.delete("/api/chat-apps/:app", async (req, res) => {
+  if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for installs you run yourself." });
+  const spec = CHAT_APPS[req.params.app];
+  if (!spec) return res.status(404).json({ error: "Unknown app" });
+  const patch = {};
+  for (const k of spec.keys) patch[k] = null;
+  patch[`${req.params.app.toUpperCase()}_BOT_NAME`] = null;
+  await setRuntimeConf(patch);
+  res.json({ success: true });
+});
+
 // Google credentials: paste the downloaded JSON (or the two values) and the
 // OAuth routes pick them up live.
 app.post("/api/setup/google", async (req, res) => {
@@ -1156,6 +1252,27 @@ app.get("/api/setup/wa-qr", async (req, res) => {
     res.status(500).json({ error: "could not render the QR" });
   }
 });
+
+// Slack and LINE deliver messages to a public address, which on an install
+// you run yourself is this webapp behind the "Your phone" tunnel. The bot
+// holds the handlers, so the two webhook paths are relayed to it byte for
+// byte (LINE signs the raw body). Providers carry no session, so this sits
+// in front of the gate.
+const BOT_INTERNAL_URL = (process.env.BOT_INTERNAL_URL || "http://bot:3000").replace(/\/$/, "");
+for (const hook of ["slack", "line"]) {
+  app.post(`/webhook/${hook}`, async (req, res) => {
+    try {
+      const headers = {};
+      for (const [k, v] of Object.entries(req.headers)) if (!/^(host|content-length|connection|accept-encoding)$/i.test(k)) headers[k] = v;
+      const r = await fetch(`${BOT_INTERNAL_URL}/webhook/${hook}`, { method: "POST", headers, body: req.rawBody || JSON.stringify(req.body || {}), signal: AbortSignal.timeout(15000) });
+      res.status(r.status);
+      const ct = r.headers.get("content-type"); if (ct) res.set("content-type", ct);
+      res.send(Buffer.from(await r.arrayBuffer()));
+    } catch (e) {
+      res.status(502).send("ClosedHand is not reachable");
+    }
+  });
+}
 
 // --- The gate: everything registered below needs the session (or Basic auth
 // --- for scripts) once a password exists. Pre-password, everything is open,
@@ -3373,10 +3490,11 @@ app.get("/api/status", async (req, res) => {
     const conf = (k) => process.env[k] || require("./config").getConfCached(k);
     const waLinkedRow = chatLinks?.find((l) => l.platform === "whatsapp_linked" && l.platform_user_id);
     const tgUsername = conf("TELEGRAM_BOT_USERNAME") || null;
+    // Keys come from .env or from the dashboard's "Set up" card (runtime config).
     const extraAvailable = {
-      discord: !!process.env.DISCORD_BOT_TOKEN,
-      slack: !!(process.env.SLACK_BOT_TOKEN || process.env.SLACK_CLIENT_ID),
-      line: !!(process.env.LINE_CHANNEL_ACCESS_TOKEN && process.env.LINE_CHANNEL_SECRET),
+      discord: !!conf("DISCORD_BOT_TOKEN"),
+      slack: !!(conf("SLACK_BOT_TOKEN") || process.env.SLACK_CLIENT_ID),
+      line: !!(conf("LINE_CHANNEL_ACCESS_TOKEN") && conf("LINE_CHANNEL_SECRET")),
     };
     for (const [key, info] of Object.entries(SUPPORTED_PLATFORMS)) {
       const link = chatLinks?.find((l) => l.platform === key);
@@ -3398,7 +3516,12 @@ app.get("/api/status", async (req, res) => {
         platforms[key].botUsername = tgUsername;
         platforms[key].configured = !!conf("TELEGRAM_BOT_TOKEN");
       }
-      if (key in extraAvailable) platforms[key].available = extraAvailable[key];
+      if (key in extraAvailable) {
+        platforms[key].available = extraAvailable[key];
+        platforms[key].keysConfigured = extraAvailable[key];
+        const own = conf(`${key.toUpperCase()}_BOT_NAME`);
+        if (own) platforms[key].botName = own;
+      }
     }
 
     res.json({

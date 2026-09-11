@@ -62,19 +62,23 @@ if (TELEGRAM_TOKEN) {
   if (tgWatcher.unref) tgWatcher.unref();
 }
 
-// Discord (optional)
-if (DISCORD_BOT_TOKEN) {
+// Discord (optional). The token comes from the environment at boot, or from
+// runtime config when it is pasted in the dashboard later: the client starts
+// the moment it appears, no restart, the same way Telegram's does.
+function startDiscord(token) {
   ctx.discordClient = new DiscordClient({
     intents: [GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel],
   });
-  ctx.discordClient.login(DISCORD_BOT_TOKEN).catch(err => {
+  ctx.discordClient.login(token).catch(err => {
     console.error("Discord login failed:", err.message);
+    ctx.discordClient = null;
   });
   ctx.discordClient.once("ready", () => console.log(`Discord bot ready: ${ctx.discordClient.user.tag}`));
   ctx.discordClient.on("error", (err) => console.error("Discord client error:", err.message));
   ctx.discordClient.on("warn", (msg) => console.warn("Discord warning:", msg));
 }
+if (DISCORD_BOT_TOKEN) startDiscord(DISCORD_BOT_TOKEN);
 
 // Express (for WhatsApp + Slack webhooks)
 ctx.expressApp = require("express")();
@@ -115,6 +119,22 @@ slackHandler.setup();
 discordHandler.setup();
 lineHandler.setup();
 webHandler.setup();
+if (!ctx.discordClient) {
+  const discordWatcher = setInterval(async () => {
+    try {
+      if (ctx.discordClient) { clearInterval(discordWatcher); return; }
+      const token = await require("./lib/config").getConf("DISCORD_BOT_TOKEN");
+      if (!token) return;
+      clearInterval(discordWatcher);
+      startDiscord(token);
+      discordHandler.setup();
+      console.log("[setup] Discord token saved in the dashboard: bot starting.");
+    } catch (e) {
+      console.error("[setup] Discord config watcher:", e.message);
+    }
+  }, 5000);
+  if (discordWatcher.unref) discordWatcher.unref();
+}
 
 // Health check
 ctx._lastMessageTime = Date.now();
