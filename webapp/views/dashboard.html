@@ -4828,7 +4828,9 @@
       if (live.departed || f.departed) return { cls: 'in-flight', label: 'In Flight' };
       if (s.includes('delay') || (live.delay && live.delay > 15)) return { cls: 'delayed', label: `Delayed ${live.delay ? live.delay + 'm' : ''}`.trim() };
       // No live status yet (or no live tracking at all) is a schedule, not a
-      // promise that the flight is on time.
+      // promise that the flight is on time; a booking the airline has not
+      // confirmed yet says so.
+      if (f.pending) return { cls: 'scheduled', label: 'Pending confirmation' };
       if (!s) return { cls: 'scheduled', label: 'Scheduled' };
       if (s.includes('on time') || s.includes('scheduled')) {
         const depTime = new Date(f.departure?.dateTime).getTime();
