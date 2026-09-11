@@ -87,7 +87,12 @@
       .then(function (r) {
         if (r.ok) {
           var next = new URLSearchParams(location.search).get("next") || "/";
-          location.href = next.startsWith("/") ? next : "/";
+          // The server cannot see #agents; browsers carry it onto the login URL.
+          // Restore it after signing in, while keeping redirects on this origin.
+          var destination = new URL(next, location.origin);
+          if (!next.startsWith("/") || destination.origin !== location.origin) destination = new URL("/", location.origin);
+          if (!destination.hash) destination.hash = location.hash;
+          location.href = destination.pathname + destination.search + destination.hash;
         } else {
           err.textContent = (r.j && r.j.error) || "Wrong password";
           err.style.display = "block";

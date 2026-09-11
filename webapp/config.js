@@ -100,4 +100,24 @@ function getConfCached(key) {
   return _cache ? _cache[key] : undefined;
 }
 
-module.exports = { getConf, setConf, invalidateConf, getConfCached };
+// Outbound chat links need an HTTPS address reachable off this computer.
+// Await the first config read; the synchronous cache can be empty at startup.
+// Prefer an operator's permanent address over a temporary phone tunnel.
+async function dashboardBase() {
+  const candidates = [await getConf("WEBAPP_URL"), await getConf("BASE_URL")];
+  if (String(await getConf("PHONE_ACCESS")) === "1") candidates.push(await getConf("PHONE_ACCESS_URL"));
+  for (const candidate of candidates) {
+    try {
+      const url = new URL(candidate);
+      const host = url.hostname;
+      if (url.protocol !== "https:" || url.username || url.password) continue;
+      if (!host.includes(".") || /(^|\.)(localhost|local|internal)$/.test(host)) continue;
+      if (/^(127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) continue;
+      if (url.search || url.hash) continue;
+      return url.href.replace(/\/$/, "");
+    } catch (_) { /* Not a usable public address. */ }
+  }
+  return null;
+}
+
+module.exports = { getConf, setConf, invalidateConf, getConfCached, dashboardBase };

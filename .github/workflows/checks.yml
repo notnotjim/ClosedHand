@@ -27,6 +27,9 @@ jobs:
           find . -name '*.js' -not -path './node_modules/*' -not -path './.git/*' \
             -print0 | xargs -0 -n1 node -c
 
+      - name: Phone dashboard links
+        run: node --test scripts/test-dashboard-links.js
+
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
 

@@ -2385,7 +2385,7 @@
                 <div style="font-size:13px;color:#aaa;line-height:1.6;min-width:220px;flex:1;">
                   <div><a id="phone-url" href="#" target="_blank" rel="noopener" style="color:#6ee7a8;word-break:break-all;"></a></div>
                   <div>Point your phone's camera at the code, then sign in with your password.</div>
-                  <div style="color:#777;">The address changes each time this is turned on. Connecting accounts still happens on this computer.</div>
+                  <div style="color:#777;">Your computer must stay on. Restarting ClosedHand gives you a new address; older chat links will stop working. Connecting accounts still happens on this computer.</div>
                 </div>
               </div>
             </div>
@@ -4666,7 +4666,7 @@
       btn.textContent = p.enabled ? 'Turn off' : 'Turn on';
       live.style.display = 'none';
       if (p.state === 'unavailable') {
-        title.textContent = 'Not available yet'; desc.textContent = 'This needs a newer ClosedHand. Re-run the installer to update.'; btn.disabled = true;
+        title.textContent = 'Not available yet'; desc.textContent = 'This needs a newer ClosedHand. Re-run the installer to update.'; btn.disabled = !p.enabled;
       } else if (p.enabled && p.url) {
         title.textContent = 'On'; desc.textContent = 'Your dashboard is reachable at the address below.';
         live.style.display = 'flex';
@@ -4686,8 +4686,13 @@
       var btn = document.getElementById('phone-btn'); btn.disabled = true;
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on }) });
-        renderPhone(await r.json());
-      } catch (e) { btn.disabled = false; }
+        var result = await r.json();
+        if (!r.ok) throw new Error(result.error || 'Could not change phone access. Try again.');
+        renderPhone(result);
+      } catch (e) {
+        btn.disabled = false;
+        document.getElementById('phone-desc').textContent = e.message;
+      }
     }
 
     // === Usage tab (BYOK spend) ===
