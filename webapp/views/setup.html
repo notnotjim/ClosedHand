@@ -52,14 +52,6 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 60px; gap: 16px;
     }
-    .wordmark {
-      display: inline-flex; align-items: center;
-      font-family: var(--font-display);
-      font-weight: 600; font-size: 19px; letter-spacing: 0.01em;
-      color: var(--text-primary); text-decoration: none;
-    }
-    .wordmark img { width: 44px; height: 44px; display: block; margin-right: 10px; }
-    .wordmark span { color: var(--accent); }
     .watch-chip {
       display: inline-flex; align-items: center; gap: 8px;
       font-size: 12px; color: var(--text-tertiary); white-space: nowrap;
@@ -348,19 +340,19 @@
     }
   </style>
   <link rel="stylesheet" href="/welcome.css">
+  <link rel="stylesheet" href="/interface.css">
 </head>
-<body>
+<body class="setup-page">
 <div class="wrap">
 
   <header class="top">
-    <a class="wordmark" href="/"><img src="/logocircle.png" alt="">Closed<span>Hand</span></a>
+    <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
     <span class="watch-chip" id="watch-chip" role="status" aria-live="polite">
       <span class="dot"></span><span id="watch-text">watching your install</span>
     </span>
   </header>
 
   <section class="hero">
-    <p class="kicker">Self-host setup</p>
     <h1>Bring ClosedHand <em>to life.</em></h1>
     <p>Everything runs on your machine and answers to you alone.</p>
   </section>
@@ -688,9 +680,9 @@
 
   <dialog class="done-screen" id="done-screen" aria-labelledby="done-title">
     <div class="done-content">
-      <h2 id="done-title" tabindex="-1" autofocus>ClosedHand is <span>yours.</span></h2>
       <div class="ch-welcome">
-        <div class="ch-welcome-voice"><img src="/logocircle.png" alt=""><strong>ClosedHand</strong></div>
+        <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+        <h2 id="done-title" tabindex="-1" autofocus>All set.</h2>
         <div class="ch-welcome-message" id="done-words">Getting your welcome ready...</div>
         <p class="ch-welcome-status" id="done-status" role="status"></p>
         <div class="ch-welcome-actions">

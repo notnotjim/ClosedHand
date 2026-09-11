@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClosedHand</title>
 <link rel="icon" href="/logocircle.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,15 +18,12 @@
     --border-default: rgba(255,255,255,0.10);
     --accent: #6ee7a8;
     --accent-dim: rgba(110,231,168,0.15);
-    /* Typography: IBM Plex Sans for body, Fraunces for display-level headings */
+    /* Product headings and body share the interface family. */
     --font-body: 'IBM Plex Sans', system-ui, sans-serif;
-    --font-display: 'Fraunces', ui-serif, Georgia, serif;
+    --font-display: var(--font-ui);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* STOPGAP: keep compact rendering until the typography pass rewrites hardcoded px values.
-     Applied to both surfaces for consistency (iframe body below and .page here). */
-  .page { zoom: 0.8; }
 
   body {
     background: #040406;
@@ -35,7 +32,7 @@
     overflow-x: hidden;
   }
   body.chat-active { overflow: hidden; height: 100dvh; }
-  body.chat-active .page { height: calc(100dvh / 0.8); min-height: 0; overflow: hidden; }
+  body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
   /* Make chat messages fill scrollable area */
 
   #blobCanvas {
@@ -84,16 +81,6 @@
     transition: all 0.2s;
   }
   .back-arrow:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
-  .header-left { gap: 10px; }
-  .header-left img { width: 32px; height: 32px; opacity: 0.78; filter: brightness(0) invert(1); }
-  .header-left span {
-    font-family: var(--font-display);
-    font-variation-settings: 'opsz' 72, 'SOFT' 30;
-    font-size: 26px;
-    font-weight: 450;
-    color: rgba(255,255,255,0.78);
-    letter-spacing: -0.01em;
-  }
   .header-center {
     display: flex;
     align-items: center;
@@ -598,7 +585,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     width: 14px; height: 14px; border-radius: 50%;
     border: 1px solid rgba(255,255,255,0.25);
-    font-size: 9px; font-style: italic; font-family: Georgia, serif;
+    font-size: 9px; font-style: italic; font-family: var(--font-ui);
     color: rgba(255,255,255,0.5); cursor: help; flex-shrink: 0;
   }
   .mon-info:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
@@ -1130,19 +1117,12 @@
   /* Mobile */
   @media (max-width: 600px) {
     .header { padding: 12px 14px; gap: 8px; }
-    .header-left { gap: 6px; }
-    .header-left img { width: 22px; height: 22px; }
-    .header-left span { font-size: 16px; }
     .header-center { font-size: 11px; }
     .feat-3d { display: none !important; }
     .header-right { gap: 14px; }
     .header-right a { font-size: 13px; }
 
-    /* Centring the hero on mobile is fought by two things: the .page zoom:0.8
-       stopgap, and iOS Safari resolving 100dvh to the larger url-bar-hidden
-       height. CSS viewport units can't be trusted here, so fitMobileHero() in JS
-       measures the real visible height and rendered chrome and sets the exact
-       height. This svh value is only the pre-JS fallback. */
+    /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
     .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
     .hero-heading { font-size: clamp(30px, 8vw, 46px); letter-spacing: -1px; margin-bottom: 8px; }
@@ -1206,11 +1186,8 @@
     .back-arrow { min-width: 36px; min-height: 40px; align-items: center; justify-content: center; margin-right: -4px; }
     .back-arrow svg { width: 22px; height: 22px; }
     body.chat-active .back-arrow { display: flex !important; }
-    body.chat-active .header-left { gap: 4px; }
     #mobileActivityBtn { min-width: 40px; min-height: 40px; align-items: center; justify-content: center; }
     body.chat-active #mobileActivityBtn { display: inline-flex !important; }
-    body.chat-active .header-left span { display: none; }
-    body.chat-active .header-left img { width: 24px; height: 24px; }
     .send-via a { width: 26px; height: 26px; }
     .send-via img { width: 13px; height: 13px; }
     .send-via-label { font-size: 10px; }
@@ -1688,14 +1665,6 @@
     padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0; background: rgba(14,16,22,0.95);
   }
-  .dash-slide-header .dash-title {
-    display: flex; align-items: center; gap: 10px;
-    font-family: var(--font-display);
-    font-variation-settings: 'opsz' 48, 'SOFT' 40;
-    color: rgba(255,255,255,0.92); font-size: 19px; font-weight: 450;
-    letter-spacing: -0.01em;
-  }
-  .dash-slide-header .dash-title img { width: 22px; height: 22px; opacity: 0.8; }
   .dash-slide-close {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
@@ -2049,6 +2018,7 @@
 
 </style>
   <link rel="stylesheet" href="/welcome.css">
+  <link rel="stylesheet" href="/interface.css">
 </head>
 <body>
 
@@ -2058,10 +2028,10 @@
   <div class="dash-slide">
     <div class="dash-slide-header">
       <div class="dash-title">
-        <img src="/fist.png" alt="">
-        Dashboard
+        <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+        <span class="ch-page-name">Dashboard</span>
       </div>
-      <button class="dash-slide-close">&times;</button>
+      <button class="dash-slide-close" aria-label="Close dashboard">&times;</button>
     </div>
     <iframe id="dashIframe" src="about:blank"></iframe>
   </div>
@@ -2078,7 +2048,7 @@
       <a href="#" class="back-arrow" id="backToHome" style="display:none" title="Back to home">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </a>
-      <a href="/" class="header-left" style="text-decoration:none">
+      <a href="/" class="header-left ch-brand">
         <img src="/fist.png" alt="">
         <span>ClosedHand</span>
       </a>
@@ -3003,13 +2973,9 @@
 })();
 </script>
 
-<!-- Mobile hero height: measured, not computed. The .page zoom:0.8 stopgap plus
-     iOS Safari's dvh behaviour make CSS viewport units unreliable, so read the
-     real visible height and rendered chrome and set an exact height that centres
-     the hero. Desktop is left entirely to CSS. -->
+<!-- Keep the mobile hero within the visible viewport. -->
 <script>
 (function() {
-  var ZOOM = 0.8; // must match .page { zoom }
   function fitMobileHero() {
     var hero = document.getElementById('heroSection');
     if (!hero) return;
@@ -3019,13 +2985,13 @@
     }
     var header = document.querySelector('.header');
     var tabs = document.getElementById('pageTabs');
-    // getBoundingClientRect is post-zoom (rendered) px. Use visualViewport.height,
+    // Use visualViewport.height,
     // not innerHeight: iOS Safari reports innerHeight as the larger url-bar-hidden
     // height, which pushed the hero down. Subtract the chrome from BOTH ends so the
     // content centres on the true middle of the visible area, not below it.
     var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
     var chrome = (header ? header.getBoundingClientRect().height : 0) + (tabs ? tabs.getBoundingClientRect().height : 0);
-    var target = (vh - 2 * chrome) / ZOOM;
+    var target = vh - 2 * chrome;
     if (target > 0) hero.style.height = target + 'px';
   }
   window.fitMobileHero = fitMobileHero;
@@ -4344,8 +4310,7 @@
     if (isOpen && page) {
       var canvasW = panel.getBoundingClientRect().width;
       var availReal = window.innerWidth - canvasW;
-      // .page has zoom:0.8, so its internal px = real px / 0.8
-      page.style.width = (availReal / 0.8) + 'px';
+      page.style.width = availReal + 'px';
       document.body.classList.add('canvas-open');
     } else if (page) {
       page.style.width = '';
@@ -4557,8 +4522,8 @@
             resumeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 12a9 9 0 11-3.4-7.05"/><polyline points="21 3 21 9 15 9"/></svg>Continue conversation';
             var isMobile = window.innerWidth < 600;
             resumeEl.style.cssText = isMobile
-              ? 'position:relative;display:flex;align-items:center;justify-content:center;padding:10px 18px;margin:12px auto 0;background:rgba(14,16,28,0.85);border:1px solid rgba(110,231,168,0.2);border-radius:12px;color:rgba(255,255,255,0.6);font-size:14px;font-family:Outfit,sans-serif;text-decoration:none;backdrop-filter:blur(20px);cursor:pointer;width:fit-content;box-shadow:0 0 12px rgba(110,231,168,0.08);animation:pillFloat 4s ease-in-out infinite;'
-              : 'position:fixed;bottom:32px;right:24px;z-index:10;display:flex;align-items:center;padding:10px 18px;background:rgba(14,16,28,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.55);font-size:14px;font-family:Outfit,sans-serif;text-decoration:none;backdrop-filter:blur(20px);transition:all 0.2s;cursor:pointer;animation:pillFloat 4s ease-in-out infinite;';
+              ? 'position:relative;display:flex;align-items:center;justify-content:center;padding:10px 18px;margin:12px auto 0;background:rgba(14,16,28,0.85);border:1px solid rgba(110,231,168,0.2);border-radius:12px;color:rgba(255,255,255,0.6);font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);cursor:pointer;width:fit-content;box-shadow:0 0 12px rgba(110,231,168,0.08);animation:pillFloat 4s ease-in-out infinite;'
+              : 'position:fixed;bottom:32px;right:24px;z-index:10;display:flex;align-items:center;padding:10px 18px;background:rgba(14,16,28,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.55);font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);transition:all 0.2s;cursor:pointer;animation:pillFloat 4s ease-in-out infinite;';
             resumeEl.onmouseover = function() { this.style.borderColor = 'rgba(255,255,255,0.2)'; this.style.color = 'rgba(255,255,255,0.8)'; };
             resumeEl.onmouseout = function() { this.style.borderColor = 'rgba(255,255,255,0.1)'; this.style.color = 'rgba(255,255,255,0.55)'; };
             resumeEl.onclick = function(e) {

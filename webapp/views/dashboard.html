@@ -11,10 +11,6 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/delight.css">
   <style>
-    /* STOPGAP: match index.html's compact rendering until the typography pass
-       rewrites hardcoded px values across both documents. Scoped to the iframe
-       context so the slide-over and the rest of the UI render at matching scale. */
-    body { zoom: 0.8; }
     /* Slide-over mode: trim padding, hide header row and chat FAB */
     .in-slideover .header-row { display: none; }
     .in-slideover .dashboard-container { padding-top: 8px; }
@@ -37,23 +33,6 @@
     .dashboard-container .section {
       padding-top: 16px;
       margin-top: 16px;
-    }
-
-    .dashboard-container h2 {
-      font-family: 'Fraunces', ui-serif, Georgia, serif;
-      font-variation-settings: 'opsz' 36, 'SOFT' 40;
-      font-size: 20px;
-      font-weight: 450;
-      margin-bottom: 6px;
-      letter-spacing: -0.01em;
-    }
-
-    .dashboard-container h1 {
-      font-family: 'Fraunces', ui-serif, Georgia, serif;
-      font-variation-settings: 'opsz' 96, 'SOFT' 40;
-      font-size: 32px;
-      font-weight: 450;
-      letter-spacing: -0.02em;
     }
 
     /* Global dashboard readability boost */
@@ -1786,7 +1765,7 @@
       display: inline-flex; align-items: center; justify-content: center;
       width: 14px; height: 14px; border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.25);
-      font-size: 9px; font-style: italic; font-family: Georgia, serif;
+      font-size: 9px; font-style: italic; font-family: var(--font-ui);
       color: rgba(255,255,255,0.5); cursor: help; flex-shrink: 0; align-self: center;
     }
     .mon-info:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
@@ -1864,8 +1843,9 @@
     .usage-empty { text-align: center; padding: 40px 20px; color: #555; font-size: 14px; }
   </style>
   <link rel="stylesheet" href="/welcome.css">
+  <link rel="stylesheet" href="/interface.css">
 </head>
-<body>
+<body class="dashboard-page">
 <script>
   // The dashboard is a slide-over on the homepage, loaded in an iframe. Every
   // OAuth redirect lands on /dashboard top-level, which renders that same
@@ -1959,28 +1939,28 @@
       <!-- Header -->
       <div class="header-row" style="margin-bottom:4px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <a href="/"><img id="dashboard-logo" src="/logocircle.png" alt="ClosedHand" style="height: 44px; width: 44px; vertical-align: middle; cursor: pointer;"></a>
+          <a class="ch-brand" href="/" target="_top"><img id="dashboard-logo" src="/fist.png" alt=""><span>ClosedHand</span></a>
           <h1 style="margin-bottom:0;">Welcome, <span id="user-name">...</span></h1>
         </div>
         <a href="/logout" class="logout-link">Log out</a>
       </div>
 
-      <section class="ch-welcome dashboard-welcome" id="dashboard-welcome" aria-labelledby="welcome-heading" hidden>
-        <div class="ch-welcome-voice"><img src="/logocircle.png" alt=""><strong>ClosedHand</strong></div>
-        <div class="ch-welcome-message">
-          <h2 id="welcome-heading" tabindex="-1"></h2>
-          <p id="welcome-description"></p>
+      <aside class="tour-panel" id="dashboard-welcome" popover="manual" role="dialog" aria-label="Quick tour" aria-describedby="welcome-description">
+        <div class="tour-top">
+          <img src="/fist.png" alt="" width="18" height="18">
+          <span id="welcome-progress"></span>
+          <button id="welcome-dismiss" class="tour-close" type="button" aria-label="Close tour"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
         </div>
-        <div class="ch-welcome-actions">
-          <button class="ch-welcome-primary" id="welcome-next" type="button"></button>
-          <button class="ch-welcome-secondary" id="welcome-back" type="button">Back</button>
-          <button class="ch-welcome-secondary" id="welcome-dismiss" type="button">I'll explore myself</button>
-          <span class="ch-welcome-progress" id="welcome-progress"></span>
+        <p id="welcome-description" tabindex="-1"></p>
+        <div class="tour-actions">
+          <button id="welcome-skip" class="tour-text-button" type="button">Skip tour</button>
+          <button id="welcome-back" class="tour-text-button" type="button">Back</button>
+          <button id="welcome-next" class="tour-next" type="button">Next</button>
         </div>
-      </section>
-      <button class="welcome-replay" id="dashboard-welcome-replay" type="button" hidden>Show me around</button>
+      </aside>
 
       <!-- Tab Navigation -->
+      <div class="dashboard-toolbar">
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
         <button class="tab" data-tab="automations" onclick="switchTab('automations')">Agents</button>
@@ -1989,13 +1969,22 @@
         <button class="tab" data-tab="usage" onclick="switchTab('usage')">Usage</button>
       </div>
 
+      <details class="dashboard-help" id="dashboard-help" hidden>
+        <summary aria-label="Dashboard help" title="Dashboard help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg></summary>
+        <div class="dashboard-help-menu">
+          <button id="dashboard-welcome-replay" type="button">Take a quick tour</button>
+          <a href="/setup" target="_top">Back to setup</a>
+        </div>
+      </details>
+      </div>
+
       <!-- Home Tab Content -->
       <div class="tab-content active" id="tab-connections">
         <!-- Accounts whose granted permissions are behind what the app now needs -->
         <div id="scope-warnings"></div>
         <!-- Search -->
         <div style="padding:8px 0 4px;">
-          <input type="text" id="connections-search" placeholder="&#128269; Search connections..." oninput="filterConnections(this.value)" style="width:100%;padding:9px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;box-sizing:border-box;outline:none;font-family:inherit;" onfocus="this.style.borderColor='#444'" onblur="this.style.borderColor='#2e2f35'">
+          <input type="text" id="connections-search" placeholder="Search connections..." aria-label="Search connections" oninput="filterConnections(this.value)" style="width:100%;padding:9px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:15px;box-sizing:border-box;outline:none;font-family:inherit;" onfocus="this.style.borderColor='#444'" onblur="this.style.borderColor='#2e2f35'">
         </div>
 
         <!-- Chat Platforms -->
@@ -2778,51 +2767,73 @@
 
     let welcomeStep = 0, welcomeInitialized = false;
     const welcomeSteps = [
-      { tab: 'connections', title: 'Your apps, all here.',
-        text: 'This is where you choose what I can work with. Your connected apps are below, and you can add or disconnect them whenever you like.',
-        next: 'Show me Context Brain' },
-      { tab: 'brain', title: 'See what I remember.',
-        text: 'Context Brain holds your Pinned facts and Context Notes. You can read, correct or delete them here. I recall by meaning, not just keywords.',
-        next: 'Show me Agents' },
-      { tab: 'automations', title: 'Keep an eye on my work.',
-        text: 'Agents are the ongoing jobs you give me in chat, like a morning briefing. This is where you can see how they are doing and change what runs. You can carry on talking to me in your chat app.',
-        next: "I'm ready" }
+      { tab: 'connections', text: 'Your connected apps live here. Add an app when you need it, or disconnect one any time.' },
+      { tab: 'brain', text: 'See what I remember in Context Brain. You can read, correct or delete your Pinned facts and Context Notes.' },
+      { tab: 'automations', text: 'Check on the jobs you give me in chat, like a morning briefing. You can manage them here, then get back to your day.' }
     ];
-    function showWelcomeStep(focusHeading) {
-      const step = welcomeSteps[welcomeStep];
-      document.getElementById('dashboard-welcome').hidden = false;
-      document.getElementById('dashboard-welcome-replay').hidden = true;
-      document.getElementById('welcome-heading').textContent = step.title;
-      document.getElementById('welcome-description').textContent = step.text;
-      document.getElementById('welcome-next').textContent = step.next;
-      document.getElementById('welcome-back').hidden = welcomeStep === 0;
-      document.getElementById('welcome-progress').textContent = (welcomeStep + 1) + ' of ' + welcomeSteps.length;
-      switchTab(step.tab);
-      if (focusHeading) document.getElementById('welcome-heading').focus({ preventScroll: true });
+    function positionWelcome() {
+      const panel = document.getElementById('dashboard-welcome');
+      if (!panel.matches(':popover-open')) return;
+      const target = document.querySelector('.tab[data-tab="' + welcomeSteps[welcomeStep].tab + '"]');
+      const rect = target.getBoundingClientRect();
+      const width = panel.offsetWidth;
+      const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
+      panel.style.left = left + 'px';
+      panel.style.top = Math.max(12, Math.min(rect.bottom + 12, window.innerHeight - panel.offsetHeight - 12)) + 'px';
+      panel.style.setProperty('--tour-pointer', Math.max(20, Math.min(rect.left + rect.width / 2 - left, width - 20)) + 'px');
     }
-    function dismissDashboardWelcome() {
-      document.getElementById('dashboard-welcome').hidden = true;
-      const replay = document.getElementById('dashboard-welcome-replay');
-      replay.hidden = false;
-      replay.focus({ preventScroll: true });
+    function showWelcomeStep(focusText) {
+      const step = welcomeSteps[welcomeStep];
+      document.getElementById('dashboard-help').open = false;
+      document.getElementById('welcome-description').textContent = step.text;
+      document.getElementById('welcome-next').textContent = welcomeStep === welcomeSteps.length - 1 ? 'Done' : 'Next';
+      document.getElementById('welcome-back').hidden = welcomeStep === 0;
+      document.getElementById('welcome-progress').textContent = 'Quick tour · ' + (welcomeStep + 1) + ' of ' + welcomeSteps.length;
+      switchTab(step.tab);
+      document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+      const target = document.querySelector('.tab[data-tab="' + step.tab + '"]');
+      target.classList.add('tour-target');
+      // Scroll only the tab strip, never its containing page or iframe.
+      const strip = target.parentElement;
+      const targetRect = target.getBoundingClientRect(), stripRect = strip.getBoundingClientRect();
+      if (targetRect.left < stripRect.left) strip.scrollLeft -= stripRect.left - targetRect.left;
+      else if (targetRect.right > stripRect.right) strip.scrollLeft += targetRect.right - stripRect.right;
+      const panel = document.getElementById('dashboard-welcome');
+      if (!panel.matches(':popover-open')) panel.showPopover();
+      positionWelcome();
+      if (focusText) document.getElementById('welcome-description').focus({ preventScroll: true });
+    }
+    function dismissDashboardWelcome(restoreFocus = true) {
+      const panel = document.getElementById('dashboard-welcome');
+      if (panel.matches(':popover-open')) panel.hidePopover();
+      document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+      if (restoreFocus) document.querySelector('.tab.active').focus({ preventScroll: true });
     }
     function initDashboardWelcome(data) {
       if (welcomeInitialized || !data.selfHost) return;
       welcomeInitialized = true;
-      const replay = document.getElementById('dashboard-welcome-replay');
-      replay.hidden = false;
-      replay.addEventListener('click', function () { welcomeStep = 0; showWelcomeStep(true); });
+      document.getElementById('dashboard-help').hidden = false;
+      document.getElementById('dashboard-welcome-replay').addEventListener('click', function () { welcomeStep = 0; showWelcomeStep(true); });
       document.getElementById('welcome-next').addEventListener('click', function () {
         if (welcomeStep === welcomeSteps.length - 1) dismissDashboardWelcome();
         else { welcomeStep++; showWelcomeStep(true); }
       });
-      document.getElementById('welcome-back').addEventListener('click', function () { welcomeStep--; showWelcomeStep(true); });
-      document.getElementById('welcome-dismiss').addEventListener('click', dismissDashboardWelcome);
+      document.getElementById('welcome-back').addEventListener('click', function () { if (welcomeStep > 0) { welcomeStep--; showWelcomeStep(true); } });
+      document.getElementById('welcome-dismiss').addEventListener('click', () => dismissDashboardWelcome());
+      document.getElementById('welcome-skip').addEventListener('click', () => dismissDashboardWelcome());
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && document.getElementById('dashboard-welcome').matches(':popover-open')) {
+          event.preventDefault(); dismissDashboardWelcome();
+        }
+      });
+      window.addEventListener('resize', positionWelcome);
+      window.addEventListener('scroll', positionWelcome, true);
       const url = new URL(window.location.href);
       if (url.searchParams.get('welcome') === '1') {
+        // This parameter is an explicit request from setup. Reloads do not replay it.
         url.searchParams.delete('welcome');
         history.replaceState(null, '', url.pathname + url.search + url.hash);
-        showWelcomeStep(false);
+        showWelcomeStep(true);
       }
     }
 
@@ -4459,10 +4470,7 @@
     function switchTab(tabName) {
       // Choosing another tab leaves the optional introduction without moving focus.
       const welcome = document.getElementById('dashboard-welcome');
-      if (!welcome.hidden && tabName !== welcomeSteps[welcomeStep].tab) {
-        welcome.hidden = true;
-        document.getElementById('dashboard-welcome-replay').hidden = false;
-      }
+      if (welcome.matches(':popover-open') && tabName !== welcomeSteps[welcomeStep].tab) dismissDashboardWelcome(false);
       document.querySelectorAll('.tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tabName);
       });
@@ -8051,9 +8059,7 @@
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <script src="/ambient-background.js"></script>
   <script src="/delight.js"></script>
-  <script>initAmbientBackground();</script>
 
   <!-- When in iframe (slide-over), hide redundant elements -->
   <script>
