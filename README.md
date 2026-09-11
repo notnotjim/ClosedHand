@@ -91,7 +91,11 @@ Two Node services (bot and dashboard) that share a Postgres with pgvector and ne
 
 ## Requirements
 
-Docker with the compose plugin, and at least one model provider key. To open the dashboard from your phone, turn on "Your phone" in Settings: it gives you an address and a code to scan, live only while it is on, with your password as the lock. Works on amd64 and arm64, including Apple Silicon and ARM VPSes.
+Docker with the compose plugin, and at least one model provider key. Works on amd64 and arm64, including Apple Silicon and ARM VPSes.
+
+To open agent links from WhatsApp or Telegram on your phone, choose a dashboard password during setup, then turn on **Your phone** in **Settings**. Your dashboard and data stay on this computer; Cloudflare forwards the connection. Keep the computer awake while using it. This uses a [temporary Cloudflare address](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/), which changes when ClosedHand restarts or phone access is turned off and back on. New messages use the current address; older links expire.
+
+For lasting chat links, set `WEBAPP_URL` in `.env` to your own permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary phone address.
 
 Memory depends on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so memory works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
