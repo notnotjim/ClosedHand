@@ -167,59 +167,6 @@
 
   /* Sign-in floating card */
   /* Sign-in modal: centered overlay with a dim backdrop so it never overlaps the panels */
-  .signin-card {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    animation: signinOverlayIn 0.2s ease;
-  }
-  .signin-card.visible { display: flex; }
-  .signin-card-body {
-    position: relative;
-    width: 320px; max-width: 100%;
-    background: rgba(22, 24, 36, 0.98);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px;
-    backdrop-filter: blur(24px);
-    padding: 28px 24px;
-    animation: cardSlideIn 0.3s cubic-bezier(0.16,1,0.3,1);
-  }
-  @keyframes signinOverlayIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes cardSlideIn {
-    from { opacity: 0; transform: translateY(8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .signin-card-close {
-    position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
-    border-radius: 8px; border: none; background: rgba(255,255,255,0.06);
-    color: rgba(255,255,255,0.4); cursor: pointer;
-    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-  }
-  .signin-card-close:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
-  .signin-card-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 18px; }
-  .signin-card-logo img { width: 36px; height: 36px; }
-  .signin-card-logo span { font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.85); }
-  .signin-card p { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 20px; line-height: 1.5; text-align: center; }
-  .signin-card-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 12px; border-radius: 10px; font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;
-    text-decoration: none; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px;
-  }
-  .signin-card-btn img { width: 18px; height: 18px; }
-  .signin-card-btn.google { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-  .signin-card-btn.google:hover { background: rgba(255,255,255,0.14); }
-  .signin-card-btn.microsoft { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.65); }
-  .signin-card-btn.microsoft:hover { background: rgba(255,255,255,0.1); }
-  @media (max-width: 600px) { .signin-card { padding: 12px; } .signin-card-body { width: 100%; padding: 24px 20px; } }
 
   /* ===== HERO STATE =====
      Everything centered vertically: heading, brand, INPUT BOX, suggestions.
@@ -1983,10 +1930,6 @@
   .bridge-cta.is-cloud .bridge-cta-node::before { border-color:rgba(96,165,250,0.2); }
   .bridge-cta.is-cloud .bridge-cta-node::after { border-color:rgba(96,165,250,0.1); }
   .bridge-cta.is-cloud .bridge-cta-node svg { stroke:rgba(96,165,250,0.7); filter:drop-shadow(0 0 12px rgba(96,165,250,0.25)); }
-  .cloud-cta-auth { display:flex; flex-direction:column; gap:8px; align-items:stretch; min-width:240px; }
-  .cloud-cta-btn { display:inline-flex; align-items:center; gap:10px; padding:10px 18px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:rgba(255,255,255,0.85); font-size:13px; font-family:inherit; text-decoration:none; transition:all 0.2s; justify-content:center; }
-  .cloud-cta-btn:hover { background:rgba(255,255,255,0.07); border-color:rgba(96,165,250,0.35); transform:translateY(-1px); box-shadow:0 4px 16px rgba(96,165,250,0.08); }
-  .cloud-cta-btn img { width:16px; height:16px; }
 
   /* Context menu */
   .mon-ctx { position:fixed; background:rgba(30,33,45,0.95); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:4px 0; z-index:999; min-width:130px; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
@@ -2142,40 +2085,15 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </button>
     </div>
-    <div class="header-center" id="headerCenter">
-      <a href="/auth/google" class="auth-row" style="text-decoration:none">Connect with
-        <img class="wordmark" src="/logos/google.svg" alt="Google">
-        or</a><a href="/auth/microsoft" class="auth-row-ms"><img class="wordmark" src="/logos/microsoft.svg" alt="Microsoft"></a> <span style="color:rgba(255,255,255,0.35);margin-left:4px;">to get started</span>
-    </div>
+    <div class="header-center" id="headerCenter"></div>
     <div class="header-right">
       <span id="agentIndicator" style="display:none;font-size:12px;color:rgba(110,231,168,0.8);cursor:pointer;display:none;align-items:center;gap:5px;" onclick="openDashSlide('#agents')">
         <span style="width:6px;height:6px;background:#6ee7a8;border-radius:50%;display:inline-block;animation:typingBounce 1.4s ease-in-out infinite;"></span>
         <span id="agentCount">0</span> active
       </span>
-      <a href="#" id="dashboardLink" onclick="var c=document.getElementById('signinCard');if(c)c.classList.add('visible');return false;">Dashboard</a>
+      <a href="#" id="dashboardLink" onclick="openDashSlide();return false;">Dashboard</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
-    </div>
-  </div>
-
-  <div id="authBanner" class="auth-banner"></div>
-
-  <!-- Sign-in modal: click backdrop to close -->
-  <div class="signin-card" id="signinCard" onclick="if(event.target===this)this.classList.remove('visible')">
-    <div class="signin-card-body">
-      <button class="signin-card-close" id="signinCardClose">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-      <div class="signin-card-logo">
-        <img src="/fist.png" alt="">
-      </div>
-      <p>Your helping hand starts here</p>
-      <a class="signin-card-btn google" href="/auth/google">
-        <img src="/logos/google.svg" alt=""> Continue with Google
-      </a>
-      <a class="signin-card-btn microsoft" href="/auth/microsoft">
-        <img src="/logos/microsoft.svg" alt=""> Continue with Microsoft
-      </a>
     </div>
   </div>
 
@@ -2521,7 +2439,7 @@
 <div class="features-inner">
 
   <div class="feat-row reveal">
-    <a href="/auth/google" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(110,231,168,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+    <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(110,231,168,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
       <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">A support team at your fingertips</div>
       <div class="feat-card-desc">Always on, works instantly in the chat apps you already use. Add the optional Bridge app to control your local computer too. No technical skill needed.</div>
@@ -2593,13 +2511,6 @@
     </div>
   </div>
 
-  <div class="feat-cta reveal" id="featCta">
-    <div class="feat-cta-heading">Get started in 30 seconds</div>
-    <div class="feat-cta-btns">
-      <a href="/auth/google" class="btn-primary"><img src="/logos/google.svg" alt=""> Continue with Google</a>
-      <a href="/auth/microsoft" class="btn-secondary"><img src="/logos/microsoft.svg" alt=""> Continue with Microsoft</a>
-    </div>
-  </div>
 
 </div>
 </div>
@@ -3209,8 +3120,6 @@
   var input = document.getElementById('chatInput');
   var sendBtn = document.getElementById('sendBtn');
   var dashboardLink = document.getElementById('dashboardLink');
-  var loginLink = document.getElementById('loginLink');
-  var authBanner = document.getElementById('authBanner');
   var attachBtn = document.getElementById('attachBtn');
   var fileInput = document.getElementById('fileInput');
   var heroInputBox = document.getElementById('heroInputBox');
@@ -3230,8 +3139,9 @@
   }, { passive: false });
 
   var isAuthenticated = false;
-  window._isAnonymous = true;
-  var isAnonymous = window._isAnonymous;
+  // An install you run yourself has one person, always signed in.
+  window._isAnonymous = false;
+  var isAnonymous = false;
   var hasMessages = false;
 
   input.addEventListener('input', function() {
@@ -3368,7 +3278,7 @@
       dl.click();
       document.body.removeChild(dl);
       setTimeout(function() {
-        window.location.href = '/auth/google';
+        openDashSlide('#connections');
       }, 500);
     });
   }
@@ -4623,34 +4533,19 @@
     }).then(function(status) {
       if (status.authenticated) {
         isAuthenticated = true;
-        isAnonymous = status.isAnonymous;
-        window._isAnonymous = isAnonymous;
         dashboardLink.style.display = 'inline';
         dashboardLink.href = '#';
         dashboardLink.onclick = function(e) { e.preventDefault(); openDashSlide(); };
-        if (loginLink) loginLink.style.display = 'none';
-        // Already signed in: hide the bottom "Get started" sign-up CTA
-        var featCta = document.getElementById('featCta');
-        if (featCta && !status.isAnonymous) featCta.style.display = 'none';
         // Swap header to show connected state
         var hc = document.getElementById('headerCenter');
-        if (hc && status.name && !status.isAnonymous) {
+        if (hc && status.name) {
           var firstName = (status.name || '').split(' ')[0].replace(/</g,'&lt;');
           hc.style.position = 'relative';
-          hc.innerHTML = '<span id="connectedLabel" style="color:rgba(255,255,255,0.4);font-size:14px;cursor:pointer;">Connected as <strong style="color:rgba(110,231,168,0.7);">' + firstName + '</strong></span>' +
-            '<a id="logoutDrop" href="/logout" style="position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%) scale(0.95);opacity:0;pointer-events:none;padding:5px 16px;background:rgba(14,16,28,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f87171;font-size:12px;text-decoration:none;white-space:nowrap;z-index:100;transition:opacity 0.15s ease, transform 0.15s ease;">Disconnect</a>';
-          document.getElementById('connectedLabel').addEventListener('click', function() {
-            var d = document.getElementById('logoutDrop');
-            var open = d.style.opacity === '1';
-            d.style.opacity = open ? '0' : '1';
-            d.style.transform = 'translateX(-50%) scale(' + (open ? '0.95' : '1') + ')';
-            d.style.pointerEvents = open ? 'none' : 'auto';
-          });
+          hc.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:14px;">Connected as <strong style="color:rgba(110,231,168,0.7);">' + firstName + '</strong></span>';
         }
         connectChat();
         if (typeof loadRAGModeState === 'function') loadRAGModeState();
-        // Re-render the Cloud panel so the OAuth CTA (if any) is replaced by the drop-files zone now that we're signed in
-        if (!isAnonymous && typeof window.monLoadCloud === 'function') window.monLoadCloud();
+        if (typeof window.monLoadCloud === 'function') window.monLoadCloud();
         // Check for previous conversation - show resume option
         fetch('/api/chat/history').then(function(r) { return r.json(); }).then(function(hist) {
           if (hist.messages && hist.messages.length > 0) {
@@ -4701,26 +4596,10 @@
             }
           }
         }).catch(function() {});
-      } else if (typeof window._offerSignin === 'function') {
-        window._offerSignin();
       }
     }).catch(function() {});
   }
 
-  window.openAuthPopup = function(e) {
-    e.preventDefault();
-    var url = e.target.href || '/auth/google?flow=chat_popup';
-    window.open(url, 'oauth', 'width=500,height=700');
-    window.addEventListener('message', function handler(event) {
-      if (event.data && event.data.type === 'oauth_complete') {
-        window.removeEventListener('message', handler);
-        authBanner.style.display = 'none';
-        isAnonymous = false;
-        window._isAnonymous = false;
-        addMessage("Connected. I now have access to your email, calendar, and more. What would you like to do?", "bot");
-      }
-    });
-  };
 
   init();
 
@@ -4758,25 +4637,6 @@
     }, 200);
   }
 
-  // Sign-in card: offered only once the server has answered "not signed
-  // in". A slow or failed status check used to show it on a 2.5s timer,
-  // which on an install you run yourself (always signed in) meant a card
-  // for a sign-in that does not exist. It moves to body level so it stacks
-  // above every page section: inside #page it shared that section's
-  // stacking context and the features page painted over it.
-  var signinCard = document.getElementById('signinCard');
-  var signinCardClose = document.getElementById('signinCardClose');
-  var signinDismissed = sessionStorage.getItem('signin_dismissed');
-  if (signinCard) document.body.appendChild(signinCard);
-  if (signinCardClose) {
-    signinCardClose.addEventListener('click', function() {
-      signinCard.classList.remove('visible');
-      sessionStorage.setItem('signin_dismissed', '1');
-    });
-  }
-  window._offerSignin = function() {
-    if (!isAuthenticated && !signinDismissed && signinCard) signinCard.classList.add('visible');
-  };
 })();
 </script>
 
@@ -5213,7 +5073,7 @@ async function ragAddSource() {
         + '<img src="/logos/google.svg" width="16" height="16" style="flex-shrink:0;"> ' + label.replace(/</g,'&lt;') + '</div>';
     });
   } else {
-    html += '<div class="rag-browse-item" onclick="window.location.href=\'/auth/google\'" style="justify-content:space-between;">'
+    html += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
       + '<span style="display:flex;align-items:center;gap:8px;"><img src="/logos/google.svg" width="16" height="16"> Google Drive</span>'
       + '<span style="font-size:10px;color:var(--accent);">Connect</span></div>';
   }
@@ -5227,7 +5087,7 @@ async function ragAddSource() {
         + '<img src="/logos/microsoft.svg" width="16" height="16" style="flex-shrink:0;"> ' + label.replace(/</g,'&lt;') + '</div>';
     });
   } else {
-    html += '<div class="rag-browse-item" onclick="window.location.href=\'/auth/microsoft\'" style="justify-content:space-between;">'
+    html += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
       + '<span style="display:flex;align-items:center;gap:8px;"><img src="/logos/microsoft.svg" width="16" height="16"> OneDrive / SharePoint</span>'
       + '<span style="font-size:10px;color:var(--accent);">Connect</span></div>';
   }
@@ -6023,23 +5883,6 @@ function escapeHtml(s) {
     var visible = (files||[]).filter(function(f){return f.name&&f.name[0]!=='.';});
     if(!visible.length){
       el.innerHTML='';el.className='';el.style.display='flex';el.style.flexDirection='column';el.style.flex='1';
-      // When the user isn't signed in with OAuth, drops won't persist — so surface sign-in instead of a drop zone.
-      if (window._isAnonymous === true) {
-        el.innerHTML = '<div class="bridge-cta is-cloud">'
-          +'<div class="bridge-cta-node"><svg viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round">'
-          +'<path d="M14 40 L50 40 Q58 40 58 32 Q58 24 50 24 Q48 16 36 16 Q24 16 22 24 Q12 24 12 32 Q12 40 14 40 Z" fill="rgba(96,165,250,0.06)"/>'
-          +'<path d="M24 26 L30 32 L24 38" fill="none" stroke-width="1.5"/>'
-          +'<line x1="34" y1="38" x2="42" y2="38" stroke-width="1.5"/>'
-          +'</svg></div>'
-          +'<h3>Your cloud workspace</h3>'
-          +'<p>A Linux computer in the cloud where ClosedHand runs Python, a browser, and a terminal. Drop files to give scripts something to work on. 1&nbsp;GB of always-on space, separate from your connected accounts.</p>'
-          +'<div class="cloud-cta-auth">'
-          +'<a class="cloud-cta-btn" href="/auth/google"><img src="/logos/google.svg" alt=""> Continue with Google</a>'
-          +'<a class="cloud-cta-btn" href="/auth/microsoft"><img src="/logos/microsoft.svg" alt=""> Continue with Microsoft</a>'
-          +'</div>'
-          +'</div>';
-        return;
-      }
       var e=document.createElement('div');e.className='mon-empty';e.onclick=function(){monUpload();};
       e.ondragover=function(ev){ev.preventDefault();this.classList.add('dragover');};
       e.ondragleave=function(){this.classList.remove('dragover');};
@@ -6240,11 +6083,6 @@ function escapeHtml(s) {
   function monUpload(){document.getElementById('monUploadInput').click();}
   async function monHandleUpload(files){
     if(!files||!files.length)return;
-    if(window._isAnonymous){
-      var card=document.getElementById('signinCard');
-      if(card)card.classList.add('visible');
-      return;
-    }
     for(var i=0;i<files.length;i++){var f=files[i],form=new FormData();form.append('file',f);form.append('path',_monCloudPath.replace(/\/$/,'')+'/'+f.name);try{var r=await fetch('/api/sandbox/upload',{method:'POST',body:form});if(!r.ok){console.error('Upload failed:',r.status);}}catch(e){}}document.getElementById('monUploadInput').value='';monDropFeedback();monLoadCloud();monLoadStorage();
   }
   function monDropFeedback(){
@@ -7261,16 +7099,6 @@ function escapeHtml(s) {
             setTimeout(function(){ tip.style.display = 'none'; }, 20000);
           }
         } catch (e) {}
-      } else if (resp.status === 401) {
-        var el = document.getElementById('monDesktopLoading');
-        el.innerHTML = '<div style="text-align:center;max-width:320px;">' +
-          '<div style="font-size:15px;color:rgba(255,255,255,0.85);margin-bottom:6px;">Your cloud computer is waiting</div>' +
-          '<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:16px;">Log in to ClosedHand to use your always-on browser, files and terminal.</div>' +
-          '<div style="display:flex;gap:8px;justify-content:center;">' +
-            '<a href="/auth/google" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:10px;color:#eaeaef;font-size:13px;text-decoration:none;"><img src="/logos/google.svg" width="14" height="14">Sign in with Google</a>' +
-            '<a href="/auth/microsoft" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:10px;color:#eaeaef;font-size:13px;text-decoration:none;"><img src="/logos/microsoft.svg" width="14" height="14">Microsoft</a>' +
-          '</div></div>';
-        el.style.display = 'flex';
       } else {
         document.getElementById('monDesktopLoading').textContent = data.error || 'No sandbox available. Create one first.';
         document.getElementById('monDesktopLoading').style.display = '';
