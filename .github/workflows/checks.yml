@@ -30,6 +30,9 @@ jobs:
       - name: Phone dashboard links
         run: node --test scripts/test-dashboard-links.js
 
+      - name: Flight times and booking changes
+        run: node --test scripts/test-flights.js
+
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
 

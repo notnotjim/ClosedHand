@@ -1846,6 +1846,7 @@
   <link rel="stylesheet" href="/interface.css">
 </head>
 <body class="dashboard-page">
+<script src="/flight-time.js"></script>
 <script>
   // The dashboard is a slide-over on the homepage, loaded in an iframe. Every
   // OAuth redirect lands on /dashboard top-level, which renders that same
@@ -4946,16 +4947,8 @@
       return { cls: 'scheduled', label: s || 'Scheduled' };
     }
 
-    function fmtFlightTime(dateStr, tz) {
-      if (!dateStr) return '--:--';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '--:--';
-      // Airport-local time (boarding-pass time), falling back to viewer's clock
-      try {
-        return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz || undefined });
-      } catch (e) {
-        return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      }
+    function fmtFlightTime(dateStr, point) {
+      return FlightTime.time(dateStr, point);
     }
 
     // ---- Bookings picked out of mail: same card shape as a flight ----
@@ -5033,8 +5026,8 @@
       const live = f.liveStatus || {};
       const depCode = (f.departure?.airport || '\u2014').substring(0, 3).toUpperCase();
       const arrCode = (f.arrival?.airport || '\u2014').substring(0, 3).toUpperCase();
-      const depTime = fmtFlightTime(live.departureTime || f.departure?.dateTime, f.departure?.tz);
-      const arrTime = fmtFlightTime(live.arrivalTime || f.arrival?.dateTime, f.arrival?.tz);
+      const depTime = fmtFlightTime(live.departureTime || f.departure?.dateTime, f.departure);
+      const arrTime = fmtFlightTime(live.arrivalTime || f.arrival?.dateTime, f.arrival);
 
       // Fixed headings: show what WILL be known, TBC until the live feed fills it
       const tbc = v => v ? escHtml(String(v)) : '<span style="color:#555;">TBC</span>';
@@ -5132,13 +5125,7 @@
         // Group by departure date in the ORIGIN airport's timezone (boarding-pass date)
         const groups = {};
         for (const f of flights) {
-          const d = new Date(f.departure?.dateTime);
-          let key;
-          try {
-            key = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: f.departure?.tz || undefined });
-          } catch (e) {
-            key = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-          }
+          const key = FlightTime.dateLabel(f.departure?.dateTime, f.departure);
           if (!groups[key]) groups[key] = [];
           groups[key].push(f);
         }
@@ -5147,21 +5134,10 @@
         // boarding-pass date (origin-airport timezone when known) and today in
         // the viewer's own calendar, so "tomorrow" means what a person looking
         // at their ticket would say.
-        const daysAway = (iso, tz) => {
-          const d = new Date(iso);
-          if (isNaN(d)) return '';
-          const ymd = (dt, z) => {
-            try { return dt.toLocaleDateString('en-CA', z ? { timeZone: z } : {}); }
-            catch (e) { return dt.toLocaleDateString('en-CA'); }
-          };
-          const n = Math.round((new Date(ymd(d, tz) + 'T00:00:00Z') - new Date(ymd(new Date(), null) + 'T00:00:00Z')) / 86400000);
-          if (n < 0 || isNaN(n)) return '';
-          return n === 0 ? 'today' : n === 1 ? 'tomorrow' : 'in ' + n + ' days';
-        };
 
         let html = '';
         for (const [date, fls] of Object.entries(groups)) {
-          const away = daysAway(fls[0].departure?.dateTime, fls[0].departure?.tz);
+          const away = FlightTime.daysAway(fls[0].departure?.dateTime, fls[0].departure);
           html += `<div class="flights-date-header">${date}${away ? `<span class="flights-away"> · ${away}</span>` : ''}</div>`;
           for (const f of fls) html += renderFlightCard(f);
         }

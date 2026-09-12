@@ -27,6 +27,7 @@ const ROOT = path.join(__dirname, "..");
 const MANIFEST = path.join(__dirname, "vendored-manifest.json");
 
 const PAIRS = [
+  { name: "flight-time", copies: ["lib/flight-time.js", "webapp/public/flight-time.js"] },
   {
     name: "reranker",
     copies: ["lib/services/reranker.js", "webapp/reranker.js"],

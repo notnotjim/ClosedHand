@@ -5188,7 +5188,7 @@ app.get("/api/flights", async (req, res) => {
         } catch { return null; }
       })
       .filter(f => {
-        if (!f || !f.departure?.dateTime) return false;
+        if (!f || f.supersededBy || !f.departure?.dateTime) return false;
         return new Date(f.departure.dateTime).getTime() > cutoff;
       })
       .sort((a, b) => new Date(a.departure.dateTime) - new Date(b.departure.dateTime));
