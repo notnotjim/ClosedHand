@@ -53,6 +53,7 @@ CREATE TABLE agent_tasks (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   completed_at timestamp with time zone,
+  result_edited_at timestamp with time zone,
   title text,
   success_criteria jsonb,
   pending_notes jsonb DEFAULT '[]'::jsonb,
