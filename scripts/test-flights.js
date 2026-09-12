@@ -174,3 +174,11 @@ test('a UTC offset of zero is usable, while timezone-less timestamps never use t
   assert.equal(clock.time('2026-09-16T20:00:00+00:00'), '20:00');
   assert.equal(clock.time('2026-09-16T20:00:00', { tz: 'Asia/Tokyo' }), '--:--');
 });
+
+test('explicit change mail can reconcile agency and airline references when both are in the evidence', () => {
+  const state = { [oldKey]: wrap({ ...old, confirmationCode: 'ORDER1234' }), [newKey]: wrap(next) };
+  const evidence = { ...email, body: email.body + ' Agency customer reference ORDER1234.' };
+  const result = reconcileFlights(state, [change], [evidence], now);
+  assert.equal(Object.fromEntries(result.patches)[oldKey].supersededBy, newKey);
+  assert.equal(result.flights[0].replacesFlightNumber, old.flightNumber);
+});
