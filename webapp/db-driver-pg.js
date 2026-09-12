@@ -208,6 +208,7 @@ class PgQueryBuilder {
           const col = term.slice(0, i1);
           const op = term.slice(i1 + 1, i2);
           const val = term.slice(i2 + 1);
+          if (op === "is") return `${ref(col)} IS ${isLiteral(val)}`;
           return `${ref(col)} ${OP_SQL[op] || "="} ${push(val)}`;
         });
         where.push(`(${ors.join(" OR ")})`);

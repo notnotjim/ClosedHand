@@ -4054,7 +4054,7 @@ app.get("/api/agents", async (req, res) => {
       .from("agent_tasks")
       .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at")
       .eq("user_id", userId)
-      .in("status", ["running", "pending", "completed", "failed", "cancelled"])
+      .in("status", ["running", "pending", "completed", "failed", "cancelled", "partial", "blocked", "awaiting_confirmation"])
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -4133,7 +4133,7 @@ app.delete("/api/agents/:id", async (req, res) => {
       .delete()
       .eq("id", req.params.id)
       .eq("user_id", userId)
-      .in("status", ["completed", "failed", "cancelled"]);
+      .in("status", ["completed", "failed", "cancelled", "partial", "blocked"]);
     if (error) throw error;
     res.json({ success: true });
   } catch (err) {
@@ -4210,7 +4210,7 @@ app.post("/api/agents/:id/cancel", async (req, res) => {
 
     if (fetchErr || !task) return res.status(404).json({ error: "Agent not found" });
     if (task.user_id !== userId) return res.status(403).json({ error: "Not authorized" });
-    if (task.status !== "running") return res.status(400).json({ error: "Agent is not running" });
+    if (!["running", "pending", "awaiting_confirmation"].includes(task.status)) return res.status(400).json({ error: "Agent is not running" });
 
     const { error } = await supabase
       .from("agent_tasks")
@@ -7374,6 +7374,10 @@ app.post("/api/account/clear-data", async (req, res) => {
     // dataset and indexed file while the copy said "all your data".
     // rag_documents carries rag_chunks away by cascade; automations carries
     // its runs; datasets does NOT cascade its rows, so both are named.
+    for (const table of ["task_followups", "task_model_calls", "task_deliveries", "task_worker_results"]) {
+      const { error } = await supabase.from(table).delete().eq("user_id", userId);
+      if (error) throw new Error(error.message);
+    }
     const wiped = await Promise.all([
       supabase.from("conversation_threads").delete().eq("user_id", userId),
       supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
@@ -7442,6 +7446,7 @@ app.delete("/api/account", async (req, res) => {
       "dataset_rows", "datasets", "rag_documents", "rag_sources",
       "conversation_threads", "conversations", "web_messages",
       "facts", "user_rules", "schedules", "attachments", "pulse_config",
+      "task_followups", "task_model_calls", "task_deliveries", "task_worker_results",
       "agent_tasks", "automations", "canvases",
       "data_vectors", "data_cache", "index_progress",
       "user_skills", "user_mcps", "user_bridges", "sandboxes",

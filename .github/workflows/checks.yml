@@ -33,6 +33,9 @@ jobs:
       - name: Chat presentation and generated media
         run: node --test scripts/test-chat-presentation.js
 
+      - name: Task continuity, verification and budgets
+        run: node --test scripts/test-agent-execution.js scripts/test-agent-runners.js scripts/test-pg-task-queries.js
+
       - name: Agent context and current task state
         run: node --test scripts/test-agent-context-state.js
 

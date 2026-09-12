@@ -55,6 +55,7 @@ CREATE TABLE agent_tasks (
   completed_at timestamp with time zone,
   title text,
   success_criteria jsonb,
+  pending_notes jsonb DEFAULT '[]'::jsonb,
   CONSTRAINT agent_tasks_pkey PRIMARY KEY (id)
 );
 

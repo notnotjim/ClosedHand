@@ -5882,7 +5882,7 @@
       var mins = Math.max(0, Math.round((Date.now() - new Date(a.created_at).getTime()) / 60000));
       var when = mins < 60 ? mins + 'm' : Math.round(mins / 60) + 'h';
       // Raw statuses read as machine output; say it as a person would.
-      var statusWords = { completed: 'Completed', failed: 'Failed', cancelled: 'Stopped', pending: 'Queued' };
+      var statusWords = { completed: 'Completed', failed: 'Failed', cancelled: 'Stopped', pending: 'Queued', partial: 'Incomplete', blocked: 'Needs attention', awaiting_confirmation: 'Waiting for your reply' };
       var detail = running
         ? (last || 'Working on it') + ' \u00b7 running ' + when
         : (a.error ? String(a.error).substring(0, 120) : (last || statusWords[a.status] || String(a.status)));
@@ -5932,7 +5932,7 @@
       // typeset server-side, so what leaves the dashboard looks as considered
       // as what is shown on it. Preview opens the identical document in the
       // browser's PDF viewer; the download button saves it.
-      var pdfHtml = (!running && a.status === 'completed' && a.result)
+      var pdfHtml = (!running && (a.status === 'completed' || a.status === 'partial') && a.result)
         ? '<button class="agent-del" title="Preview the PDF without downloading" onclick="event.stopPropagation();window.open(\'/api/agents/' + a.id + '/pdf?view=1\', \'_blank\')">Preview</button>' +
           '<button class="agent-del" title="Download as a PDF" onclick="event.stopPropagation();location.href=\'/api/agents/' + a.id + '/pdf\'">&#8595; PDF</button>'
         : '';
@@ -5940,7 +5940,7 @@
       return '<div class="auto-card agent-card' + (_openAgents[a.id] ? ' open' : '') + '" onclick="toggleAgentCard(this, \'' + a.id + '\')" title="Click for detail">' +
         '<div class="auto-card-header">' +
           '<div class="auto-card-name">' + escapeHtml(goal) + '</div>' +
-          '<div class="auto-status-pill ' + statusClass + '">' + (running ? 'RUNNING' : String(a.status).toUpperCase()) + '</div>' +
+          '<div class="auto-status-pill ' + statusClass + '">' + (running ? 'RUNNING' : String(statusWords[a.status] || a.status).toUpperCase()) + '</div>' +
           pdfHtml +
           binHtml +
         '</div>' +
@@ -6074,7 +6074,7 @@
             '<span style="width:6px;height:6px;border-radius:50%;background:' + statusColor + ';flex-shrink:0;"></span>' +
             '<span style="color:#aaa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.output_summary || r.status) + '</span>' +
             '<span style="color:#555;">' + time + '</span>' +
-            (r.status === 'success' ? '<button onclick="event.stopPropagation();viewAutoRun(\'' + r.id + '\')" style="background:none;border:1px solid #1a3050;color:#7ab8ff;padding:2px 8px;border-radius:4px;font-size: 13px;cursor:pointer;">View</button>' : '') +
+            ((r.status === 'success' || r.status === 'partial') ? '<button onclick="event.stopPropagation();viewAutoRun(\'' + r.id + '\')" style="background:none;border:1px solid #1a3050;color:#7ab8ff;padding:2px 8px;border-radius:4px;font-size: 13px;cursor:pointer;">View</button>' : '') +
           '</div>';
         }).join('');
       } catch (e) { console.error('Load runs error:', e); }
