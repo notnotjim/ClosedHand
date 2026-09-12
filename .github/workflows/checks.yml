@@ -30,6 +30,9 @@ jobs:
       - name: Dashboard overview from chat
         run: node --test scripts/test-dashboard-overview.js
 
+      - name: Agent context and current task state
+        run: node --test scripts/test-agent-context-state.js
+
       - name: Phone dashboard links
         run: node --test scripts/test-dashboard-links.js
 
