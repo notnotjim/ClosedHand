@@ -182,3 +182,87 @@ test('explicit change mail can reconcile agency and airline references when both
   assert.equal(Object.fromEntries(result.patches)[oldKey].supersededBy, newKey);
   assert.equal(result.flights[0].replacesFlightNumber, old.flightNumber);
 });
+
+test('a newer same-number departure email produces one change alert without inventing arrival', () => {
+  const before = { ...next, departure: old.departure, emailId: 'original', sourceEmailAt: '2026-09-11T08:00:00Z' };
+  const state = { [newKey]: wrap(before) };
+  const departureOnly = { ...next, arrival: { airport: 'DAD', dateTime: null } };
+  const r = reconcileFlights(state, [departureOnly], [email], now);
+  assert.equal(r.flights.length, 1);
+  assert.equal(r.flights[0].scheduleChanges.departure.from.dateTime, old.departure.dateTime);
+  assert.equal(r.flights[0].scheduleChanges.departure.to.dateTime, next.departure.dateTime);
+  assert.equal(r.flights[0].scheduleChanges.arrival, undefined);
+  assert.equal(r.flights[0].arrival.dateTime, null);
+  apply(state, r);
+  assert.equal(reconcileFlights(state, [departureOnly], [email], now).flights.length, 0);
+  assert.equal(reconcileFlights(state, [{ ...before, emailIndex: 0 }], [{ ...email, id: 'older', date: '2026-09-10T08:00:00Z' }], now).patches.length, 0);
+});
+test('equivalent instants and metadata updates never announce a schedule change', () => {
+  const state = { [newKey]: wrap(next) };
+  const f = { ...next, departure: { ...next.departure, dateTime: '2026-09-16T13:00:00Z' }, airline: 'Updated name' };
+  assert.equal(reconcileFlights(state, [f], [email], now).flights.length, 0);
+});
+test('a batch announces its latest clock, or stays silent if changes cancel out', () => {
+  const second = { ...next, departure: { ...next.departure, dateTime: '2026-09-16T21:00:00+07:00' }, emailIndex: 1 };
+  const newer = { ...email, id: 'latest', date: '2026-09-12T08:00:00Z' };
+  const fresh = reconcileFlights({}, [next, second], [email, newer], now);
+  assert.equal(fresh.flights.length, 1);
+  assert.equal(fresh.flights[0].departure.dateTime, second.departure.dateTime);
+  assert.equal(fresh.flights[0].scheduleChanges, undefined);
+  const state = { [newKey]: wrap({ ...next, departure: old.departure }) };
+  const changed = reconcileFlights(state, [next, second], [email, newer], now);
+  assert.equal(changed.flights[0].scheduleChanges.departure.from.dateTime, old.departure.dateTime);
+  assert.equal(changed.flights[0].scheduleChanges.departure.to.dateTime, second.departure.dateTime);
+  const restored = { ...second, departure: old.departure };
+  assert.equal(reconcileFlights(state, [next, restored], [email, newer], now).flights.length, 0);
+});
+test('relative flight dates use the airport calendar across midnight and the date line', () => {
+  const tz = process.env.TZ;
+  try {
+    for (const zone of ['UTC', 'Europe/London', 'America/Los_Angeles']) {
+      process.env.TZ = zone;
+      const at = new Date('2026-09-12T21:40:00Z');
+      assert.equal(clock.daysAway('2026-09-13T10:30:00+09:00', { tz: 'Asia/Tokyo' }, at), 'today');
+      assert.equal(clock.daysAway('2026-09-13T10:30:00-10:00', { tz: 'Pacific/Honolulu' }, at), 'tomorrow');
+    }
+  } finally { if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz; }
+});
+
+function loadAnnouncements(targets, options = {}) {
+  const sends = [], conversation = [], errors = [];
+  const source = fs.readFileSync(path.join(root, 'lib/flights-scheduler.js'), 'utf8');
+  const body = source.match(/async function announceNewFlights\([^]*?\n\}/)[0];
+  const announce = vm.runInNewContext(body + '\nannounceNewFlights', {
+    FlightTime: clock, LIVE: false, flightIntervals: {}, ctx: {},
+    _getNoteValue: n => n?.value || n,
+    dashboardUrl: async (platform, section) => { assert.equal(section, 'schedules'); if (options.noUrl) throw Error('unavailable'); return 'https://phone.example/dashboard#schedules'; },
+    deliveryTargets: async () => targets,
+    sendToPlatform: async (...args) => { if (options.fail) throw Error('offline'); sends.push(args); return { id: 'captured' }; },
+    getConversation: () => conversation, saveStore() {}, console: { error: text => errors.push(text) },
+  });
+  return { announce: f => announce('fixture-user', { notes: {} }, [f], targets), sends, conversation, errors };
+}
+test('the real announcement sends old/new local clocks and a phone link without live tracking', async () => {
+  const target = [{ platform: 'whatsapp_linked', platform_user_id: 'self' }];
+  const h = loadAnnouncements(target);
+  const f = { key: newKey, ...next, scheduleChanges: { departure: { from: old.departure, to: next.departure } } };
+  await h.announce(f);
+  assert.equal(h.sends.length, 1);
+  assert.match(h.sends[0][2], /schedule has changed/);
+  assert.match(h.sends[0][2], /20:00.*was 20:40.*SGN local time/);
+  assert.match(h.sends[0][2], /https:\/\/phone.example\/dashboard#schedules/);
+  assert.equal(h.conversation.length, 1);
+  const disabled = loadAnnouncements([]); await disabled.announce(f);
+  assert.equal(disabled.sends.length, 0); assert.equal(disabled.conversation.length, 0);
+  const noUrl = loadAnnouncements(target, { noUrl: true }); await noUrl.announce(f);
+  assert.equal(noUrl.sends.length, 1); assert.doesNotMatch(noUrl.sends[0][2], /localhost/);
+  const failed = loadAnnouncements(target, { fail: true }); await failed.announce(f);
+  assert.equal(failed.conversation.length, 0); assert.equal(failed.errors.length, 1);
+});
+test('departure notices without the word booking still enter mail noticing', () => {
+  const source = fs.readFileSync(path.join(root, 'lib/mail-noticing.js'), 'utf8');
+  const re = vm.runInNewContext(source.match(/const CONFIRMATION_RE = ([^\n]+);/)[1]);
+  assert.ok(re.test('XY829 flight delayed'));
+  assert.ok(re.test('Flight schedule notification'));
+  assert.ok(!re.test('Save 20% on your next summer holiday'));
+});

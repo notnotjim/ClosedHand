@@ -46,11 +46,12 @@ function fixture(fail = "") {
   } };
   return db;
 }
-const getUrl = async platform => platform === "web" ? "/dashboard#agents" : "https://phone.example.com/dashboard#agents";
+const getUrl = async (platform, section) => (platform === "web" ? "" : "https://phone.example.com") + "/dashboard#" + section;
 const overview = (db, opts = {}) => getDashboardOverview({ db, userId: USER, platform: "whatsapp_linked", now: NOW, getUrl, ...opts });
 test("an idle dashboard still has a phone link, flights and hotels despite no reminder tasks", async () => {
   const r = await overview(fixture());
   assert.equal(r.dashboard_url, "https://phone.example.com/dashboard#agents");
+  assert.equal(r.schedules_url, "https://phone.example.com/dashboard#schedules");
   assert.equal(r.sections.agents.running_count, 0);
   assert.equal(r.sections.schedules.count, 0);
   assert.equal(r.sections.flights.count, 1);
@@ -109,4 +110,14 @@ test("Postgres timestamp objects retain the booking's local date and time", asyn
   assert.equal(b.start_local.local_date, "2026-09-16");
   assert.equal(b.start_local.local_time, "15:00");
   assert.equal(b.end_local.local_date, "2026-10-07");
+});
+
+test("overview dates use the departure airport's today when the server is still yesterday", async () => {
+  const db = fixture();
+  db.records.facts = [row("", { key: "flight-fixture", value: JSON.stringify(flight("XY829", {
+    departure: { airport: "KIX", dateTime: "2026-09-13T10:30:00+09:00", tz: "Asia/Tokyo" }
+  })) })];
+  const r = await overview(db, { now: Date.parse("2026-09-12T21:40:00Z") });
+  assert.equal(r.sections.flights.items[0].departure.local_today, "2026-09-13");
+  assert.equal(r.sections.flights.items[0].departure.relative_day, "today");
 });

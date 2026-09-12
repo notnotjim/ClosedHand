@@ -46,7 +46,7 @@ jobs:
         run: node --test scripts/test-bug-reports.js
 
       - name: Flight times and booking changes
-        run: node --test scripts/test-flights.js
+        run: node --test scripts/test-flights.js scripts/test-time-context.js
 
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
