@@ -427,6 +427,7 @@ CREATE TABLE schedules (
   user_id uuid NOT NULL,
   name text NOT NULL,
   cron_expression text NOT NULL,
+  timezone text,
   task text NOT NULL,
   enabled boolean DEFAULT true,
   last_run timestamp with time zone,
