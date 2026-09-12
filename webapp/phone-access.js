@@ -29,6 +29,29 @@ async function start() {
     const child = spawn(BIN, ["tunnel", "--url", `http://localhost:${PORT}`, "--no-autoupdate"], { stdio: ["ignore", "pipe", "pipe"] });
     proc = child;
     let assigned = null, registered = false, publishing = false;
+    // A quick tunnel can lose its public address while cloudflared stays alive,
+    // for example across a long network interruption. Process liveness alone
+    // must not leave a dead address advertised as phone access.
+    let checking = false, failures = 0;
+    const healthTimer = setInterval(async () => {
+      if (proc !== child || !wanted) { clearInterval(healthTimer); return; }
+      if (!url || checking) return;
+      checking = true;
+      try {
+        const response = await fetch(url + "/health", { signal: AbortSignal.timeout(10000) });
+        const health = response.ok ? await response.json() : null;
+        if (health?.status !== "ok" || health?.service !== "closedhand-webapp") throw new Error("Phone address is unreachable");
+        failures = 0;
+      } catch (_) {
+        if (proc !== child || !wanted) return;
+        if (++failures >= 3) {
+          clearInterval(healthTimer);
+          failed(new Error("Phone address stopped responding. Reconnecting."));
+          child.kill();
+        }
+      } finally { checking = false; }
+    }, 60000);
+    healthTimer.unref();
     const publish = async () => {
       if (proc !== child || !wanted || !assigned || !registered || publishing) return;
       publishing = true;
@@ -55,6 +78,7 @@ async function start() {
       });
     }
     const failed = (error) => {
+      clearInterval(healthTimer);
       if (proc !== child) return;
       proc = null; url = null;
       state = error.code === "ENOENT" ? "unavailable" : "error";

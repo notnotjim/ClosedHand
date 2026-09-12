@@ -44,12 +44,16 @@ test('unsafe or computer-only addresses are never sent to chat', async () => {
 });
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function tunnel(initial = {}) {
-  const values = { ...initial }, children = [];
+  const values = { ...initial }, children = [], intervals = [], retries = [];
+  let health = async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) });
   const api = load('webapp/phone-access.js', {
     './config': { getConf: async key => values[key], setConf: async patch => Object.assign(values, patch) },
-    child_process: { spawn() { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => {}; children.push(child); return child; } },
-  }, { setTimeout: () => 1, clearTimeout() {}, console: { log() {}, error() {} } });
-  return { api, values, children };
+    child_process: { spawn() { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; children.push(child); return child; } },
+  }, { setTimeout: fn => { retries.push(fn); return retries.length; }, clearTimeout() {}, console: { log() {}, error() {} },
+    AbortSignal, fetch: (...args) => health(...args),
+    setInterval: fn => { const timer = { fn, unref() {} }; intervals.push(timer); return timer; },
+    clearInterval: timer => { timer.cleared = true; } });
+  return { api, values, children, intervals, retries, setHealth: fn => { health = fn; } };
 }
 test('phone access requires a password on enable and on restart', async () => {
   const t = tunnel({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone });
@@ -95,4 +99,50 @@ test('successful login preserves the Agents tab and rejects external redirects',
     await flush();
     assert.equal(location.href, expected);
   }
+});
+
+test('a live process with a dead public address clears the URL and reconnects after repeated failures', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  const first = t.children[0];
+  first.stderr.emit('data', phone + '\nRegistered tunnel connection');
+  await flush();
+  const check = t.intervals[0].fn;
+  t.setHealth(async () => { throw new Error('DNS address gone'); });
+  await check(); await check();
+  assert.equal(first.killed, undefined, 'a brief outage does not rotate the address');
+  t.setHealth(async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) }));
+  await check();
+  t.setHealth(async () => ({ ok: false }));
+  await check(); await check();
+  assert.equal(first.killed, undefined, 'success resets the failure count');
+  await check(); await flush();
+  assert.equal(first.killed, true);
+  assert.equal(t.values.PHONE_ACCESS_URL, null);
+  assert.equal(t.api.status().state, 'error');
+  assert.equal(t.intervals[0].cleared, true);
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.children.length, 2);
+  t.children[1].stderr.emit('data', 'https://reconnected.trycloudflare.com\nRegistered tunnel connection');
+  await flush();
+  assert.equal(t.api.status().url, 'https://reconnected.trycloudflare.com');
+});
+
+test('a health check finishing after disable cannot restart or clear a replacement connection', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.children[0].stderr.emit('data', phone + '\nRegistered tunnel connection');
+  await flush();
+  t.setHealth(async () => { throw new Error('offline'); });
+  await t.intervals[0].fn(); await t.intervals[0].fn();
+  let reject;
+  t.setHealth(() => new Promise((_, fail) => { reject = fail; }));
+  const pending = t.intervals[0].fn();
+  await t.api.disable(); await t.api.enable();
+  t.children[1].stderr.emit('data', 'https://replacement.trycloudflare.com\nRegistered tunnel connection');
+  await flush();
+  reject(new Error('old check')); await pending;
+  assert.equal(t.api.status().url, 'https://replacement.trycloudflare.com');
+  assert.equal(t.children[1].killed, undefined);
+  assert.equal(t.retries.length, 0);
 });
