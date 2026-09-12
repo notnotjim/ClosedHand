@@ -105,6 +105,16 @@ Where you run it sets the tier. On a laptop it works while the lid is open and c
 
 Single-tenant by construction, not by configuration: every request resolves to the one admin. The first platform sender claims the instance and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
 
+## Reporting a problem
+
+Send `/bug` followed by what went wrong in your ClosedHand chat. The report stays
+on your installation unless you agree to send it to ClosedHand. Before you decide,
+ClosedHand explains what is included and lets you review the saved conversation.
+
+Use `/bugs` to see your reports and any outcomes, `/bugs <reference>` to review one,
+`/bugs send <reference>` to send or retry it, and `/bugs delete <reference>` to delete
+your local copy. Deleting a local copy does not withdraw a report already sent.
+
 ## Contributing
 
 Issues and PRs welcome. Open an issue before starting anything sizeable so the approach can be agreed first. A genuinely useful first contribution: run `install.sh` on a clean Linux box or WSL and report what breaks.

@@ -30,6 +30,9 @@ jobs:
       - name: Phone dashboard links
         run: node --test scripts/test-dashboard-links.js
 
+      - name: Bug reporting and consent
+        run: node --test scripts/test-bug-reports.js
+
       - name: Flight times and booking changes
         run: node --test scripts/test-flights.js
 
