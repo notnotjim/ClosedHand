@@ -5024,7 +5024,7 @@
         ? 'Completed, confirmed by you. Times shown are from your booking.'
         : status.label === 'Status unconfirmed'
           ? 'Departure time has passed. Takeoff and arrival have not been confirmed.'
-          : f.liveTrackingAvailable === false ? 'Times from your booking. Live flight status is not connected.' : '';
+          : !f.liveStatus ? 'Scheduled times from your booking.' : '';
 
 
       // Fixed headings: show what WILL be known, TBC until the live feed fills it

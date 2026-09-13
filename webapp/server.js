@@ -5152,7 +5152,6 @@ app.get("/api/flights", async (req, res) => {
           let f = JSON.parse(row.value);
           if (f && typeof f.value === "string") f = JSON.parse(f.value);
           f._key = row.key;
-          f.liveTrackingAvailable = !!process.env.FLIGHTAWARE_API_KEY;
           return f;
         } catch { return null; }
       })
