@@ -754,8 +754,15 @@ app.get("/keep", async (req, res) => {
 app.get("/api/keep", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   const phone = phoneAccess.status();
+  const base = await require("./config").dashboardBase();
+  const permanent = !!base && !new URL(base).hostname.endsWith(".trycloudflare.com");
   const { data: links } = await supabase.from("chat_links").select("platform,platform_user_id").eq("user_id", getAdminUserId());
-  res.set("Cache-Control", "no-store").json({ ...phone, local: true, canSend: (links || []).some(x => ["whatsapp_linked", "telegram"].includes(x.platform) && x.platform_user_id) });
+  res.set("Cache-Control", "no-store").json({ ...phone, permanent, url: base || phone.url, local: true, canSend: phone.permanent && (links || []).some(x => ["whatsapp_linked", "telegram"].includes(x.platform) && x.platform_user_id) });
+});
+app.get("/api/phone/delivery", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  const job = await getRuntimeConf("PHONE_LINK_DELIVERY");
+  res.set("Cache-Control", "no-store").json({ state: job?.state || "none" });
 });
 app.post("/api/phone/send", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
@@ -767,7 +774,7 @@ app.post("/api/phone/send", async (req, res) => {
     const target = (links || []).find(x => x.platform === "whatsapp_linked" && x.platform_user_id) || (links || []).find(x => x.platform === "telegram" && x.platform_user_id);
     if (!target) return res.status(409).json({ error: "Link WhatsApp or Telegram first." });
     const pending = await getRuntimeConf("PHONE_LINK_DELIVERY");
-    if (!pending || pending.state !== "pending") await setRuntimeConf({ PHONE_LINK_DELIVERY: { id: crypto.randomBytes(16).toString("hex").toUpperCase(), state: "pending", platform: target.platform, chatId: target.platform_user_id, url: phone.url, requestedAt: new Date().toISOString() } });
+    if (!pending || !["pending", "sending"].includes(pending.state) || Date.now() - Date.parse(pending.requestedAt) > 60000) await setRuntimeConf({ PHONE_LINK_DELIVERY: { id: crypto.randomBytes(16).toString("hex").toUpperCase(), state: "pending", platform: target.platform, chatId: target.platform_user_id, url: phone.url, requestedAt: new Date().toISOString() } });
     res.json({ queued: true });
   } catch (_) { res.status(503).json({ error: "Could not send the link. Please try again." }); }
 });
@@ -787,7 +794,7 @@ app.post("/api/phone", async (req, res) => {
 });
 app.get("/api/phone/qr.svg", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
-  const { url } = phoneAccess.status();
+  const url = await require("./config").dashboardBase() || phoneAccess.status().url;
   if (!url) return res.status(404).end();
   try {
     const svg = await require("qrcode").toString(url + "/keep", { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
