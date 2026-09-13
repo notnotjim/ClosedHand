@@ -747,6 +747,31 @@ app.post("/api/settings/spend-limits", async (req, res) => {
   }
 });
 
+app.get("/keep", async (req, res) => {
+  if (await passwordConfigured() && !hasAdminSession(req)) return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl));
+  res.set("Cache-Control", "no-store").sendFile(path.join(__dirname, "views", "keep.html"));
+});
+app.get("/api/keep", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  const phone = phoneAccess.status();
+  const { data: links } = await supabase.from("chat_links").select("platform,platform_user_id").eq("user_id", getAdminUserId());
+  res.set("Cache-Control", "no-store").json({ ...phone, local: true, canSend: (links || []).some(x => ["whatsapp_linked", "telegram"].includes(x.platform) && x.platform_user_id) });
+});
+app.post("/api/phone/send", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  const phone = phoneAccess.status();
+  if (!phone.permanent || !phone.url) return res.status(409).json({ error: "Finish setting up your lasting address first." });
+  try {
+    const { data: links, error } = await supabase.from("chat_links").select("platform,platform_user_id").eq("user_id", getAdminUserId());
+    if (error) throw error;
+    const target = (links || []).find(x => x.platform === "whatsapp_linked" && x.platform_user_id) || (links || []).find(x => x.platform === "telegram" && x.platform_user_id);
+    if (!target) return res.status(409).json({ error: "Link WhatsApp or Telegram first." });
+    const pending = await getRuntimeConf("PHONE_LINK_DELIVERY");
+    if (!pending || pending.state !== "pending") await setRuntimeConf({ PHONE_LINK_DELIVERY: { id: crypto.randomBytes(16).toString("hex").toUpperCase(), state: "pending", platform: target.platform, chatId: target.platform_user_id, url: phone.url, requestedAt: new Date().toISOString() } });
+    res.json({ queued: true });
+  } catch (_) { res.status(503).json({ error: "Could not send the link. Please try again." }); }
+});
+
 app.get("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   res.json(phoneAccess.status());
@@ -754,7 +779,7 @@ app.get("/api/phone", async (req, res) => {
 app.post("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   try {
-    if ((req.body || {}).enabled) await phoneAccess.enable(); else await phoneAccess.disable();
+    if ((req.body || {}).enabled) await phoneAccess.enable(req.body.mode || "quick"); else await phoneAccess.disable();
     res.json(phoneAccess.status());
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -765,7 +790,7 @@ app.get("/api/phone/qr.svg", async (req, res) => {
   const { url } = phoneAccess.status();
   if (!url) return res.status(404).end();
   try {
-    const svg = await require("qrcode").toString(url, { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
+    const svg = await require("qrcode").toString(url + "/keep", { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-store").send(svg);
   } catch (e) {
     res.status(500).end();
@@ -3542,7 +3567,7 @@ app.get("/api/status", async (req, res) => {
       selfHost: true,
       name: profile?.display_name || "User",
       email: profile?.email || "",
-      settings: profile?.settings || {},
+      settings: Object.fromEntries(Object.entries(profile?.settings || {}).filter(([key]) => key !== "self_host_config")),
       services: (connections || []).map((c) => c.service),
       platforms,
       availableServices: getAvailableServices(),

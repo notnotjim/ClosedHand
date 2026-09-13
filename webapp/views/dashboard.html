@@ -1855,6 +1855,9 @@
   </style>
   <link rel="stylesheet" href="/welcome.css">
   <link rel="stylesheet" href="/interface.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/logocircle.png">
+  <meta name="theme-color" content="#101115">
 </head>
 <body class="dashboard-page">
 <script src="/flight-time.js"></script>
@@ -1985,6 +1988,7 @@
         <summary aria-label="Dashboard help" title="Dashboard help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg></summary>
         <div class="dashboard-help-menu">
           <button id="dashboard-welcome-replay" type="button">Take a quick tour</button>
+          <a href="/keep" target="_top">Keep your dashboard handy</a>
           <a href="/setup" target="_top">Back to setup</a>
         </div>
       </details>
@@ -2384,7 +2388,7 @@
           <div class="settings-group" id="phone-block" style="display:none;">
             <div class="settings-group-header">
               <h2>Your phone</h2>
-              <p class="section-desc">Open this dashboard from your phone, wherever you are. The address is yours alone and only exists while this is on. Your password is the lock.</p>
+              <p class="section-desc">Open this dashboard from your phone, wherever you are. You can set up a lasting address and save it to your home screen. Your dashboard password is still required.</p>
             </div>
             <div style="padding:12px 16px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
@@ -2394,12 +2398,13 @@
                 </div>
                 <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Turn on</button>
               </div>
+              <p><a href="/keep" target="_top" style="color:#6ee7a8">Set up or save your phone address</a></p>
               <div id="phone-live" style="display:none;margin-top:14px;gap:18px;align-items:center;flex-wrap:wrap;">
                 <div id="phone-qr" style="width:132px;height:132px;flex:none;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;padding:8px;box-sizing:border-box;"></div>
                 <div style="font-size:13px;color:#aaa;line-height:1.6;min-width:220px;flex:1;">
                   <div><a id="phone-url" href="#" target="_blank" rel="noopener" style="color:#6ee7a8;word-break:break-all;"></a></div>
                   <div>Point your phone's camera at the code, then sign in with your password.</div>
-                  <div style="color:#777;">Your computer must stay on. Restarting ClosedHand gives you a new address; older chat links will stop working. Connecting accounts still happens on this computer.</div>
+                  <div style="color:#777;">Your computer must stay on. A temporary address changes on restart. A lasting address stays the same.</div>
                 </div>
               </div>
             </div>
@@ -4684,6 +4689,9 @@
         document.getElementById('phone-url').textContent = p.url.replace(/^https:\/\//, '');
         document.getElementById('phone-url').href = p.url;
         document.getElementById('phone-qr').innerHTML = '<img src="/api/phone/qr.svg?t=' + Date.now() + '" alt="" style="width:100%;height:100%;display:block;">';
+      } else if (p.state === 'pairing') {
+        title.textContent = 'Finish setup'; desc.textContent = 'Open the phone address link below to finish setting up your lasting address.';
+        _phonePoll = setTimeout(loadPhoneAccess, 4000);
       } else if (p.enabled) {
         title.textContent = p.state === 'error' ? 'Reconnecting' : 'Starting';
         desc.textContent = p.state === 'error' ? 'The connection dropped. Trying again.' : 'Getting an address. A few seconds.';
@@ -4696,7 +4704,7 @@
       var on = !!(_phone && _phone.enabled);
       var btn = document.getElementById('phone-btn'); btn.disabled = true;
       try {
-        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on }) });
+        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });
         var result = await r.json();
         if (!r.ok) throw new Error(result.error || 'Could not change phone access. Try again.');
         renderPhone(result);

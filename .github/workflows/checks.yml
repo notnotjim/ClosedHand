@@ -43,7 +43,7 @@ jobs:
         run: node --test scripts/test-agent-context-state.js
 
       - name: Phone dashboard links
-        run: node --test scripts/test-dashboard-links.js
+        run: node --test scripts/test-dashboard-links.js scripts/test-phone-registration.js
 
       - name: Bug reporting and consent
         run: node --test scripts/test-bug-reports.js

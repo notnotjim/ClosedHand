@@ -112,6 +112,7 @@ whatsappHandler.setup();
 // Linked-device WhatsApp (self-host tier): only ever activates when the setup
 // page has written its connection row, so cloud never starts a socket.
 require("./lib/platforms/whatsapp-linked").setup();
+require("./lib/phone-link-delivery").setup();
 // Self-host: read the inbox as soon as Google is connected, so the first
 // chat message already has something to show.
 require("./lib/onboarding").watchForFirstGoogle();

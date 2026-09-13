@@ -43,12 +43,13 @@ test('unsafe or computer-only addresses are never sent to chat', async () => {
   }
 });
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function tunnel(initial = {}) {
+function tunnel(initial = {}, permanent = null) {
   const values = { ...initial }, children = [], intervals = [], retries = [];
   let health = async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) });
   const api = load('webapp/phone-access.js', {
     './config': { getConf: async key => values[key], setConf: async patch => Object.assign(values, patch) },
-    child_process: { spawn() { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; children.push(child); return child; } },
+    './phone-registration': { connection: async () => permanent, begin: async () => 'https://closedhand.com/phone-access/pair#fixture' },
+    child_process: { spawn(bin, args, options) { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; child.args = args; child.options = options; children.push(child); return child; } },
   }, { setTimeout: fn => { retries.push(fn); return retries.length; }, clearTimeout() {}, console: { log() {}, error() {} },
     AbortSignal, fetch: (...args) => health(...args),
     setInterval: fn => { const timer = { fn, unref() {} }; intervals.push(timer); return timer; },
@@ -145,4 +146,53 @@ test('a health check finishing after disable cannot restart or clear a replaceme
   assert.equal(t.api.status().url, 'https://replacement.trycloudflare.com');
   assert.equal(t.children[1].killed, undefined);
   assert.equal(t.retries.length, 0);
+});
+
+
+test('named connection retains the exact address across a disconnect and an installation restart', async () => {
+  const permanent = { url: 'https://ch-11111111111141118111111111111111.closedhand.com', token: 'fixture-named-token' };
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' }, permanent);
+  await t.api.enable('managed');
+  assert.equal(t.api.status().url, null);
+  assert.equal(t.children[0].args.includes(permanent.token), false);
+  assert.equal(t.children[0].options.env.TUNNEL_TOKEN, permanent.token);
+  t.children[0].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(t.api.status().url, permanent.url);
+  t.children[0].emit('exit', 1); await flush();
+  t.retries.at(-1)(); await flush();
+  t.children[1].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(t.api.status().url, permanent.url);
+  const restarted = tunnel(t.values, permanent); await restarted.api.boot();
+  restarted.children[0].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(restarted.api.status().url, permanent.url);
+  await restarted.api.disable();
+  assert.equal(restarted.api.status().url, null);
+  assert.equal(restarted.children[0].killed, true);
+});
+test('pending registration does not start a tunnel or publish a link', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable('managed');
+  assert.equal(t.children.length, 0);
+  assert.equal(t.api.status().state, 'pairing');
+  assert.equal(t.api.status().permanent, true);
+  assert.equal(t.api.status().url, null);
+  await t.api.disable();
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.children.length, 0);
+  assert.equal(t.api.status().pairingUrl, null);
+});
+
+test('upgrading a temporary phone connection keeps it reachable during approval', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.children[0].stderr.emit('data', phone + '\nRegistered tunnel connection'); await flush();
+  await t.api.enable('managed');
+  assert.equal(t.children[0].killed, undefined);
+  assert.equal(t.api.status().url, phone);
+  assert.equal(t.api.status().permanent, false);
+  assert.equal(t.api.status().state, 'pairing');
+  assert.ok(t.api.status().pairingUrl);
+  await t.api.disable();
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.api.status().enabled, false);
 });

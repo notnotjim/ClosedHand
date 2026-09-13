@@ -122,3 +122,25 @@ Issues and PRs welcome. Open an issue before starting anything sizeable so the a
 ## License
 
 [MIT](LICENSE).
+
+
+### Open your local dashboard from your phone
+
+On your computer, open [the dashboard](http://localhost:3000/dashboard). Under
+Settings, choose **Your phone → Set up or save your phone address**. The same
+page is available from the dashboard’s help menu and after linking a chat app.
+
+Lasting phone access is optional. Sign in to ClosedHand to reserve an address
+for this installation, then copy it, send it to your connected chat, or scan its
+QR code. You can bookmark that address or pin the message and reuse it after
+restarts. In Safari on iPhone, use **Share → Add to Home Screen → Add**. Browsers
+that support an install prompt also show an install button.
+
+The dashboard and database stay on your computer. ClosedHand stores the address
+and connection details, and Cloudflare relays phone traffic to your computer.
+Your computer must be awake and online, and your dashboard password is required.
+Turning phone access off stops the connection; re-enabling the same installation
+keeps its reserved address. Local access needs no ClosedHand account.
+
+Temporary phone access remains available in Settings. Its address changes when
+the connection restarts, so use a lasting address before bookmarking or pinning.

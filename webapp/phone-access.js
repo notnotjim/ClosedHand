@@ -6,7 +6,7 @@ const BIN = process.env.CLOUDFLARED_BIN || "cloudflared";
 const PORT = process.env.PORT || 3000;
 const URL_RE = /https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com/i;
 let proc = null, url = null, wanted = false, state = "off", lastError = null;
-let retryTimer = null, generation = 0;
+let retryTimer = null, upgradeTimer = null, generation = 0, upgradeGeneration = 0, mode = "quick", pairingUrl = null;
 // Keep an old publication from landing after a disable or restart clears it.
 let writes = Promise.resolve();
 function save(patch) {
@@ -25,10 +25,27 @@ async function start() {
   try {
     await save({ PHONE_ACCESS_URL: null });
     await requirePassword();
+    let permanent = null;
+    if (mode === "managed") {
+      permanent = await require("./phone-registration").connection();
+      if (run !== generation || !wanted) return;
+      if (!permanent) {
+        state = "pairing";
+        const nextPairingUrl = pairingUrl || await require("./phone-registration").begin();
+        if (run !== generation || !wanted) return;
+        pairingUrl = nextPairingUrl;
+        retryTimer = setTimeout(() => { if (wanted) void start(); }, 5000);
+        return;
+      }
+      pairingUrl = null;
+    }
     if (run !== generation || !wanted) return;
-    const child = spawn(BIN, ["tunnel", "--url", `http://localhost:${PORT}`, "--no-autoupdate"], { stdio: ["ignore", "pipe", "pipe"] });
+    const args = permanent ? ["tunnel", "--no-autoupdate", "run"] : ["tunnel", "--url", `http://localhost:${PORT}`, "--no-autoupdate"];
+    const options = { stdio: ["ignore", "pipe", "pipe"] };
+    if (permanent) options.env = { ...process.env, TUNNEL_TOKEN: permanent.token };
+    const child = spawn(BIN, args, options);
     proc = child;
-    let assigned = null, registered = false, publishing = false;
+    let assigned = permanent?.url || null, registered = false, publishing = false;
     // A quick tunnel can lose its public address while cloudflared stays alive,
     // for example across a long network interruption. Process liveness alone
     // must not leave a dead address advertised as phone access.
@@ -72,7 +89,7 @@ async function start() {
         if (proc !== child) return;
         buffer = (buffer + String(chunk)).slice(-8192);
         const match = buffer.match(URL_RE);
-        if (match) assigned = match[0];
+        if (match && !permanent) assigned = match[0];
         if (buffer.includes("Registered tunnel connection")) registered = true;
         void publish();
       });
@@ -97,23 +114,48 @@ async function start() {
     console.error("[Phone]", lastError);
   }
 }
-async function enable() {
+async function enable(nextMode = "quick") {
   await requirePassword();
-  await save({ PHONE_ACCESS: "1" });
+  if (!["quick", "managed"].includes(nextMode)) throw new Error("Unknown phone access option.");
+  if (nextMode === "managed" && mode === "quick" && wanted) {
+    // A person may be using the temporary address right now. Keep it alive
+    // while they approve the lasting one on the provider's separate page.
+    const registration = require("./phone-registration");
+    if (!await registration.connection()) {
+      pairingUrl = await registration.begin(); state = "pairing"; lastError = null;
+      const run = ++upgradeGeneration;
+      clearTimeout(upgradeTimer);
+      const check = async () => {
+        try {
+          const ready = await registration.connection();
+          if (!wanted || run !== upgradeGeneration) return;
+          if (ready) { await disable(); await enable("managed"); }
+          else upgradeTimer = setTimeout(check, 5000);
+        } catch (_) { if (run === upgradeGeneration) lastError = "Could not finish setup. Try again from your computer."; }
+      };
+      upgradeTimer = setTimeout(check, 5000);
+      return;
+    }
+  }
+  if (nextMode !== mode && wanted) await disable();
+  mode = nextMode;
+  pairingUrl = null;
+  await save({ PHONE_ACCESS: "1", PHONE_ACCESS_MODE: mode });
   wanted = true;
   await start();
 }
 async function disable() {
-  wanted = false; ++generation;
-  clearTimeout(retryTimer);
+  wanted = false; ++generation; ++upgradeGeneration;
+  clearTimeout(retryTimer); clearTimeout(upgradeTimer);
   const child = proc;
-  proc = null; url = null; state = "off"; lastError = null;
+  proc = null; url = null; state = "off"; lastError = null; pairingUrl = null;
   if (child) child.kill();
   await save({ PHONE_ACCESS: null, PHONE_ACCESS_URL: null });
 }
-function status() { return { enabled: wanted, state, url, error: lastError }; }
+function status() { return { enabled: wanted, state, url, error: lastError, mode, permanent: mode === "managed", pairingUrl }; }
 async function boot() {
   try {
+    mode = (await getConf("PHONE_ACCESS_MODE")) === "managed" ? "managed" : "quick";
     wanted = String(await getConf("PHONE_ACCESS")) === "1";
     if (wanted) await start();
     else await save({ PHONE_ACCESS_URL: null });
