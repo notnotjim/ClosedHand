@@ -4,8 +4,9 @@
   const message = (text, error = false) => { $('status').textContent = text; $('status').classList.toggle('error', error); };
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent) || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
   if (new URLSearchParams(location.search).get('welcome') === '1') $('later').href = '/?dash=%3Fwelcome%3D1';
+  function canInstall() { return !!(prompt && current?.permanent && current.url && new URL(current.url).origin === location.origin); }
   function render(data) {
-    current = data; $('loading').hidden = true;
+    current = data; $('loading').hidden = true; $('install').hidden = !canInstall();
     const ready = !!(data.permanent && data.url);
     $('ready').hidden = !ready; $('setup').hidden = ready || !data.local;
     if (ready) {
@@ -55,8 +56,8 @@
       if (state !== 'sent') message('The link is still waiting to be sent. You can copy it above.'); }
     catch (e) { message(e.message, true); } finally { $('send').disabled = false; }
   };
-  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); prompt = e; $('install').hidden = false; });
-  $('install').onclick = async () => { if (!prompt) return; const p = prompt; prompt = null; $('install').hidden = true; await p.prompt(); const answer = await p.userChoice; message(answer.outcome === 'accepted' ? 'Follow your browser’s confirmation to finish adding ClosedHand.' : 'You can add ClosedHand later from your browser’s menu.'); };
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); prompt = e; $('install').hidden = !canInstall(); });
+  $('install').onclick = async () => { if (!canInstall()) return; const p = prompt; prompt = null; $('install').hidden = true; await p.prompt(); const answer = await p.userChoice; message(answer.outcome === 'accepted' ? 'Follow your browser’s confirmation to finish adding ClosedHand.' : 'You can add ClosedHand later from your browser’s menu.'); };
   window.addEventListener('appinstalled', () => { $('install').hidden = true; message('ClosedHand has been added.'); });
   load();
 })();
