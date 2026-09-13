@@ -143,7 +143,7 @@ test('flights API excludes superseded records and keeps authentication enforced'
   const state = facts(); apply(state, reconcileFlights(state, [change], [email], now));
   const query = { select() { return this; }, eq(column, value) { assert.equal(column, 'user_id'); assert.equal(value, user); return this; }, async like() { return { data: Object.entries(state).map(([key,value]) => ({key,value:JSON.stringify(value)})) }; } };
   class FixedDate extends Date { static now() { return now; } }
-  vm.runInNewContext(source.slice(start, end), { Date: FixedDate, console, getUserIdFromRequest: () => user, supabase: { from: () => query }, app: { get: (_,fn) => { handler = fn; } } });
+  vm.runInNewContext(source.slice(start, end), { Date: FixedDate, process: {env:{}}, console, getUserIdFromRequest: () => user, supabase: { from: () => query }, app: { get: (_,fn) => { handler = fn; } } });
   const res = { json(value) { payload = value; }, status(code) { status = code; return this; } };
   await handler({}, res);
   assert.deepEqual(Array.from(payload, f => f.flightNumber), ['XY648']);
@@ -265,4 +265,27 @@ test('departure notices without the word booking still enter mail noticing', () 
   assert.ok(re.test('XY829 flight delayed'));
   assert.ok(re.test('Flight schedule notification'));
   assert.ok(!re.test('Save 20% on your next summer holiday'));
+});
+
+test('elapsed schedules never imply live takeoff or landing, and confirmed flights are recent', () => {
+  const f={...next,departure:{dateTime:new Date(now-10*3600000).toISOString()},arrival:{dateTime:null},lastStatus:'Scheduled'};
+  assert.equal(clock.status(f,now).label,'Status unconfirmed');assert.equal(clock.status(f,now).past,true);
+  assert.equal(clock.status({...f,landed:true},now).label,'Landed');
+  assert.equal(clock.status({...f,liveStatus:{departed:true}},now).label,'In flight');
+  assert.equal(clock.status(next,now).label,'Scheduled');
+  assert.equal(clock.status({...next,lastStatus:'Scheduled'},now).label,'Scheduled');
+  assert.equal(clock.status({...next,lastStatus:'Cancelled'},now).past,true);
+});
+test('live tracking covers long flights beyond six hours, then stops within a bounded window', () => {
+  const f={departure:{dateTime:new Date(now-15*3600000).toISOString()},arrival:{dateTime:new Date(now+3600000).toISOString()}};
+  assert.equal(clock.shouldTrack(f,now),true);
+  assert.equal(clock.shouldTrack({...f,landed:true},now),false);
+  assert.equal(clock.shouldTrack({...f,supersededBy:'replacement'},now),false);
+  assert.equal(clock.shouldTrack(f,now+50*3600000),false);
+});
+test('scanner reads arrival from attached itinerary even when the body contains a flight number', async () => {
+  let reads=0;
+  const h=loadFlights({},[next],{'./mail-attachments':{bodyForScan:async(_,e)=>e.body,attachmentTextFor:async()=>{reads++;return '[Attachment itinerary.pdf] XY648 departs 20:00 arrives 21:20';}}});
+  await h.api.scanEmailsForFlights('fixture-user',{emails:[{...email,body:'XY648 will now depart 20:00. Please see your full itinerary.',attachments:[{filename:'itinerary.pdf',size:100}]}]});
+  assert.equal(reads,1);assert.match(h.prompt(),/arrives 21:20/);
 });

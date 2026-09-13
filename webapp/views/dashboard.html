@@ -357,7 +357,18 @@
       border-color: #aaa;
     }
 
-    /* Shopify modal */
+    /* Shopify uses the browser's modal focus and Escape handling. */
+    #shopify-modal { margin: auto; color: inherit; padding: 28px; }
+    #shopify-modal::backdrop { background: rgba(0,0,0,0.65); }
+    #shopify-modal input { font-size: 16px; min-height: 44px; }
+    #shopify-modal .modal-desc { color: #aaa; line-height: 1.55; margin: 16px 0; }
+    #shopify-modal label { margin-top: 18px; color: #bbb; }
+    #shopify-modal a { color: #6ee7a8; }
+    #shopify-modal summary { cursor: pointer; margin-top: 20px; }
+    #shopify-modal .modal-actions { flex-wrap: wrap; gap: 12px; }
+    #shopify-modal .btn-modal { min-height: 44px; }
+
+    /* Shared modal styles */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -2273,6 +2284,8 @@
           <div id="flights-empty" style="display:none;font-size:13px;color:#555;padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, and bookings picked out of your mail (trains, hotels, tickets, tables) appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
 
           <!-- Resources: datasets and skills, both nested under it -->
+          <div id="recent-flights" class="mc-subsection"></div>
+
           <div class="mc-section-label" style="margin-top:24px;">Resources</div>
           <p id="resources-blurb" style="font-size:13px;color:#555;margin:0 0 10px;line-height:1.5;">What ClosedHand builds and works from.</p>
           <!-- Files: what has come in and gone out -->
@@ -3150,64 +3163,61 @@
     }
 
     function openShopifyModal() {
-      document.getElementById("shopify-store").value = "";
-      document.getElementById("shopify-token").value = "";
+      const modal = document.getElementById("shopify-modal");
+      document.getElementById("shopify-form").reset();
       document.getElementById("shopify-error").style.display = "none";
       document.getElementById("shopify-save-btn").disabled = false;
-      document.getElementById("shopify-save-btn").textContent = "Connect";
-      document.getElementById("shopify-modal").classList.add("visible");
-      setTimeout(() => document.getElementById("shopify-store").focus(), 100);
+      const oauth = !!window._allServices?.shopify?.oauthReady;
+      document.getElementById("shopify-oauth").hidden = !oauth;
+      document.getElementById("shopify-own-app").hidden = oauth;
+      modal.showModal();
     }
 
     function closeShopifyModal() {
-      document.getElementById("shopify-modal").classList.remove("visible");
+      document.getElementById("shopify-modal").close();
+      document.getElementById("shopify-form").reset();
+    }
+
+    function shopifyDomain() {
+      let domain = document.getElementById("shopify-store").value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+      if (!domain.includes(".")) domain += ".myshopify.com";
+      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.myshopify\.com$/.test(domain)) throw new Error("Enter your store's myshopify.com address, without a page path.");
+      return domain;
     }
 
     function connectShopifyOAuth() {
-      const store = document.getElementById("shopify-store").value.trim().replace(/\.myshopify\.com$/i, "");
       const errEl = document.getElementById("shopify-error");
-      errEl.style.display = "none";
-      if (!store) { errEl.textContent = "Enter your store name first."; errEl.style.display = "block"; return; }
-      (window.top || window).location.href = "/auth/shopify?store_domain=" + encodeURIComponent(store + ".myshopify.com");
+      try {
+        (window.top || window).location.href = "/auth/shopify?store_domain=" + encodeURIComponent(shopifyDomain());
+      } catch (e) { errEl.textContent = e.message; errEl.style.display = "block"; }
     }
 
     async function saveShopifyToken() {
-      const store = document.getElementById("shopify-store").value.trim().replace(/\.myshopify\.com$/i, "");
-      const token = document.getElementById("shopify-token").value.trim();
       const errEl = document.getElementById("shopify-error");
       const btn = document.getElementById("shopify-save-btn");
-
       errEl.style.display = "none";
-
-      if (!store) { errEl.textContent = "Enter your store name."; errEl.style.display = "block"; return; }
-      if (!token) { errEl.textContent = "Paste your Admin API access token."; errEl.style.display = "block"; return; }
-
-      btn.disabled = true;
-      btn.textContent = "Connecting...";
-
       try {
+        const storeDomain = shopifyDomain();
+        const accessToken = document.getElementById("shopify-token").value.trim();
+        const clientId = document.getElementById("shopify-client-id").value.trim();
+        const clientSecret = document.getElementById("shopify-client-secret").value.trim();
+        if (!accessToken && (!clientId || !clientSecret)) throw new Error("Enter your app's Client ID and Client secret, or use an existing access token below.");
+        btn.disabled = true;
+        btn.textContent = "Connecting...";
         const res = await fetch("/api/connect-shopify-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storeDomain: store, accessToken: token }),
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeDomain, ...(accessToken ? { accessToken } : { clientId, clientSecret }) }),
+          signal: AbortSignal.timeout(35000),
         });
         const data = await res.json();
-        if (!res.ok) {
-          errEl.textContent = data.error || "Connection failed.";
-          errEl.style.display = "block";
-          btn.disabled = false;
-          btn.textContent = "Connect";
-          return;
-        }
+        if (!res.ok) throw new Error(data.error || "Connection failed. Please try again.");
         closeShopifyModal();
-        showToast(`Connected to ${data.shopName || store}`);
+        showToast(`Connected to ${data.shopName || storeDomain}`);
         loadStatus();
       } catch (e) {
-        errEl.textContent = "Network error. Please try again.";
+        errEl.textContent = e.name === "TimeoutError" ? "The connection took too long. Please try again." : e.message;
         errEl.style.display = "block";
-        btn.disabled = false;
-        btn.textContent = "Connect";
-      }
+      } finally { btn.disabled = false; btn.textContent = "Connect store"; }
     }
 
     async function openAppleModal() {
@@ -4927,25 +4937,7 @@
 
     // === Globe SVG rendering ===
     let _globeId = 0;
-    function getFlightStatusInfo(f) {
-      const live = f.liveStatus || {};
-      const s = (live.status || f.lastStatus || '').toLowerCase();
-      if (live.landed || f.landed) return { cls: 'landed', label: 'Landed' };
-      if (s.includes('cancel')) return { cls: 'cancelled', label: 'Cancelled' };
-      if (live.departed || f.departed) return { cls: 'in-flight', label: 'In Flight' };
-      if (s.includes('delay') || (live.delay && live.delay > 15)) return { cls: 'delayed', label: `Delayed ${live.delay ? live.delay + 'm' : ''}`.trim() };
-      // No live status yet (or no live tracking at all) is a schedule, not a
-      // promise that the flight is on time; a booking the airline has not
-      // confirmed yet says so.
-      if (f.pending) return { cls: 'scheduled', label: 'Pending confirmation' };
-      if (!s) return { cls: 'scheduled', label: 'Scheduled' };
-      if (s.includes('on time') || s.includes('scheduled')) {
-        const depTime = new Date(f.departure?.dateTime).getTime();
-        if (depTime > Date.now()) return { cls: 'on-time', label: 'On Time' };
-        return { cls: 'scheduled', label: 'Scheduled' };
-      }
-      return { cls: 'scheduled', label: s || 'Scheduled' };
-    }
+    function getFlightStatusInfo(f) { return FlightTime.status(f); }
 
     function fmtFlightTime(dateStr, point) {
       return FlightTime.time(dateStr, point);
@@ -5028,11 +5020,17 @@
       const arrCode = (f.arrival?.airport || '\u2014').substring(0, 3).toUpperCase();
       const depTime = fmtFlightTime(live.departureTime || f.departure?.dateTime, f.departure);
       const arrTime = fmtFlightTime(live.arrivalTime || f.arrival?.dateTime, f.arrival);
+      const timeNote = f.completionSource === 'user'
+        ? 'Completed, confirmed by you. Times shown are from your booking.'
+        : status.label === 'Status unconfirmed'
+          ? 'Departure time has passed. Takeoff and arrival have not been confirmed.'
+          : f.liveTrackingAvailable === false ? 'Times from your booking. Live flight status is not connected.' : '';
+
 
       // Fixed headings: show what WILL be known, TBC until the live feed fills it
       const tbc = v => v ? escHtml(String(v)) : '<span style="color:#555;">TBC</span>';
       let details = [];
-      details.push(`<span class="flight-detail">Terminal <span>${tbc(live.terminal)}</span></span>`);
+      details.push(`<span class="flight-detail">Terminal <span>${tbc(live.terminal || f.departure?.terminal)}</span></span>`);
       details.push(`<span class="flight-detail">Gate <span>${tbc(live.gate)}</span></span>`);
       details.push(`<span class="flight-detail">Arr Gate <span>${tbc(live.gateDestination)}</span></span>`);
       details.push(`<span class="flight-detail">Aircraft <span>${tbc(f.aircraftType || live.aircraftType)}</span></span>`);
@@ -5059,9 +5057,10 @@
               <div style="font-size:11px;color:#777;">${arrTime}</div>
             </div>
           </div>
-          <span class="flight-status-badge ${status.cls}">${status.label}</span>
+          <span class="flight-status-badge ${status.cls}">${escHtml(status.label)}</span>
         </div>
         ${details.length ? `<div class="flight-details" style="padding:0 14px 10px;">${details.join('')}</div>` : ''}
+        ${timeNote ? `<p class="flight-details" style="padding:0 14px 14px;margin:0;">${escHtml(timeNote)}</p>` : ''}
       </div>`;
     }
 
@@ -5118,13 +5117,19 @@
 
         if (!flights.length) {
           listEl.innerHTML = '';
+          document.getElementById('recent-flights').innerHTML = '';
           updateUpcomingEmpty();
           return;
         }
 
-        // Group by departure date in the ORIGIN airport's timezone (boarding-pass date)
+        const recent = flights.filter(f => getFlightStatusInfo(f).past);
+        const recentEl = document.getElementById('recent-flights');
+        const wasOpen = !!recentEl.querySelector('details[open]');
+        recentEl.innerHTML = recent.length ? `<details${wasOpen ? ' open' : ''}><summary class="flights-date-header">Recent flights (${recent.length})</summary>${recent.map(renderFlightCard).join('')}</details>` : '';
+
+        // Group current/future flights by departure date at the origin airport.
         const groups = {};
-        for (const f of flights) {
+        for (const f of flights.filter(f => !getFlightStatusInfo(f).past)) {
           const key = FlightTime.dateLabel(f.departure?.dateTime, f.departure);
           if (!groups[key]) groups[key] = [];
           groups[key].push(f);
@@ -7978,25 +7983,39 @@
   </div>
 
   <!-- Shopify Connect Modal -->
-  <div class="modal-overlay" id="shopify-modal" onclick="if(event.target===this)closeShopifyModal()">
-    <div class="modal">
-      <h3>Connect Shopify</h3>
-      <p class="modal-desc">Connect your Shopify store to ClosedHand.</p>
-
-      <label for="shopify-store">Store name</label>
-      <input type="text" id="shopify-store" placeholder="mystore" autocomplete="off" spellcheck="false">
-      <div style="font-size: 13px;color:#444;margin-top:3px;margin-bottom:12px;">.myshopify.com</div>
-
-      <div class="modal-error" id="shopify-error"></div>
-
-      <div class="modal-actions">
-        <button class="btn-modal btn-modal-secondary" onclick="closeShopifyModal()">Cancel</button>
-        <button class="btn-modal btn-modal-primary" onclick="connectShopifyOAuth()">Connect with Shopify</button>
+  <dialog class="modal" id="shopify-modal" aria-labelledby="shopify-heading" onclick="if(event.target===this)closeShopifyModal()">
+    <form id="shopify-form" onsubmit="event.preventDefault();if(window._allServices?.shopify?.oauthReady)connectShopifyOAuth();else saveShopifyToken();">
+      <h3 id="shopify-heading">Connect Shopify</h3>
+      <p class="modal-desc">Connect your store to work with its orders and products.</p>
+      <label for="shopify-store">Store address</label>
+      <input type="text" id="shopify-store" placeholder="yourstore.myshopify.com" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
+      <div id="shopify-oauth" hidden>
+        <p class="modal-desc">Shopify will ask you to approve access to your store.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal btn-modal-secondary" onclick="closeShopifyModal()">Cancel</button>
+          <button type="submit" class="btn-modal btn-modal-primary">Connect with Shopify</button>
+        </div>
       </div>
-
-    </div>
-  </div>
-
+      <div id="shopify-own-app" hidden>
+        <p class="modal-desc">Use an app installed on your own store. Find its Client ID and Client secret in <a href="https://dev.shopify.com/dashboard" target="_blank" rel="noopener noreferrer">Shopify's Dev Dashboard</a>, under Settings.</p>
+        <label for="shopify-client-id">Client ID</label>
+        <input id="shopify-client-id" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <label for="shopify-client-secret">Client secret</label>
+        <input id="shopify-client-secret" type="password" autocomplete="off">
+        <p class="modal-desc">The app and store must belong to the same Shopify organization. Choose the app's permissions in Shopify before connecting.</p>
+        <details>
+          <summary>Use an existing access token instead</summary>
+          <label for="shopify-token">Admin API access token</label>
+          <input id="shopify-token" type="password" autocomplete="off">
+        </details>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal btn-modal-secondary" onclick="closeShopifyModal()">Cancel</button>
+          <button type="submit" id="shopify-save-btn" class="btn-modal btn-modal-primary">Connect store</button>
+        </div>
+      </div>
+      <div class="modal-error" id="shopify-error" role="alert"></div>
+    </form>
+  </dialog>
 
   <!-- Floating chat pill -->
   <a href="/?chat=1" id="chat-fab" style="

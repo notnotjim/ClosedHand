@@ -3610,62 +3610,30 @@ app.get("/api/connections", async (req, res) => {
   }
 });
 
-// Shopify API key paste flow
+// Shopify store-owned app credentials or an existing access token.
 app.post("/api/connect-shopify-token", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
-
-  const { storeDomain, accessToken } = req.body;
-  if (!storeDomain || !accessToken) return res.status(400).json({ error: "Store domain and access token are required" });
-
-  // Normalise domain
-  const domain = storeDomain.replace(/\.myshopify\.com$/i, "").trim() + ".myshopify.com";
-
-  // Validate domain format to prevent SSRF
-  if (!/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.myshopify\.com$/.test(domain)) {
-    return res.status(400).json({ error: "Invalid store domain. Must be yourstore.myshopify.com" });
-  }
-
-  // Validate token by calling Shopify API
+  const { storeDomain, accessToken, clientId, clientSecret } = req.body || {};
   try {
-    const shopData = await new Promise((resolve, reject) => {
-      const httpReq = https.request({
-        hostname: domain,
-        path: "/admin/api/2024-01/shop.json",
-        method: "GET",
-        headers: { "X-Shopify-Access-Token": accessToken },
-      }, (httpRes) => {
-        const chunks = [];
-        httpRes.on("data", (c) => chunks.push(c));
-        httpRes.on("end", () => {
-          if (httpRes.statusCode !== 200) return reject(new Error(`Shopify returned ${httpRes.statusCode}`));
-          try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
-          catch { reject(new Error("Invalid response from Shopify")); }
-        });
-      });
-      httpReq.on("error", reject);
-      httpReq.end();
-    });
-
-    const shopName = shopData?.shop?.name || domain;
-    const shopEmail = shopData?.shop?.email || null;
-
-    // Save connection
+    const auth = require("./shopify-auth");
+    const domain = auth.storeDomain(storeDomain);
+    const tokens = typeof accessToken === "string" && accessToken.trim()
+      ? { access_token: accessToken.trim() }
+      : await auth.exchangeCredentials(domain, clientId, clientSecret);
+    const shop = await auth.inspectShop(domain, tokens.access_token);
     const { encryptTokens } = require("./crypto-tokens");
-    const row = {
-      user_id: userId,
-      service: "shopify",
-      tokens: encryptTokens({ access_token: accessToken }),
-      config: { scopes: ["read_products", "read_orders", "read_all_orders", "read_customers", "read_analytics", "read_inventory", "read_shopify_payments_payouts"] },
-      metadata: { shopDomain: domain, name: shopName, email: shopEmail, method: "api_key" },
+    await mustWrite("could not save the connection", supabase.from("connections").upsert({
+      user_id: userId, service: "shopify", tokens: encryptTokens(tokens),
+      config: { scopes: shop.scopes },
+      metadata: { shopDomain: domain, name: shop.name, method: tokens.client_secret ? "client_credentials" : "api_key" },
       updated_at: new Date().toISOString(),
-    };
-    await mustWrite("could not save the connection", supabase.from("connections").upsert(row, { onConflict: "user_id,service" }));
-
-    res.json({ success: true, shopName, domain });
+    }, { onConflict: "user_id,service" }));
+    res.json({ success: true, shopName: shop.name, domain });
   } catch (e) {
-    console.error("Shopify token validation failed:", e.message);
-    res.status(400).json({ error: "Could not connect to your store. Check the domain and token are correct." });
+    // Never echo Shopify response bodies or submitted credentials.
+    const safe = /^(Enter |Use your |Shopify (rejected|did not|could not))/.test(e.message);
+    res.status(400).json({ error: safe ? e.message : "Could not connect to your store. Check your details and try again." });
   }
 });
 
@@ -5184,6 +5152,7 @@ app.get("/api/flights", async (req, res) => {
           let f = JSON.parse(row.value);
           if (f && typeof f.value === "string") f = JSON.parse(f.value);
           f._key = row.key;
+          f.liveTrackingAvailable = !!process.env.FLIGHTAWARE_API_KEY;
           return f;
         } catch { return null; }
       })

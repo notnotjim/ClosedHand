@@ -131,7 +131,7 @@ function decryptString(value) {
 
 // Every credential-bearing field that may appear in connections.tokens.
 // app_password covers Apple iCloud app-specific passwords (IMAP/SMTP/CalDAV).
-const SECRET_FIELDS = ["access_token", "refresh_token", "app_password", "ics_url"];
+const SECRET_FIELDS = ["access_token", "refresh_token", "app_password", "ics_url", "client_secret"];
 
 function encryptTokens(tokens) {
   if (!tokens || typeof tokens !== "object") return tokens;

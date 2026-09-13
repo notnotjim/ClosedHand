@@ -27,6 +27,7 @@ const ROOT = path.join(__dirname, "..");
 const MANIFEST = path.join(__dirname, "vendored-manifest.json");
 
 const PAIRS = [
+  { name: "shopify-auth", copies: ["lib/shopify-auth.js", "webapp/shopify-auth.js"] },
   { name: "flight-time", copies: ["lib/flight-time.js", "webapp/public/flight-time.js"] },
   {
     name: "reranker",

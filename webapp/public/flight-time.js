@@ -49,5 +49,34 @@
     }
     return point;
   }
-  return { time, dateKey, dateLabel, daysAway, preserveOffset };
+  function trackingUntil(f) {
+    const dep = Date.parse(f.liveStatus?.departureTime || f.departure?.dateTime);
+    const arr = Date.parse(f.liveStatus?.arrivalTime || f.arrival?.dateTime);
+    // Allow long-haul flights and a late arrival update, with a bounded lookback.
+    return Number.isFinite(dep) ? Math.min(dep + 48 * 3600000, Math.max(dep + 24 * 3600000, (Number.isFinite(arr) ? arr : dep) + 6 * 3600000)) : NaN;
+  }
+  function shouldTrack(f, now = Date.now(), aheadHours = 48) {
+    if (f.supersededBy || f.landed || f.liveStatus?.landed) return false;
+    const dep = Date.parse(f.departure?.dateTime);
+    return dep < now + aheadHours * 3600000 && now < trackingUntil(f);
+  }
+  function status(f, now = Date.now()) {
+    const live = f.liveStatus || {};
+    const s = String(live.status || f.lastStatus || '').toLowerCase();
+    const dep = Date.parse(live.departureTime || f.departure?.dateTime);
+    const passed = Number.isFinite(dep) && dep <= now;
+    if (live.landed || f.landed) return { cls: 'landed', label: 'Landed', past: true };
+    if (s.includes('cancel')) return { cls: 'cancelled', label: 'Cancelled', past: true };
+    // Elapsed schedule is not evidence of takeoff or landing. Never leave old
+    // scheduled/on-time badges looking like fresh live tracking after departure.
+    if (passed && (!(live.departed || f.departed) || now > trackingUntil(f))) {
+      return { cls: 'scheduled', label: 'Status unconfirmed', past: true };
+    }
+    if (live.departed || f.departed) return { cls: 'in-flight', label: 'In flight', past: false };
+    if (f.pending) return { cls: 'scheduled', label: 'Pending confirmation', past: false };
+    if (s.includes('delay') || live.delay > 15) return { cls: 'delayed', label: live.delay ? `Delayed ${live.delay}m` : 'Delayed', past: false };
+    if (s.includes('on time')) return { cls: 'on-time', label: 'On time', past: false };
+    return { cls: 'scheduled', label: 'Scheduled', past: false };
+  }
+  return { time, dateKey, dateLabel, daysAway, preserveOffset, status, shouldTrack, trackingUntil };
 });
