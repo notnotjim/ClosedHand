@@ -4080,10 +4080,10 @@ app.get("/api/agents/stats", async (req, res) => {
     if (error) throw error;
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
     const active = tasks.filter(t => t.status === "running" || t.status === "pending").length;
-    const completedToday = tasks.filter(t => t.status === "completed" && t.completed_at && t.completed_at >= todayStart).length;
+    const completedToday = tasks.filter(t => t.status === "completed" && t.completed_at && new Date(t.completed_at).getTime() >= todayStart).length;
     const completedTotal = tasks.filter(t => t.status === "completed").length;
     const failed = tasks.filter(t => t.status === "failed").length;
 
@@ -4362,10 +4362,13 @@ app.get("/api/automations/stats", async (req, res) => {
       supabase.from("agent_tasks").select("status, created_at, completed_at").eq("user_id", userId),
     ]);
 
+    for (const result of [runsRes, autosRes, tasksRes]) {
+      if (result.error) throw result.error;
+    }
     const runs = runsRes.data || [];
     const autos = autosRes.data || [];
     const tasks = tasksRes.data || [];
-    const todayStart = new Date(new Date().setHours(0,0,0,0)).toISOString();
+    const todayStart = new Date().setHours(0,0,0,0);
 
     // Running means running, not enabled. The old count was of saved agents
     // with status active, which is whether a trigger is armed.
@@ -4373,18 +4376,18 @@ app.get("/api/automations/stats", async (req, res) => {
     // ever, and one from March was keeping this card on 1 with nothing
     // running. The bot restarts on every deploy, so anything that claims to
     // have been going for hours is not going at all.
-    const staleBefore = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-    const liveish = (t) => t && t > staleBefore;
+    const staleBefore = Date.now() - 6 * 3600 * 1000;
+    const liveish = (t) => t && new Date(t).getTime() > staleBefore;
     const running = tasks.filter(t => (t.status === "running" || t.status === "pending") && liveish(t.created_at)).length
-      + runs.filter(r => r.status === "running" && liveish(r.started_at)).length;
+      + runs.filter(r => (r.status === "running" || r.status === "pending") && liveish(r.started_at)).length;
     const savedCount = autos.length;
-    const runsToday = runs.filter(r => r.started_at >= todayStart).length
-      + tasks.filter(t => t.created_at >= todayStart).length;
+    const runsToday = runs.filter(r => r.started_at && new Date(r.started_at).getTime() >= todayStart).length
+      + tasks.filter(t => t.created_at && new Date(t.created_at).getTime() >= todayStart).length;
 
     let lastActivity = null;
     for (const t of [...runs.map(r => r.completed_at || r.started_at),
                      ...tasks.map(t => t.completed_at || t.created_at)]) {
-      if (t && (!lastActivity || t > lastActivity)) lastActivity = t;
+      if (t && (!lastActivity || new Date(t).getTime() > new Date(lastActivity).getTime())) lastActivity = t;
     }
 
     res.json({ running, savedCount, runsToday, lastActivity });

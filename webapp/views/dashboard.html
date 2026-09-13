@@ -1435,6 +1435,12 @@
     .agent-del:hover { color: #f88; border-color: #555; }
     .agent-card .agent-detail { display: none; margin-top: 10px; border-top: 1px solid #25262b; padding-top: 8px; }
     .agent-card.open .agent-detail { display: block; }
+    @media (max-width: 600px) {
+      .agent-card .auto-card-header { flex-wrap: wrap; }
+      .agent-card .auto-card-name { flex: 1 0 100%; white-space: normal; overflow-wrap: anywhere; }
+      .agent-card .agent-del { margin-left: 0; white-space: nowrap; }
+      .agent-card .auto-status-pill { max-width: 100%; white-space: normal; }
+    }
     .agent-step { font-size: 12px; color: #888; padding: 2px 0; font-variant-numeric: tabular-nums; }
     .agent-step.agent-err { color: #f8a; }
     .agent-report { font-size: 12.5px; line-height: 1.55; color: #c9cad0; margin-top: 8px; padding-top: 8px; border-top: 1px solid #25262b; }
@@ -2179,13 +2185,15 @@
           <!-- Active Runs -->
           <div class="mc-section-label" id="auto-active-label" style="display:none;">Running Now</div>
           <div id="auto-active-list"></div>
+          <p id="auto-active-error" class="auto-card-meta" role="status" hidden>Could not refresh your tasks. Please try again shortly.</p>
 
           <!-- Workers header with + New Worker button -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
-            <div class="mc-section-label" style="margin:0;">Your agents</div>
+            <div class="mc-section-label" style="margin:0;">Saved agents</div>
             <button onclick="openCreateAutomationModal()" style="padding:6px 14px;background:#18191d;border:1px solid #6ee7a8;border-radius:8px;color:#6ee7a8;font-size: 14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#1a2a1a';this.style.boxShadow='0 0 8px rgba(110,231,168,0.15)'" onmouseout="this.style.background='#18191d';this.style.boxShadow='none'">+ New agent</button>
           </div>
           <div id="auto-saved-list"></div>
+          <p id="auto-saved-error" class="auto-card-meta" role="status" hidden>Could not load your saved agents. Please try again shortly.</p>
 
           <!-- Empty state (only when no saved workers) -->
           <div id="auto-empty" style="display:none;">
@@ -2221,7 +2229,7 @@
                   </text>
                 </svg>
               </div>
-              <p style="font-size:13px;color:#666;line-height:1.6;margin-bottom:14px;">No agents yet. Pick a template or create your own:</p>
+              <p style="font-size:13px;color:#666;line-height:1.6;margin-bottom:14px;">No saved agents yet. Pick a template or create your own:</p>
               <div class="agent-tpl-grid">
                 <div class="auto-template" onclick="loadAgentTemplate('morning-briefing')" style="padding:14px;background:#18191d;border:1px solid #222;border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#444'" onmouseout="this.style.borderColor='#222'">
                   <div style="font-size:20px;margin-bottom:6px;">&#9728;&#65039;</div>
@@ -5682,34 +5690,23 @@
     }
 
     async function loadAutomations() {
+      // Chat tasks are independent of saved recurring agents. Start their
+      // refresh even when the saved list is empty or cannot be loaded.
+      var tasksLoaded = loadRunningAgents();
+      startAgentPolling();
       try {
         var autosRes = await fetch('/api/automations');
-        var autos = autosRes.ok ? await autosRes.json() : [];
-
-        var savedList = document.getElementById('auto-saved-list');
-        var emptyEl = document.getElementById('auto-empty');
-        var activeList = document.getElementById('auto-active-list');
-        var activeLabel = document.getElementById('auto-active-label');
-
-        if (!autos.length) {
-          savedList.innerHTML = '';
-          activeList.innerHTML = '';
-          activeLabel.style.display = 'none';
-          emptyEl.style.display = 'block';
-          return;
-        }
-
-        emptyEl.style.display = 'none';
-
-        savedList.innerHTML = autos.map(function(a) { return renderAutomationCard(a); }).join('');
-      } catch (e) { console.error('Load workers error:', e); }
-
-      // The agents ClosedHand spins up itself live in agent_tasks, a different
-      // table from the saved automations above. /api/agents has always served
-      // them and nothing here ever called it, so the header could say "1 active"
-      // while this tab showed nothing at all.
-      loadRunningAgents();
-      startAgentPolling();
+        if (!autosRes.ok) throw new Error('Saved agents unavailable');
+        var autos = await autosRes.json();
+        document.getElementById('auto-saved-error').hidden = true;
+        document.getElementById('auto-empty').style.display = autos.length ? 'none' : 'block';
+        document.getElementById('auto-saved-list').innerHTML = autos.map(renderAutomationCard).join('');
+      } catch (e) {
+        document.getElementById('auto-empty').style.display = 'none';
+        document.getElementById('auto-saved-error').hidden = false;
+        console.error('Load saved agents error:', e);
+      }
+      await tasksLoaded;
     }
 
     // A "Running Now" panel that fetches once is a snapshot, not a status: this
@@ -5759,32 +5756,31 @@
       if (!activeList) return;
       try {
         var res = await fetch('/api/agents');
-        var agents = res.ok ? await res.json() : [];
+        if (!res.ok) throw new Error('Tasks unavailable');
+        var agents = await res.json();
+        document.getElementById('auto-active-error').hidden = true;
         var live = agents.filter(function(a) { return a.status === 'running' || a.status === 'pending'; });
+        var waiting = agents.filter(function(a) { return a.status === 'awaiting_confirmation'; });
         var recent = agents.filter(function(a) {
-          if (a.status === 'running' || a.status === 'pending') return false;
-          return (Date.now() - new Date(a.created_at).getTime()) < 6 * 3600 * 1000;
+          if (a.status === 'running' || a.status === 'pending' || a.status === 'awaiting_confirmation') return false;
+          return (Date.now() - new Date(a.completed_at || a.created_at).getTime()) < 6 * 3600 * 1000;
         }).slice(0, 5);
 
-        var show = live.concat(recent);
+        var show = live.concat(waiting, recent);
         if (!show.length) {
           activeList.innerHTML = '';
           activeLabel.style.display = 'none';
         } else {
           activeLabel.style.display = '';
-          activeLabel.textContent = live.length ? 'Running Now' : 'Recently Run';
+          activeLabel.textContent = live.length ? 'Running Now' : waiting.length ? 'Waiting for your reply' : 'Recently Run';
           var html = show.map(renderAgentCard).join('');
           if (activeList.innerHTML !== html) activeList.innerHTML = html;
         }
 
-        // The metric counted saved automations only, so a running agent never
-        // reached it and the tab disagreed with the header on the same page.
-        // Written after the automation stats land, and kept in a variable the
-        // stats refresh reads, so a running agent is not overwritten back to 0.
-        window._liveAgentCount = live.length;
-        var activeEl = document.getElementById('auto-active');
-        if (activeEl && live.length) activeEl.textContent = live.length;
-      } catch (e) { console.error('Load agents error:', e); }
+      } catch (e) {
+        document.getElementById('auto-active-error').hidden = false;
+        console.error('Load agents error:', e);
+      }
     }
 
     async function stopAgentRun(id, btn) {
@@ -6312,8 +6308,11 @@
     async function loadAutomationStats() {
       try {
         var res = await fetch('/api/automations/stats');
-        if (!res.ok) return;
+        if (!res.ok) throw new Error('Task counts unavailable');
         var s = await res.json();
+        ['auto-active', 'auto-runs-today', 'auto-agents', 'auto-last-activity'].forEach(function(id) {
+          document.getElementById(id).removeAttribute('title');
+        });
         var active = s.running || 0;
         var total = s.savedCount || 0;
         if (typeof Delight !== 'undefined') {
@@ -6325,7 +6324,13 @@
         }
         document.getElementById('auto-agents').textContent = total;
         document.getElementById('auto-last-activity').textContent = s.lastActivity ? timeAgo(s.lastActivity) : '—';
-      } catch (e) { console.error('Auto stats error:', e); }
+      } catch (e) {
+        ['auto-active', 'auto-runs-today', 'auto-agents', 'auto-last-activity'].forEach(function(id) {
+          document.getElementById(id).textContent = '?';
+          document.getElementById(id).title = 'Counts unavailable. Please try again shortly.';
+        });
+        console.error('Auto stats error:', e);
+      }
     }
 
     // === Files ===
