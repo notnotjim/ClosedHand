@@ -21,7 +21,7 @@
       $('send').hidden = !data.canSend;
       message('');
     } else if (data.local) {
-      $('setup-copy').textContent = data.url ? 'Your current phone link is temporary. Set up a lasting address before saving it.' : 'Set up a lasting address so you can open this dashboard from your phone.';
+      $('setup-copy').textContent = data.url ? 'Your current phone link is temporary. Set up a permanent, password-protected link before saving it.' : 'Access your dashboard from your phone with a permanent, password-protected link.';
       $('pair').hidden = !data.pairingUrl; $('enable').hidden = !!data.pairingUrl;
       if (data.pairingUrl) $('pair').href = data.pairingUrl;
       if (data.error) { message(data.error, true); $('enable').hidden = false; $('enable').textContent = 'Try again'; }
