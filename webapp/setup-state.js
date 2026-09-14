@@ -117,15 +117,17 @@ async function getSetupState() {
       rerank: String(envOr("RERANK_MODEL") || "").startsWith("local:") ? { mode: "local", model: envOr("RERANK_MODEL") }
         : (envOr("DEEPINFRA_API_KEY") ? { mode: "hosted", model: "Qwen/Qwen3-Reranker" }
           : { mode: "local", model: "local:jina-reranker-v1-turbo" }),
-      vision: envOr("VISION_MODEL") ? { mode: "hosted", model: envOr("VISION_MODEL") }
+      vision: settings.model_config ? { mode: settings.model_config.roles.vision ? "configured" : "off", model: settings.model_config.roles.vision?.model || null }
+        : envOr("VISION_MODEL") ? { mode: "hosted", model: envOr("VISION_MODEL") }
         : (envOr("DEEPINFRA_API_KEY") ? { mode: "hosted", model: "Qwen/Qwen3-VL" } : { mode: "off", model: null }),
-      light: { mode: "hosted", model: envOr("ENRICH_MODEL") || (envOr("DEEPINFRA_API_KEY") ? "deepseek-ai/DeepSeek-V4-Flash" : null) },
+      light: settings.model_config ? { mode: "configured", model: settings.model_config.roles.background.model }
+        : { mode: "hosted", model: envOr("ENRICH_MODEL") || (envOr("DEEPINFRA_API_KEY") ? "deepseek-ai/DeepSeek-V4-Flash" : null) },
     },
     localModels: conf.LOCAL_MODELS_STATUS || null,
-    chatProvider: conf.DEEPINFRA_API_KEY && (!settings.llm_provider || settings.llm_provider === "custom")
+    chatProvider: settings.model_config?.connections?.primary?.provider || (conf.DEEPINFRA_API_KEY && (!settings.llm_provider || settings.llm_provider === "custom")
       ? "deepinfra"
-      : settings.llm_provider || null,
-    chatProviderLabel: conf.CHAT_PROVIDER_LABEL ||
+      : settings.llm_provider || null),
+    chatProviderLabel: settings.model_config ? new URL(settings.model_config.connections.primary.baseUrl).hostname : conf.CHAT_PROVIDER_LABEL ||
       ({ anthropic: "Anthropic", openai: "OpenAI", gemini: "Google Gemini" })[settings.llm_provider] || null,
     botUsername: conf.TELEGRAM_BOT_USERNAME || null,
     // Identifies THIS install, so the page can keep per-install UI state

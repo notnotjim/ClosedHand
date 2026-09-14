@@ -54,6 +54,9 @@ jobs:
       - name: Flight times and booking changes
         run: node --test scripts/test-flights.js scripts/test-time-context.js
 
+      - name: Model routing and setup
+        run: node --test scripts/test-model-routing.js
+
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
 

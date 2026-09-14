@@ -78,7 +78,18 @@ const FALLBACK_RESULT = {
   summary: "Scan inconclusive",
 };
 
-async function callScanModel(systemPrompt, userContent) {
+async function callScanModel(systemPrompt, userContent, selected) {
+  if (selected !== undefined) {
+    if (!selected) return null;
+    try {
+      const response = await require("./model-wire").request(selected, { model: selected.model, effort: "default",
+        system: systemPrompt, messages: [{ role: "user", content: userContent }], max_tokens: 2048 },
+        { signal: AbortSignal.timeout(45000) });
+      const text = response.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
+      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "null");
+      return parsed?.risk_level && Array.isArray(parsed.findings) ? parsed : null;
+    } catch (error) { console.log("[security-scan] Selected model unavailable: " + error.message); return null; }
+  }
   if (!XAI_API_KEY) {
     const viaOwn = await callFallbackModel(systemPrompt, userContent);
     if (viaOwn) return viaOwn;
@@ -129,7 +140,7 @@ async function callScanModel(systemPrompt, userContent) {
   }
 }
 
-async function scanMcpTools(tools) {
+async function scanMcpTools(tools, selected) {
   if (!tools || tools.length === 0) {
     return { risk_level: "safe", findings: [], summary: "No tools exposed" };
   }
@@ -161,11 +172,11 @@ Rules:
 - Each finding description must be one sentence
 - If ${toolsToScan.length} > 50, add an info finding noting the large tool count`;
 
-  const result = await callScanModel(systemPrompt, userContent);
+  const result = await callScanModel(systemPrompt, userContent, selected);
   return result || FALLBACK_RESULT;
 }
 
-async function scanSkillContent(content) {
+async function scanSkillContent(content, selected) {
   if (!content || content.trim().length === 0) {
     return { risk_level: "blocked", findings: [{ severity: "critical", description: "Empty skill content." }], summary: "No content to install" };
   }
@@ -200,7 +211,7 @@ Rules:
 - "safe" = normal skill instructions with no security concerns
 - Each finding description must be one sentence`;
 
-  const result = await callScanModel(systemPrompt, userContent);
+  const result = await callScanModel(systemPrompt, userContent, selected);
   return result || FALLBACK_RESULT;
 }
 

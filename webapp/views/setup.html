@@ -344,6 +344,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/logocircle.png">
   <meta name="theme-color" content="#101115">
+  <link rel="stylesheet" href="/model-settings.css">
+  <script src="/model-settings.js"></script>
 </head>
 <body class="setup-page">
 <div class="wrap">
@@ -402,7 +404,7 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Model provider</h2>
-            <p class="whisper">Bring a key; ClosedHand arranges what it covers.</p>
+            <p class="whisper">Choose the models ClosedHand will use for your conversations and other work.</p>
             <p class="done-note" id="model-done-note"></p>
           </span>
           <span class="state-chip">Required</span>
@@ -410,38 +412,7 @@
         <div class="card-body">
           <p>You can add more models later and choose which one handles each of ClosedHand's
              jobs, in Settings.</p>
-          <form id="model-form">
-            <div class="field" id="f-key">
-              <label for="model-key" id="model-key-label">API key</label>
-              <input type="password" id="model-key" autocomplete="off" spellcheck="false" placeholder="paste the key here">
-            </div>
-            <p class="note" id="detect-line">ClosedHand identifies the provider from the key itself.</p>
-            <div class="field" id="f-provider" style="display:none;">
-              <label for="provider-select">Provider</label>
-              <select id="provider-select">
-                <option value="deepinfra">DeepInfra</option>
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Google Gemini</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="groq">Groq</option>
-                <option value="xai">xAI (Grok)</option>
-                <option value="ollama">Ollama (local)</option>
-                <option value="custom">Another OpenAI-compatible endpoint</option>
-              </select>
-              <p class="note" id="cap-line" style="margin-top:8px;"></p>
-            </div>
-            <div class="field" id="f-base-url" style="display:none;">
-              <label for="base-url" id="base-url-label">Endpoint URL</label>
-              <input type="text" id="base-url" spellcheck="false" placeholder="https://host/v1">
-            </div>
-            <div class="field" id="f-custom-model" style="display:none;">
-              <label for="custom-model">Model name</label>
-              <input type="text" id="custom-model" spellcheck="false" placeholder="the model this endpoint serves">
-            </div>
-            <button class="save-btn" type="submit" id="model-save">Save and connect</button>
-            <p class="form-msg" id="model-msg"></p>
-            <button class="manual-link" type="button" id="manual-toggle">Choose the provider manually (Ollama, custom endpoints)</button>
-          </form>
+          <div id="model-configuration"></div>
         </div>
       </article>
     </li>
@@ -786,115 +757,7 @@
   // detected plus what that key covers, and the save runs on the detection.
   // Manual mode exists for Ollama (no key), custom endpoints (undetectable),
   // and the escape hatch when detection gets it wrong.
-  var CAP_LINES = {
-    deepinfra: "Chat, recall and vision all run on this key.",
-    openai: "Chat, recall and vision all run on this key.",
-    gemini: "Chat, recall and vision all run on this key.",
-    anthropic: "Chat runs on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
-    groq: "Chat runs on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
-    xai: "Chat and vision run on this key. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
-    ollama: "Everything stays on your machine: chat from Ollama, recall from your pulled embedding model or ClosedHand's built-in one.",
-    custom: "Chat runs through your endpoint. Recall (ClosedHand's memory of your life, searchable by meaning) runs on a small built-in model, swappable later in Settings.",
-  };
-  var providerSel = $("#provider-select");
-  var manualMode = false;
-  var detected = null; // { provider, label, ... } from /api/setup/detect
-
-  function refreshProviderFields() {
-    var p = providerSel.value;
-    $("#cap-line").textContent = CAP_LINES[p] || "";
-    $("#f-key").style.display = p === "ollama" ? "none" : "";
-    $("#f-base-url").style.display = (manualMode && (p === "custom" || p === "ollama")) ? "" : "none";
-    $("#base-url-label").textContent = p === "ollama"
-      ? "Ollama address (usually http://localhost:11434; from Docker: http://host.docker.internal:11434)"
-      : "Endpoint URL";
-    $("#base-url").placeholder = p === "ollama" ? "http://localhost:11434" : "https://host/v1";
-    $("#f-custom-model").style.display = (manualMode && p === "custom") ? "" : "none";
-    $("#model-key-label").textContent = p === "custom" ? "API key (leave empty for a local endpoint)" : "API key";
-  }
-  providerSel.addEventListener("change", refreshProviderFields);
-
-  $("#manual-toggle").addEventListener("click", function () {
-    manualMode = !manualMode;
-    $("#f-provider").style.display = manualMode ? "" : "none";
-    $("#detect-line").style.display = manualMode ? "none" : "";
-    this.textContent = manualMode
-      ? "Back to automatic detection"
-      : "Choose the provider manually (Ollama, custom endpoints)";
-    refreshProviderFields();
-  });
-
-  // Detection: debounced probe as the key is pasted. No silent fallbacks; a
-  // key nobody claims says so plainly.
-  var _detectTimer = null;
-  var _detectSeq = 0;
-  $("#model-key").addEventListener("input", function () {
-    if (_detectTimer) clearTimeout(_detectTimer);
-    detected = null;
-    var key = this.value.trim();
-    if (!key || manualMode) { $("#detect-line").textContent = "ClosedHand identifies the provider from the key itself."; return; }
-    // A bare UUID is a key ID from a provider console, not an API key (xAI
-    // lists keys by exactly this shape). Say so instantly, no probing.
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) {
-      $("#detect-line").textContent = "That looks like a key ID from your provider's console, not the API key itself. The key is a longer string (xAI's start with xai-, OpenAI's with sk-) shown once when you create it.";
-      return;
-    }
-    $("#detect-line").textContent = "Checking whose key this is…";
-    _detectTimer = setTimeout(function () {
-      var seq = ++_detectSeq;
-      fetch("/api/setup/detect", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key }),
-      }).then(function (res) { return res.ok ? res.json() : null; })
-        .then(function (j) {
-          if (seq !== _detectSeq || manualMode) return;
-          if (j && j.detected) {
-            detected = j;
-            $("#detect-line").textContent = j.label + " key. " + (CAP_LINES[j.provider] || "");
-          } else if (j && j.hint && j.hintStatuses) {
-            // Name what the provider actually answered instead of a mystery.
-            var st = j.hintStatuses.key || j.hintStatuses.models;
-            var why = st === 403 ? "the key may be disabled, restricted, or out of credits, so check your provider console"
-              : st === 401 || st === 400 ? "it looks mistyped or revoked, so re-copy it from your provider console"
-              : st === 0 ? "the provider couldn't be reached from this install"
-              : "status " + st;
-            $("#detect-line").textContent = "This looks like " + (j.hintLabel ? "a " + j.hintLabel : "a") + " key, but the provider answered " + (st || "nothing") + ": " + why + ". Or choose manually below.";
-          } else {
-            $("#detect-line").textContent = "No provider recognised this key. Check it, or choose manually below.";
-          }
-        })
-        .catch(function () {
-          if (seq === _detectSeq) $("#detect-line").textContent = "Couldn't check the key just now. Save will verify it, or choose manually below.";
-        });
-    }, 700);
-  });
-  refreshProviderFields();
-
-  $("#model-form").addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    var msg = $("#model-msg");
-    var btn = $("#model-save");
-    var key = $("#model-key").value.trim();
-    if (manualMode) {
-      var p = providerSel.value;
-      if (p === "custom") {
-        postJSON("/api/api-key", "PUT", { provider: "custom", apiKey: key, baseUrl: $("#base-url").value.trim(), model: $("#custom-model").value.trim() }, msg, btn,
-          function () { return "Endpoint connected. Change models any time in Settings."; });
-      } else {
-        postJSON("/api/setup/provider", "POST", { provider: p, apiKey: key, baseUrl: $("#base-url").value.trim() }, msg, btn,
-          function (j) { return j.note ? j.message + " " + j.note : j.message; });
-      }
-      return;
-    }
-    var prov = detected && detected.provider;
-    if (!prov) {
-      msg.className = "form-msg err"; msg.style.display = "block";
-      msg.textContent = key ? "The key hasn't been recognised yet. Give detection a second, or choose manually below." : "Paste an API key first.";
-      return;
-    }
-    postJSON("/api/setup/provider", "POST", { provider: prov, apiKey: key }, msg, btn,
-      function (j) { return j.note ? j.message + " " + j.note : j.message; });
-  });
+  window.ClosedHandModels.mount(document.getElementById("model-configuration"));
 
   // --- Password form -------------------------------------------------------
   $("#password-form").addEventListener("submit", function (ev) {
@@ -973,7 +836,7 @@
     // Done-notes: name what's connected without exposing anything secret.
     var provLabel = state.chatProviderLabel || (state.chatProvider === "deepinfra" ? "DeepInfra" : state.chatProvider);
     $("#model-done-note").textContent = provLabel
-      ? "Running on " + provLabel + (state.memory ? ", recall included" : ", chat only")
+      ? "Models connected through " + provLabel
       : "";
     $("#tg-done-note").textContent = state.botUsername ? "@" + state.botUsername + " is yours" : "";
     // Connected: swap the BotFather instructions for a scan-and-say-hello QR.
@@ -997,7 +860,7 @@
     var showForm = true;
     // "Recall" is the feature (finding your mail and files by meaning);
     // "RAM" is the hardware. The old copy called both "memory".
-    var what = "Recall is ClosedHand's memory of your life: it finds any mail, event or file by meaning, not just keywords. That needs a small model, and your provider does not offer one, so ClosedHand runs one on this machine.";
+    var what = "ClosedHand recalls by meaning, not just keywords. That uses a separate small model, which runs on this computer with your current setup.";
     if (modelDone && state.memoryMode === "local") {
       showMemoryPanel = true;
       title = "Recall runs on this machine.";

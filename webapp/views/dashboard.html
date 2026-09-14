@@ -1864,6 +1864,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/logocircle.png">
   <meta name="theme-color" content="#101115">
+  <link rel="stylesheet" href="/model-settings.css">
+  <script src="/model-settings.js"></script>
 </head>
 <body class="dashboard-page">
 <script src="/flight-time.js"></script>
@@ -2337,6 +2339,7 @@
                 <span id="dataset-detail-name" style="font-size:15px;color:#ccc;font-weight:500;"></span>
                 <span id="dataset-detail-count" style="font-size:12px;color:#555;"></span>
               </div>
+
               <div style="display:flex;gap:8px;">
                 <a id="dataset-export-link" href="#" style="border:1px solid #333;border-radius:6px;padding:4px 10px;color:#7ab8ff;font-size:12px;text-decoration:none;">Download</a>
                 <button onclick="deleteCurrentDataset()" style="background:none;border:1px solid #444;border-radius:6px;padding:4px 10px;color:#f87171;font-size:12px;cursor:pointer;">Delete dataset</button>
@@ -2477,55 +2480,14 @@
           <!-- AI Model Selection -->
           <div class="settings-group" style="border-color:#1a2433;">
             <div class="settings-group-header">
-              <h2>AI Model</h2>
-              <p class="section-desc">Choose which model powers your ClosedHand conversations.</p>
+              <h2>Models</h2>
+              <p class="section-desc">Choose which models handle your conversations, summaries and images.</p>
             </div>
             <div style="padding:12px 16px;">
-              <div id="llm-selector" style="display:flex;gap:8px;margin-bottom:12px;">
-                <button class="seg-btn llm-choice" data-provider="anthropic" onclick="selectLLM('anthropic')" style="flex:1;padding:10px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#888;font-size:13px;cursor:pointer;text-align:center;transition:all 0.2s;">
-                  <div style="font-weight:600;margin-bottom:2px;">Default</div>
-                  <div style="font-size:10px;opacity:0.6;">ClosedHand's built-in AI</div>
-                </button>
-                <button class="seg-btn llm-choice" data-provider="byok" onclick="selectLLM('byok')" style="flex:1;padding:10px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#888;font-size:13px;cursor:pointer;text-align:center;transition:all 0.2s;">
-                  <div style="font-weight:600;margin-bottom:2px;">Your Key</div>
-                  <div style="font-size:10px;opacity:0.6;">Use your own LLM API key</div>
-                </button>
-              </div>
-              <div id="byok-panel" style="display:none;">
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-                  <select id="byok-provider" onchange="byokProviderChanged()" style="padding:8px 10px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:inherit;">
-                    <option value="anthropic">Claude (Anthropic)</option>
-                    <option value="openai">GPT (OpenAI)</option>
-                    <option value="gemini">Gemini (Google)</option>
-                    <option value="preset:openrouter">OpenRouter</option>
-                    <option value="preset:groq">Groq</option>
-                    <option value="preset:deepseek">DeepSeek</option>
-                    <option value="preset:moonshot">Moonshot (Kimi)</option>
-                    <option value="preset:ollama">Ollama (local)</option>
-                    <option value="custom">Custom endpoint...</option>
-                  </select>
-                </div>
-                <div id="byok-custom-fields" style="display:none;flex-direction:column;gap:8px;margin-bottom:8px;">
-                  <input type="text" id="byok-base-url" placeholder="Base URL, e.g. https://openrouter.ai/api/v1" onblur="byokFetchModels()" style="padding:8px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:monospace;">
-                  <div>
-                    <label style="font-size:11px;color:#777;display:block;margin-bottom:3px;">Main model &mdash; the exact id the provider uses, spelling and slashes included</label>
-                    <input type="text" id="byok-model" list="byok-model-list" placeholder="e.g. moonshotai/kimi-k2" style="width:100%;box-sizing:border-box;padding:8px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:monospace;">
-                  </div>
-                  <div>
-                    <label style="font-size:11px;color:#777;display:block;margin-bottom:3px;">Cheaper model for background chores like titles and summaries (optional &mdash; leave blank to use the main model for everything)</label>
-                    <input type="text" id="byok-model-fast" list="byok-model-list" placeholder="e.g. moonshotai/kimi-k2-turbo" style="width:100%;box-sizing:border-box;padding:8px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:monospace;">
-                  </div>
-                  <datalist id="byok-model-list"></datalist>
-                  <div id="byok-models-hint" style="font-size:11px;color:#555;">Works with any OpenAI-compatible endpoint. Once the URL and key are in, the model fields suggest what that provider actually offers. Tool calling is tested before the key is accepted.</div>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <input type="password" id="byok-input" placeholder="Paste your API key..." style="flex:1;padding:8px 12px;background:#16171b;border:1px solid #2e2f35;border-radius:8px;color:#ccc;font-size:13px;outline:none;font-family:monospace;" onfocus="this.style.borderColor='#444'" onblur="this.style.borderColor='#2e2f35';byokFetchModels()">
-                  <button onclick="saveApiKey()" id="byok-save-btn" style="padding:8px 16px;background:#25262b;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;">Save Key</button>
-                </div>
-                <div id="byok-error" style="display:none;margin-top:8px;font-size:12px;color:#f87171;"></div>
-              </div>
+
+              <div id="byok-panel"></div>
               <div id="byok-status" style="margin-top:8px;"></div>
-              <p id="llm-desc" style="font-size:11px;color:#444;margin-top:8px;"></p>
+              <p id="llm-desc" hidden></p>
             </div>
           </div>
 
@@ -4039,178 +4001,12 @@
     var providerNames = { anthropic: 'Claude (Anthropic)', openai: 'GPT (OpenAI)', gemini: 'Gemini (Google)', custom: 'custom endpoint' };
     var _currentProvider = 'anthropic';
 
-    function selectLLM(choice) {
-      var btns = document.querySelectorAll('.llm-choice');
-      btns.forEach(function(b) { b.style.borderColor = '#2e2f35'; b.style.color = '#888'; b.style.background = '#16171b'; });
-      var active = document.querySelector('.llm-choice[data-provider="' + choice + '"]');
-      if (active) { active.style.borderColor = '#f59e0b'; active.style.color = '#f59e0b'; active.style.background = '#1a1c10'; }
-      var byokPanel = document.getElementById('byok-panel');
-      var desc = document.getElementById('llm-desc');
-      if (choice === 'byok') {
-        byokPanel.style.display = '';
-        desc.textContent = 'Your key is stored securely and only used for your conversations.';
-      } else {
-        byokPanel.style.display = 'none';
-        desc.textContent = "Using ClosedHand's built-in AI. Fair usage limits apply.";
-        // Save provider selection immediately
-        fetch('/api/api-key', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: choice, setProviderOnly: true }) }).then(function() {
-          showToast('Switched to ClosedHand default');
-        }).catch(function() {});
-      }
-      _currentProvider = choice;
+    function selectLLM() {
+      document.getElementById("byok-panel").style.display = "";
+      document.getElementById("llm-desc").textContent = "Choose which models handle conversations, summaries and images.";
+      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); });
     }
-
-    async function loadApiKey() {
-      try {
-        var res = await fetch('/api/api-key');
-        if (!res.ok) return;
-        var data = await res.json();
-        var status = document.getElementById('byok-status');
-        var selector = document.getElementById('byok-provider');
-        if (!status) return;
-        // Determine which button to highlight
-        var provider = data.provider || 'anthropic';
-        if (data.configured || (data.hasKey && ['anthropic', 'openai', 'gemini'].includes(provider))) {
-          selectLLM('byok');
-          if (selector && provider !== 'custom') selector.value = provider;
-          if (selector && provider === 'custom') selector.value = 'custom';
-          var label = provider === 'custom'
-            ? 'Custom (' + esc((data.customBaseUrl || '').replace(/^https?:\/\//, '').split('/')[0]) + ')'
-            : esc(providerNames[provider] || provider);
-          // Say which models the key is actually running: the resolver picks
-          // them from the provider's list, so the user never typed these.
-          var m = data.models || {};
-          var modelBits = [];
-          if (m.default) modelBits.push(m.default);
-          if (m.fast && m.fast !== m.default) modelBits.push('fast: ' + m.fast);
-          if (m.strong && m.strong !== m.default) modelBits.push('deep: ' + m.strong);
-          var modelLine = modelBits.length
-            ? '<div style="font-size:11px;color:#4a7a5c;margin-top:2px;">Using ' + esc(modelBits.join(' \u00b7 ')) + '</div>'
-            : '';
-          status.innerHTML = '<div style="padding:8px 12px;background:#1a2e24;border:1px solid #2a4a34;border-radius:8px;">' +
-            '<div style="display:flex;align-items:center;gap:8px;">' +
-            '<span style="color:#6ee7a8;font-size:13px;">' + label + (data.maskedKey ? ': ' + esc(data.maskedKey) : '') + '</span>' +
-            '<button onclick="removeApiKey()" style="margin-left:auto;background:none;border:none;color:#666;font-size:12px;cursor:pointer;">Remove</button></div>' +
-            modelLine + '</div>';
-        } else {
-          selectLLM('anthropic');
-          status.innerHTML = '';
-        }
-      } catch (e) {}
-    }
-
-    // Presets are addresses, not integrations: every one of these speaks
-    // OpenAI's wire format, so they all ride the same custom backend and the
-    // dropdown just saves typing the URL.
-    var BYOK_PRESETS = {
-      openrouter: { url: 'https://openrouter.ai/api/v1', hint: 'e.g. moonshotai/kimi-k2' },
-      groq:       { url: 'https://api.groq.com/openai/v1', hint: 'e.g. llama-3.3-70b-versatile' },
-      deepseek:   { url: 'https://api.deepseek.com/v1', hint: 'e.g. deepseek-chat' },
-      moonshot:   { url: 'https://api.moonshot.ai/v1', hint: 'e.g. kimi-k2-0711-preview' },
-      ollama:     { url: 'http://localhost:11434/v1', hint: 'e.g. qwen2.5:32b (needs a reachable address, not localhost, unless self-hosting the bot)' },
-    };
-
-    // Model ids have to be exact, so guessing in a text box is a bad game.
-    // As soon as an address and key exist, ask the endpoint what it serves and
-    // feed the ids into the datalist under both model fields.
-    async function byokFetchModels() {
-      var url = document.getElementById('byok-base-url').value.trim();
-      var key = document.getElementById('byok-input').value.trim();
-      var listEl = document.getElementById('byok-model-list');
-      var hint = document.getElementById('byok-models-hint');
-      if (!url || !listEl) return;
-      try {
-        var res = await fetch('/api/llm/models', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ baseUrl: url, apiKey: key })
-        });
-        var data = await res.json();
-        if (res.ok && data.models && data.models.length) {
-          listEl.innerHTML = data.models.map(function(m) { return '<option value="' + esc(m) + '">'; }).join('');
-          if (hint) hint.textContent = data.models.length + ' models found. Start typing in the model fields to pick one.';
-        }
-      } catch (e) { /* suggestions are a nicety, typing still works */ }
-    }
-
-    function byokProviderChanged() {
-      var v = document.getElementById('byok-provider').value;
-      var fields = document.getElementById('byok-custom-fields');
-      var urlEl = document.getElementById('byok-base-url');
-      var modelEl = document.getElementById('byok-model');
-      var isCustomish = v === 'custom' || v.indexOf('preset:') === 0;
-      fields.style.display = isCustomish ? 'flex' : 'none';
-      if (v.indexOf('preset:') === 0) {
-        var p = BYOK_PRESETS[v.slice(7)];
-        urlEl.value = p.url;
-        modelEl.placeholder = 'Model name, ' + p.hint;
-        modelEl.value = '';
-      } else if (v === 'custom') {
-        urlEl.value = '';
-        modelEl.placeholder = 'Model name, e.g. moonshotai/kimi-k2';
-      }
-    }
-
-    async function saveApiKey() {
-      var input = document.getElementById('byok-input');
-      var btn = document.getElementById('byok-save-btn');
-      var errorEl = document.getElementById('byok-error');
-      var provider = document.getElementById('byok-provider').value;
-      var isCustomish = provider === 'custom' || provider.indexOf('preset:') === 0;
-      var key = input.value.trim();
-      var baseUrl = isCustomish ? document.getElementById('byok-base-url').value.trim() : undefined;
-      var model = isCustomish ? document.getElementById('byok-model').value.trim() : undefined;
-      var modelFast = isCustomish ? document.getElementById('byok-model-fast').value.trim() : undefined;
-      // A local endpoint may genuinely have no key; everything else needs one.
-      if (!key && !isCustomish) return;
-      if (isCustomish && (!baseUrl || !model)) {
-        errorEl.textContent = 'Base URL and model name are both needed.';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      btn.textContent = 'Validating...';
-      btn.disabled = true;
-      errorEl.style.display = 'none';
-
-      try {
-        var res = await fetch('/api/api-key', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apiKey: key, provider: isCustomish ? 'custom' : provider, baseUrl: baseUrl, model: model, modelFast: modelFast })
-        });
-        var data = await res.json();
-        if (!res.ok) {
-          errorEl.textContent = data.error || 'Failed to save key';
-          errorEl.style.display = 'block';
-        } else {
-          input.value = '';
-          showToast('API key saved. ClosedHand now uses your ' + (providerNames[provider] || provider) + ' key.');
-          loadApiKey();
-        }
-      } catch (e) {
-        errorEl.textContent = 'Network error';
-        errorEl.style.display = 'block';
-      }
-      btn.textContent = 'Save Key';
-      btn.disabled = false;
-    }
-
-    async function removeApiKey() {
-      var provider = document.getElementById('byok-provider').value;
-      // Presets are custom endpoints under the hood; removing must clear that.
-      if (provider.indexOf('preset:') === 0) provider = 'custom';
-      try {
-        await fetch('/api/api-key', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apiKey: '', provider: provider })
-        });
-        showToast('API key removed. Using ClosedHand\'s shared key.');
-        loadApiKey();
-      } catch (e) {}
-    }
-
-    loadApiKey();
+    selectLLM();
 
     // --- Pulse Settings ---
     let pulseState = { proactiveLevel: "medium", quietStart: 22, quietEnd: 7, quietEnabled: true, deliveryPlatforms: [] };

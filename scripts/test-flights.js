@@ -87,8 +87,8 @@ test('same-number retiming remains one active flight and updates its offset', ()
 function loadFlights(state, modelResponse, extra = {}) {
   let saved = 0, prompt;
   const ctx = { store: { facts: state }, bridgeConnected: true };
-  const dependencies = { './context': ctx,
-    './llm': { getInternalClient: () => ({ model: 'fixture', client: { messages: { create: async p => { prompt = p.messages[0].content; return { content: [{ text: JSON.stringify(modelResponse) }] }; } } } }) },
+  const dependencies = { './context': ctx, './model-wire': require('../lib/model-wire'),
+    './llm': { getInternalClient: () => ({ model: 'fixture', client: { messages: { create: async p => { prompt = p.messages[0].content; return { content: [{ type: 'provider_state', value: { reasoning_content: 'Synthetic reasoning' } }, { type: 'text', text: JSON.stringify(modelResponse) }] }; } } } }) },
     './http': {}, './messaging': {}, './storage': { saveStore() { saved++; } },
     './services/google': { isGoogleConnected: () => false }, './services/microsoft': { isMicrosoftConnected: () => false },
     './services/imap-mail': { isImapConnected: () => false }, './services/data-access': {},

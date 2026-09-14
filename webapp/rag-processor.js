@@ -2,6 +2,16 @@
 // Extracts text, chunks, embeds via Qwen3-Embedding (DeepInfra), stores in Supabase pgvector
 
 const path = require("path");
+const modelContext = new (require("async_hooks").AsyncLocalStorage)();
+function selectedModel(role) { return require("./model-policy").getRole(modelContext.getStore(), role); }
+async function modelJob(role, content) {
+  const pick = selectedModel(role);
+  if (!pick) return null;
+  const response = await llmSlot(() => require("./model-wire").request(pick, {
+    model: pick.model, effort: "fast", max_tokens: 1024, messages: [{ role: "user", content }],
+  }, { signal: AbortSignal.timeout(90000) }));
+  return response.content?.filter(b => b.type === "text").map(b => b.text).join("\n") || null;
+}
 const { supabase } = require("./db");
 
 const DEEPINFRA_API_KEY = process.env.DEEPINFRA_API_KEY;
@@ -167,6 +177,14 @@ async function downscaleImage(buffer, maxEdge = 1400) {
 }
 
 async function extractTextFromImage(buffer, mimeType, attempt = 0) {
+  if (selectedModel("vision") !== undefined) {
+    if (!selectedModel("vision")) throw new Error("Image understanding is off. Choose an image model in Settings to read this file.");
+    const scaled = await downscaleImage(buffer);
+    return modelJob("vision", [
+      { type: "image", source: { type: "base64", media_type: scaled?.mimeType || mimeType, data: (scaled?.buffer || buffer).toString("base64") } },
+      { type: "text", text: "Transcribe the visible text and describe what this image shows." },
+    ]);
+  }
   if (!DEEPINFRA_API_KEY) throw new Error("No DEEPINFRA_API_KEY for image OCR");
 
   // Smaller image on the retry: if the first pass timed out, the most likely
@@ -388,7 +406,7 @@ function chunkText(text) {
 // Uses Qwen (free) so cost isn't a factor.
 
 async function enrichChunks(chunks, fileName) {
-  if (!DEEPINFRA_API_KEY) {
+  if (selectedModel("background") === undefined && !DEEPINFRA_API_KEY) {
     console.log(`[RAG] No DEEPINFRA_API_KEY for enrichment, using raw chunks`);
     return chunks;
   }
@@ -423,6 +441,12 @@ async function enrichChunks(chunks, fileName) {
 
 /** Contextualise one chunk. Returns the enriched text, or the raw chunk on any failure. */
 async function enrichOneChunk(chunk, fileName) {
+  if (selectedModel("background") !== undefined) {
+    try {
+      const summary = await modelJob("background", "Summarise this excerpt in two sentences. File: " + fileName + "\n" + chunk.substring(0, 2000));
+      return summary ? "[About: " + summary + "]\n\n" + chunk : chunk;
+    } catch (error) { console.log("[RAG] Summaries model unavailable: " + error.message); return chunk; }
+  }
   try {
     const resp = await llmSlot(() => fetch(CHAT_URL, {
       method: "POST",
@@ -683,6 +707,11 @@ async function fetchFileContent(userId, origin, filePath, account) {
 // --- Main processing pipeline ---
 
 async function processDocument(documentId, userId, fileBuffer, fileName, fileType, sourceContext = null) {
+  const { data, error } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+  if (error || !data) throw new Error("Could not load model settings for this document.");
+  return modelContext.run(data.settings || {}, () => processDocumentWithModels(documentId, userId, fileBuffer, fileName, fileType, sourceContext));
+}
+async function processDocumentWithModels(documentId, userId, fileBuffer, fileName, fileType, sourceContext = null) {
   try {
     // Update status to processing
     await supabase.from("rag_documents").update({ status: "processing" }).eq("id", documentId);
