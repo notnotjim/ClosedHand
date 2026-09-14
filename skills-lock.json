@@ -21,11 +21,6 @@
       "sourceType": "github",
       "computedHash": "587f7d9187c237d909b9f446cf3ac357184342d54ceb7c430dec56fdbac6816c"
     },
-    "frontend-design": {
-      "source": "anthropics/claude-code",
-      "sourceType": "github",
-      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
-    },
     "gws-admin-reports": {
       "source": "googleworkspace/cli",
       "sourceType": "github",
