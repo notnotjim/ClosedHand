@@ -403,6 +403,11 @@ const SUPPORTED_PLATFORMS = {
 // Middleware
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json({ limit: "50mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
+const browserAccess = require("./browser-access");
+app.use((req, res, next) => {
+  if (!browserAccess.allowBrowserWrite(req)) return res.status(403).json({ error: "Open your own dashboard to make this change." });
+  next();
+});
 
 // Public health check (container healthcheck hits this; must bypass the gate below).
 app.get("/health", (req, res) => res.json({ status: "ok", service: "closedhand-webapp" }));
@@ -510,10 +515,10 @@ function readCookie(req, name) {
   return null;
 }
 function setAdminSessionCookie(res) {
-  res.append("Set-Cookie", `ch_admin=${encodeURIComponent(signUserId(ADMIN_SESSION_VALUE))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+  res.append("Set-Cookie", `${browserAccess.sessionName(res.req)}=${encodeURIComponent(signUserId(ADMIN_SESSION_VALUE))}; ${browserAccess.sessionAttributes(res.req)}`);
 }
 function hasAdminSession(req) {
-  return verifySignedCookie(readCookie(req, "ch_admin")) === ADMIN_SESSION_VALUE;
+  return verifySignedCookie(readCookie(req, browserAccess.sessionName(req))) === ADMIN_SESSION_VALUE;
 }
 
 // Wizard write APIs: open until a password exists (first run on localhost),

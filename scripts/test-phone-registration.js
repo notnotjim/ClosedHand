@@ -12,7 +12,7 @@ function registration(values, request) {
 }
 test('installation identity survives restart and tunnel credentials are not stored in plaintext', async () => {
   const values = {}, calls = [];
-  const url = 'https://ch-11111111111141118111111111111111.closedhand.com';
+  const url = 'https://james.closedhand.ai';
   const request = async (path, options) => { calls.push(options.headers.Authorization); return { ok: true, json: async () => path.endsWith('/register') ? { ticket: 'signed-fixture' } : { state: 'active', url, token: 'fixture-per-install-token-1234567890' } }; };
   const first = registration(values, request);
   await Promise.all([first.begin(), first.begin()]);
@@ -22,7 +22,15 @@ test('installation identity survives restart and tunnel credentials are not stor
   assert.match(values.PHONE_TUNNEL_TOKEN, /^enc:v1:/);
   const restarted = registration(values, async () => { throw new Error('Provider unavailable'); });
   assert.equal((await restarted.connection()).url, url, 'existing installation can restart while the provisioning service is down');
-  for (const invalid of ['https://evil.example', 'https://ch-11111111111141118111111111111111.closedhand.com.evil.example', url + '?secret=leak', url + '/other', 'http://localhost:3000']) assert.equal(first.validAddress(invalid), false);
+  for (const invalid of ['https://evil.example', 'https://james.closedhand.ai.evil.example', 'https://www.closedhand.ai', 'https://james.closedhand.com', url + '?secret=leak', url + '/other', 'http://localhost:3000']) assert.equal(first.validAddress(invalid), false);
+});
+test('an old address is refreshed without changing the installation identity', async () => {
+  const values = { PHONE_PERMANENT_URL: 'https://ch-11111111111141118111111111111111.closedhand.com', PHONE_TUNNEL_TOKEN: 'enc:v1:old-token-fixture', PHONE_INSTALL_ID: '11111111-1111-4111-8111-111111111111', PHONE_INSTALL_SECRET: 'enc:v1:' + 'a'.repeat(64) };
+  let calls = 0;
+  const client = registration(values, async () => { calls++; return { ok: true, json: async () => ({ state: 'active', url: 'https://james.closedhand.ai', token: 'fixture-per-install-token-1234567890' }) }; });
+  assert.equal((await client.connection()).url, 'https://james.closedhand.ai');
+  assert.equal(calls, 1);
+  assert.equal(values.PHONE_INSTALL_ID, '11111111-1111-4111-8111-111111111111');
 });
 test('unexpected registration responses never persist tokens or an attacker address', async () => {
   const values = {};

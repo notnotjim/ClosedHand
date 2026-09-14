@@ -38,7 +38,13 @@ async function begin() {
   return PROVIDER + '/phone-access/pair#' + encodeURIComponent(data.ticket);
 }
 function validAddress(value) {
-  try { const u = new URL(value); return u.protocol === 'https:' && /^ch-[a-f0-9]{32}\.closedhand\.com$/.test(u.hostname) && !u.port && !u.username && !u.password && u.pathname === '/' && !u.search && !u.hash; } catch (_) { return false; }
+  try {
+    const u = new URL(value);
+    const name = u.hostname.slice(0, -'.closedhand.ai'.length);
+    const reserved = new Set(['www', 'app', 'api', 'admin', 'account', 'accounts', 'auth', 'login', 'mail', 'smtp', 'support', 'status', 'cloud', 'dashboard', 'closedhand']);
+    return u.protocol === 'https:' && /^[a-z][a-z0-9-]{1,30}[a-z0-9]\.closedhand\.ai$/.test(u.hostname) &&
+      !reserved.has(name) && !u.port && !u.username && !u.password && u.pathname === '/' && !u.search && !u.hash;
+  } catch (_) { return false; }
 }
 async function connection() {
   const savedUrl = await getConf('PHONE_PERMANENT_URL');
