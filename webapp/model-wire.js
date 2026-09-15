@@ -350,10 +350,16 @@ async function request(conn, params, options = {}) {
       throw Object.assign(new Error("The model context window was exceeded."), { status: 400, code: "context_length_exceeded" });
     }
     // Never echo provider bodies, which can contain the request or credentials.
-    const error = new Error("The model provider returned HTTP " + response.status + ". Check the model, access and balance.");
+    const error = new Error("The model provider returned HTTP " + response.status + ". " + providerProblem(response.status, "Check the model, access and balance."));
     error.status = response.status; throw error;
   }
   return convert(await response.json());
+}
+// What a provider's status code means for the person reading it. Bodies are never echoed.
+function providerProblem(status, fallback) {
+  return { 401: "The provider rejected the API key.", 402: "The provider says this account needs payment or more credit.",
+    403: "The provider refused this key access to the model.", 404: "The provider has no model with this ID.",
+    429: "The provider is limiting requests right now. Try again shortly." }[status] || fallback;
 }
 async function listModels(conn) {
   const headers = {};
@@ -361,7 +367,7 @@ async function listModels(conn) {
   else if (conn.backend === "gemini") headers["x-goog-api-key"] = conn.apiKey;
   else if (conn.apiKey) headers.Authorization = "Bearer " + conn.apiKey;
   const response = await fetch(conn.baseUrl + "/models", { headers, signal: AbortSignal.timeout(12000), redirect: "error" });
-  if (!response.ok) { const e = new Error("Could not load models (HTTP " + response.status + "). You can enter the model ID."); e.status = response.status; throw e; }
+  if (!response.ok) { const e = new Error("Could not load models (HTTP " + response.status + "). " + providerProblem(response.status, "You can enter the model ID.")); e.status = response.status; throw e; }
   const data = await response.json();
   return (data.data || data.models || []).map(m => ({ id: (m.id || m.name || "").replace(/^models\//, ""), metadata: m })).filter(m => m.id);
 }

@@ -3955,14 +3955,19 @@ app.get("/api/agents", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("agent_tasks")
-      .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at")
+      .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at, runtime")
       .eq("user_id", userId)
       .in("status", ["running", "pending", "completed", "failed", "cancelled", "partial", "blocked", "awaiting_confirmation"])
       .order("created_at", { ascending: false })
       .limit(20);
 
     if (error) throw error;
-    res.json(data || []);
+    // A paused agent asked its question in chat. The card says where and when,
+    // and repeats the question, so the answer is given there, never here.
+    res.json((data || []).map(({ runtime, ...task }) => {
+      const c = task.status === "awaiting_confirmation" ? runtime?.confirmation : null;
+      return { ...task, waiting: c ? { platform: c.asked?.platform || c.platform || null, since: c.asked?.at || c.pausedAt || null, question: c.asked?.text || null } : null };
+    }));
   } catch (err) {
     console.error("Agents list error:", err.message);
     res.status(500).json({ error: "Failed to load agents" });

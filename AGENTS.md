@@ -60,6 +60,9 @@ they neither get published nor drift out of step with a second copy.
   Google console walkthrough, six steps inside the setup page's Google card, is
   "Connect to Google", a thing you do, never a "guide" you read. It is part of setup,
   not a page of its own. (James, 2026-09-05)
+- Questions mid-task go to the chat the task came from. The dashboard only shows
+  that ClosedHand is waiting, where it asked and when, and repeats the question.
+  It never expects the answer there. (James, 2026-09-15)
 
 ## Workflow
 - Plan first for anything with 3+ steps.

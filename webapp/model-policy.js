@@ -8,7 +8,13 @@ const BASES = {
 };
 function hostOf(base) { try { return new URL(base).hostname; } catch { return ""; } }
 function connection(input) {
-  const provider = String(input.provider || input.backend || "custom");
+  let provider = String(input.provider || input.backend || "custom");
+  // A "custom" connection at a known provider's address is that provider. Setups
+  // saved before the provider had a name of its own then show under that name.
+  if (provider === "custom") {
+    const given = String(input.baseUrl || "").trim().replace(/\/+$/, "");
+    provider = Object.keys(BASES).find(key => BASES[key] === given) || provider;
+  }
   const backend = ["anthropic", "gemini"].includes(provider) ? provider : "custom";
   const baseUrl = String(BASES[provider] || input.baseUrl || "").trim().replace(/\/+$/, "");
   const url = new URL(baseUrl);

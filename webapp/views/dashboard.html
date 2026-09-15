@@ -5260,7 +5260,7 @@
     };
 
     function timeAgo(date) {
-      const s = Math.floor((Date.now() - date.getTime()) / 1000);
+      const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
       if (s < 60) return 'just now';
       if (s < 3600) return Math.floor(s / 60) + 'm ago';
       if (s < 86400) return Math.floor(s / 3600) + 'h ago';
@@ -5642,7 +5642,7 @@
           activeLabel.style.display = 'none';
         } else {
           activeLabel.style.display = '';
-          activeLabel.textContent = live.length ? 'Running Now' : waiting.length ? 'Waiting for your reply' : 'Recently Run';
+          activeLabel.textContent = live.length ? 'Running Now' : waiting.length ? 'Waiting for your answer' : 'Recently Run';
           var html = show.map(renderAgentCard).join('');
           if (activeList.innerHTML !== html) activeList.innerHTML = html;
         }
@@ -5761,11 +5761,18 @@
       var mins = Math.max(0, Math.round((Date.now() - new Date(a.created_at).getTime()) / 60000));
       var when = mins < 60 ? mins + 'm' : Math.round(mins / 60) + 'h';
       // Raw statuses read as machine output; say it as a person would.
-      var statusWords = { completed: 'Completed', failed: 'Failed', cancelled: 'Stopped', pending: 'Queued', partial: 'Incomplete', blocked: 'Needs attention', awaiting_confirmation: 'Waiting for your reply' };
+      var statusWords = { completed: 'Completed', failed: 'Failed', cancelled: 'Stopped', pending: 'Queued', partial: 'Incomplete', blocked: 'Needs attention', awaiting_confirmation: 'Waiting for your answer' };
       var detail = running
         ? (last || 'Working on it') + ' \u00b7 running ' + when
         : (a.error ? String(a.error).substring(0, 120) : (last || statusWords[a.status] || String(a.status)));
       if (!running && a.result_edited_at) detail += ' \u00b7 edited ' + timeAgo(a.result_edited_at);
+      // The question went to the chat the task came from. Say where and when, so
+      // the answer is given there; this card never takes one.
+      var asked = a.status === 'awaiting_confirmation' ? (a.waiting || {}) : null;
+      if (asked) {
+        var where = { whatsapp: 'WhatsApp', whatsapp_linked: 'WhatsApp', telegram: 'Telegram', slack: 'Slack', discord: 'Discord', line: 'LINE', web: 'the web chat' }[asked.platform] || 'chat';
+        detail = 'Asked you in ' + where + (asked.since ? ' ' + timeAgo(asked.since) : '') + '. Answer there to carry on.';
+      }
 
       // The trail the agent reported as it went, plus whatever ended it. This is
       // the answer to "why did that fail", which is the only reason to click a
@@ -5776,6 +5783,7 @@
         return '<div class="agent-step">' + escapeHtml(t) + '  ' + escapeHtml((x && x.text) || '') + '</div>';
       }).join('');
       var errHtml = a.error ? '<div class="agent-step agent-err">' + escapeHtml(String(a.error)) + '</div>' : '';
+      if (asked && asked.question) errHtml += '<div class="agent-step">' + escapeHtml(String(asked.question)).replace(/\n/g, '<br>') + '</div>';
       // Raw tool names ("search_cache, sandbox_exec") are machinery leaking.
       // Say where it looked, in words, deduplicated.
       var toolAreas = {

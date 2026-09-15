@@ -296,3 +296,17 @@ test("a save receipt belongs to one user and preserves unrelated settings", asyn
   config.install(app, { supabase: db, authorize: async req => req.user });
   assert.equal((await invoke("default", "u1", {})).code, 400);
 });
+test("a custom connection at a known provider's address is that provider", () => {
+  assert.equal(policy.connection({ provider: "custom", baseUrl: "https://api.x.ai/v1/", apiKey: "key" }).provider, "xai");
+  assert.equal(policy.connection({ provider: "custom", baseUrl: "https://api.x.ai/v1", apiKey: "key" }).baseUrl, "https://api.x.ai/v1");
+  assert.equal(policy.connection({ provider: "custom", baseUrl: "https://unknown.example/v1", apiKey: "key" }).provider, "custom");
+});
+test("provider status codes are explained in plain words", async () => {
+  global.fetch = async () => new Response("", { status: 402 });
+  await assert.rejects(wire.request(policy.connection({ provider: "deepseek", apiKey: "key" }), { ...params, model: "deepseek-flash" }),
+    err => err.status === 402 && /needs payment or more credit/.test(err.message));
+  global.fetch = async () => new Response("", { status: 401 });
+  await assert.rejects(wire.listModels(policy.connection({ provider: "deepseek", apiKey: "key" })), /rejected the API key/);
+  global.fetch = async () => new Response("", { status: 500 });
+  await assert.rejects(wire.listModels(policy.connection({ provider: "deepseek", apiKey: "key" })), /You can enter the model ID/);
+});
