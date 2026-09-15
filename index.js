@@ -112,6 +112,21 @@ whatsappHandler.setup();
 // Linked-device WhatsApp (self-host tier): only ever activates when the setup
 // page has written its connection row, so cloud never starts a socket.
 require("./lib/platforms/whatsapp-linked").setup();
+// A restart used to kill the process outright. WhatsApp's keys on disk could
+// then lag what was in memory, and the phone could not read the next message.
+let _stopping = false;
+async function stopCleanly(signal) {
+  if (_stopping) return;
+  _stopping = true;
+  console.log(`[shutdown] ${signal}: closing WhatsApp and flushing usage`);
+  const finish = setTimeout(() => process.exit(0), 5000);
+  try { await require("./lib/platforms/whatsapp-linked").closeForShutdown(); } catch (_) {}
+  try { await require("./lib/usage").flushUsage(); } catch (_) {}
+  clearTimeout(finish);
+  process.exit(0);
+}
+process.on("SIGTERM", () => stopCleanly("SIGTERM"));
+process.on("SIGINT", () => stopCleanly("SIGINT"));
 require("./lib/phone-link-delivery").setup();
 // Self-host: read the inbox as soon as Google is connected, so the first
 // chat message already has something to show.
