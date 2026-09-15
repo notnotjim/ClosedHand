@@ -3259,7 +3259,7 @@ app.post("/api/chat/activity/delete", async (req, res) => {
   }
 });
 
-// WebSocket auth token for direct browser-to-bot chat
+// Short-lived chat token; the browser connects through this webapp.
 app.get("/api/chat/ws-token", async (req, res) => {
   try {
     let userId = getUserIdFromRequest(req);
@@ -3270,7 +3270,8 @@ app.get("/api/chat/ws-token", async (req, res) => {
     hmac.update(payload);
     const sig = hmac.digest("hex");
     const token = `${payload}.${sig}`;
-    res.json({ token, wsUrl: process.env.BOT_WS_URL || "" });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ token, wsUrl: "/chat" });
   } catch (err) {
     console.error("[Chat] WS token error:", err.message);
     res.status(500).json({ error: "Failed to create token" });
@@ -7921,6 +7922,14 @@ const vncWss = new (require("ws").WebSocketServer)({ noServer: true, perMessageD
 
 server.on("upgrade", (req, socket, head) => {
   const url = new URL(req.url, "http://localhost");
+
+  if (url.pathname === "/chat") {
+    require("./chat-proxy").proxyChatUpgrade(req, socket, head, {
+      upstream: process.env.BOT_INTERNAL_URL || process.env.BOT_WS_URL,
+      secret: process.env.WS_AUTH_SECRET || "fallback-dev-secret",
+    });
+    return;
+  }
 
   if (url.pathname === "/bridge") {
     wss.handleUpgrade(req, socket, head, (ws) => {

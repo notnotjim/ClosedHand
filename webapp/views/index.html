@@ -3442,8 +3442,10 @@
     if (chatWs && chatWs.readyState <= 1) return;
     fetch('/api/chat/ws-token').then(function(r) { return r.json(); }).then(function(data) {
       if (!data.token || !data.wsUrl) return;
-      var protocol = data.wsUrl.replace(/^http/, 'ws');
-      chatWs = new WebSocket(protocol + '/chat?token=' + encodeURIComponent(data.token));
+      var chatUrl = new URL('/chat', window.location.href);
+      chatUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      chatUrl.searchParams.set('token', data.token);
+      chatWs = new WebSocket(chatUrl.href);
       chatWs.onopen = function() {
         while (pendingMessages.length > 0) {
           var pm = pendingMessages.shift();

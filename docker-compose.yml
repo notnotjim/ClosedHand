@@ -7,8 +7,8 @@
 # the webapp. Copy .env.example to .env first; it boots with nothing configured
 # (setup mode) and you add model/platform keys there or via the dashboard.
 #
-# Dashboard: http://localhost:3000 (WEBAPP_PORT). The bot is exposed on
-# http://localhost:3001 (BOT_PORT) so the browser's web-chat WebSocket reaches it.
+# Dashboard and chat: http://localhost:3000 (WEBAPP_PORT).
+# The webapp reaches the bot over the internal Docker network.
 
 services:
   db:
@@ -43,7 +43,7 @@ services:
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
       PORT: "3000"
     ports:
-      - "${BOT_PORT:-3001}:3000" # exposed for the browser's /chat WebSocket
+      - "${BOT_PORT:-3001}:3000" # bot service and health endpoint
     volumes:
       - storage:/data/storage # shared with the webapp (attachments + logos)
     healthcheck:
@@ -66,7 +66,7 @@ services:
       STORAGE_DIR: /data/storage
       WS_AUTH_SECRET: ${WS_AUTH_SECRET:-change-me-dev-secret}
       BASE_URL: ${BASE_URL:-http://localhost:3000}
-      BOT_WS_URL: ${BOT_WS_URL:-http://localhost:3001}
+      BOT_INTERNAL_URL: http://bot:3000
       PORT: "3000"
     ports:
       - "${WEBAPP_PORT:-3000}:3000"
