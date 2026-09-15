@@ -48,9 +48,9 @@ async function checkModel(conn, model, purpose, catalog) {
     }, { signal: AbortSignal.timeout(45000) });
     if (!followup.content?.some(b => b.type === "text" && b.text?.trim())) throw new Error("The model could not finish after a tool result. Retry or choose another model.");
     cap.tools = true;
-  } else if (purpose === "summaries") {
+  } else if (purpose === "support") {
     const response = await wire.request({ ...conn, capabilities: cap }, { ...base, messages: [{ role: "user", content: "Reply with the word ready." }] }, { signal: AbortSignal.timeout(45000) });
-    if (!response.content?.some(b => b.type === "text" && b.text?.trim())) throw new Error("The summaries model returned no answer. Retry or choose another model.");
+    if (!response.content?.some(b => b.type === "text" && b.text?.trim())) throw new Error("The support model returned no answer. Retry or choose another model.");
   }
   return cap;
 }
@@ -61,7 +61,7 @@ async function prepare(input, settings) {
   const model = String(input.model || "").trim();
   const chat = await checkModel(connections.primary, model, "chat", catalog);
   const backgroundModel = String(input.backgroundModel || model).trim();
-  const background = backgroundModel === model ? chat : await checkModel(connections.primary, backgroundModel, "summaries", catalog);
+  const background = backgroundModel === model ? chat : await checkModel(connections.primary, backgroundModel, "support", catalog);
   const roles = {
     chat: { connection: "primary", model, capabilities: chat },
     background: { connection: "primary", model: backgroundModel, capabilities: background },

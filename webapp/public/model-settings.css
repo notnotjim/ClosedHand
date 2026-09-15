@@ -23,9 +23,15 @@
   .model-current .model-role-list dd { margin-bottom: 16px; }
 }
 .model-result.is-error { color: #ffacac; }
-.model-preview { padding: 24px; border: 1px solid #43534a; border-radius: 12px; display: grid; gap: 20px; }
-.model-preview h3 { margin: 0; font-family: inherit; font-weight: 600; font-size: 18px; line-height: 1.4; }
+.model-check { padding: 24px; border: 1px solid #43534a; border-radius: 12px; display: grid; gap: 20px; }
+.model-check h3 { margin: 0; font-family: inherit; font-weight: 600; font-size: 18px; line-height: 1.4; }
+.model-check .model-role-list { margin: 0; }
+.model-check dd.is-ok::before { content: "\2713\00a0"; color: #8eddb4; }
+.model-check dd.is-fail { color: #ffacac; }
+.model-check dd.is-fail::before { content: "\2717\00a0"; }
+.model-check dd.is-wait { color: #bcc2c6; }
+.model-check dd.is-wait::before { content: "\2026\00a0"; }
 .model-role-list { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 14px 24px; margin: 0 0 20px; line-height: 1.5; }
 .model-role-list dt { color: #bdc4c0; }
 .model-role-list dd { margin: 0; overflow-wrap: anywhere; }
-@media (max-width: 520px) { .model-role-list { grid-template-columns: minmax(0,1fr); gap: 6px; } .model-role-list dd { margin-bottom: 16px; } .model-preview { padding: 18px; } }
+@media (max-width: 520px) { .model-role-list { grid-template-columns: minmax(0,1fr); gap: 6px; } .model-role-list dd { margin-bottom: 16px; } .model-check { padding: 18px; } }

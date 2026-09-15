@@ -20,9 +20,9 @@ function modelSummary(settings, read = key => process.env[key], local = false) {
     add(label, pick?.model, pick?.baseUrl);
   };
   if (config) {
-    configured("Conversations", "chat");
-    configured("Titles and summaries", "background");
-    configured("Reading images", "vision");
+    configured("Chat model", "chat");
+    configured("Support model", "background");
+    configured("Images", "vision");
   } else {
     const requested = settings.llm_provider;
     const provider = requested === "custom" && settings.custom_base_url && settings.custom_model ? requested
@@ -30,13 +30,13 @@ function modelSummary(settings, read = key => process.env[key], local = false) {
     const fallback = { xai: "grok-4.5", anthropic: "claude-sonnet-5", openai: "gpt-4o", gemini: "gemini-pro-latest" };
     const model = provider === "custom" ? settings.custom_model : provider === "xai"
       ? (read("XAI_API_KEY") ? fallback.xai : null) : settings.byok_models?.default || fallback[provider];
-    add("Conversations", model, provider === "custom" ? settings.custom_base_url : policy.BASES[provider]);
+    add("Chat model", model, provider === "custom" ? settings.custom_base_url : policy.BASES[provider]);
     const internalKey = (local && read("INTERNAL_LLM_API_KEY")) || read("DEEPINFRA_API_KEY");
-    add("Titles and summaries", internalKey ? read("INTERNAL_LLM_MODEL") || "deepseek-ai/DeepSeek-V4-Flash" : read("XAI_API_KEY") ? "grok-4.5" : null,
+    add("Support model", internalKey ? read("INTERNAL_LLM_MODEL") || "deepseek-ai/DeepSeek-V4-Flash" : read("XAI_API_KEY") ? "grok-4.5" : null,
       internalKey ? read("INTERNAL_LLM_URL") || policy.BASES.deepinfra : policy.BASES.xai);
     const enrichKey = read("ENRICH_API_KEY") || read("DEEPINFRA_API_KEY");
     const enrichUrl = read("ENRICH_API_URL") || policy.BASES.deepinfra;
-    add("Reading images", enrichKey ? read("VISION_MODEL") || "Qwen/Qwen3-VL-30B-A3B-Instruct" : null, enrichUrl);
+    add("Images", enrichKey ? read("VISION_MODEL") || "Qwen/Qwen3-VL-30B-A3B-Instruct" : null, enrichUrl);
     const enrichModel = read("ENRICH_MODEL") || "deepseek-ai/DeepSeek-V4-Flash";
     if (enrichKey && (enrichModel !== rows[1].model || location(enrichModel, enrichUrl) !== rows[1].provider)) add("Document summaries", enrichModel, enrichUrl);
   }

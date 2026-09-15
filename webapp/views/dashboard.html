@@ -2448,7 +2448,7 @@
           <div class="settings-group" style="border-color:#1a2433;">
             <div class="settings-group-header">
               <h2>Models</h2>
-              <p class="section-desc">Choose which models handle your conversations, summaries and images.</p>
+              <p class="section-desc">Choose your chat model, support model and image model.</p>
             </div>
             <div style="padding:12px 16px;">
 
@@ -4009,7 +4009,7 @@
 
     function selectLLM() {
       document.getElementById("byok-panel").style.display = "";
-      document.getElementById("llm-desc").textContent = "Choose which models handle conversations, summaries and images.";
+      document.getElementById("llm-desc").textContent = "Choose your chat model, support model and image model.";
       window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); });
     }
     selectLLM();
