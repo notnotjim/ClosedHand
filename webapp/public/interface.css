@@ -186,8 +186,9 @@ body.dashboard-page { display: block; background: #101115; color: var(--ui-text)
 #phone-options { margin-top: 12px; }
 #phone-block summary { width: fit-content; min-height: 44px; padding: 10px 0; box-sizing: border-box; cursor: pointer; color: var(--ui-muted); font-size: var(--ui-body); }
 .dashboard-link-options { padding: 8px 0 0; color: var(--ui-muted); line-height: 1.65; max-width: 68ch; }
-.dashboard-link-options p { margin: 0 0 12px; }
-#phone-qr-details { margin-top: 12px; }
+.dashboard-link-options p { margin: 0 0 12px; text-wrap: pretty; }
+#phone-save { display: inline-block; text-wrap: balance; }
+#phone-qr-details { margin-top: 24px; }
 #phone-qr { display: block; padding: 8px; background: #101115; border: 1px solid var(--ui-border); border-radius: 8px; }
 .dashboard-link-control { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ui-border); }
 .dashboard-link-control p { flex: 1 1 260px; margin: 0; }
