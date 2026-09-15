@@ -4369,7 +4369,11 @@
     var overlay = document.getElementById('dashOverlay');
     var iframe = document.getElementById('dashIframe');
     var url = '/dashboard' + (hash || '');
-    if (iframe.src === 'about:blank' || !iframe.src.includes('/dashboard') || (hash && !iframe.src.includes(hash))) {
+    // Where the frame really is, not where it was sent: a link inside it can
+    // have moved it to another page, and then it must be brought back.
+    var current = '';
+    try { current = iframe.contentWindow.location.pathname + iframe.contentWindow.location.hash; } catch (e) { current = iframe.src; }
+    if (iframe.src === 'about:blank' || current.indexOf('/dashboard') !== 0 || (hash && current.indexOf(hash) === -1)) {
       iframe.src = url;
     } else if (hash) {
       // Frame already carries this hash: no reload, no hashchange. Tell it

@@ -1838,6 +1838,12 @@
     .usage-tile .t-name { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #888; margin-bottom: 6px; }
     .usage-tile .t-val { font-size: 20px; font-weight: 600; color: #eee; line-height: 1.2; }
     .usage-tile .t-sub { font-size: 11px; color: #555; margin-top: 3px; }
+    .usage-models { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 12px; color: #999; }
+    .usage-models .m-head { grid-column: 1 / -1; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    .usage-models .m-name { color: #ddd; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .usage-notes { margin: 14px 0 0; padding: 12px 14px; border-left: 2px solid #2e2f35; font-size: 13px; line-height: 1.6; color: #aaa; }
+    .usage-notes:empty { display: none; }
+    .usage-notes .n-head { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
     .usage-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
     .usage-chart-card { background: var(--u-surface); border: 1px solid #2e2f35; border-radius: 10px; padding: 14px 14px 8px; position: relative; }
     .usage-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #999; margin-bottom: 10px; }
@@ -2704,6 +2710,8 @@
             </div>
           </div>
           <div class="usage-tiles" id="usage-tiles"></div>
+          <div class="usage-models" id="usage-models"></div>
+          <div class="usage-notes" id="usage-notes"></div>
           <div class="usage-chart-card" id="usage-chart-card" style="display:none;">
             <div class="usage-legend" id="usage-legend"></div>
             <div class="usage-chart" id="usage-chart"></div>
@@ -2865,9 +2873,10 @@
         if (platform.connected && platform.linkedDevice) {
           // Your own number, as a linked device: unlinking lives on the setup page.
           platformsGrid.innerHTML += `
-            <div class="plat-card connected" onclick="window.location.href='/setup#step-chat'" title="Manage on the setup page">
+            <div class="plat-card connected" style="cursor:default;">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <span class="badge badge-connected" style="background:none;border:none;color:#6ee7a8;font-weight:600;padding:0;">Linked &#10003;</span>
+              <a href="/setup#step-chat" target="_top" style="font-size:12px;color:#888;margin-left:auto;">Manage</a>
             </div>`;
         } else if (platform.connected) {
           platformsGrid.innerHTML += `
@@ -2887,7 +2896,7 @@
           platformsGrid.innerHTML += `
             <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-              <a class="plat-connect-btn" href="/setup#step-chat" onclick="event.stopPropagation()">Set up</a>
+              <a class="plat-connect-btn" target="_top" href="/setup#step-chat" onclick="event.stopPropagation()">Set up</a>
             </div>`;
         } else if (data.selfHost && !platform.available) {
           // The app exists once its keys are pasted in; the card opens that.
@@ -4597,10 +4606,10 @@
     // so a window with no vision rows must not repaint the survivors.
     const USAGE_FEATURES = [
       { key: 'chat', label: 'Chat', color: 'var(--u-chat)' },
-      { key: 'machinery', label: 'Machinery', color: 'var(--u-machinery)' },
-      { key: 'enrichment', label: 'Enrichment', color: 'var(--u-enrichment)' },
-      { key: 'embeddings', label: 'Embeddings', color: 'var(--u-embeddings)' },
-      { key: 'vision', label: 'Vision', color: 'var(--u-vision)' },
+      { key: 'machinery', label: 'Routine work', color: 'var(--u-machinery)' },
+      { key: 'enrichment', label: 'Reading your data', color: 'var(--u-enrichment)' },
+      { key: 'embeddings', label: 'Recall', color: 'var(--u-embeddings)' },
+      { key: 'vision', label: 'Images', color: 'var(--u-vision)' },
     ];
     let usageDays = 30;
 
@@ -4638,8 +4647,11 @@
       const tableEl = document.getElementById('usage-table');
       const emptyEl = document.getElementById('usage-empty');
 
+      const modelsEl = document.getElementById('usage-models');
+      const notesEl = document.getElementById('usage-notes');
       if (!rows.length) {
         tilesEl.innerHTML = '';
+        modelsEl.innerHTML = ''; notesEl.innerHTML = '';
         chartCard.style.display = 'none';
         tableEl.innerHTML = '';
         emptyEl.style.display = 'block';
@@ -4671,6 +4683,47 @@
           '<div class="t-sub">' + fmtTokens(f.tin) + ' in · ' + fmtTokens(f.tout) + ' out · ' + f.calls + ' calls</div>' +
           '</div>';
       }).join('');
+
+      // By model: the same window can span a model change, so say which model
+      // carried the tokens. Biggest first, with its share.
+      const byModel = {};
+      let grand = 0;
+      for (const r of rows) {
+        const m = r.model || 'unknown';
+        byModel[m] = byModel[m] || { calls: 0, tokens: 0, feats: {} };
+        byModel[m].calls += r.calls; byModel[m].tokens += r.tokens_in + r.tokens_out;
+        byModel[m].feats[r.feature] = (byModel[m].feats[r.feature] || 0) + r.tokens_in + r.tokens_out;
+        grand += r.tokens_in + r.tokens_out;
+      }
+      const modelOrder = Object.keys(byModel).sort((a, b) => byModel[b].tokens - byModel[a].tokens);
+      const pct = n => grand ? (n / grand >= 0.005 ? Math.round(n / grand * 100) + '%' : 'under 1%') : '';
+      modelsEl.innerHTML = '<div class="m-head">By model</div>' + modelOrder.map(m =>
+        '<span class="m-name">' + escapeHtml(m) + '</span><span>' + fmtTokens(byModel[m].tokens) + ' tokens · ' +
+        byModel[m].calls.toLocaleString() + ' calls · ' + pct(byModel[m].tokens) + '</span>').join('');
+
+      // What stands out: worked out here from the rows, never asked of a model.
+      // Only a rule that fires is shown, at most three.
+      const notes = [];
+      const top = k => modelOrder.slice().sort((a, b) => (byModel[b].feats[k] || 0) - (byModel[a].feats[k] || 0))[0];
+      const routine = (byFeature.machinery ? byFeature.machinery.tin + byFeature.machinery.tout : 0) + (byFeature.enrichment ? byFeature.enrichment.tin + byFeature.enrichment.tout : 0);
+      const chatModel = byFeature.chat ? top('chat') : null;
+      const routineModel = routine ? (top('enrichment') || top('machinery')) : null;
+      if (chatModel && routineModel === chatModel && routine / grand >= 0.2) {
+        notes.push('Routine work and reading your data ran on ' + escapeHtml(chatModel) + ', the same model as chat, and took ' + pct(routine) + ' of your tokens. A smaller support model can do that work for less. You can choose one in Settings.');
+      }
+      if (byFeature.chat && byFeature.chat.calls) {
+        const avg = (byFeature.chat.tin + byFeature.chat.tout) / byFeature.chat.calls;
+        const inShare = byFeature.chat.tin / (byFeature.chat.tin + byFeature.chat.tout);
+        if (avg >= 10000 && inShare >= 0.9) notes.push('Each chat message costs about ' + fmtTokens(Math.round(avg)) + ' tokens on average, nearly all of it what goes in: the history and recall attached to every message.');
+      }
+      const dayTotals = Object.keys(byDay).map(d => [d, Object.values(byDay[d]).reduce((a, b) => a + b, 0)]).sort((a, b) => b[1] - a[1]);
+      if (dayTotals.length > 2 && dayTotals[0][1] / grand >= 0.4) {
+        notes.push(dayTotals[0][0].slice(5).replace('-', '/') + ' alone was ' + pct(dayTotals[0][1]) + ' of this window.');
+      }
+      if (modelOrder.length > 1 && byModel[modelOrder[1]].tokens / grand >= 0.05) {
+        notes.push('This window spans more than one model, so the totals above mix them. The list by model separates them.');
+      }
+      notesEl.innerHTML = notes.length ? '<div class="n-head">What stands out</div>' + notes.slice(0, 3).map(n => '<div>' + n + '</div>').join('') : '';
 
       // Legend (>1 series shown; identity never colour-alone thanks to tiles + table)
       document.getElementById('usage-legend').innerHTML = featOrder.map(k => {
