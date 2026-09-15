@@ -5771,7 +5771,7 @@
       var asked = a.status === 'awaiting_confirmation' ? (a.waiting || {}) : null;
       if (asked) {
         var where = { whatsapp: 'WhatsApp', whatsapp_linked: 'WhatsApp', telegram: 'Telegram', slack: 'Slack', discord: 'Discord', line: 'LINE', web: 'the web chat' }[asked.platform] || 'chat';
-        detail = 'Asked you in ' + where + (asked.since ? ' ' + timeAgo(asked.since) : '') + '. Answer there to carry on.';
+        detail = 'Asked you in ' + where + (asked.since ? ' ' + timeAgo(asked.since) : '') + '. Reply yes or no there. It lapses a day after asking.';
       }
 
       // The trail the agent reported as it went, plus whatever ended it. This is
