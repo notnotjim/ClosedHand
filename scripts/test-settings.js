@@ -123,3 +123,34 @@ test("preference labels escape quotes before entering HTML attributes", async ()
   assert.match(container.innerHTML, /aria-label="Enable preference: A &quot;quoted&quot;/);
   assert.doesNotMatch(container.innerHTML, /<img/);
 });
+
+test("the actual notification save route retains linked WhatsApp and rejects unknown platform names", async () => {
+  const source = fs.readFileSync(require.resolve("../webapp/server.js"), "utf8");
+  const start = source.indexOf('app.put("/api/pulse"');
+  const route = source.slice(start, source.indexOf("\n});", start) + 4);
+  let handler, stored = { pulse_settings: { deliveryPlatforms: ["telegram"] }, unrelated: "keep" };
+  const state = vm.createContext({
+    app: { put(_, fn) { handler = fn; } },
+    getUserIdFromRequest: () => "test-owner",
+    console: { log() {}, error() {} },
+    supabase: { from(table) {
+      return {
+        select() { return this; },
+        eq(_, id) { assert.equal(id, "test-owner"); return this; },
+        async single() { return { data: { settings: stored } }; },
+        update(values) { assert.equal(table, "profiles"); stored = values.settings; return this; },
+        async upsert() { assert.equal(table, "pulse_config"); return {}; },
+        then(resolve) { resolve({ error: null }); },
+      };
+    } },
+  });
+  vm.runInContext(source.match(/const SUPPORTED_PLATFORMS = \{[\s\S]*?\n\};/)[0] + "\n" + route, state);
+  const response = { status(code) { throw new Error("Unexpected HTTP " + code); }, json(body) { assert.equal(body.success, true); } };
+  await handler({ body: { proactiveLevel: "medium", deliveryPlatforms: ["whatsapp_linked", "unknown"] } }, response);
+  assert.deepEqual(Array.from(stored.pulse_settings.deliveryPlatforms), ["whatsapp_linked"]);
+  assert.equal(stored.unrelated, "keep");
+  await handler({ body: { proactiveLevel: "medium", quietStart: 21 } }, response);
+  assert.deepEqual(Array.from(stored.pulse_settings.deliveryPlatforms), ["whatsapp_linked"]);
+  await handler({ body: { proactiveLevel: "medium", deliveryPlatforms: [] } }, response);
+  assert.deepEqual(Array.from(stored.pulse_settings.deliveryPlatforms), []);
+});

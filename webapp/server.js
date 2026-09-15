@@ -3813,7 +3813,7 @@ app.put("/api/pulse", async (req, res) => {
   // Validate deliveryPlatforms — must be array of connected platform names.
   // WhatsApp is allowed: the bot delivers there only while Meta's 24h
   // customer-service window is open, and skips it otherwise.
-  const validPlatforms = Object.keys(SUPPORTED_PLATFORMS);
+  const validPlatforms = [...Object.keys(SUPPORTED_PLATFORMS), "whatsapp_linked"];
   const platforms = Array.isArray(deliveryPlatforms)
     ? deliveryPlatforms.filter(p => validPlatforms.includes(p))
     : [];
