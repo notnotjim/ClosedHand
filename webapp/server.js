@@ -5618,7 +5618,7 @@ app.get("/api/notes", async (req, res) => {
             const parsed = JSON.parse(val);
             if (parsed && typeof parsed === "object" && parsed.value !== undefined) {
               val = parsed.value;
-              meta = { created: parsed.created, lastAccessed: parsed.lastAccessed, accessCount: parsed.accessCount || 0 };
+              meta = { created: parsed.created, lastAccessed: parsed.lastAccessed, accessCount: parsed.accessCount || 0, source: parsed.source || null };
             }
           } catch (e) {}
         }
@@ -5660,14 +5660,15 @@ app.put("/api/notes/:key", async (req, res) => {
     const now = new Date().toISOString();
     let created = now;
     let accessCount = 0;
+    let source = "you";
     if (existing?.value) {
       try {
         const parsed = JSON.parse(existing.value);
-        if (parsed && parsed.created) { created = parsed.created; accessCount = parsed.accessCount || 0; }
+        if (parsed && parsed.created) { created = parsed.created; accessCount = parsed.accessCount || 0; source = parsed.source || source; }
       } catch (e) {}
     }
 
-    const serialized = JSON.stringify({ value, created, lastAccessed: now, accessCount });
+    const serialized = JSON.stringify({ value, created, lastAccessed: now, accessCount, source });
     const { error } = await supabase
       .from("facts")
       .upsert({ user_id: userId, key, value: serialized, updated_at: now }, { onConflict: "user_id,key" });

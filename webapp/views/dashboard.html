@@ -6809,6 +6809,10 @@
 
       // Build knowledge node data
       var titleSet = new Set(nodes.map(function(n) { return n.title; }));
+      // A fact's recall mirror is the same fact again; it is drawn once, as a
+      // pinned dot, or it shows up under a storage name like fact_pattern-2.
+      var isMirror = function(n) { return (n.tags || []).indexOf('fact') !== -1 || /^fact_/.test(n._external_id || n.title || ''); };
+      nodes = nodes.filter(function(n) { return !isMirror(n); });
       var nodeData = nodes.map(function(n, i) {
         var lc = (n.links || []).length;
         return { id: n.title, tags: n.tags || [], linkCount: lc, index: i, type: 'knowledge', r: Math.min(8, 4 + lc * 1) };
@@ -7290,9 +7294,16 @@
       if (!note) return;
       var panel = document.getElementById('brain-panel');
       panel.style.display = 'block';
-      document.getElementById('brain-panel-title').textContent = '&#128204; ' + key;
-      document.getElementById('brain-panel-title').innerHTML = '&#128204; ' + escapeHtml(key);
-      document.getElementById('brain-panel-tags').innerHTML = '<span style="font-size:11px;color:#f59e0b;">Pinned fact -- always available to ClosedHand</span>';
+      // The panel says what the fact is about, what kind it is, and where it
+      // came from. The storage key is an edit-time detail, shown in the editor.
+      var CAT = { profile: 'About you', preference: 'Preference', person: 'Person', business: 'Business or project', topic: 'Other' };
+      var kind = (note.category === 'profile' && /^profile[-_]/.test(key)) ? key.replace(/^profile[-_]/, '').replace(/[-_]+/g, ' ') : '';
+      var title = kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : (note.subject || (note.value || '').split(/[.;]/)[0].slice(0, 60) || key);
+      var who = note.source === 'chat' ? 'Pinned by ClosedHand from chat' : note.source === 'setup scan' ? 'Read from your mail by the setup scan' : note.source === 'you' ? 'Added by you' : 'Pinned earlier';
+      var when = note.created ? new Date(note.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      document.getElementById('brain-panel-title').innerHTML = '&#128204; ' + escapeHtml(title);
+      document.getElementById('brain-panel-tags').innerHTML = '<span style="font-size:11px;color:#f59e0b;">' + escapeHtml(CAT[note.category] || CAT.topic) + '</span>' +
+        '<span style="font-size:11px;color:#777;margin-left:10px;">' + escapeHtml(who + (when ? ', ' + when : '')) + '. Always in front of ClosedHand.</span>';
       document.getElementById('brain-panel-content').textContent = note.value || '';
       // Set handlers as properties, never by rewriting onclick attributes: an
       // attribute selector for the original onclick stops matching after the
