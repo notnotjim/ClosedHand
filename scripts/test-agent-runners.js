@@ -51,7 +51,7 @@ function harness(options = {}) {
     "user-mutex":{acquireUserMutex:async(id,fn)=>fn()},"storage":{swapToCloudStore:s=>{ctx.activeUserStore=s;ctx.store=s;},syncAdapterBack(){},cleanupUserContext(){}},
     "tools/handlers":{isInternalTool:()=>true,handleInternalTool:async(name,input)=>{sends.push({name,input});return {success:true,source:"fixture",time:"20:00"};}},
     "mcp":{getMcpToolDefsFor:()=>[],warmUserMcp:async()=>{},callMCPTool:async()=>({})},
-    "tools/definitions":{INTERNAL_TOOLS:tools},"messaging":{sendToPlatform:async(...args)=>sends.push(args)},
+    "tools/definitions":{INTERNAL_TOOLS:tools,usable:()=>true},"messaging":{sendToPlatform:async(...args)=>sends.push(args)},
     "skills":{getSkillsForPrompt:()=>""},"llm":llm,"spend-guard":{spendIntent:()=>null},"outbound-guard":{outboundIntent:()=>null},"claims-check":{},
     "verification":{prepareTask:async(...args)=> options.prepare ? options.prepare(...args) : {tier:"default",criteria:["Correct time"]},verifyCompletion:async()=> options.verdict || {passed:true,status:"passed"}},
     "task-delivery":{deliverFinished:async()=>{}},"response-presentation":{responsePresentation:()=>""},
