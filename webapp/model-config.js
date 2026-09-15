@@ -133,7 +133,9 @@ function install(app, deps) {
     const connectionId = req.body.connection === "vision" ? "vision" : "primary";
     const conn = resolveConnection(req.body[connectionId] || {}, settings.model_config || legacyConfig(settings), connectionId);
     const models = await wire.listModels(conn);
-    res.json({ models: models.map(m => ({ id: m.id, capabilities: policy.capabilities(conn, m.id, m.metadata) })) });
+    res.json({ models: models.map(m => ({ id: m.id,
+      name: m.metadata?.display_name || m.metadata?.displayName || m.metadata?.name || m.id,
+      capabilities: policy.capabilities(conn, m.id, m.metadata) })) });
   }));
   app.post("/api/model-config/check", route(async (req, res, id) => {
     const settings = await profile(id);

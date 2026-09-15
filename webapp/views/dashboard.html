@@ -2399,16 +2399,16 @@
               <div id="wallet-main" style="display:none;">
                 <div style="font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:8px;">Spending rules</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;">
-                  <label class="wallet-field"><span>Per purchase, at most</span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"></label>
-                  <label class="wallet-field"><span>Per day, at most</span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"></label>
-                  <label class="wallet-field"><span>Per month, at most</span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"></label>
-                  <label class="wallet-field"><span>Currency</span><input type="text" id="sl-currency" maxlength="3" placeholder="GBP" style="text-transform:uppercase;"></label>
+                  <label class="wallet-field"><span>Currency</span><input type="text" id="sl-currency" maxlength="3" placeholder="e.g. GBP" style="text-transform:uppercase;"></label>
+                  <label class="wallet-field"><span>Per purchase, at most <span data-spend-currency></span></span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Per day, at most <span data-spend-currency></span></span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Per month, at most <span data-spend-currency></span></span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"></label>
                 </div>
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;cursor:pointer;margin:4px 0 6px;">
                   <input type="checkbox" id="sl-always-ask" checked style="width:14px;height:14px;margin:0;accent-color:#6ee7a8;">
                   Ask me before every purchase
                 </label>
-                <label class="wallet-field" id="sl-auto-wrap" style="max-width:260px;opacity:0.5;"><span>Go ahead without asking under</span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled></label>
+                <label class="wallet-field" id="sl-auto-wrap" style="max-width:360px;opacity:0.5;"><span>Go ahead without asking under <span data-spend-currency></span></span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled></label>
                 <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
                   <button class="account-action-btn" onclick="saveSpendLimits()">Save rules</button>
                   <span id="sl-status" style="font-size:12.5px;color:#888;"></span>
@@ -4364,6 +4364,12 @@
       document.getElementById('sl-auto-under').disabled = ask;
       document.getElementById('sl-auto-wrap').style.opacity = ask ? '0.5' : '1';
     }
+    function updateSpendCurrency() {
+      var currency = document.getElementById('sl-currency').value.trim().toUpperCase();
+      document.querySelectorAll('[data-spend-currency]').forEach(function (el) {
+        el.textContent = /^[A-Z]{3}$/.test(currency) ? '(' + currency + ')' : '(choose currency)';
+      });
+    }
     async function loadWallet() {
       try {
         var res = await fetch('/api/wallet');
@@ -4384,6 +4390,8 @@
         document.getElementById('sl-per-day').value = l.per_day ?? '';
         document.getElementById('sl-per-month').value = l.per_month ?? '';
         document.getElementById('sl-currency').value = l.currency || '';
+        document.getElementById('sl-currency').oninput = updateSpendCurrency;
+        updateSpendCurrency();
         document.getElementById('sl-always-ask').checked = l.always_ask !== false;
         document.getElementById('sl-auto-under').value = l.auto_under ?? '';
         document.getElementById('sl-always-ask').onchange = autoUnderToggle;
@@ -4426,6 +4434,16 @@
     }
 
     async function saveSpendLimits() {
+      var currency = document.getElementById('sl-currency').value.trim().toUpperCase();
+      var hasAmount = ['sl-per-purchase', 'sl-per-day', 'sl-per-month', 'sl-auto-under'].some(function (id) {
+        var input = document.getElementById(id);
+        return !input.disabled && input.value !== '';
+      });
+      if ((currency || hasAmount) && !/^[A-Z]{3}$/.test(currency)) {
+        document.getElementById('sl-status').textContent = 'Enter a three-letter currency code, such as GBP, USD or VND.';
+        document.getElementById('sl-currency').focus();
+        return;
+      }
       var body = {
         per_purchase: document.getElementById('sl-per-purchase').value,
         per_day: document.getElementById('sl-per-day').value,
