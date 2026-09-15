@@ -2389,33 +2389,29 @@
       <div class="tab-content" id="tab-settings">
         <div style="padding-top:16px;">
 
-          <!-- Model roles: which run hosted vs local (self-host truth-telling) -->
-          <div id="model-roles-block" style="display:none;margin-bottom:16px;padding:12px 16px;background:#16171b;border:1px solid #2e2f35;border-radius:10px;">
-            <div style="font-size:12px;color:#888;margin-bottom:8px;">Model roles on this install</div>
-            <div id="model-roles-rows" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#aaa;"></div>
-          </div>
+
 
           <!-- Reach the dashboard from your phone (self-host only; see phone-access.js) -->
           <div class="settings-group" id="phone-block" style="display:none;">
             <div class="settings-group-header">
-              <h2>Your phone</h2>
-              <p class="section-desc">Open this dashboard from your phone, wherever you are. You can set up a lasting address and save it to your home screen. Your dashboard password is still required.</p>
+              <h2>Dashboard access</h2>
+              <p class="section-desc">Open your dashboard on your phone or another device using a password-protected link. ClosedHand must be running on your computer.</p>
             </div>
             <div style="padding:12px 16px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
                 <div>
-                  <div id="phone-title" style="font-size:14px;font-weight:600;color:#e8e8e8;">Off</div>
-                  <div id="phone-desc" style="font-size:12.5px;color:#888;margin-top:2px;">Turn it on to get an address and a code to scan.</div>
+                  <div id="phone-title">Loading dashboard access…</div>
+                  <p id="phone-desc"></p>
                 </div>
-                <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Turn on</button>
+                <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()" hidden>Turn off remote access</button>
               </div>
-              <p><a href="/keep" target="_top" style="color:#6ee7a8">Set up or save your phone address</a></p>
+              <p class="dashboard-save"><a id="phone-save" href="/keep" target="_top">Set up dashboard link</a></p>
               <div id="phone-live" style="display:none;margin-top:14px;gap:18px;align-items:center;flex-wrap:wrap;">
                 <div id="phone-qr" style="width:132px;height:132px;flex:none;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;padding:8px;box-sizing:border-box;"></div>
-                <div style="font-size:13px;color:#aaa;line-height:1.6;min-width:220px;flex:1;">
+                <div class="dashboard-link-details">
                   <div><a id="phone-url" href="#" target="_blank" rel="noopener" style="color:#6ee7a8;word-break:break-all;"></a></div>
-                  <div>Point your phone's camera at the code, then sign in with your password.</div>
-                  <div style="color:#777;">Your computer must stay on. A temporary address changes on restart. A lasting address stays the same.</div>
+                  <div id="phone-scan-help">Point your phone's camera at the code, then sign in with your password.</div>
+                  <p id="phone-link-help"></p>
                 </div>
               </div>
             </div>
@@ -2498,7 +2494,7 @@
               <p class="section-desc">Where ClosedHand sends Pulse updates and scheduled agent results. One-off tasks reply in the chat you asked from.</p>
             </div>
             <div class="settings-group-body" id="pulse-delivery">
-              <div class="platform-pills" id="platform-pills"></div>
+              <div class="platform-pills" id="platform-pills" aria-live="polite"><p class="pulse-no-platforms">Loading notification settings…</p></div>
             </div>
           </div>
 
@@ -2553,23 +2549,23 @@
           <div class="settings-group" id="rules-section">
             <div class="settings-group-header">
               <h2>Your Preferences</h2>
-              <p class="section-desc">Persistent rules that shape how ClosedHand behaves in every conversation.</p>
+              <p class="section-desc">Preferences you add here or ask ClosedHand to remember in chat. Turn them off or remove them at any time.</p>
             </div>
             <div class="settings-group-body">
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;cursor:pointer;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06);">
                 <input type="checkbox" id="confirm-sends" checked onchange="saveConfirmSends(this.checked)" style="width:14px;height:14px;margin:0;accent-color:#6ee7a8;">
-                Confirm before sending an email (chat and background agents)
+                Ask before sending emails
               </label>
               <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                <div style="font-size:13px;color:#ccc;">Places ClosedHand may send your data to</div>
-                <div style="font-size:12px;color:#777;margin:2px 0 6px;">The first time a request would carry your content somewhere new, ClosedHand asks. Answer "always" in chat and the place lands here. Anything connected as a service is not listed; the provider already holds that data.</div>
+                <div class="approved-sites-title">Approved websites</div>
+                <p class="approved-sites-desc">ClosedHand asks before sending your content to a new website. Choose &ldquo;always&rdquo; in chat to save your approval here. Remove a website to make ClosedHand ask again. Services you have connected are managed in Connections.</p>
                 <div id="allowed-hosts" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:13px;color:#555;">Loading...</div>
               </div>
               <div style="display:flex;gap:8px;margin-top:12px;">
-                <input type="text" id="new-rule-input" placeholder="Add a preference, e.g. 'Always ask before sending emails'" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#ccc;font-size:13px;font-family:inherit;outline:none;">
+                <input type="text" id="new-rule-input" aria-label="New preference" placeholder="Write a preference" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#ccc;font-size:13px;font-family:inherit;outline:none;">
                 <button onclick="addRule()" style="padding:10px 16px;background:#2563eb;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;white-space:nowrap;">Add</button>
               </div>
             </div>
@@ -2824,12 +2820,18 @@
     }
 
     async function loadStatus() {
-      const res = await fetch("/api/status");
-      if (res.status === 401) {
-        window.location.href = "/";
+      let data;
+      try {
+        const res = await fetch("/api/status");
+        if (res.status === 401) { window.location.href = "/"; return; }
+        if (!res.ok) throw new Error("Could not load connected apps");
+        data = await res.json();
+        _platformsLoadError = false;
+      } catch (e) {
+        _platformsLoadError = true;
+        renderPlatformPills(window._platformsCache);
         return;
       }
-      const data = await res.json();
 
       document.getElementById("user-name").textContent = (data.name || "").split(" ")[0];
 
@@ -3004,6 +3006,7 @@
 
       // Cache platforms for tab-switch re-render
       window._platformsCache = data.platforms;
+      renderPlatformPills(data.platforms);
 
       // Toast on connect/error
       const params = new URLSearchParams(window.location.search);
@@ -3427,6 +3430,9 @@
       const d = document.createElement("div");
       d.textContent = s || "";
       return d.innerHTML;
+    }
+    function escAttribute(s) {
+      return escHtml(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     // --- MCP Connections ---
@@ -4011,11 +4017,13 @@
     // --- Pulse Settings ---
     let pulseState = { proactiveLevel: "medium", quietStart: 22, quietEnd: 7, quietEnabled: true, deliveryPlatforms: [] };
     let _pulseLoaded = false;
+    let _pulseError = false;
+    let _platformsLoadError = false;
 
     async function loadPulse() {
       try {
         const res = await fetch("/api/pulse");
-        if (!res.ok) return;
+        if (!res.ok) throw new Error("Could not load notification settings");
         const data = await res.json();
         pulseState = {
           proactiveLevel: data.proactiveLevel || "medium",
@@ -4025,12 +4033,16 @@
           deliveryPlatforms: data.deliveryPlatforms || [],
         };
         _pulseLoaded = true;
+        _pulseError = false;
+        renderPlatformPills(window._platformsCache);
         renderPulseLevel();
         renderQuietHours();
         var csBox = document.getElementById("confirm-sends");
         if (csBox) csBox.checked = data.confirmSends !== false;
         loadAllowedHosts();
       } catch (e) {
+        _pulseError = true;
+        renderPlatformPills(window._platformsCache);
         console.error("Failed to load pulse:", e);
       }
     }
@@ -4069,35 +4081,46 @@
 
     function renderPlatformPills(platforms) {
       const container = document.getElementById("platform-pills");
-      const connectedPlatforms = Object.entries(platforms).filter(([, info]) => info.connected);
-
-      if (connectedPlatforms.length === 0) {
-        container.innerHTML = '<p class="pulse-no-platforms">Connect a chat app to receive proactive pulse messages. <a href="#platforms-wrap" onclick="document.getElementById(\'platforms-wrap\').scrollIntoView({behavior:\'smooth\'});return false;" style="color:#6ee7a8;text-decoration:underline;cursor:pointer;">Connect one now</a>.</p>';
+      if (_platformsLoadError) {
+        container.innerHTML = '<p class="pulse-no-platforms">Could not load connected apps. <button class="notification-retry" onclick="loadStatus()">Try again</button></p>';
         return;
       }
-
-      const pillsHtml = connectedPlatforms.map(([key, info]) => {
-        const selected = pulseState.deliveryPlatforms.includes(key);
-        return `<button class="pill ${selected ? "selected" : ""}" data-platform="${key}">${info.name}</button>`;
+      if (_pulseError) {
+        container.innerHTML = '<p class="pulse-no-platforms">Could not load notification settings. <button class="notification-retry" onclick="loadPulse()">Try again</button></p>';
+        return;
+      }
+      if (!_pulseLoaded || !platforms) {
+        container.innerHTML = '<p class="pulse-no-platforms">Loading notification settings…</p>';
+        return;
+      }
+      const connected = Object.entries(platforms).filter(([, info]) => info.connected);
+      if (!connected.length) {
+        container.innerHTML = '<p class="pulse-no-platforms">Connect a chat app to receive updates and scheduled results. <a href="#connections" onclick="switchTab(\'connections\');return false;">Connect a chat app</a>.</p>';
+        return;
+      }
+      const pills = connected.map(([key, info]) => {
+        const deliveryKey = info.linkedDevice ? "whatsapp_linked" : key;
+        const selected = pulseState.deliveryPlatforms.includes(deliveryKey);
+        return `<button class="pill ${selected ? "selected" : ""}" aria-pressed="${selected}" data-platform="${escAttribute(deliveryKey)}"${_pulseSaving ? " disabled" : ""}>${escHtml(info.name || key)}</button>`;
       }).join("");
-      // WhatsApp note: deliverable only inside Meta's 24h window since the
-      // user's last WhatsApp message. Shown only when WhatsApp is selected.
-      const waNote = pulseState.deliveryPlatforms.includes("whatsapp")
-        ? '<p class="pulse-no-platforms" style="margin-top:10px;">WhatsApp only accepts messages from ClosedHand within 24 hours of your last message there. Outside that window, notifications go to your other selected apps instead.</p>'
+      const businessWhatsApp = connected.some(([key, info]) => key === "whatsapp" && !info.linkedDevice);
+      const note = businessWhatsApp && pulseState.deliveryPlatforms.includes("whatsapp")
+        ? '<p class="pulse-no-platforms">WhatsApp accepts these updates within 24 hours of your last message there. Outside that window, ClosedHand uses your other selected apps.</p>'
         : "";
-      container.innerHTML = pillsHtml + waNote;
-
-      container.querySelectorAll(".pill:not([disabled])").forEach(pill => {
-        pill.addEventListener("click", () => {
-          const platform = pill.dataset.platform;
-          const idx = pulseState.deliveryPlatforms.indexOf(platform);
-          if (idx >= 0) {
-            pulseState.deliveryPlatforms.splice(idx, 1);
-          } else {
-            pulseState.deliveryPlatforms.push(platform);
-          }
-          savePulse();
-          renderPlatformPills(platforms); // re-render so the WhatsApp note tracks selection
+      const help = pulseState.deliveryPlatforms.length
+        ? "Choose the apps where you want to receive updates and scheduled results."
+        : "No apps selected. ClosedHand will not send updates or scheduled results to your chat apps.";
+      container.innerHTML = '<p class="notification-help">' + help + '</p><div class="notification-options">' + pills + '</div>' + note;
+      container.querySelectorAll(".pill").forEach(pill => {
+        pill.addEventListener("click", async () => {
+          if (_pulseSaving) return;
+          const previous = pulseState.deliveryPlatforms.slice();
+          const key = pill.dataset.platform;
+          pulseState.deliveryPlatforms = previous.includes(key) ? previous.filter(p => p !== key) : previous.concat(key);
+          const saving = savePulse();
+          renderPlatformPills(platforms);
+          if (!await saving) pulseState.deliveryPlatforms = previous;
+          renderPlatformPills(platforms);
         });
       });
     }
@@ -4151,8 +4174,8 @@
     async function savePulse() {
       // Never save before the real state has loaded: a blank default here
       // once wiped the user's saved delivery platforms
-      if (!_pulseLoaded) { showToast("Still loading settings, try again", true); return; }
-      if (_pulseSaving) return;
+      if (!_pulseLoaded) { showToast("Still loading settings, try again", true); return false; }
+      if (_pulseSaving) return false;
       _pulseSaving = true;
       try {
         const res = await fetch("/api/pulse", {
@@ -4162,6 +4185,7 @@
         });
         if (res.ok) {
           showToast("Saved");
+          return true;
         } else {
           const body = await res.json().catch(() => ({}));
           console.error("Pulse save error:", res.status, body);
@@ -4173,6 +4197,7 @@
       } finally {
         _pulseSaving = false;
       }
+      return false;
     }
 
     // --- Schedules (kept for backward compat) ---
@@ -4312,7 +4337,7 @@
         if (window._platformsCache) renderPlatformPills(window._platformsCache);
         loadLocationWeather();
         loadUserRules();
-        loadModelRoles();
+        loadSettingsExtras();
       }
       if (tabName === 'brain') {
         loadUnifiedMemory();
@@ -4323,27 +4348,7 @@
       }
     }
 
-    // === Model roles (hosted vs local, from setup status) ===
-    async function loadModelRoles() {
-      try {
-        const res = await fetch('/api/setup/status');
-        const s = await res.json();
-        if (!s.roles) return;
-        const names = { memory: 'Recall', rerank: 'Reranker', vision: 'Vision', light: 'Light tasks' };
-        const rows = Object.entries(s.roles).map(function (kv) {
-          const mode = kv[1].mode;
-          const color = mode === 'local' ? '#e7b76e' : mode === 'hosted' ? '#6ee7a8' : '#555';
-          const label = mode === 'local' ? 'local' : mode === 'hosted' ? 'hosted' : 'off';
-          return '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>' +
-            names[kv[0]] + ': ' + label + '</span>';
-        });
-        // Download progress, if a local model is mid-fetch
-        const emb = (s.localModels || {}).embedder;
-        if (emb && emb.state === 'downloading') rows.push('<span style="color:#e7b76e;">downloading recall model ' + (emb.pct || 0) + '%</span>');
-        if (emb && emb.state === 'error') rows.push('<span style="color:#f87171;">recall model download failed, retrying on next sync</span>');
-        document.getElementById('model-roles-rows').innerHTML = rows.join('');
-        document.getElementById('model-roles-block').style.display = 'block';
-      } catch (e) { /* roles are informational */ }
+    function loadSettingsExtras() {
       document.getElementById('phone-block').style.display = 'block';
       loadPhoneAccess();
       document.getElementById('wallet-block').style.display = 'block';
@@ -4474,8 +4479,12 @@
     async function loadPhoneAccess() {
       try {
         var r = await fetch('/api/phone');
-        if (r.ok) renderPhone(await r.json());
-      } catch (e) { /* card stays as it was */ }
+        if (!r.ok) throw new Error('Could not load dashboard access');
+        renderPhone(await r.json());
+      } catch (e) {
+        document.getElementById('phone-title').textContent = 'Could not load dashboard access';
+        document.getElementById('phone-desc').innerHTML = '<button class="notification-retry" onclick="loadPhoneAccess()">Try again</button>';
+      }
     }
     function renderPhone(p) {
       _phone = p;
@@ -4483,25 +4492,34 @@
       var btn = document.getElementById('phone-btn'), live = document.getElementById('phone-live');
       clearTimeout(_phonePoll);
       btn.disabled = false;
-      btn.textContent = p.enabled ? 'Turn off' : 'Turn on';
+      btn.hidden = !p.enabled;
+      btn.textContent = 'Turn off remote access';
+      document.getElementById('phone-save').textContent = p.permanent ? 'Save dashboard link' : 'Set up a permanent link';
       live.style.display = 'none';
       if (p.state === 'unavailable') {
-        title.textContent = 'Not available yet'; desc.textContent = 'This needs a newer ClosedHand. Re-run the installer to update.'; btn.disabled = !p.enabled;
+        title.textContent = 'Update required'; desc.textContent = 'Update ClosedHand to enable dashboard access from other devices.';
       } else if (p.enabled && p.url) {
-        title.textContent = 'On'; desc.textContent = 'Your dashboard is reachable at the address below.';
+        title.textContent = p.permanent ? 'Your permanent dashboard link' : 'Your temporary dashboard link';
+        desc.textContent = 'Use this link to sign in from another device.';
         live.style.display = 'flex';
-        document.getElementById('phone-url').textContent = p.url.replace(/^https:\/\//, '');
-        document.getElementById('phone-url').href = p.url;
-        document.getElementById('phone-qr').innerHTML = '<img src="/api/phone/qr.svg?t=' + Date.now() + '" alt="" style="width:100%;height:100%;display:block;">';
+        var url = new URL('/dashboard', p.url).href;
+        document.getElementById('phone-url').textContent = url.replace(/^https:\/\//, '');
+        document.getElementById('phone-url').href = url;
+        document.getElementById('phone-link-help').textContent = p.permanent
+          ? 'Save it to your home screen, bookmark it, or pin it in WhatsApp. The link stays the same.'
+          : 'This link changes when the connection restarts. Set up a permanent link before bookmarking or pinning it.';
+        document.getElementById('phone-qr').innerHTML = '<img src="/api/phone/qr.svg?t=' + Date.now() + '" alt="Scan to open your dashboard" style="width:100%;height:100%;display:block;">';
       } else if (p.state === 'pairing') {
-        title.textContent = 'Finish setup'; desc.textContent = 'Open the phone address link below to finish setting up your lasting address.';
+        title.textContent = 'Finish setting up your dashboard link';
+        desc.textContent = 'Follow the setup link below to confirm your permanent address.';
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
       } else if (p.enabled) {
-        title.textContent = p.state === 'error' ? 'Reconnecting' : 'Starting';
-        desc.textContent = p.state === 'error' ? 'The connection dropped. Trying again.' : 'Getting an address. A few seconds.';
+        title.textContent = p.state === 'error' ? 'Reconnecting' : 'Connecting';
+        desc.textContent = p.state === 'error' ? 'The connection dropped. ClosedHand is trying again.' : 'Your dashboard link will appear here when the connection is ready.';
         _phonePoll = setTimeout(loadPhoneAccess, 2000);
       } else {
-        title.textContent = 'Off'; desc.textContent = 'Turn it on to get an address and a code to scan.';
+        title.textContent = 'Remote access is off';
+        desc.textContent = 'You can still use the dashboard on this computer. Set up your link below to open it elsewhere.';
       }
     }
     async function togglePhoneAccess() {
@@ -4510,7 +4528,7 @@
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });
         var result = await r.json();
-        if (!r.ok) throw new Error(result.error || 'Could not change phone access. Try again.');
+        if (!r.ok) throw new Error(result.error || 'Could not change dashboard access. Try again.');
         renderPhone(result);
       } catch (e) {
         btn.disabled = false;
@@ -5135,32 +5153,32 @@
     }
 
     // === Cloud Workspace / Sandbox ===
+    function ruleOrigin(rule) {
+      const labels = { assistant: 'Saved by ClosedHand', observed: 'Suggested by ClosedHand', user: 'Added in Settings' };
+      const label = labels[rule.source] || 'Source not recorded';
+      const date = rule.created_at && new Date(rule.created_at);
+      return label + (date && !Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+    }
     async function loadUserRules() {
+      const list = document.getElementById('rules-list');
+      if (!list) return;
       try {
         const res = await fetch('/api/rules');
+        if (!res.ok) throw new Error('Could not load preferences');
         const rules = await res.json();
-        var list = document.getElementById('rules-list');
-        if (!list) return;
-        if (!rules || rules.length === 0) {
-          list.innerHTML = '<div style="font-size:13px;color:#555;padding:4px 0;">No preferences set yet. Chat naturally and ClosedHand will learn your preferences, or add them here.</div>';
+        if (!rules.length) {
+          list.innerHTML = '<p>No saved preferences yet. Ask ClosedHand to remember how you like things done, or add a preference below.</p>';
           return;
         }
         list.innerHTML = rules.map(function(r) {
-          var opacity = r.active ? '1' : '0.4';
-          var checked = r.active ? 'checked' : '';
-          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:' + opacity + ';border-bottom:1px solid rgba(255,255,255,0.04);">' +
-            '<label style="position:relative;width:36px;height:20px;flex-shrink:0;">' +
-              '<input type="checkbox" ' + checked + ' onchange="toggleRule(\'' + r.id + '\',this.checked)" style="opacity:0;width:0;height:0;">' +
-              '<span style="position:absolute;top:0;left:0;right:0;bottom:0;background:' + (r.active ? 'rgba(110,231,168,0.3)' : 'rgba(255,255,255,0.1)') + ';border-radius:10px;cursor:pointer;transition:all 0.2s;"><span style="position:absolute;top:2px;left:' + (r.active ? '18px' : '2px') + ';width:16px;height:16px;background:#fff;border-radius:50%;transition:all 0.2s;"></span></span>' +
-            '</label>' +
-            '<span style="flex:1;font-size:13px;color:' + (r.active ? '#ccc' : '#666') + ';">' + r.rule.replace(/</g, '&lt;') + '</span>' +
-            '<span style="font-size:10px;color:#444;flex-shrink:0;">' + (r.source === 'observed' ? 'auto' : '') + '</span>' +
-            '<button onclick="deleteRule(\'' + r.id + '\',this)" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:4px;transition:all 0.15s;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'#555\'">&times;</button>' +
+          return '<div class="preference-row">' +
+            '<input type="checkbox" aria-label="Enable preference: ' + escAttribute(r.rule) + '" ' + (r.active ? 'checked' : '') + ' onchange="toggleRule(\'' + escHtml(r.id) + '\',this.checked)">' +
+            '<div class="preference-copy"><span>' + escHtml(r.rule) + '</span><small>' + ruleOrigin(r).split(' · ').map(part => '<span>' + escHtml(part) + '</span>').join('') + (r.active ? '' : ' · Turned off') + '</small></div>' +
+            '<button class="preference-remove" aria-label="Delete preference: ' + escAttribute(r.rule) + '" onclick="deleteRule(\'' + escHtml(r.id) + '\',this)">&times;</button>' +
           '</div>';
         }).join('');
       } catch (e) {
-        var list = document.getElementById('rules-list');
-        if (list) list.innerHTML = '<div style="font-size:13px;color:#555;">Could not load preferences.</div>';
+        list.innerHTML = '<p>Could not load preferences. <button class="notification-retry" onclick="loadUserRules()">Try again</button></p>';
       }
     }
 
@@ -7666,7 +7684,7 @@
         html += '<div style="font-size:12px;color:#888;margin-bottom:4px;">Address to paste</div>';
         html += '<div onclick="copyCode(\'' + info.webhook + '\')" title="Click to copy" style="font-family:ui-monospace,monospace;font-size:12px;color:#eaeaef;background:#111;border:1px solid #2a2b31;border-radius:6px;padding:8px 10px;margin-bottom:14px;cursor:pointer;word-break:break-all;">' + info.webhook + '</div>';
       } else if (info && info.needsPublic) {
-        html += '<p style="font-size:13px;color:#e0b467;line-height:1.5;margin:0 0 14px;">' + name + ' sends messages to ClosedHand over the internet, so this install needs a public address first. Turn on Your phone in Settings, then come back here.</p>';
+        html += '<p style="font-size:13px;color:#e0b467;line-height:1.5;margin:0 0 14px;">' + name + ' sends messages to ClosedHand over the internet, so ClosedHand needs a link that works from other devices first. Open Dashboard access in Settings, then come back here.</p>';
       }
       if (info && info.fromEnv) html += '<p style="font-size:12px;color:#888;margin:0 0 10px;">Some of these keys are set in the .env file, which wins over anything saved here.</p>';
       spec.fields.forEach(function(f) {

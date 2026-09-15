@@ -10,6 +10,18 @@
 .model-fields details > .model-fields { padding-top: 16px; }
 .model-result { line-height: 1.6; color: #8eddb4; }
 .model-result:empty { display: none; }
+.model-current { max-width: 760px; padding-bottom: 28px; }
+.model-current[hidden] { display: none; }
+.model-current .model-role-list { grid-template-columns: minmax(130px, 180px) minmax(0,1fr); row-gap: 22px; }
+.model-current dd small { display: block; margin-top: 4px; color: #bcc2c6; font-size: 14px; }
+.model-current .model-hint { color: #bcc2c6; font-size: 15px; line-height: 1.6; margin: 20px 0 0; max-width: 65ch; }
+.model-editor > summary { cursor: pointer; padding: 14px 0; font-size: 16px; color: #edf0f2; }
+.model-editor > .model-fields { margin-top: 20px; }
+.model-editor > summary:focus-visible { outline: 2px solid #6ee7a8; outline-offset: 4px; }
+@media (max-width: 520px) {
+  .model-current .model-role-list { grid-template-columns: 1fr; gap: 6px; }
+  .model-current .model-role-list dd { margin-bottom: 16px; }
+}
 .model-result.is-error { color: #ffacac; }
 .model-preview { padding: 24px; border: 1px solid #43534a; border-radius: 12px; display: grid; gap: 20px; }
 .model-preview h3 { margin: 0; font-family: inherit; font-weight: 600; font-size: 18px; line-height: 1.4; }

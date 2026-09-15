@@ -9,7 +9,7 @@
     if (!root || root.dataset.mounted) return;
     root.dataset.mounted = "true";
     var options = '<option value="">Choose a provider</option>' + Object.keys(providers).map(function (key) { return '<option value="' + key + '">' + providers[key] + '</option>'; }).join('');
-    root.innerHTML = '<div class="model-fields">' +
+    root.innerHTML = '<div class="model-current" data-region="current" hidden></div><details class="model-editor" data-region="editor" open><summary>Change models</summary><div class="model-fields">' +
       '<label>Provider<select data-field="provider">' + options + '</select></label>' +
       '<label data-region="address" hidden>Base URL<input data-field="baseUrl" type="url" placeholder="https://provider.example/v1" spellcheck="false"></label>' +
       '<label>API key<input data-field="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>' +
@@ -17,9 +17,9 @@
       '<button type="button" data-action="load">Load available models</button>' +
       '<label>Chat model<input data-field="model" list="model-options" spellcheck="false" placeholder="Choose or enter the exact model ID"></label>' +
       '<datalist id="model-options"></datalist><p class="model-hint" data-region="capabilities"></p>' +
-      '<details><summary>Models for summaries and images</summary><div class="model-fields">' +
+      '<details data-region="extras"><summary>Models for summaries and images</summary><div class="model-fields">' +
       '<label>Summaries model<input data-field="backgroundModel" list="model-options" spellcheck="false" placeholder="Use the chat model"></label>' +
-      '<p class="model-hint">A smaller model can reduce the cost of titles, summaries and other routine work. Chat keeps the model chosen above.</p>' +
+      '<p class="model-hint">You can use a smaller model from the same provider for routine work. Leave this blank to use your chat model. ClosedHand adjusts the chat model\'s thinking effort separately, when its provider supports it.</p>' +
       '<label>Images<select data-field="visionMode"><option value="same">Use the chat model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
       '<div data-region="vision" class="model-fields" hidden><label>Image provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Base URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
@@ -33,11 +33,37 @@
       '<button type="button" data-action="save">Use these models</button></section>' +
       '<details data-region="default" hidden><summary>Return to the hosted models</summary><div class="model-fields">' +
       '<p>This removes your own model connections from ClosedHand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
-      '<button type="button" data-action="default">Use the hosted models</button></div></details></div>';
+      '<button type="button" data-action="default">Use the hosted models</button></div></details></div></details>';
     var saved = null, ticket = null, models = [], busy = false, allowDefault = false;
     var field = function (key) { return root.querySelector('[data-field="' + key + '"]'); };
     var region = function (key) { return root.querySelector('[data-region="' + key + '"]'); };
     var result = root.querySelector(".model-result"), preview = root.querySelector(".model-preview");
+    function renderCurrent(data) {
+      var current = region("current");
+      current.replaceChildren();
+      var rows = data.activeModels || [];
+      current.hidden = !rows.length;
+      if (!rows.length) return;
+      var list = document.createElement("dl"); list.className = "model-role-list";
+      rows.forEach(function (row) {
+        var term = document.createElement("dt"); term.textContent = row.label;
+        var definition = document.createElement("dd");
+        var name = document.createElement("span"); name.textContent = row.model.replace(/^local:/, "");
+        definition.append(name);
+        if (row.provider) { var provider = document.createElement("small"); provider.textContent = row.provider; definition.append(provider); }
+        list.append(term, definition);
+      });
+      current.append(list);
+      var note = document.createElement("p"); note.className = "model-hint";
+      note.textContent = "Recall helps find relevant information. Search ranking puts the closest matches first. These models stay the same when you change your chat model.";
+      current.append(note);
+      var download = data.localModels?.embedder;
+      if (download && ["downloading", "error"].includes(download.state)) {
+        var status = document.createElement("p"); status.className = "model-hint";
+        status.textContent = download.state === "downloading" ? "Downloading the recall model: " + (download.pct || 0) + "%." : "The recall model could not finish downloading. ClosedHand will retry when syncing.";
+        current.append(status);
+      }
+    }
     function value(key) { return field(key).value.trim(); }
     function show(message, error) { result.textContent = message; result.classList.toggle("is-error", !!error); }
     function invalidate() { ticket = null; preview.hidden = true; }
@@ -70,7 +96,7 @@
       root.querySelectorAll("button,input,select").forEach(function (el) { el.disabled = true; });
       try { await fn(); } catch (e) {
         show(e.message || "Could not reach ClosedHand. Try again.", true);
-        if (e.visionNeeded) { root.querySelector("details").open = true; focusImages = true; }
+        if (e.visionNeeded) { region("editor").open = true; region("extras").open = true; focusImages = true; }
       } finally {
         busy = false; root.removeAttribute("aria-busy");
         root.querySelectorAll("button,input,select").forEach(function (el) { el.disabled = false; });
@@ -137,13 +163,13 @@
     root.querySelector('[data-action="save"]').onclick = function () { perform(async function () {
       show("Saving models..."); await call("/save", { ticket: ticket });
       field("apiKey").value = ""; field("visionKey").value = ""; invalidate();
-      saved = (await call("")).config;
+      var updated = await call(""); saved = updated.config; renderCurrent(updated);
       region("default").hidden = !allowDefault;
       show("Models updated. New requests use these choices."); result.focus();
       if (onSaved) onSaved();
     }); };
     root.querySelector('[data-action="default"]').onclick = function () { perform(async function () {
-      await call("/default", {}); saved = null; invalidate();
+      await call("/default", {}); saved = null; invalidate(); renderCurrent(await call(""));
       root.querySelectorAll("input").forEach(function (el) { el.value = ""; });
       field("provider").value = ""; field("visionMode").value = "same"; visibility();
       region("default").hidden = true;
@@ -151,7 +177,8 @@
       if (onSaved) onSaved();
     }); };
     perform(async function () {
-      var data = await call(""); saved = data.config;
+      var data = await call(""); saved = data.config; renderCurrent(data);
+      region("editor").open = !saved && !data.allowDefault;
       allowDefault = !!data.allowDefault;
       region("default").hidden = !allowDefault || !saved;
       if (!saved) { visibility(); if (data.allowDefault) show("ClosedHand's hosted models are active. You can connect your own models here."); return; }
@@ -171,7 +198,7 @@
         }
       }
       visibility(); region("capabilities").textContent = describeCaps(saved.roles.chat.capabilities);
-      if (data.legacy) show("Your current setup is still active. Check and review these choices to bring all model jobs into this setup.");
+      if (data.legacy) show("The models shown above are active. Check and review your choices here before applying a change.");
     });
   }
   window.ClosedHandModels = { mount: mount };

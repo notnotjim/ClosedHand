@@ -21,7 +21,7 @@
       $('send').hidden = !data.canSend;
       message('');
     } else if (data.local) {
-      $('setup-copy').textContent = data.url ? 'Your current phone link is temporary. Set up a permanent, password-protected link before saving it.' : 'Access your dashboard from your phone with a permanent, password-protected link.';
+      $('setup-copy').textContent = data.url ? 'Your current dashboard link is temporary. Set up a permanent, password-protected link before saving it.' : 'Access your dashboard from your phone with a permanent, password-protected link.';
       $('pair').hidden = !data.pairingUrl; $('enable').hidden = !!data.pairingUrl;
       if (data.pairingUrl) $('pair').href = data.pairingUrl;
       if (data.error) { message(data.error, true); $('enable').hidden = false; $('enable').textContent = 'Try again'; }
@@ -36,7 +36,7 @@
     catch (e) { $('loading').hidden = true; message(e.message, true); }
   }
   $('enable').onclick = async () => {
-    $('enable').disabled = true; message('Setting up phone access…');
+    $('enable').disabled = true; message('Setting up dashboard access…');
     try { const r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true, mode: 'managed' }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); await load(); }
     catch (e) { message(e.message, true); } finally { $('enable').disabled = false; }
   };

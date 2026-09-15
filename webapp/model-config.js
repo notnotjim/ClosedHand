@@ -115,7 +115,10 @@ function install(app, deps) {
   };
   app.get("/api/model-config", route(async (req, res, id) => {
     const settings = await profile(id);
-    res.set("Cache-Control", "no-store").json({ config: policy.publicConfig(settings.model_config || legacyConfig(settings)), legacy: !settings.model_config, allowDefault: !!deps.allowDefault });
+    const download = (deps.local ? settings.self_host_config?.LOCAL_MODELS_STATUS : null)?.embedder;
+    res.set("Cache-Control", "no-store").json({ config: policy.publicConfig(settings.model_config || legacyConfig(settings)), legacy: !settings.model_config, allowDefault: !!deps.allowDefault,
+      activeModels: require("./model-summary").modelSummary(settings, deps.readRuntime, !!deps.local),
+      localModels: download ? { embedder: { state: download.state, pct: download.pct } } : null });
   }));
   app.post("/api/model-config/default", route(async (req, res, id) => {
     if (!deps.allowDefault) return res.status(400).json({ error: "This installation needs its own model connection." });

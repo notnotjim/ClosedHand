@@ -5171,6 +5171,8 @@ app.put("/api/location", async (req, res) => {
 // GET /api/api-key — check if user has their own API key set
 require("./model-config").install(app, {
   supabase,
+  local: true,
+  readRuntime: key => process.env[key],
   authorize: async (req, res) => {
     if (mcpClient.isSelfHost()) {
       if (!(await requireSetupAccess(req, res))) return null;
@@ -5514,10 +5516,11 @@ app.get("/api/rules", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
-    const { data } = await supabase.from("user_rules")
+    const { data, error } = await supabase.from("user_rules")
       .select("id, rule, active, source, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
+    if (error) throw error;
     res.json(data || []);
   } catch (e) {
     res.status(500).json({ error: e.message });

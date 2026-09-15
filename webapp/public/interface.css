@@ -168,3 +168,42 @@ body.dashboard-page { display: block; background: #101115; color: var(--ui-text)
   .setup-page .wrap { padding: 24px 20px 64px; }
   .header-right a[href='/privacy'], .header-right a[href='/terms'] { display: none; }
 }
+
+/* Settings use the same body type and spacing as the surrounding dashboard. */
+#phone-title { font-weight: 600; }
+#phone-desc { margin: 6px 0 0; color: var(--ui-muted); line-height: 1.6; }
+#phone-block > div:last-child { padding: var(--space-card); }
+#phone-block .dashboard-save { margin: 24px 0 0; }
+#phone-block a, .platform-pills a, .notification-retry { color: var(--ui-accent, #6ee7a8); text-underline-offset: 3px; }
+.dashboard-link-details { flex: 1; min-width: min(240px, 100%); color: var(--ui-muted); line-height: 1.65; }
+.dashboard-link-details p { margin: 12px 0 0; }
+.dashboard-link-details a { display: inline-block; margin-bottom: 10px; }
+#phone-live { margin-top: 24px !important; }
+#platform-pills { display: block; }
+.notification-help, #platform-pills .pulse-no-platforms { margin: 0; color: var(--ui-muted); font-size: var(--ui-body); line-height: 1.65; }
+.notification-options { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.notification-options + .pulse-no-platforms { margin-top: 20px !important; }
+.notification-options .pill[aria-pressed="true"]::before { content: "✓ "; }
+.notification-retry { background: none; border: 0; padding: 4px; font: inherit; text-decoration: underline; cursor: pointer; }
+.preference-row { display: flex; align-items: flex-start; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--ui-border, #303238); }
+.preference-row input { width: 20px; height: 20px; margin: 3px 0 0; flex: 0 0 20px; accent-color: #6ee7a8; }
+.preference-copy { flex: 1; min-width: 0; font-size: var(--ui-body); line-height: 1.65; overflow-wrap: anywhere; }
+.preference-copy small { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 14px; color: var(--ui-muted); }
+.preference-copy small > span { white-space: nowrap; }
+.preference-remove { flex: 0 0 32px; width: 32px; min-height: 32px; border: 0; background: none; color: var(--ui-muted); font: inherit; font-size: 22px; cursor: pointer; }
+.preference-remove:hover { color: #ffaaaa; }
+.preference-row input:focus-visible, .preference-remove:focus-visible, .notification-retry:focus-visible { outline: 2px solid #6ee7a8; outline-offset: 3px; }
+@media (max-width: 520px) {
+  #phone-block > div:last-child > div:first-child { flex-wrap: wrap; }
+  .preference-row { gap: 12px; }
+}
+#tab-settings .section-desc { color: var(--ui-muted); font-size: var(--ui-body); }
+#rules-section .settings-group-body > label { font-size: var(--ui-body) !important; padding-bottom: 20px !important; margin-bottom: 20px !important; }
+#rules-section .settings-group-body > div:has(> #allowed-hosts) { padding-bottom: 20px !important; margin-bottom: 0 !important; }
+.approved-sites-title { font-size: var(--ui-body); color: var(--ui-text); }
+.approved-sites-desc { font-size: var(--ui-body); color: var(--ui-muted); line-height: 1.65; margin: 8px 0 12px; max-width: 65ch; }
+#allowed-hosts > span { color: var(--ui-muted) !important; font-size: var(--ui-label) !important; }
+#new-rule-input { min-width: 0; min-height: 44px; font-size: var(--ui-body) !important; }
+@media (max-width: 520px) {
+  #phone-qr, #phone-scan-help { display: none; }
+}
