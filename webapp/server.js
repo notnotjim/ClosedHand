@@ -14,6 +14,7 @@ const http = require("http");
 const https = require("https");
 const crypto = require("crypto");
 const path = require("path");
+const assets = require("./assets");
 const multer = require("multer");
 const { supabase } = require("./db");
 
@@ -401,7 +402,7 @@ const SUPPORTED_PLATFORMS = {
 };
 
 // Middleware
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { setHeaders: assets.cacheHeaders }));
 app.use(express.json({ limit: "50mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 const browserAccess = require("./browser-access");
 app.use((req, res, next) => {
@@ -465,7 +466,7 @@ app.get("/setup", async (req, res) => {
     if ((await passwordConfigured()) && !hasAdminSession(req)) {
       return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/setup"));
     }
-    res.sendFile(path.join(__dirname, "views", "setup.html"));
+    assets.sendPage(res, "setup.html");
   } catch (e) {
     res.status(500).send("Could not check setup access. Try again.");
   }
@@ -532,7 +533,7 @@ async function requireSetupAccess(req, res) {
 
 app.get("/login", (req, res) => {
   res.set("Cache-Control", "no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "views", "login.html"));
+  assets.sendPage(res, "login.html");
 });
 
 // Five wrong passwords lock that address out for fifteen minutes. On a
@@ -754,7 +755,7 @@ app.post("/api/settings/spend-limits", async (req, res) => {
 
 app.get("/keep", async (req, res) => {
   if (await passwordConfigured() && !hasAdminSession(req)) return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl));
-  res.set("Cache-Control", "no-store").sendFile(path.join(__dirname, "views", "keep.html"));
+  assets.sendPage(res, "keep.html", { "Cache-Control": "no-store" });
 });
 app.get("/api/keep", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
@@ -1428,7 +1429,7 @@ app.get("/", async (req, res) => {
     const state = await require("./setup-state").getSetupState();
     if (!state.ready) return res.redirect("/setup");
   } catch (e) { /* status failure never blocks the homepage */ }
-  res.sendFile(path.join(__dirname, "views", "index.html"));
+  assets.sendPage(res, "index.html");
 });
 
 // WhatsApp magic link — dedicated onboarding page
@@ -1571,7 +1572,7 @@ app.get("/dashboard", async (req, res) => {
   // After OAuth login: serve homepage instead of dashboard so user lands
   // on the main page with cookie established (same server-side request)
   if (userId && req.query.from_login === "1") {
-    return res.sendFile(path.join(__dirname, "views", "index.html"));
+    return assets.sendPage(res, "index.html");
   }
 
   // LINE LIFF auto-login: validate token and set auth cookie
@@ -1601,11 +1602,11 @@ app.get("/dashboard", async (req, res) => {
   // Never cached: a stale copy shows the previous release's dashboard, and
   // with it whatever that release got wrong.
   res.set("Cache-Control", "no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "views", "dashboard.html"));
+  assets.sendPage(res, "dashboard.html");
 });
 
 app.get("/telegram-app", (req, res) => {
-  res.sendFile(path.join(__dirname, "views", "telegram-app.html"));
+  assets.sendPage(res, "telegram-app.html");
 });
 
 app.get("/line-app", (req, res) => {
