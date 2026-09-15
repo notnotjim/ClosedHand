@@ -134,3 +134,49 @@ test("an old worker lease cannot overwrite the new worker's result",async()=>{
   await assert.rejects(scope.withTaskRun({taskId:"task",leaseOwner:first.lease_owner},()=>lease.update(h.db,"agent_tasks","task",{status:"completed"})),/stopped/);
   assert.equal(h.db.tables.agent_tasks[0].status,"running");
 });
+
+test("ordinary answers deliver without a digest call or report link", async () => {
+  const h = harness();
+  const delivery = h.load("task-delivery", true);
+  for (const answer of ["The flight leaves at 20:00.", "Option A: 12. Option B: 15.", "Useful finding. ".repeat(150)]) {
+    assert.equal(await delivery.reportDigest(answer, "whatsapp_linked", "user", {}), answer);
+  }
+  assert.equal(h.calls.length, 0);
+});
+test("large requested reports retain a readable chat digest and full result", async () => {
+  const h = harness();
+  const delivery = h.load("task-delivery", true);
+  const answer = await delivery.reportDigest("Sourced detail. ".repeat(400), "telegram", "user", {});
+  assert.equal(h.calls.length, 1);
+  assert.ok(answer.includes("20:00"));
+  assert.ok(answer.includes("https://fixture.test/dashboard#agents"));
+});
+test("one-off runner answers in the originating chat without creating a schedule or document", async () => {
+  const h = harness({tables: {agent_tasks: [row({platform: "telegram", chat_id: "phone"})]}});
+  await h.load("agents").processPendingTasks();
+  await until(() => h.db.tables.agent_tasks[0].status === "completed");
+  const prompt = h.calls[0].system;
+  assert.match(prompt, /Answer the user's question directly in chat/);
+  assert.match(prompt, /Create a full report, document, spreadsheet/);
+  assert.doesNotMatch(prompt, /Write a clear, detailed report/);
+  assert.equal(h.db.tables.agent_tasks[0].result, "The confirmed time is 20:00.");
+  assert.equal(h.db.tables.automations?.length || 0, 0);
+  assert.equal(h.sends.length, 0);
+});
+test("compact tables remain intact on web and are adapted for phone chat", async () => {
+  const h = harness(), delivery = h.load("task-delivery", true);
+  const table = "| Option | Cost |\n| A | 12 |";
+  assert.equal(await delivery.reportDigest(table, "web", "user", {}), table);
+  assert.equal(h.calls.length, 0);
+  await delivery.reportDigest(table, "whatsapp_linked", "user", {});
+  assert.equal(h.calls.length, 1);
+});
+test("completed task delivery leads with the answer and remains idempotent", async () => {
+  const h = harness({tables: {agent_tasks: [row({platform:"telegram",chat_id:"phone",status:"completed",delivery_status:"pending",result:"The flight leaves at 20:00."})]}});
+  const delivery = h.load("task-delivery", true);
+  await delivery.deliverFinished();
+  await delivery.deliverFinished();
+  assert.equal(h.sends.length, 1);
+  assert.equal(h.sends[0][2], "The flight leaves at 20:00.");
+  assert.equal(h.calls.length, 0);
+});

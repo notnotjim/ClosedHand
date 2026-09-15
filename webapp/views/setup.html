@@ -353,13 +353,13 @@
   <header class="top">
     <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
     <span class="watch-chip" id="watch-chip" role="status" aria-live="polite">
-      <span class="dot"></span><span id="watch-text">watching your install</span>
+      <span class="dot"></span><span id="watch-text">Checking setup</span>
     </span>
   </header>
 
   <section class="hero">
     <h1>Bring ClosedHand <em>to life.</em></h1>
-    <p>Everything runs on your machine and answers to you alone.</p>
+    <p>ClosedHand runs on your computer. Choose your models and connect the services you want it to use.</p>
   </section>
 
   <section class="ready" id="ready-banner">
@@ -371,7 +371,7 @@
 
   <div class="summary">
     <span class="count"><b id="done-count">0</b> of <span id="total-count">5</span> unlocked</span>
-    <span id="summary-note">checking your install…</span>
+    <span id="summary-note">Checking setup…</span>
     <span class="next-chip" id="next-chip"></span>
   </div>
 
@@ -383,7 +383,7 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Database</h2>
-            <p class="whisper">Your own Postgres, where everything ClosedHand learns lives.</p>
+            <p class="whisper">Stores your conversations, settings and Context Brain on this computer.</p>
           </span>
           <span class="state-chip">Required</span>
         </button>
@@ -412,6 +412,7 @@
         <div class="card-body">
           <p>You can add more models later and choose which one handles each of ClosedHand's
              jobs, in Settings.</p>
+          <p>Hosted providers receive the content needed for your requests under their own privacy and usage terms. Local models run on your own hardware.</p>
           <div id="model-configuration"></div>
         </div>
       </article>
@@ -423,13 +424,12 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Dashboard password</h2>
-            <p class="whisper">You choose it here, and it locks everything but this setup page.</p>
+            <p class="whisper">Protect access to your dashboard with a password.</p>
           </span>
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
-          <p>The dashboard holds everything ClosedHand knows about you. There is no username,
-             because this instance has exactly one owner.</p>
+          <p>Choose a password to protect your dashboard on this computer and when opening it from another device.</p>
           <form id="password-form">
             <div class="field">
               <label for="pw-input">Choose a password</label>
@@ -968,7 +968,7 @@
         return res.json();
       })
       .then(function (state) {
-        setChip("watching your install", false);
+        setChip("Checking setup", false);
         loadSkipsFor(state.installId);
         if (_gKey === null) gLoad(state.installId);
         _celebKey = "ch-celebrated:" + (state.installId || "x");

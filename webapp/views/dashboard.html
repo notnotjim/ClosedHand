@@ -2254,14 +2254,14 @@
                 <div class="auto-template" onclick="loadAgentTemplate('research-analyst')" style="padding:14px;background:#18191d;border:1px solid #222;border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#444'" onmouseout="this.style.borderColor='#222'">
                   <div style="font-size:20px;margin-bottom:6px;">&#128270;</div>
                   <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Research Analyst</div>
-                  <div style="font-size: 13px;color:#666;line-height:1.4;">Deep research with sourced reports saved to Context Brain.</div>
+                  <div style="font-size: 13px;color:#666;line-height:1.4;">Research a topic and return a sourced answer.</div>
                   <div style="font-size:9px;color:#444;margin-top:4px;">&#9654; Run manually</div>
                 </div>
                 <div class="auto-template" onclick="loadAgentTemplate('data-cruncher')" style="padding:14px;background:#18191d;border:1px solid #222;border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#444'" onmouseout="this.style.borderColor='#222'">
                   <div style="font-size:20px;margin-bottom:6px;">&#128202;</div>
                   <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Data Cruncher</div>
                   <div style="font-size: 13px;color:#666;line-height:1.4;">Runs Python code to process data and generate charts.</div>
-                  <div style="font-size:9px;color:#444;margin-top:4px;">&#9654; Run manually (uses cloud computer)</div>
+                  <div style="font-size:9px;color:#444;margin-top:4px;">&#9654; Run manually (uses workspace)</div>
                 </div>
                 <div class="auto-template" onclick="loadAgentTemplate('weekly-review')" style="padding:14px;background:#18191d;border:1px solid #222;border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#444'" onmouseout="this.style.borderColor='#222'">
                   <div style="font-size:20px;margin-bottom:6px;">&#128221;</div>
@@ -2462,7 +2462,7 @@
           <div class="settings-group">
             <div class="settings-group-header">
               <h2>Notifications</h2>
-              <p class="section-desc">Where ClosedHand sends Pulse updates and scheduled agent results. One-off tasks reply in the chat you asked from.</p>
+              <p class="section-desc">Choose where Pulse and tasks set to run later send their updates. Tasks started in a conversation answer in that same chat.</p>
             </div>
             <div class="settings-group-body" id="pulse-delivery">
               <div class="platform-pills" id="platform-pills" aria-live="polite"><p class="pulse-no-platforms">Loading notification settings…</p></div>
@@ -5278,7 +5278,7 @@
       },
       'research-analyst': {
         name: 'research-analyst',
-        prompt: "Research [REPLACE WITH: your topic]. Search multiple sources using web_search, cross-reference findings, and produce a detailed report. Structure: Executive Summary (3 sentences), Key Findings (bullet points), Detailed Analysis (paragraphs with sources), and Recommendations. Save the full report to my Context Brain using save_note for future reference. Be thorough, not fast.",
+        prompt: "Research [REPLACE WITH: your topic]. Check relevant sources and answer directly with the key findings, sources and important caveats. Keep the answer concise unless I request a full report. Do not save research as personal Context Brain information unless I ask.",
         trigger: 'manual',
         cron: null,
         humanSchedule: null,
@@ -5763,8 +5763,8 @@
       var toolAreas = {
         search_cache: 'mail and calendar', search_calendar: 'mail and calendar', semantic_search: 'your history',
         web_search: 'the web', web_fetch: 'the web', drive_search: 'Drive', drive_read: 'Drive', drive_list_recent: 'Drive',
-        sandbox_exec: 'the cloud computer', sandbox_file_read: 'the cloud computer', sandbox_file_list: 'the cloud computer',
-        sandbox_file_write: 'the cloud computer', sandbox_browse: 'the cloud browser', sandbox_gateway: 'connected services',
+        sandbox_exec: 'the workspace', sandbox_file_read: 'the workspace', sandbox_file_list: 'the workspace',
+        sandbox_file_write: 'the workspace', sandbox_browse: 'the workspace browser', sandbox_gateway: 'connected services',
         api_request: 'connected services', fetch_attachment: 'attachments', view_attachment: 'attachments', list_attachments: 'attachments',
         gmail_send: 'email', gmail_reply: 'email', gmail_create_draft: 'email drafts', gmail_draft_update: 'email drafts',
         gcal_create_event: 'the calendar', gcal_update_event: 'the calendar', add_schedule: 'schedules', list_schedules: 'schedules',
@@ -7796,7 +7796,7 @@
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#eaeaef" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         <h3 style="margin:0;">Connect your Mac</h3>
       </div>
-      <p style="font-size:13px;color:#888;text-align:center;line-height:1.6;margin-bottom:20px;">This lets ClosedHand see your Mac's email, calendars, reminders, contacts, and notes. You choose what to share. Everything stays on your machine until you ask for it.</p>
+      <p style="font-size:13px;color:#888;text-align:center;line-height:1.6;margin-bottom:20px;">This lets ClosedHand see your Mac's email, calendars, reminders, contacts, and notes. You choose what to share. Content needed for a request is processed by your selected AI provider.</p>
 
       <!-- Step 1: Not paired yet -->
       <div id="apple-step-setup">
@@ -7806,9 +7806,9 @@
             <span style="font-size:13px;color:#ccc;">Download the ClosedHand Bridge app</span>
           </div>
           <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download style="display:block;text-align:center;padding:10px;background:#25262b;border:1px solid #333;border-radius:8px;color:#ccc;font-size:13px;text-decoration:none;transition:background 0.12s;margin-bottom:6px;" onmouseover="this.style.background='#2e2f35'" onmouseout="this.style.background='#25262b'">Download for Mac (1MB)</a>
-          <a id="bridge-download-link-win" href="#" onclick="event.preventDefault();showToast('Windows Bridge is coming soon')" style="display:none;text-align:center;padding:10px;background:#25262b;border:1px solid #333;border-radius:8px;color:#ccc;font-size:13px;text-decoration:none;transition:background 0.12s;margin-bottom:6px;" onmouseover="this.style.background='#2e2f35'" onmouseout="this.style.background='#25262b'">Bridge for Windows (coming soon)</a>
-          <div id="bridge-mobile-notice" style="display:none;text-align:center;padding:12px;background:#1a1a1e;border:1px solid #2e2f35;border-radius:8px;color:#888;font-size: 14px;">Bridge connects ClosedHand to your computer's apps and file system. Open this page on your computer to download.</div>
-          <script>(function(){var ua=navigator.userAgent;if(/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}else if(/Windows/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-download-link-win').style.display='block';}})()</script>
+
+          <div id="bridge-mobile-notice" style="display:none;text-align:center;padding:12px;background:#1a1a1e;border:1px solid #2e2f35;border-radius:8px;color:#888;font-size: 14px;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files ClosedHand can access.</div>
+          <script>(function(){var ua=navigator.userAgent;if(!/Macintosh|Mac OS X/i.test(ua)||/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}})()</script>
         </div>
 
         <div style="background:#0f0f0f;border:1px solid #1c1d21;border-radius:10px;padding:16px;margin-bottom:16px;">

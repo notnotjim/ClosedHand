@@ -52,9 +52,10 @@ they neither get published nor drift out of step with a second copy.
   "company" will do. State what, why and how like a friend would; never sell, never
   persuade, no "the one cost is". The facts speak for themselves. Brief, readable at a
   glance. (James, 2026-09-05)
-- Two tiers share the home page and dashboard, so copy there must be true for the
-  hosted product as well as self-host. The installer and the setup page (Connect to
-  Google included) are self-host only and can say "this machine" outright. (James, 2026-09-05)
+- This repository's website, dashboard and setup describe the local OSS product.
+  Do not promise hosted storage, availability while the host computer is off, or
+  provider-independent encryption/training guarantees. Explain external processing
+  where it matters. The separately preserved cloud product has its own repository.
 - Names: the self-host onboarding at /setup is "the setup page" (never "wizard"); the
   Google console walkthrough, six steps inside the setup page's Google card, is
   "Connect to Google", a thing you do, never a "guide" you read. It is part of setup,

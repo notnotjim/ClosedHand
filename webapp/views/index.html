@@ -651,7 +651,10 @@
   }
   .hero-footer span {
     font-size: 16px;
-    color: rgba(255,255,255,0.35);
+    color: #aeb3bb;
+    max-width: 65ch;
+    text-align: center;
+    text-wrap: pretty;
   }
   .hero-footer .footer-sep {
     color: rgba(255,255,255,0.15);
@@ -2083,8 +2086,8 @@
   <!-- HERO STATE: heading + brand + big input + suggestions, all centered -->
   <div class="hero-area" id="heroSection">
     <div style="flex:1;max-flex:1;"></div>
-    <div class="hero-heading">No more <span class="claw-swap" id="heroSwap"><span class="swap-lobster" id="heroLobster">&#129438;</span><span class="swap-fist" id="heroFist"><img src="/fist.png" alt=""></span></span><span class="claw-word" id="heroClawWord">claws</span></div>
-    <div class="hero-heading-sub">Always on. No complicated setup. Connect and control life.</div>
+    <div class="hero-heading">What would you like to do?</div>
+    <div class="hero-heading-sub">Work with your apps through chat, with ClosedHand running on your computer.</div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2148,21 +2151,18 @@
     <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.json,.md,.html,.xml,.js,.py,.ts,.css,.sql,.sh,.yaml,.yml,.log,.doc,.docx,.xls,.xlsx,.pptx,.ogg,.mp3,.wav,.mp4,.mov,.avi,.webm,.m4a,.aac,.flac,.zip,.tar,.gz,.rtf,.epub">
 
     <div class="hero-footer">
-      <span>Your data is encrypted, never sold and never used for AI training.</span>
+      <span>ClosedHand runs on your computer. Requests use the AI provider you choose.</span>
     </div>
 
     <div style="flex:0.5"></div>
 
     <div class="hero-bridge-prompt" id="heroBridgePrompt">
-      <span style="color:rgba(255,255,255,0.45);font-size:12px;">Connect your computer:</span>
+      <span style="color:rgba(255,255,255,0.45);font-size:12px;">Connect your Mac:</span>
       <a href="/download/ClosedHandBridge.dmg" class="hero-bridge-link" id="heroBridgeMac">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Mac
       </a>
-      <a href="#" onclick="winBridgeSoon(event)" class="hero-bridge-link" id="heroBridgeWin">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
-        Windows
-      </a>
+
     </div>
   </div>
 
@@ -2237,7 +2237,7 @@
   <div class="page-view computers-view" id="viewComputers">
             <!-- Two monitors side by side -->
     <div class="mon-area" id="monArea">
-      <!-- Cloud Computer Monitor -->
+      <!-- Workspace Monitor -->
       <div class="mon-wrap" id="monCloudWrap">
         <div class="mon" id="monCloud">
           <div class="mon-accent"></div>
@@ -2245,9 +2245,9 @@
             <div class="mon-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
             <div class="mon-bar-title">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-              Cloud Computer
+              Workspace
               <span class="mon-status on pulse"></span>
-              <span style="font-size:10px;color:rgba(255,255,255,0.3);">Always on</span>
+              <span style="font-size:10px;color:rgba(255,255,255,0.3);">Runs on your computer</span>
               <span class="mon-info" data-tip="Sign in to any site here once and you stay signed in, so ClosedHand can use it exactly as you would, even when you're offline. That covers sites with no useful API, like Instagram.&#10;&#10;It is your own machine, not shared with anyone.">i</span>
             </div>
             <div class="mon-bar-right">
@@ -2260,7 +2260,7 @@
               <button class="mon-max-btn" id="monCloudMax" onclick="monMaximize('cloud')" title="Maximize"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
             </div>
           </div>
-          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files..." oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of Cloud Computer</button></div></div></div>
+          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files..." oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of Workspace</button></div></div></div>
           <div class="mon-screen" id="monCloudScreen"
             ondragover="event.preventDefault();if(!window._monDragOrigin)document.getElementById('monCloudDrop').classList.add('active')"
             ondragleave="if(!this.contains(event.relatedTarget))document.getElementById('monCloudDrop').classList.remove('active')"
@@ -2390,7 +2390,7 @@
       <div class="rag-privacy" id="ragPrivacyPanel">
         <div class="rag-privacy-reassurance">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:rgba(110,231,168,0.3);margin-top:1px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>File Search never copies or stores your original files.</span>
+          <span>File Search saves searchable content from the sources you add. You can manage those sources here.</span>
         </div>
       </div>
     </div>
@@ -2416,7 +2416,7 @@
     <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(110,231,168,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
       <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">A support team at your fingertips</div>
-      <div class="feat-card-desc">Always on, works instantly in the chat apps you already use. Add the optional Bridge app to control your local computer too. No technical skill needed.</div>
+      <div class="feat-card-desc">Ask questions and get work done in your connected chat apps. Keep the computer running ClosedHand awake and online.</div>
       <div class="feat-card-icons">
         <img src="/logos/whatsapp.svg" alt="WhatsApp"><img src="/logos/telegram.svg" alt="Telegram"><img src="/logos/discord.svg" alt="Discord"><img src="/logos/slack.svg" alt="Slack"><img src="/logos/line.svg" alt="LINE">
       </div>
@@ -2424,7 +2424,7 @@
     <a href="#" id="bridgeFeatureCard" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(110,231,168,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
       <canvas class="feat-3d" id="feat3dMac" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">Bridge: your desktop, your rules</div>
-      <div class="feat-card-desc">A lightweight Mac app, with Windows coming soon. Shell access, screen reading, file control. You choose exactly what ClosedHand can and can't touch via gated permissions.</div>
+      <div class="feat-card-desc">The optional Mac app lets ClosedHand work with your files, apps and screen. Choose its permissions in the dashboard.</div>
     </a>
   </div>
 
@@ -2437,49 +2437,38 @@
     <div class="feat-mini">
       <span class="feat-mini-icon">🛡</span>
       <div class="feat-mini-title">Your data stays yours</div>
-      <div class="feat-mini-desc">Every permission is gated and revocable. No hidden access, no silent data collection.</div>
+      <div class="feat-mini-desc">Choose which services to connect and disconnect them when you want. Your selected AI provider processes the content needed for your requests.</div>
     </div>
     <div class="feat-mini">
       <span class="feat-mini-icon">📡</span>
       <div class="feat-mini-title">Proactive Pulse</div>
-      <div class="feat-mini-desc">Always watching across your connected services. Proactively messages you with helpful info to make your life easy.</div>
+      <div class="feat-mini-desc">When enabled, Pulse checks your connected services and sends useful updates while ClosedHand is running.</div>
     </div>
   </div>
 
   <div class="reveal" style="margin-bottom:64px;">
-    <div class="feat-heading">Works while you sleep (without leaving your computer on)</div>
-    <div class="feat-sub">ClosedHand spins up agents to work on your tasks in the background, even when you're offline.</div>
+    <div class="feat-heading">Let tasks run while you do something else</div>
+    <div class="feat-sub">Agents work in the background and reply in chat. The computer running ClosedHand must stay awake; your phone can be offline.</div>
     <div class="feat-pills">
       <div class="feat-pill">Find new leads and draft personalised outreach</div>
-      <div class="feat-pill">Grab tickets the second they go on sale</div>
+      <div class="feat-pill">Check ticket availability</div>
       <div class="feat-pill">Chase refunds and cancel unused subscriptions</div>
-      <div class="feat-pill">Reply to your Instagram and X comments overnight</div>
-      <div class="feat-pill">Watch competitor pricing 24/7</div>
+      <div class="feat-pill">Review comments and draft replies</div>
+      <div class="feat-pill">Check competitor prices on a schedule</div>
       <div class="feat-pill">Process invoices from your inbox</div>
     </div>
   </div>
 
   <div class="reveal" style="margin-bottom:64px;">
-    <div class="feat-heading">How it compares</div>
-    <div class="feat-sub">Set ClosedHand up in seconds and gain your unfair advantage.</div>
-    <style>
-      .feat-table.comp-simple td:not(:first-child), .feat-table.comp-simple th:not(:first-child) { text-align: center; }
-      .feat-table.comp-simple td.yes { color: #6ee7a8; font-size: 16px; }
-      .feat-table.comp-simple td.no { color: rgba(248,113,113,0.7); font-size: 15px; }
-    </style>
+    <div class="feat-heading">What you need to run ClosedHand</div>
+    <div class="feat-sub">Install ClosedHand, choose your AI model and connect the services you want to use.</div>
     <div class="feat-table-wrap">
-      <table class="feat-table comp-simple">
-        <thead><tr>
-          <th></th><th class="highlight">ClosedHand</th><th>OpenClaw</th><th>Claude Cowork</th><th>Hermes</th>
-        </tr></thead>
+      <table class="feat-table">
         <tbody>
-          <tr><td>No technical setup</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="yes">&#10003;</td><td class="no">&#10007;</td></tr>
-          <tr><td>Works in WhatsApp, Telegram and more</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="yes">&#10003;</td></tr>
-          <tr><td>Always on, even with computers off</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="yes">&#10003;</td><td class="no">&#10007;</td></tr>
-          <tr><td>Stays logged into your websites</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
-          <tr><td>Controls your own computer too</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td></tr>
-          <tr><td>Finds files on your drives instantly with semantic search</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="no">&#10007;</td><td class="no">&#10007;</td></tr>
-          <tr><td>Proactive alerts to your chat apps</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="no">&#10007;</td><td class="yes">&#10003;</td></tr>
+          <tr><th scope="row">Your computer</th><td>Keep it awake for chat replies, background tasks and dashboard access from another device.</td></tr>
+          <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
+          <tr><th scope="row">Your dashboard</th><td>Open it on the computer running ClosedHand, or use a configured password-protected link from another device.</td></tr>
+          <tr><th scope="row">Optional Mac Bridge</th><td>Connect your Mac to work with its files and apps, using the permissions you choose.</td></tr>
         </tbody>
       </table>
     </div>
@@ -3222,7 +3211,7 @@
   if (bridgeFeatureCard) {
     bridgeFeatureCard.addEventListener('click', function(e) {
       e.preventDefault();
-      if (isWindows) { winBridgeSoon(); return; }
+      if (!/Macintosh|Mac OS X/.test(navigator.userAgent) || isMobile) { winBridgeSoon(); return; }
       var dl = document.createElement('a');
       dl.href = '/download/ClosedHandBridge.dmg';
       dl.download = 'ClosedHandBridge.dmg';
@@ -3231,7 +3220,7 @@
       document.body.removeChild(dl);
     });
   }
-  if (isWindows && bridgeCtaLabel) bridgeCtaLabel.textContent = 'Bridge for Windows (coming soon)';
+  if (isWindows && bridgeCtaLabel) bridgeCtaLabel.textContent = 'Bridge is available for Mac only';
   if (isMobile && bridgeCta) {
     // Replace entire bridge pill wrapper with separate mobile layout
     var wrapper = bridgeCta.closest('.bridge-pill-wrap');
@@ -3242,14 +3231,14 @@
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
             '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(255,255,255,0.35);"> Enter your pairing code</span></span>' +
           '</a>' +
-          '<p style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.4;margin:0;">Visit on desktop to download Bridge and enable secure,<br>private access to your computer that only you control.</p>' +
+          '<p style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.4;margin:0;">Open this dashboard on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
         '</div>';
     }
   }
   if (bridgeCta && !isMobile) {
     bridgeCta.addEventListener('click', function(e) {
       e.preventDefault();
-      if (isWindows) { winBridgeSoon(); return; }
+      if (!/Macintosh|Mac OS X/.test(navigator.userAgent) || isMobile) { winBridgeSoon(); return; }
       var dl = document.createElement('a');
       dl.href = '/download/ClosedHandBridge.dmg';
       dl.download = 'ClosedHandBridge.dmg';
@@ -4812,7 +4801,7 @@ setInterval(pollWorkerStatus, 8000);
 function winBridgeSoon(e) {
   if (e) e.preventDefault();
   var t = document.createElement('div');
-  t.textContent = 'Windows Bridge is coming soon';
+  t.textContent = 'Bridge is available for Mac only.';
   t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e1f23;border:1px solid rgba(255,255,255,0.15);color:#eaeaef;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;';
   document.body.appendChild(t);
   setTimeout(function(){ t.remove(); }, 2200);
@@ -5090,7 +5079,7 @@ async function ragAddSource() {
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'cloud\',\'/workspace\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>'
-    + 'Cloud Computer</div>';
+    + 'Workspace</div>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'bridge\',\'~\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
@@ -5920,7 +5909,7 @@ function escapeHtml(s) {
       else if(side==='local'&&_syncedPaths.has(fp))html+='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(110,231,168,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html+='</span>';
-      if(side==='local'&&!isDir)html+='<span class="mon-row-upload" title="Always on" onclick="event.stopPropagation();monCopyToCloud(\''+esc+'\')">'+'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7a8" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
+      if(side==='local'&&!isDir)html+='<span class="mon-row-upload" title="Copy to workspace" onclick="event.stopPropagation();monCopyToCloud(\''+esc+'\')">'+'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7a8" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html+='<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size))+'</span>';
       html+='<span class="mon-row-meta" style="min-width:60px;text-align:right;">'+monFmtDate(f.modified)+'</span></div>';
       html+='<div class="mon-row-children" style="display:none" data-path="'+fp.replace(/"/g,'&quot;')+'" data-side="'+side+'"></div>';
@@ -5991,10 +5980,10 @@ function escapeHtml(s) {
       var vt=document.getElementById('monLocalViewToggle');if(vt)vt.style.display='none';
       var cr=document.getElementById('monLocalCrumb');if(cr)cr.style.display='none';
       el.style.display='flex';el.style.flexDirection='column';el.style.flex='1';
-      var isMac=/Mac|iPhone/.test(navigator.userAgent);
+      var isMac=/Macintosh|Mac OS X/.test(navigator.userAgent)&&!/iPhone|iPad|iPod/.test(navigator.userAgent);
       var dlUrl=isMac?'/download/ClosedHandBridge.dmg':'#';
       var dlAttrs=isMac?' download':' onclick="winBridgeSoon(event)"';
-      var dlLabel=isMac?'Download for Mac':'Bridge for Windows (coming soon)';
+      var dlLabel=isMac?'Download for Mac':'Bridge is available for Mac only';
       el.innerHTML='<div class="bridge-cta">'
         +'<div class="bridge-cta-node"><svg viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round">'
         +'<image href="/fist.png" x="1" y="33" width="20" height="20" style="filter:drop-shadow(0 0 4px rgba(245,158,11,0.25));"/>'
@@ -6005,7 +5994,7 @@ function escapeHtml(s) {
         +'</svg></div>'
         +'<h3>Unlock your local computer</h3>'
         +'<p>Files, apps, terminal, browser. ClosedHand controls your computer through a secure local bridge.</p>'
-        +'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>'
+        +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open this dashboard on your Mac to download Bridge.</p>')
         +'<div class="bridge-cta-flow">'
         +'<div class="bridge-cta-step"><em>1</em> Download</div>'
         +'<span class="bridge-cta-arrow">\u2192</span>'
@@ -6238,7 +6227,7 @@ function escapeHtml(s) {
       if(isSynced){
         html+='<button onclick="monToggleSync(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Go Offline</button>';
       } else {
-        html+='<button onclick="monCopyToCloud(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>Always on</button>';
+        html+='<button onclick="monCopyToCloud(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>Copy to workspace</button>';
       }
       html+='<button onclick="monLocalOpen(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open</button>';
     } else {
@@ -6575,7 +6564,7 @@ function escapeHtml(s) {
       for (var k = 0; k < existing.length; k++) cmdHtml += existing[k].outerHTML;
 
       if (entries.length === 0 && !cmdHtml) {
-        logEl.innerHTML = monLogEntry('--', 'Cloud Computer idle, no recent activity', 'idle');
+        logEl.innerHTML = monLogEntry('--', 'Workspace idle, no recent activity', 'idle');
       } else {
         logEl.innerHTML = entries.map(function(e) { return e.html; }).join('') + cmdHtml;
       }
@@ -6678,7 +6667,7 @@ function escapeHtml(s) {
     var cur = side === 'cloud' ? _monCloudPath : _monLocalPath;
     return cur || _monRootPath(side);
   }
-  function _monPanelName(side) { return side === 'cloud' ? 'Cloud Computer' : 'Local Computer'; }
+  function _monPanelName(side) { return side === 'cloud' ? 'Workspace' : 'Local Computer'; }
   function _monPathLabel(side, p) {
     var root = _monRootPath(side);
     if (!p || p === root || p === root + '/') return _monPanelName(side);
@@ -6843,7 +6832,7 @@ function escapeHtml(s) {
       if (side==='cloud' && fp.indexOf('/workspace/synced/') === 0) html += '<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html += '<span style="color:rgba(255,255,255,0.35);font-size:11px;margin-left:8px;">'+escapeHtml(parent)+'</span>';
       html += '</span>';
-      if (side==='local' && !isDir) html += '<span class="mon-row-upload" title="Always on" onclick="event.stopPropagation();monCopyToCloud(\''+fpAttr+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7a8" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
+      if (side==='local' && !isDir) html += '<span class="mon-row-upload" title="Copy to workspace" onclick="event.stopPropagation();monCopyToCloud(\''+fpAttr+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7a8" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html += '<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size||0))+'</span>';
       html += '</div>';
     }
