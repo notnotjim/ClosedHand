@@ -13,8 +13,8 @@
       '<label>Provider<select data-field="provider">' + options + '</select></label>' +
       '<label data-region="address" hidden>Base URL<input data-field="baseUrl" type="url" placeholder="https://provider.example/v1" spellcheck="false"></label>' +
       '<label>API key<input data-field="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>' +
-      '<p class="model-hint">Your key is sent only to the provider you choose. Loading the list does not change your current setup.</p>' +
-      '<button type="button" data-action="load">Load available models</button>' +
+      '<p class="model-hint">Your key is sent only to the provider you choose. The models it offers appear below. Nothing changes until you save.</p>' +
+      '<button type="button" data-action="load" hidden>Try loading the models again</button>' +
       '<label>Chat model<select data-picker="model"></select></label><label data-manual="model" hidden>Chat model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
       '<p class="model-hint" data-region="capabilities"></p>' +
       '<details data-region="extras"><summary>Models for summaries and images</summary><div class="model-fields">' +
@@ -24,7 +24,7 @@
       '<div data-region="vision" class="model-fields" hidden><label>Image provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Base URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
       '<label>Image provider API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
-      '<button type="button" data-action="load-vision">Load available image models</button>' +
+      '<button type="button" data-action="load-vision" hidden>Try loading the image models again</button>' +
       '<label>Image model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Image model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</div></details><p class="model-hint">Checking sends a few short test requests to the selected models. Your provider may charge for them.</p>' +
       '<button type="button" data-action="check">Check models</button>' +
@@ -35,6 +35,7 @@
       '<p>This removes your own model connections from ClosedHand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
       '<button type="button" data-action="default">Use the hosted models</button></div></details></div></details>';
     var saved = null, ticket = null, models = [], imageModels = [], busy = false, allowDefault = false;
+    var loads = { primary: 0, vision: 0 }, loadTimers = {};
     var field = function (key) { return root.querySelector('[data-field="' + key + '"]'); };
     var region = function (key) { return root.querySelector('[data-region="' + key + '"]'); };
     var result = root.querySelector(".model-result"), preview = root.querySelector(".model-preview");
@@ -101,7 +102,8 @@
     function refreshPickers() {
       refreshPicker("model", models, value("provider"));
       refreshPicker("backgroundModel", models, value("provider"));
-      refreshPicker("visionModel", imageModels, value("visionProvider") || value("provider"));
+      var images = value("visionProvider") ? imageModels : models.filter(function (model) { return model.capabilities?.vision !== false; });
+      refreshPicker("visionModel", images, value("visionProvider") || value("provider"));
     }
     function show(message, error) { result.textContent = message; result.classList.toggle("is-error", !!error); }
     function invalidate() { ticket = null; preview.hidden = true; }
@@ -141,13 +143,52 @@
         if (focusImages) field("visionMode").focus();
       }
     }
+    function ready(kind) {
+      var vision = kind === "vision";
+      var provider = vision ? value("visionProvider") : value("provider");
+      var key = vision ? value("visionKey") : value("apiKey");
+      var base = vision ? value("visionBaseUrl") : value("baseUrl");
+      var prior = saved?.connections?.[kind];
+      if (!provider) return false;
+      if (["ollama", "custom"].includes(provider)) return !!base;
+      return !!key || !!(prior?.hasKey && prior.provider === provider && (prior.baseUrl || "") === base);
+    }
+    async function loadModels(kind, quiet) {
+      var token = ++loads[kind], vision = kind === "vision";
+      var retry = root.querySelector('[data-action="' + (vision ? "load-vision" : "load") + '"]');
+      retry.hidden = true;
+      if (!ready(kind)) return;
+      if (!quiet) show(vision ? "Loading image models..." : "Loading available models...");
+      try {
+        var body = input(); body.connection = kind;
+        var data = await call("/models", body);
+        if (token !== loads[kind]) return;
+        if (vision) imageModels = data.models.filter(function (model) { return model.capabilities.vision !== false; });
+        else models = data.models;
+        refreshPickers();
+        if (!vision) region("capabilities").textContent = describeCaps(models.find(function (m) { return m.id === value("model"); })?.capabilities);
+        if (!quiet) show(vision ? "Choose an image model from the list. Its image support will be checked before saving." : models.length + " models found. Choose one in the Chat model field.");
+      } catch (e) {
+        if (token !== loads[kind]) return;
+        show(e.message || "Could not reach ClosedHand. Try again.", true);
+        retry.hidden = false;
+      }
+    }
+    function scheduleLoad(kind) {
+      clearTimeout(loadTimers[kind]);
+      loadTimers[kind] = setTimeout(function () { loadModels(kind); }, 500);
+    }
     function describeCaps(cap) {
       if (!cap) return "Capabilities will be checked before saving.";
       return (cap.vision === true ? "Accepts images. " : cap.vision === false ? "Text only. " : "Images need checking. ") +
         (cap.reasoning ? "ClosedHand can adjust thinking effort. " : "Thinking uses the provider default. ") +
         (cap.contextWindow ? "Context limit: " + cap.contextWindow.toLocaleString() + " tokens." : "The provider has not published a context limit here.");
     }
-    root.addEventListener("input", invalidate);
+    root.addEventListener("input", function (ev) {
+      invalidate();
+      if (ev.target === field("apiKey") || ev.target === field("baseUrl")) scheduleLoad("primary");
+      if (ev.target === field("visionKey") || ev.target === field("visionBaseUrl")) scheduleLoad("vision");
+    });
     root.addEventListener("change", function (ev) {
       if (ev.target.dataset.picker) {
         var key = ev.target.dataset.picker, manual = ev.target.value === "__manual__";
@@ -163,30 +204,19 @@
         models = []; field("apiKey").value = ""; field("model").value = ""; field("backgroundModel").value = "";
         field("baseUrl").value = value("provider") === "ollama" ? "http://host.docker.internal:11434/v1" : "";
         imageModels = []; field("visionModel").value = ""; refreshPickers();
-        show("Load this provider's models, then choose one.");
+        show("Paste your key and the available models will appear.");
+        loadModels("primary");
       }
       if (ev.target === field("visionProvider")) {
         field("visionKey").value = ""; field("visionModel").value = "";
         field("visionBaseUrl").value = value("visionProvider") === "ollama" ? "http://host.docker.internal:11434/v1" : "";
         imageModels = []; refreshPickers();
+        loadModels("vision");
       }
       region("capabilities").textContent = describeCaps(models.find(function (m) { return m.id === value("model"); })?.capabilities);
     });
-    root.querySelector('[data-action="load"]').onclick = function () { perform(async function () {
-      if (!value("provider")) throw new Error("Choose a provider first.");
-      show("Loading available models...");
-      var data = await call("/models", input()); models = data.models;
-      refreshPickers();
-      show(models.length + " models found. Choose one in the Chat model field.");
-    }); };
-    root.querySelector('[data-action="load-vision"]').onclick = function () { perform(async function () {
-      show("Loading image models...");
-      var body = input(); body.connection = value("visionProvider") ? "vision" : "primary";
-      var data = await call("/models", body);
-      imageModels = data.models.filter(function (model) { return model.capabilities.vision !== false; });
-      refreshPickers();
-      show("Choose an image model from the list. Its image support will be checked before saving.");
-    }); };
+    root.querySelector('[data-action="load"]').onclick = function () { loadModels("primary"); };
+    root.querySelector('[data-action="load-vision"]').onclick = function () { loadModels("vision"); };
     root.querySelector('[data-action="check"]').onclick = function () { perform(async function () {
       invalidate();
       if (!value("provider") || !value("model")) throw new Error("Choose a provider and chat model first.");
@@ -243,6 +273,8 @@
       }
       refreshPickers(); visibility(); region("capabilities").textContent = describeCaps(saved.roles.chat.capabilities);
       if (data.legacy) show("The models shown above are active. Check and review your choices here before applying a change.");
+      loadModels("primary", true);
+      if (vision && vision.connection === "vision") loadModels("vision", true);
     });
   }
   window.ClosedHandModels = { mount: mount };
