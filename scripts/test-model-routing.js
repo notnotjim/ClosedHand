@@ -310,3 +310,12 @@ test("provider status codes are explained in plain words", async () => {
   global.fetch = async () => new Response("", { status: 500 });
   await assert.rejects(wire.listModels(policy.connection({ provider: "deepseek", apiKey: "key" })), /You can enter the model ID/);
 });
+
+test("an assistant turn with only provider state is sent with empty content, never null", async () => {
+  const calls = mockProvider();
+  await wire.request(policy.connection({ provider: "deepseek", apiKey: "key" }), { ...params, model: "deepseek-flash",
+    messages: [{ role: "user", content: "hi" }, { role: "assistant", content: [{ type: "provider_state", value: { reasoning_content: "t" }, identity: "x" }] }, { role: "user", content: "again" }] });
+  const turn = calls[0].body.messages.find(m => m.role === "assistant");
+  assert.equal(turn.content, "");
+  assert.equal(turn.tool_calls, undefined);
+});

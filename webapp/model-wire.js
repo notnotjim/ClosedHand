@@ -45,7 +45,9 @@ function convertMessagesToOpenAI(systemPrompt, messages, identity) {
         }
         // Skip thinking blocks
       }
-      const converted = { role: "assistant", content: textParts.join("\n") || null };
+      // A turn with neither text nor a tool call still has to carry content:
+      // DeepSeek refuses null there ("content or tool_calls must be set").
+      const converted = { role: "assistant", content: textParts.join("\n") || (toolCalls.length > 0 ? null : "") };
       if (toolCalls.length > 0) converted.tool_calls = toolCalls;
       const replay = msg.content.find(b => b.type === "provider_state" && b.identity === identity);
       if (replay) Object.assign(converted, replay.value);
@@ -349,7 +351,9 @@ async function request(conn, params, options = {}) {
     if (response.status === 400 && /context.*(?:length|window)|maximum.*(?:prompt|tokens)/i.test(detail.error?.message || "")) {
       throw Object.assign(new Error("The model context window was exceeded."), { status: 400, code: "context_length_exceeded" });
     }
-    // Never echo provider bodies, which can contain the request or credentials.
+    // The provider's own message goes to the log, trimmed, so a 400 can be
+    // diagnosed; never to the user, and never the body, which can carry the request.
+    if (detail.error?.message) console.warn(`[model-wire] ${conn.provider || conn.backend} HTTP ${response.status}: ${String(detail.error.message).slice(0, 200)}`);
     const error = new Error("The model provider returned HTTP " + response.status + ". " + providerProblem(response.status, "Check the model, access and balance."));
     error.status = response.status; throw error;
   }
