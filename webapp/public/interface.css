@@ -170,15 +170,28 @@ body.dashboard-page { display: block; background: #101115; color: var(--ui-text)
 }
 
 /* Settings use the same body type and spacing as the surrounding dashboard. */
-#phone-title { font-weight: 600; }
-#phone-desc { margin: 6px 0 0; color: var(--ui-muted); line-height: 1.6; }
-#phone-block > div:last-child { padding: var(--space-card); }
-#phone-block .dashboard-save { margin: 24px 0 0; }
+.dashboard-link-section { margin: var(--space-section) 0; padding: 28px var(--space-card); border-top: 1px solid var(--ui-border); border-bottom: 1px solid var(--ui-border); }
+.dashboard-container .dashboard-link-section h2 { margin-bottom: 12px; }
+#phone-desc { margin: 0; max-width: 68ch; color: var(--ui-muted); line-height: 1.65; }
 #phone-block a, .platform-pills a, .notification-retry { color: var(--ui-accent, #6ee7a8); text-underline-offset: 3px; }
-.dashboard-link-details { flex: 1; min-width: min(240px, 100%); color: var(--ui-muted); line-height: 1.65; }
-.dashboard-link-details p { margin: 12px 0 0; }
-.dashboard-link-details a { display: inline-block; margin-bottom: 10px; }
-#phone-live { margin-top: 24px !important; }
+.dashboard-copy-box { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 8px 8px 8px 16px; max-width: 620px; border: 1px solid var(--ui-border); border-radius: 8px; background: #191b20; }
+.dashboard-copy-box a { flex: 1; min-width: 0; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; text-decoration: none; }
+.dashboard-link-path { white-space: nowrap; }
+.dashboard-copy-box a:hover { text-decoration: underline; }
+.dashboard-copy-box button { flex: none; min-width: 80px; min-height: 44px; padding: 10px 16px; border: 1px solid #474c55; border-radius: 6px; background: #25282e; color: var(--ui-text); font: 500 var(--ui-body)/1.4 var(--font-ui); cursor: pointer; }
+.dashboard-copy-box button:hover { background: #32363e; }
+.dashboard-link-feedback { margin: 8px 0 0; color: var(--ui-muted); font-size: var(--ui-label); line-height: 1.6; }
+.dashboard-link-feedback:empty { display: none; }
+#phone-setup { margin: 20px 0 0; }
+#phone-options { margin-top: 12px; }
+#phone-block summary { width: fit-content; min-height: 44px; padding: 10px 0; box-sizing: border-box; cursor: pointer; color: var(--ui-muted); font-size: var(--ui-body); }
+.dashboard-link-options { padding: 8px 0 0; color: var(--ui-muted); line-height: 1.65; max-width: 68ch; }
+.dashboard-link-options p { margin: 0 0 12px; }
+#phone-qr-details { margin-top: 12px; }
+#phone-qr { display: block; padding: 8px; background: #101115; border: 1px solid var(--ui-border); border-radius: 8px; }
+.dashboard-link-control { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ui-border); }
+.dashboard-link-control p { flex: 1 1 260px; margin: 0; }
+#phone-block :is(a, button, summary):focus-visible { outline: 2px solid #6ee7a8; outline-offset: 3px; }
 #platform-pills { display: block; }
 .notification-help, #platform-pills .pulse-no-platforms { margin: 0; color: var(--ui-muted); font-size: var(--ui-body); line-height: 1.65; }
 .notification-options { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
@@ -194,7 +207,8 @@ body.dashboard-page { display: block; background: #101115; color: var(--ui-text)
 .preference-remove:hover { color: #ffaaaa; }
 .preference-row input:focus-visible, .preference-remove:focus-visible, .notification-retry:focus-visible { outline: 2px solid #6ee7a8; outline-offset: 3px; }
 @media (max-width: 520px) {
-  #phone-block > div:last-child > div:first-child { flex-wrap: wrap; }
+  .dashboard-link-section { padding: 24px 0; }
+  .dashboard-copy-box { gap: 12px; padding-left: 12px; }
   .preference-row { gap: 12px; }
 }
 #tab-settings .section-desc { color: var(--ui-muted); font-size: var(--ui-body); }
@@ -204,6 +218,3 @@ body.dashboard-page { display: block; background: #101115; color: var(--ui-text)
 .approved-sites-desc { font-size: var(--ui-body); color: var(--ui-muted); line-height: 1.65; margin: 8px 0 12px; max-width: 65ch; }
 #allowed-hosts > span { color: var(--ui-muted) !important; font-size: var(--ui-label) !important; }
 #new-rule-input { min-width: 0; min-height: 44px; font-size: var(--ui-body) !important; }
-@media (max-width: 520px) {
-  #phone-qr, #phone-scan-help { display: none; }
-}

@@ -2389,35 +2389,6 @@
       <div class="tab-content" id="tab-settings">
         <div style="padding-top:16px;">
 
-
-
-          <!-- Reach the dashboard from your phone (self-host only; see phone-access.js) -->
-          <div class="settings-group" id="phone-block" style="display:none;">
-            <div class="settings-group-header">
-              <h2>Dashboard access</h2>
-              <p class="section-desc">Open your dashboard on your phone or another device using a password-protected link. ClosedHand must be running on your computer.</p>
-            </div>
-            <div style="padding:12px 16px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-                <div>
-                  <div id="phone-title">Loading dashboard access…</div>
-                  <p id="phone-desc"></p>
-                </div>
-                <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()" hidden>Turn off remote access</button>
-              </div>
-              <p class="dashboard-save"><a id="phone-save" href="/keep" target="_top">Set up dashboard link</a></p>
-              <div id="phone-live" style="display:none;margin-top:14px;gap:18px;align-items:center;flex-wrap:wrap;">
-                <div id="phone-qr" style="width:132px;height:132px;flex:none;background:#0e0f12;border:1px solid #2e2f35;border-radius:10px;padding:8px;box-sizing:border-box;"></div>
-                <div class="dashboard-link-details">
-                  <div><a id="phone-url" href="#" target="_blank" rel="noopener" style="color:#6ee7a8;word-break:break-all;"></a></div>
-                  <div id="phone-scan-help">Point your phone's camera at the code, then sign in with your password.</div>
-                  <p id="phone-link-help"></p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
           <div class="settings-group" id="wallet-block" style="display:none;">
             <div class="settings-group-header">
               <h2>Wallet</h2>
@@ -2570,6 +2541,36 @@
               </div>
             </div>
           </div>
+
+          <!-- The dashboard address is a utility, separate from ClosedHand's behaviour settings. -->
+          <section class="dashboard-link-section" id="phone-block" aria-labelledby="phone-heading" style="display:none;">
+            <h2 id="phone-heading">Dashboard link</h2>
+            <p id="phone-desc" role="status">Loading your link…</p>
+            <div id="phone-live" hidden>
+              <div class="dashboard-copy-box">
+                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open your dashboard"></a>
+                <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
+              </div>
+              <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
+            </div>
+            <p id="phone-setup" hidden><a id="phone-setup-link" href="/keep" target="_top">Set up a permanent link</a></p>
+            <details id="phone-options" hidden>
+              <summary>Link options</summary>
+              <div class="dashboard-link-options">
+                <p id="phone-link-help">Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.</p>
+                <a id="phone-save" href="/keep" target="_top">How to save it to your home screen</a>
+                <details id="phone-qr-details">
+                  <summary>Show QR code</summary>
+                  <p>Scan this with another device to open your dashboard.</p>
+                  <img id="phone-qr" alt="Scan to open your dashboard" width="132" height="132" loading="lazy">
+                </details>
+                <div class="dashboard-link-control">
+                  <p id="phone-pause-help">Pausing stops this link from opening your dashboard. Resume it from Settings on your computer.</p>
+                  <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Pause link</button>
+                </div>
+              </div>
+            </details>
+          </section>
 
           <!-- Account Management Section -->
           <div class="settings-group" id="account-section">
@@ -4479,57 +4480,95 @@
     async function loadPhoneAccess() {
       try {
         var r = await fetch('/api/phone');
-        if (!r.ok) throw new Error('Could not load dashboard access');
+        if (!r.ok) throw new Error('Could not load dashboard link');
         renderPhone(await r.json());
       } catch (e) {
-        document.getElementById('phone-title').textContent = 'Could not load dashboard access';
-        document.getElementById('phone-desc').innerHTML = '<button class="notification-retry" onclick="loadPhoneAccess()">Try again</button>';
+        document.getElementById('phone-desc').innerHTML = 'Could not check your dashboard link. <button class="notification-retry" onclick="loadPhoneAccess()">Try again</button>';
       }
     }
     function renderPhone(p) {
       _phone = p;
-      var title = document.getElementById('phone-title'), desc = document.getElementById('phone-desc');
-      var btn = document.getElementById('phone-btn'), live = document.getElementById('phone-live');
+      var desc = document.getElementById('phone-desc'), btn = document.getElementById('phone-btn');
+      var live = document.getElementById('phone-live'), setup = document.getElementById('phone-setup');
+      var base = p.url || p.savedUrl;
+      var permanent = p.url ? !!p.permanent : !!p.savedUrl;
       clearTimeout(_phonePoll);
       btn.disabled = false;
-      btn.hidden = !p.enabled;
-      btn.textContent = 'Turn off remote access';
-      document.getElementById('phone-save').textContent = p.permanent ? 'Save dashboard link' : 'Set up a permanent link';
-      live.style.display = 'none';
-      if (p.state === 'unavailable') {
-        title.textContent = 'Update required'; desc.textContent = 'Update ClosedHand to enable dashboard access from other devices.';
-      } else if (p.enabled && p.url) {
-        title.textContent = p.permanent ? 'Your permanent dashboard link' : 'Your temporary dashboard link';
-        desc.textContent = 'Use this link to sign in from another device.';
-        live.style.display = 'flex';
-        var url = new URL('/dashboard', p.url).href;
-        document.getElementById('phone-url').textContent = url.replace(/^https:\/\//, '');
+      btn.hidden = p.state === 'unavailable';
+      btn.textContent = p.enabled ? 'Pause link' : 'Resume link';
+      live.hidden = !base;
+      setup.hidden = !!base && permanent;
+      document.getElementById('phone-options').hidden = !base && !p.enabled;
+      document.getElementById('phone-setup-link').textContent = p.state === 'pairing' ? 'Finish setting up your link' : 'Set up a permanent link';
+      document.getElementById('phone-save').hidden = !permanent;
+      document.getElementById('phone-copy-status').textContent = '';
+      document.getElementById('phone-copy').textContent = 'Copy';
+      document.getElementById('phone-qr-details').hidden = !p.enabled || !p.url;
+      document.getElementById('phone-pause-help').textContent = p.enabled
+        ? 'Pausing stops this link from opening your dashboard. Resume it from Settings on your computer.'
+        : 'Resume this link to open your dashboard from other devices.';
+      if (base) {
+        var url = new URL('/dashboard', base).href;
+        document.getElementById('phone-url').innerHTML = escHtml(new URL(url).host) + '<wbr><span class="dashboard-link-path">/dashboard</span>';
         document.getElementById('phone-url').href = url;
-        document.getElementById('phone-link-help').textContent = p.permanent
-          ? 'Save it to your home screen, bookmark it, or pin it in WhatsApp. The link stays the same.'
-          : 'This link changes when the connection restarts. Set up a permanent link before bookmarking or pinning it.';
-        document.getElementById('phone-qr').innerHTML = '<img src="/api/phone/qr.svg?t=' + Date.now() + '" alt="Scan to open your dashboard" style="width:100%;height:100%;display:block;">';
+        // The code is optional, and opens the same dashboard address as Copy.
+        document.getElementById('phone-qr').src = '/api/phone/qr.svg?destination=dashboard';
+      }
+      document.getElementById('phone-link-help').textContent = permanent
+        ? 'Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.'
+        : 'This is a temporary link and changes when the connection restarts. Set up a permanent link before saving it.';
+      if (p.state === 'unavailable') {
+        desc.textContent = 'Update ClosedHand to use your dashboard on other devices.';
+        setup.hidden = true;
+      } else if (!p.enabled) {
+        desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
+          : 'Create a password-protected link to open your dashboard on other devices.';
       } else if (p.state === 'pairing') {
-        title.textContent = 'Finish setting up your dashboard link';
-        desc.textContent = 'Follow the setup link below to confirm your permanent address.';
+        desc.textContent = 'Finish setup to reserve your permanent dashboard link.';
+        setup.hidden = false;
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
-      } else if (p.enabled) {
-        title.textContent = p.state === 'error' ? 'Reconnecting' : 'Connecting';
-        desc.textContent = p.state === 'error' ? 'The connection dropped. ClosedHand is trying again.' : 'Your dashboard link will appear here when the connection is ready.';
+      } else if (p.state !== 'on' || !p.url) {
+        desc.textContent = base ? 'Reconnecting. Your saved link stays the same.'
+          : 'Connecting. Your dashboard link will appear here when it is ready.';
         _phonePoll = setTimeout(loadPhoneAccess, 2000);
       } else {
-        title.textContent = 'Remote access is off';
-        desc.textContent = 'You can still use the dashboard on this computer. Set up your link below to open it elsewhere.';
+        desc.textContent = 'Open this link on any device and sign in with your dashboard password. ClosedHand must be running on your computer.';
       }
+    }
+    async function copyDashboardLink() {
+      var link = document.getElementById('phone-url');
+      var message = document.getElementById('phone-copy-status');
+      var button = document.getElementById('phone-copy');
+      try {
+        await navigator.clipboard.writeText(link.href);
+      } catch (_) {
+        // Clipboard permissions can be unavailable inside an embedded browser.
+        var field = document.createElement('textarea'), copied = false;
+        field.value = link.href;
+        field.readOnly = true;
+        field.style.cssText = 'position:fixed;left:-9999px;top:0';
+        document.body.appendChild(field);
+        try { field.select(); copied = document.execCommand('copy'); } catch (_) {}
+        field.remove();
+        button.focus();
+        if (!copied) {
+          button.textContent = 'Copy';
+          message.textContent = 'Touch and hold the address, or right-click it, to copy the link.';
+          return;
+        }
+      }
+      button.textContent = 'Copied';
+      message.textContent = 'Dashboard link copied.';
     }
     async function togglePhoneAccess() {
       var on = !!(_phone && _phone.enabled);
+      if (on && !confirm('Pause this dashboard link? You will need to open Settings on your computer to resume it.')) return;
       var btn = document.getElementById('phone-btn'); btn.disabled = true;
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });
         var result = await r.json();
         if (!r.ok) throw new Error(result.error || 'Could not change dashboard access. Try again.');
-        renderPhone(result);
+        renderPhone({ ...result, savedUrl: _phone?.savedUrl || (_phone?.permanent ? _phone.url : null) });
       } catch (e) {
         btn.disabled = false;
         document.getElementById('phone-desc').textContent = e.message;

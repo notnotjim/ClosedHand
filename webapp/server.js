@@ -786,7 +786,10 @@ app.post("/api/phone/send", async (req, res) => {
 
 app.get("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
-  res.json(phoneAccess.status());
+  // Keep the reserved public address visible while its connection is paused.
+  const saved = await getRuntimeConf("PHONE_PERMANENT_URL");
+  const savedUrl = require("./phone-registration").validAddress(saved) ? saved : null;
+  res.set("Cache-Control", "no-store").json({ ...phoneAccess.status(), savedUrl });
 });
 app.post("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
@@ -802,7 +805,8 @@ app.get("/api/phone/qr.svg", async (req, res) => {
   const url = await require("./config").dashboardBase() || phoneAccess.status().url;
   if (!url) return res.status(404).end();
   try {
-    const svg = await require("qrcode").toString(url + "/keep", { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
+    const destination = req.query.destination === "dashboard" ? "/dashboard" : "/keep";
+    const svg = await require("qrcode").toString(new URL(destination, url).href, { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-store").send(svg);
   } catch (e) {
     res.status(500).end();
