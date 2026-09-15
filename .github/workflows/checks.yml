@@ -43,7 +43,7 @@ jobs:
         run: node --test scripts/test-agent-execution.js scripts/test-agent-runners.js scripts/test-pg-task-queries.js
 
       - name: Agent context and current task state
-        run: node --test scripts/test-agent-context-state.js scripts/test-confirmation-lifetime.js scripts/test-thread-size.js scripts/test-outbound-guard.js scripts/test-maps-fallback.js scripts/test-search-route.js scripts/test-facts-prose.js
+        run: node --test scripts/test-agent-context-state.js scripts/test-confirmation-lifetime.js scripts/test-thread-size.js scripts/test-outbound-guard.js scripts/test-maps-fallback.js scripts/test-search-route.js scripts/test-facts-prose.js scripts/test-stuck-tools.js
 
       - name: Phone dashboard links
         run: node --test scripts/test-dashboard-links.js scripts/test-phone-registration.js scripts/test-phone-link-delivery.js scripts/test-dashboard-link-settings.js
