@@ -60,6 +60,12 @@ they neither get published nor drift out of step with a second copy.
   Google console walkthrough, six steps inside the setup page's Google card, is
   "Connect to Google", a thing you do, never a "guide" you read. It is part of setup,
   not a page of its own. (James, 2026-09-05)
+- Pinned facts hold durable truths about the user's life: identity, relationships, key
+  dates, what they run, standing decisions and preferences. Everything else learned in
+  chat is context: it stays in the conversation and is folded into a Context Note when
+  the thread is condensed. "Sayako is James's wife; Japanese; trying to conceive" is a
+  fact; "she finds Ho Chi Minh City stressful" is context. The test: would you say it
+  the same way in a year, to a stranger, with no story around it. (James, 2026-09-15)
 - Questions mid-task go to the chat the task came from. The dashboard only shows
   that ClosedHand is waiting, where it asked and when, and repeats the question.
   It never expects the answer there. (James, 2026-09-15)
