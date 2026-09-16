@@ -225,6 +225,9 @@ async function main() {
   console.log("Waiting for Telegram + WhatsApp messages...");
 
 
+  // Notice the lid closing: a frozen process wakes with a jumped clock.
+  require("./lib/sleep-watch").start();
+
   // Resume user messages that a redeploy interrupted mid-processing.
   // Delayed so platform connections (Telegram bot, WhatsApp) are up first.
   setTimeout(() => {
