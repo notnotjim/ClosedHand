@@ -43,3 +43,15 @@ test('the actual chat prompt tail includes the current airport date evidence', (
   assert.match(text, /location is unknown/);
   assert.match(text, /XY829: 2026-09-13, 10:30 at KIX; today/);
 });
+test('a flight departing soon places the user at that airport, and the countdown is done in code', () => {
+  const at = new Date('2026-09-16T11:37:00Z');
+  const facts = { 'flight-VJ648-2026-09-16': { value: JSON.stringify({ flightNumber: 'VJ648', departure: { airport: 'SGN', dateTime: '2026-09-16T20:00:00+07:00', tz: 'Asia/Ho_Chi_Minh' }, arrival: { airport: 'DAD', dateTime: '2026-09-16T21:20:00+07:00', tz: 'Asia/Ho_Chi_Minh' } }) } };
+  const clock = currentTimeContext({ profile: { timezone: 'Europe/London' }, facts }, at);
+  assert.match(clock.text, /Asia\/Ho_Chi_Minh, inferred from flight VJ648 departing SGN soon/);
+  assert.match(clock.text, /18:37/, 'the clock reads Ho Chi Minh time, not London');
+  const dates = flightDateContext(facts, at);
+  assert.match(dates, /departs in 1 h 23 min from now/);
+  const saved = process.env.FLIGHTAWARE_API_KEY; delete process.env.FLIGHTAWARE_API_KEY;
+  assert.match(flightDateContext(facts, at), /no live flight status source/);
+  if (saved !== undefined) process.env.FLIGHTAWARE_API_KEY = saved;
+});
