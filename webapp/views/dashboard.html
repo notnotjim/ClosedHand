@@ -2405,7 +2405,9 @@
               <div id="wallet-main" style="display:none;">
                 <div style="font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:8px;">Spending rules</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;">
-                  <label class="wallet-field"><span>Currency</span><input type="text" id="sl-currency" maxlength="3" placeholder="e.g. GBP" style="text-transform:uppercase;"></label>
+                  <label class="wallet-field"><span>Currency</span><select id="sl-currency">
+                    <option value="USD">USD, US dollar</option><option value="GBP">GBP, British pound</option><option value="EUR">EUR, euro</option><option value="JPY">JPY, Japanese yen</option><option value="AUD">AUD, Australian dollar</option><option value="CAD">CAD, Canadian dollar</option><option value="NZD">NZD, New Zealand dollar</option><option value="CHF">CHF, Swiss franc</option><option value="SGD">SGD, Singapore dollar</option><option value="HKD">HKD, Hong Kong dollar</option><option value="VND">VND, Vietnamese dong</option><option value="THB">THB, Thai baht</option><option value="KRW">KRW, South Korean won</option><option value="INR">INR, Indian rupee</option><option value="AED">AED, UAE dirham</option><option value="SEK">SEK, Swedish krona</option><option value="NOK">NOK, Norwegian krone</option><option value="DKK">DKK, Danish krone</option><option value="PLN">PLN, Polish zloty</option><option value="ZAR">ZAR, South African rand</option><option value="BRL">BRL, Brazilian real</option><option value="MXN">MXN, Mexican peso</option>
+                  </select></label>
                   <label class="wallet-field"><span>Per purchase, at most <span data-spend-currency></span></span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"></label>
                   <label class="wallet-field"><span>Per day, at most <span data-spend-currency></span></span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"></label>
                   <label class="wallet-field"><span>Per month, at most <span data-spend-currency></span></span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"></label>
@@ -4374,10 +4376,8 @@
       document.getElementById('sl-auto-wrap').style.opacity = ask ? '0.5' : '1';
     }
     function updateSpendCurrency() {
-      var currency = document.getElementById('sl-currency').value.trim().toUpperCase();
-      document.querySelectorAll('[data-spend-currency]').forEach(function (el) {
-        el.textContent = /^[A-Z]{3}$/.test(currency) ? '(' + currency + ')' : '(choose currency)';
-      });
+      var currency = document.getElementById('sl-currency').value;
+      document.querySelectorAll('[data-spend-currency]').forEach(function (el) { el.textContent = '(' + currency + ')'; });
     }
     async function loadWallet() {
       try {
@@ -4398,8 +4398,12 @@
         document.getElementById('sl-per-purchase').value = l.per_purchase ?? '';
         document.getElementById('sl-per-day').value = l.per_day ?? '';
         document.getElementById('sl-per-month').value = l.per_month ?? '';
-        document.getElementById('sl-currency').value = l.currency || '';
-        document.getElementById('sl-currency').oninput = updateSpendCurrency;
+        // Shops charge in their own money; the checkout total is converted into
+        // this currency before the limits are checked.
+        var sel = document.getElementById('sl-currency');
+        sel.value = l.currency || 'USD';
+        if (sel.value !== (l.currency || 'USD')) sel.value = 'USD';
+        sel.onchange = updateSpendCurrency;
         updateSpendCurrency();
         document.getElementById('sl-always-ask').checked = l.always_ask !== false;
         document.getElementById('sl-auto-under').value = l.auto_under ?? '';
@@ -4443,7 +4447,7 @@
     }
 
     async function saveSpendLimits() {
-      var currency = document.getElementById('sl-currency').value.trim().toUpperCase();
+      var currency = document.getElementById('sl-currency').value;
       var hasAmount = ['sl-per-purchase', 'sl-per-day', 'sl-per-month', 'sl-auto-under'].some(function (id) {
         var input = document.getElementById(id);
         return !input.disabled && input.value !== '';
@@ -4457,7 +4461,7 @@
         per_purchase: document.getElementById('sl-per-purchase').value,
         per_day: document.getElementById('sl-per-day').value,
         per_month: document.getElementById('sl-per-month').value,
-        currency: document.getElementById('sl-currency').value.trim().toUpperCase() || undefined,
+        currency: document.getElementById('sl-currency').value,
         always_ask: document.getElementById('sl-always-ask').checked,
         auto_under: document.getElementById('sl-always-ask').checked ? '' : document.getElementById('sl-auto-under').value,
       };
