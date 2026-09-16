@@ -109,8 +109,11 @@ app.post("/exec", (req, res) => {
     case "python": {
       tmpFile = path.join(os.tmpdir(), `exec_${crypto.randomBytes(4).toString("hex")}.py`);
       fs.writeFileSync(tmpFile, code);
+      // Unbuffered, so a run stopped at the time cap still shows what it had
+      // printed; buffered output died with the process and every timeout read
+      // as "no output".
       cmd = "python3";
-      args = [tmpFile];
+      args = ["-u", tmpFile];
       break;
     }
     case "node": {
