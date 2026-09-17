@@ -734,7 +734,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    padding: 20px 20px 40px;
+    padding: 20px max(20px, calc((100% - 900px) / 2)) 40px;
     flex-direction: column;
     gap: 12px;
     width: 100%;
@@ -857,14 +857,19 @@
     color: rgba(239,230,214,0.5);
     margin-top: 2px;
   }
-  /* Push chat content right when sidebar is open on desktop */
+  /* With the sidebar open the input box is fixed across the area to its
+     right, with a 900px box centred in that. The messages take the same
+     area and the same centred 900px column, so bubbles line up with the box. */
   @media (min-width: 900px) {
     .activity-sidebar.active ~ .chat-messages {
-      margin: 0 auto;
-      max-width: 900px;
-      padding-left: calc(var(--sidebar-width) / 2);
+      margin: 0 0 0 var(--sidebar-width);
+      width: auto;
+      max-width: none;
+      /* Percent padding resolves against the parent's width, so the sidebar
+         comes off inside the sum. */
+      padding-left: max(20px, calc((100% - var(--sidebar-width) - 900px) / 2));
+      padding-right: max(20px, calc((100% - var(--sidebar-width) - 900px) / 2));
     }
-    .activity-sidebar.active ~ .docked-input { padding-left: calc(var(--sidebar-width) / 2); }
   }
   @media (max-width: 899px) {
     .activity-sidebar { width: 240px; }
@@ -1736,6 +1741,9 @@
     z-index: 10;
     padding: 0 20px;
   }
+  /* The input floats over the list, so the list ends with room for it:
+     the last message scrolls clear of the box instead of behind it. */
+  body.chat-active .chat-messages { padding-bottom: 300px; }
   @media (max-width: 899px) {
     body.chat-active .docked-input.active {
       left: 0;
