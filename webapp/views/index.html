@@ -175,12 +175,12 @@
   .hero-heading {
     font-family: var(--font-display);
     font-variation-settings: 'opsz' 120, 'SOFT' 40;
-    font-size: clamp(34px, 5vw, 56px);
+    font-size: clamp(30px, 3.7vw, 56px);
     font-weight: 450;
     letter-spacing: -0.02em;
     text-align: center;
     line-height: 1.1;
-    max-width: 640px;
+    white-space: nowrap;
     user-select: none;
     margin-bottom: 8px;
     color: #EFE6D6;
@@ -196,24 +196,21 @@
   .hero-heading .grip {
     display: inline-block;
     color: #D8624B;
-    animation: gripClose 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.9s;
+    letter-spacing: -0.02em;
+    animation: gripClose 1.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards 1s;
   }
   @keyframes gripClose {
-    0% { letter-spacing: 0.3em; color: #EFE6D6; }
-    55% { color: #EFE6D6; }
-    100% { letter-spacing: inherit; color: #D8624B; }
+    0% { letter-spacing: 0.32em; color: #EFE6D6; }
+    45% { color: #EFE6D6; }
+    100% { letter-spacing: -0.02em; color: #D8624B; }
   }
-  /* One line at a time says what that grip is for; it turns over gently. */
-  .hero-sub-line { display: inline-block; transition: opacity 0.38s ease, transform 0.38s ease; }
-  .hero-sub-line.out { opacity: 0; transform: translateY(6px); }
   .hero-stance {
-    max-width: 560px;
     margin: -8px auto 28px;
     font-size: clamp(12px, 1.3vw, 14px);
     line-height: 1.5;
     text-align: center;
+    white-space: nowrap;
     color: #B6AFA4;
-    text-wrap: balance;
     opacity: 0;
     animation: heroIn 0.8s ease forwards 0.7s;
   }
@@ -282,8 +279,7 @@
     color: rgba(239,230,214,0.5);
     line-height: 1.4;
     max-width: 600px;
-    white-space: normal;
-    min-height: 1.4em;
+    white-space: nowrap;
     user-select: none;
     margin-bottom: 24px;
     opacity: 0;
@@ -1155,9 +1151,9 @@
     /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
     .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
-    .hero-heading { font-size: clamp(30px, 8vw, 46px); letter-spacing: -1px; margin-bottom: 8px; }
-    .hero-heading-sub { font-size: clamp(13px, 3.4vw, 16px); gap: 6px; margin-bottom: 18px; white-space: normal; min-height: 2.8em; max-width: 34ch; }
-    .hero-stance { font-size: 12px; margin: -4px auto 20px; max-width: 36ch; }
+    .hero-heading { font-size: clamp(30px, 8vw, 46px); letter-spacing: -1px; margin-bottom: 8px; white-space: normal; }
+    .hero-heading-sub { font-size: clamp(13px, 3.4vw, 16px); gap: 6px; margin-bottom: 18px; white-space: normal; max-width: 34ch; }
+    .hero-stance { font-size: 12px; margin: -4px auto 20px; white-space: normal; max-width: 36ch; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
     .input-box-wrap { max-width: 100%; }
@@ -2115,8 +2111,8 @@
   <div class="hero-area" id="heroSection">
     <div style="flex:1;max-flex:1;"></div>
     <div class="hero-heading">Keep a <span class="grip">grip</span> on your personal data.</div>
-    <div class="hero-heading-sub"><span class="hero-sub-line" id="heroSubLine">Speak with all of your apps together, to stay on top of things.</span></div>
-    <p class="hero-stance">It runs on your computer, not in some billionaire's cloud, so nobody's business model sits between you and your own life.</p>
+    <div class="hero-heading-sub">Speak with all of your apps together, to stay on top of things.</div>
+    <p class="hero-stance">It runs on your computer, so no company gets between you and your own life.</p>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -3003,26 +2999,6 @@
 <!-- Keep the mobile hero within the visible viewport. -->
 <script>
 (function() {
-  // The sub line turns over every few seconds, one plain thing ClosedHand
-  // does. It rests while the tab is hidden, once chat starts, and for anyone
-  // who asked for less motion.
-  (function turnHeroLine() {
-    var el = document.getElementById('heroSubLine');
-    if (!el || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-    var lines = [
-      'Speak with all of your apps together, to stay on top of things.',
-      'Ask your mail, calendar and files one question and get one answer.',
-      'Hand over the boring bits and keep the decisions.',
-      'Say it once and it happens every week without you.'
-    ];
-    var i = 0;
-    setInterval(function() {
-      if (document.hidden || document.body.classList.contains('chat-active')) return;
-      el.classList.add('out');
-      setTimeout(function() { i = (i + 1) % lines.length; el.textContent = lines[i]; el.classList.remove('out'); }, 400);
-    }, 5200);
-  })();
-
   function fitMobileHero() {
     var hero = document.getElementById('heroSection');
     var pageTabs = document.getElementById('pageTabs');
@@ -3078,8 +3054,10 @@
     "How are my Meta campaigns doing this week vs last?",
     "Book the cheapest flight to Barcelona next Friday",
     "Message Jim 'Happy Birthday!!!' at midnight every Dec 11",
-    "Tell me any time my name is mentioned on X",
+    "How many Shopify orders came in overnight?",
     "Draft a reply to that investor email for me to check",
+    "Tell me if my flight moves and what the new time is",
+    "What did the landlord say about the deposit?",
   ];
   var current = 0;
   var charIndex = 0;
