@@ -170,18 +170,20 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .hero-area *, .hero-heading, .hero-heading-sub, .input-box-wrap, .suggestions { animation: none !important; opacity: 1 !important; }
-    .hero-heading .grip { letter-spacing: -0.02em; color: #D8624B; }
+    .hero-heading .hero-heading-more { transition: none; max-width: none; opacity: 0.85; }
   }
 
   .hero-heading {
     font-family: var(--font-display);
     font-variation-settings: 'opsz' 120, 'SOFT' 40;
-    font-size: clamp(26px, 3.05vw, 50px);
+    font-size: clamp(22px, 2.5vw, 37px);
     font-weight: 450;
     letter-spacing: -0.02em;
     text-align: center;
     line-height: 1.1;
     white-space: nowrap;
+    width: 100%;
+    max-width: 900px;
     user-select: none;
     margin-bottom: 8px;
     color: #EFE6D6;
@@ -194,31 +196,25 @@
   }
   /* The grip closes: the word starts spread and cream, then tightens to
      madder, the way the fist in the mark closes. */
-  /* The grip starts spread and cream and closes to madder. It waits for
-     the first painted frame (.hero-area.is-live, set by the page once the
-     background has drawn) rather than a clock that starts at parse time,
-     because on a slow load the first paint can land after that clock has
-     already run out and the word would appear closed. */
-  .hero-heading .grip {
-    display: inline-block;
-    color: #EFE6D6;
-    letter-spacing: 0.32em;
-  }
-  .hero-area.is-live .hero-heading .grip {
-    animation: gripClose 1.6s cubic-bezier(0.25, 0.1, 0.25, 1) both 0.5s;
-  }
-  @keyframes gripClose {
-    0% { letter-spacing: 0.32em; color: #EFE6D6; }
-    45% { color: #EFE6D6; }
-    100% { letter-spacing: -0.02em; color: #D8624B; }
-  }
-  /* The second line lands a beat after the grip has closed. */
+  /* The second sentence unfolds from the end of the first: it starts at no
+     width, so the first sentence sits centred over the box, then it opens
+     to its measured width (set by the page as --more-w) while fading in,
+     and the first sentence glides left to make room. */
+  .hero-heading .hero-heading-first { display: inline-block; }
   .hero-heading .hero-heading-more {
-    color: #B6AFA4;
+    display: inline-block;
+    vertical-align: bottom;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
     opacity: 0;
+    color: #D8624B;
+    font-weight: 300;
+    transition: max-width 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 1.2s, opacity 0.9s ease 1.5s;
   }
   .hero-area.is-live .hero-heading-more {
-    animation: heroIn 0.7s ease forwards 2.1s;
+    max-width: var(--more-w, 60ch);
+    opacity: 0.85;
   }
   .claw-swap {
     position: relative;
@@ -1157,7 +1153,8 @@
     /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
     .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
-    .hero-heading { font-size: clamp(30px, 8vw, 46px); letter-spacing: -1px; margin-bottom: 8px; white-space: normal; }
+    .hero-heading { font-size: clamp(26px, 7vw, 40px); letter-spacing: -1px; margin-bottom: 8px; white-space: normal; }
+    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: inline; white-space: normal; max-width: none; transition: opacity 0.9s ease 1.2s; }
     .hero-heading-sub { font-size: clamp(13px, 3.4vw, 16px); gap: 6px; margin-bottom: 18px; white-space: normal; max-width: 34ch; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
@@ -2115,7 +2112,7 @@
   <!-- HERO STATE: heading + brand + big input + suggestions, all centered -->
   <div class="hero-area" id="heroSection">
     <div style="flex:1;max-flex:1;"></div>
-    <div class="hero-heading">Keep a <span class="grip">grip</span> on your life. <span class="hero-heading-more">And your personal data.</span></div>
+    <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">&nbsp;And your personal data.</span></div>
     <div class="hero-heading-sub">Speak with all of your apps in one chat and hand over the boring bits.</div>
 
     <div class="input-box-wrap" id="heroInputWrap">
@@ -2514,11 +2511,21 @@
   var isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var canvas = document.getElementById('blobCanvas');
   var renderer;
+  // The second sentence of the heading is measured at its natural width once
+  // the fonts are in, so it can unfold to exactly that; then the hero is live.
+  window.heroLive = function() {
+    var more = document.getElementById('heroMore');
+    var go = function() {
+      if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
+      document.getElementById('heroSection').classList.add('is-live');
+    };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
+  };
   try {
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobileDevice, alpha: true });
   } catch(e) {
     console.warn('WebGL not available:', e.message);
-    document.getElementById('heroSection').classList.add('is-live');
+    window.heroLive();
     // Show CSS gradient fallback
     var fallback = document.createElement('div');
     fallback.className = 'no-webgl-bg';
@@ -2842,7 +2849,7 @@
   // The first frame above compiles the shaders and can hold the thread for a
   // while; the frame after it is the first one on screen, so the heading's
   // motion starts from there.
-  requestAnimationFrame(function() { requestAnimationFrame(function() { document.getElementById('heroSection').classList.add('is-live'); }); });
+  requestAnimationFrame(function() { requestAnimationFrame(window.heroLive); });
 
   window.addEventListener('resize', function() {
     camera.aspect = window.innerWidth / window.innerHeight;
