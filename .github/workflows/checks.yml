@@ -52,7 +52,7 @@ jobs:
         run: node --test scripts/test-bug-reports.js
 
       - name: Flight times and booking changes
-        run: node --test scripts/test-flights.js scripts/test-time-context.js
+        run: node --test scripts/test-flights.js scripts/test-time-context.js scripts/test-bookings.js
 
       - name: Model routing and setup
         run: node --test scripts/test-model-routing.js scripts/test-settings.js scripts/test-static-assets.js

@@ -5071,7 +5071,9 @@ app.get("/api/bookings", async (req, res) => {
     const { data, error } = await supabase.from("bookings").select("*").eq("user_id", userId)
       .or(`starts_at.gte.${since},ends_at.gte.${since}`).order("starts_at", { ascending: true }).limit(100);
     if (error) throw error;
-    res.json(data || []);
+    // A booking whose end has passed is over, not upcoming (a ride's receipt arrives after the ride).
+    const now = Date.now();
+    res.json((data || []).filter((b) => !b.ends_at || Date.parse(b.ends_at) >= now));
   } catch (e) {
     console.error("[bookings] list error:", e.message);
     res.status(500).json({ error: "Could not load bookings" });
