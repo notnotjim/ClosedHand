@@ -138,25 +138,25 @@ window.Delight = {
   _getSeasonalConfig: function (month) {
     var day = new Date().getDate();
     // St Patrick's Day (March 17)
-    if (month === 2 && day === 17) return { colors: ["#00a651", "#009944", "#4caf50", "#2e7d32", "#a5d6a7", "#fff"] };
+    if (month === 2 && day === 17) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#D8624B", "#EFE6D6"] };
     // Christmas (Dec 20-31)
-    if (month === 11 && day >= 20) return { colors: ["#8b0000", "#cc0000", "#006400", "#228b22", "#ffd700"] };
+    if (month === 11 && day >= 20) return { colors: ["rgba(239,230,214,0.1)", "rgba(216,98,75,0.16)", "#D8624B", "#D8624B", "#D0A652"] };
     // New Year (Jan 1)
-    if (month === 0 && day === 1) return { colors: ["#ffd700", "#ffdf00", "#fff", "#c0c0c0", "#ff6347"] };
+    if (month === 0 && day === 1) return { colors: ["#D0A652", "#D0A652", "#EFE6D6", "rgba(239,230,214,0.9)", "#D8624B"] };
     // Valentine's Day (Feb 14)
-    if (month === 1 && day === 14) return { colors: ["#ff1744", "#e91e63", "#f48fb1", "#ff80ab", "#fff"] };
+    if (month === 1 && day === 14) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#EFE6D6"] };
     // Halloween (Oct 31)
-    if (month === 9 && day === 31) return { colors: ["#ff6600", "#ff8c00", "#1a1a1a", "#333", "#8b00ff"] };
+    if (month === 9 && day === 31) return { colors: ["#D8624B", "#D8624B", "#1F1917", "rgba(239,230,214,0.16)", "rgba(109,106,113,0.2)"] };
     // 4th July
-    if (month === 6 && day === 4) return { colors: ["#bf0a30", "#fff", "#002868"] };
+    if (month === 6 && day === 4) return { colors: ["#D8624B", "#EFE6D6", "#D8624B"] };
     // Diwali (~Nov)
-    if (month === 10) return { colors: ["#ff9800", "#ffd700", "#ff5722", "#e91e63", "#9c27b0"] };
+    if (month === 10) return { colors: ["#D0A652", "#D0A652", "#D8624B", "#D8624B", "#6D6A71"] };
     // March-May: spring blossoms
-    if (month >= 2 && month <= 4) return { colors: ["#FFB7C5", "#FF69B4", "#FFC0CB", "#FFD1DC", "#FF91A4"], scalar: 1.2, shapes: ["circle"] };
+    if (month >= 2 && month <= 4) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#D8624B"], scalar: 1.2, shapes: ["circle"] };
     // Dec-Feb: snowflakes
-    if (month === 11 || month <= 1) return { colors: ["#fff", "#b3d9ff", "#cce5ff", "#e6f2ff"], startVelocity: 15, gravity: 0.3, scalar: 1.1, shapes: ["circle"], ticks: 300 };
+    if (month === 11 || month <= 1) return { colors: ["#EFE6D6", "#D8624B", "#D8624B", "#D8624B"], startVelocity: 15, gravity: 0.3, scalar: 1.1, shapes: ["circle"], ticks: 300 };
     // Default: party
-    return { colors: ["#6ee7a8", "#60a5fa", "#f59e0b", "#ef4444", "#a78bfa", "#ec4899"] };
+    return { colors: ["#D8624B", "#D8624B", "#D0A652", "#D8624B", "#6D6A71", "#D8624B"] };
   },
 
   // -----------------------------------------------------------
@@ -261,7 +261,7 @@ window.Delight = {
         window.confetti({
           particleCount: 100,
           spread: 70,
-          colors: ["#ef4444", "#991b1b", "#1a1a1a", "#ffffff"],
+          colors: ["#D8624B", "#D8624B", "#1F1917", "#EFE6D6"],
           origin: { y: 0.6 },
           disableForReducedMotion: true,
         });

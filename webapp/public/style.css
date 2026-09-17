@@ -12,8 +12,8 @@
 
 body {
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #0a0a0a;
-  color: #e8e8e8;
+  background: #14100E;
+  color: #EFE6D6;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -28,8 +28,8 @@ body {
 
 /* Card */
 .card {
-  background: #161616;
-  border: 1px solid #2a2a2a;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.16);
   border-radius: 16px;
   padding: 40px 32px;
 }
@@ -44,7 +44,7 @@ body {
 h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #ffffff;
+  color: #EFE6D6;
   margin-bottom: 8px;
   letter-spacing: -0.5px;
 }
@@ -52,7 +52,7 @@ h1 {
 h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: #EFE6D6;
   margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -60,7 +60,7 @@ h2 {
 
 .tagline {
   font-size: 16px;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   margin-bottom: 32px;
 }
 
@@ -74,11 +74,11 @@ h2 {
 
 .feature {
   font-size: 14px;
-  color: #aaa;
+  color: #B8AC9A;
   padding: 10px 12px;
-  background: #1c1c1c;
+  background: #1F1917;
   border-radius: 8px;
-  border: 1px solid #252525;
+  border: 1px solid rgba(239,230,214,0.1);
 }
 
 /* Sign-up section */
@@ -88,7 +88,7 @@ h2 {
 
 .signup-desc {
   font-size: 14px;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   margin-bottom: 20px;
   line-height: 1.5;
 }
@@ -101,8 +101,8 @@ h2 {
   gap: 10px;
   width: 100%;
   padding: 14px 24px;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: #EFE6D6;
+  color: #14100E;
   font-size: 15px;
   font-weight: 600;
   border: none;
@@ -113,7 +113,7 @@ h2 {
 }
 
 .btn-google:hover {
-  background: #f0f0f0;
+  background: #EFE6D6;
 }
 
 .google-icon {
@@ -122,7 +122,7 @@ h2 {
 
 .note {
   font-size: 12px;
-  color: #555;
+  color: rgba(239,230,214,0.4);
   margin-top: 16px;
   line-height: 1.5;
   text-align: center;
@@ -132,17 +132,17 @@ h2 {
 .error-banner {
   margin-top: 20px;
   padding: 12px 16px;
-  background: #2a1010;
-  border: 1px solid #4a2020;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.16);
   border-radius: 8px;
-  color: #ff6b6b;
+  color: #D8624B;
   font-size: 14px;
   text-align: center;
 }
 
 /* Dashboard sections */
 .section {
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid rgba(239,230,214,0.16);
   padding-top: 24px;
   margin-top: 24px;
 }
@@ -159,14 +159,14 @@ h2 {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: #1c1c1c;
+  background: #1F1917;
   border-radius: 10px;
-  border: 1px solid #252525;
+  border: 1px solid rgba(239,230,214,0.1);
 }
 
 .service.connected {
-  border-color: #1a3a1a;
-  background: #111a11;
+  border-color: rgba(239,230,214,0.16);
+  background: #1F1917;
 }
 
 .service-icon {
@@ -177,18 +177,18 @@ h2 {
 .service strong {
   display: block;
   font-size: 14px;
-  color: #e8e8e8;
+  color: #EFE6D6;
 }
 
 .service-detail {
   font-size: 12px;
-  color: #666;
+  color: rgba(239,230,214,0.52);
 }
 
 /* Activation code */
 .step-desc {
   font-size: 14px;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   margin-bottom: 16px;
   line-height: 1.5;
 }
@@ -198,9 +198,9 @@ h2 {
   font-size: 36px;
   font-weight: 700;
   letter-spacing: 6px;
-  color: #ffffff;
-  background: #1c1c1c;
-  border: 2px solid #3a3a3a;
+  color: #EFE6D6;
+  background: #1F1917;
+  border: 2px solid rgba(239,230,214,0.28);
   border-radius: 12px;
   padding: 20px;
   text-align: center;
@@ -210,7 +210,7 @@ h2 {
 }
 
 .activation-code:hover {
-  border-color: #555;
+  border-color: rgba(239,230,214,0.4);
 }
 
 /* Steps */
@@ -225,7 +225,7 @@ h2 {
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: #aaa;
+  color: #B8AC9A;
   line-height: 1.4;
 }
 
@@ -235,11 +235,11 @@ h2 {
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: #252525;
+  background: rgba(239,230,214,0.1);
   border-radius: 50%;
   font-size: 13px;
   font-weight: 600;
-  color: #ccc;
+  color: rgba(239,230,214,0.9);
   flex-shrink: 0;
 }
 
@@ -252,18 +252,18 @@ h2 {
 
 .logout-link {
   font-size: 13px;
-  color: #555;
+  color: rgba(239,230,214,0.4);
   text-decoration: none;
 }
 
 .logout-link:hover {
-  color: #aaa;
+  color: #B8AC9A;
 }
 
 /* Section description */
 .section-desc {
   font-size: 14px;
-  color: #666;
+  color: rgba(239,230,214,0.52);
   margin-bottom: 16px;
 }
 
@@ -276,14 +276,14 @@ h2 {
 
 .platform-card {
   padding: 16px;
-  background: #1c1c1c;
-  border: 1px solid #252525;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.1);
   border-radius: 10px;
 }
 
 .platform-card.connected {
-  border-color: #1a3a1a;
-  background: #111a11;
+  border-color: rgba(239,230,214,0.16);
+  background: #1F1917;
 }
 
 .platform-card.unavailable {
@@ -291,8 +291,8 @@ h2 {
 }
 
 .platform-card.pending {
-  border-color: #3a3a1a;
-  background: #1a1a11;
+  border-color: rgba(239,230,214,0.16);
+  background: #1F1917;
 }
 
 .platform-header {
@@ -304,12 +304,12 @@ h2 {
 
 .platform-header strong {
   font-size: 15px;
-  color: #e8e8e8;
+  color: #EFE6D6;
 }
 
 .platform-detail {
   font-size: 13px;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   margin-bottom: 12px;
 }
 
@@ -324,23 +324,23 @@ h2 {
 }
 
 .badge-connected {
-  background: rgba(110,231,168,0.1);
-  color: #6ee7a8;
+  background: rgba(150,173,127,0.1);
+  color: #96AD7F;
 }
 
 .badge-pending {
-  background: #3a3a1a;
-  color: #facc15;
+  background: rgba(239,230,214,0.16);
+  color: #D0A652;
 }
 
 .badge-soon {
-  background: #252525;
-  color: #666;
+  background: rgba(239,230,214,0.1);
+  color: rgba(239,230,214,0.52);
 }
 
 .badge-none {
-  background: #252525;
-  color: #888;
+  background: rgba(239,230,214,0.1);
+  color: rgba(239,230,214,0.64);
 }
 
 /* Connect button */
@@ -348,8 +348,8 @@ h2 {
   display: inline-block;
   margin-top: 8px;
   padding: 10px 20px;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: #EFE6D6;
+  color: #14100E;
   font-size: 14px;
   font-weight: 600;
   border: none;
@@ -359,7 +359,7 @@ h2 {
 }
 
 .btn-connect:hover {
-  background: #e0e0e0;
+  background: #EFE6D6;
 }
 
 /* Small button (regenerate code) */
@@ -368,18 +368,18 @@ h2 {
   margin-top: 12px;
   padding: 6px 14px;
   background: transparent;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid #333;
+  border: 1px solid rgba(239,230,214,0.16);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btn-small:hover {
-  border-color: #555;
-  color: #ccc;
+  border-color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.9);
 }
 
 /* Microsoft button */
@@ -390,11 +390,11 @@ h2 {
   gap: 10px;
   width: 100%;
   padding: 14px 24px;
-  background: #2f2f2f;
-  color: #ffffff;
+  background: rgba(239,230,214,0.16);
+  color: #EFE6D6;
   font-size: 15px;
   font-weight: 600;
-  border: 1px solid #444;
+  border: 1px solid rgba(239,230,214,0.28);
   border-radius: 10px;
   text-decoration: none;
   cursor: pointer;
@@ -403,13 +403,13 @@ h2 {
 }
 
 .btn-microsoft:hover {
-  background: #404040;
+  background: rgba(239,230,214,0.28);
 }
 
 /* Available (not yet connected) service cards */
 .service.available {
-  border-color: #2a2a2a;
-  background: #1c1c1c;
+  border-color: rgba(239,230,214,0.16);
+  background: #1F1917;
   flex-wrap: wrap;
 }
 
@@ -425,8 +425,8 @@ h2 {
 /* Disconnect button */
 .btn-disconnect {
   background: transparent;
-  color: #ff6b6b;
-  border: 1px solid #4a2020;
+  color: #D8624B;
+  border: 1px solid rgba(239,230,214,0.16);
   border-radius: 6px;
   padding: 6px 14px;
   font-size: 12px;
@@ -436,8 +436,8 @@ h2 {
 }
 
 .btn-disconnect:hover {
-  background: #2a1010;
-  border-color: #ff6b6b;
+  background: #1F1917;
+  border-color: #D8624B;
 }
 
 /* Toast notification */
@@ -467,7 +467,7 @@ h2 {
 
 .footer p {
   font-size: 12px;
-  color: #444;
+  color: rgba(239,230,214,0.28);
 }
 
 /* Responsive */
@@ -499,8 +499,8 @@ h2 {
 
 .segmented-control {
   display: flex;
-  background: #1c1c1c;
-  border: 1px solid #252525;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.1);
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
@@ -513,7 +513,7 @@ h2 {
   align-items: center;
   padding: 12px 8px 10px;
   background: transparent;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   border: none;
   border-radius: 8px;
   font-size: 15px;
@@ -523,31 +523,31 @@ h2 {
 }
 
 .seg-btn:hover {
-  color: #ccc;
+  color: rgba(239,230,214,0.9);
 }
 
 .seg-btn.active {
-  background: #ffffff;
-  color: #0a0a0a;
+  background: #EFE6D6;
+  color: #14100E;
   font-weight: 600;
 }
 
 .seg-desc {
   font-size: 12px;
   font-weight: 400;
-  color: #666;
+  color: rgba(239,230,214,0.52);
   margin-top: 2px;
 }
 
 .seg-btn.active .seg-desc {
-  color: #444;
+  color: rgba(239,230,214,0.28);
 }
 
 .pulse-label {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 10px;
@@ -565,10 +565,10 @@ h2 {
 
 .pill {
   padding: 10px 20px;
-  background: #1c1c1c;
-  border: 1px solid #2a2a2a;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.16);
   border-radius: 20px;
-  color: #888;
+  color: rgba(239,230,214,0.64);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -576,19 +576,19 @@ h2 {
 }
 
 .pill:hover {
-  border-color: #444;
-  color: #ccc;
+  border-color: rgba(239,230,214,0.28);
+  color: rgba(239,230,214,0.9);
 }
 
 .pill.selected {
-  background: rgba(110,231,168,0.1);
-  border-color: rgba(110,231,168,0.25);
-  color: #6ee7a8;
+  background: rgba(208,86,63,0.1);
+  border-color: rgba(208,86,63,0.25);
+  color: #D8624B;
 }
 
 .pulse-no-platforms {
   font-size: 13px;
-  color: #555;
+  color: rgba(239,230,214,0.4);
   font-style: italic;
 }
 
@@ -604,10 +604,10 @@ h2 {
 
 .time-select {
   padding: 12px 16px;
-  background: #1c1c1c;
-  border: 1px solid #252525;
+  background: #1F1917;
+  border: 1px solid rgba(239,230,214,0.1);
   border-radius: 8px;
-  color: #e8e8e8;
+  color: #EFE6D6;
   font-size: 15px;
   font-family: inherit;
   cursor: pointer;
@@ -617,20 +617,20 @@ h2 {
 }
 
 .time-select:focus {
-  border-color: #444;
+  border-color: rgba(239,230,214,0.28);
   outline: none;
 }
 
 .quiet-separator {
-  color: #555;
+  color: rgba(239,230,214,0.4);
   font-size: 14px;
 }
 
 .pulse-note {
   font-size: 12px;
-  color: #444;
+  color: rgba(239,230,214,0.28);
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid #1F1917;
   line-height: 1.5;
 }

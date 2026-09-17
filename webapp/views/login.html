@@ -9,27 +9,27 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
   <style>
     :root {
-      --text-primary: rgba(255,255,255,0.92);
-      --text-secondary: rgba(255,255,255,0.65);
-      --text-tertiary: rgba(255,255,255,0.40);
-      --bg-raised: rgba(25, 28, 40, 0.55);
-      --bg-input: #0b0c12;
-      --border-default: rgba(255,255,255,0.10);
-      --border-faint: rgba(255,255,255,0.06);
-      --accent: #6ee7a8;
-      --accent-dim: rgba(110,231,168,0.15);
-      --warn: #e7b76e;
+      --text-primary: rgba(239,230,214,0.92);
+      --text-secondary: rgba(239,230,214,0.65);
+      --text-tertiary: rgba(239,230,214,0.4);
+      --bg-raised: rgba(31,25,23,0.55);
+      --bg-input: #14100E;
+      --border-default: rgba(239,230,214,0.1);
+      --border-faint: rgba(239,230,214,0.06);
+      --accent: #D8624B;
+      --accent-dim: rgba(208,86,63,0.15);
+      --warn: #D0A652;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #040406; color: var(--text-primary);
+      background: #14100E; color: var(--text-primary);
       font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px;
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
       -webkit-font-smoothing: antialiased;
     }
     body::before {
       content: ""; position: fixed; inset: 0;
-      background: radial-gradient(560px 380px at 30% 10%, rgba(110,231,168,0.055), transparent 70%);
+      background: radial-gradient(560px 380px at 30% 10%, rgba(208,86,63,0.06), transparent 70%);
       pointer-events: none;
     }
     .box { width: min(360px, 90vw); position: relative; }
@@ -52,7 +52,7 @@
     input[type="password"]:focus { border-color: var(--accent-dim); }
     button {
       width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
-      background: var(--accent); color: #06241a; font-family: inherit; font-size: 14.5px;
+      background: var(--accent); color: #14100E; font-family: inherit; font-size: 14.5px;
       font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
     }
     button:hover { transform: translateY(-1px); }
@@ -61,7 +61,7 @@
   </style>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/logocircle.png">
-  <meta name="theme-color" content="#101115">
+  <meta name="theme-color" content="#1F1917">
 </head>
 <body>
   <div class="box">
