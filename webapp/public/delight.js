@@ -146,7 +146,7 @@ window.Delight = {
     // Valentine's Day (Feb 14)
     if (month === 1 && day === 14) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#EFE6D6"] };
     // Halloween (Oct 31)
-    if (month === 9 && day === 31) return { colors: ["#D8624B", "#D8624B", "#1F1917", "rgba(239,230,214,0.16)", "rgba(109,106,113,0.2)"] };
+    if (month === 9 && day === 31) return { colors: ["#D8624B", "#D8624B", "#1A1817", "rgba(239,230,214,0.16)", "rgba(109,106,113,0.2)"] };
     // 4th July
     if (month === 6 && day === 4) return { colors: ["#D8624B", "#EFE6D6", "#D8624B"] };
     // Diwali (~Nov)
@@ -261,7 +261,7 @@ window.Delight = {
         window.confetti({
           particleCount: 100,
           spread: 70,
-          colors: ["#D8624B", "#D8624B", "#1F1917", "#EFE6D6"],
+          colors: ["#D8624B", "#D8624B", "#1A1817", "#EFE6D6"],
           origin: { y: 0.6 },
           disableForReducedMotion: true,
         });

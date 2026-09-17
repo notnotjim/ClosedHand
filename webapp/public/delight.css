@@ -31,9 +31,9 @@
 }
 
 .delight-toast.success {
-  background: rgba(150,173,127,0.15);
-  border-color: rgba(150,173,127,0.3);
-  color: #96AD7F;
+  background: rgba(141,189,121,0.15);
+  border-color: rgba(141,189,121,0.3);
+  color: #8DBD79;
 }
 
 .delight-toast.error {
@@ -83,7 +83,7 @@
 }
 .int-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31,25,23,0.3);
+  box-shadow: 0 4px 12px rgba(26,24,23,0.3);
 }
 .int-card:hover img {
   transform: scale(1.05);
@@ -95,7 +95,7 @@
 }
 .plat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31,25,23,0.3);
+  box-shadow: 0 4px 12px rgba(26,24,23,0.3);
 }
 
 /* --- Connection Success Animation --- */
@@ -145,7 +145,7 @@
   top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1F1917;
+  background: #1A1817;
   color: #D8624B;
   font-size: 11px;
   font-weight: 600;
@@ -208,12 +208,12 @@ body.resistance-mode .int-badge {
 }
 
 body.resistance-mode .plat-card.connected {
-  border-color: #1F1917;
-  background: #1F1917;
+  border-color: #1A1817;
+  background: #1A1817;
 }
 
 body.resistance-mode .int-card.connected {
-  border-color: #1F1917;
+  border-color: #1A1817;
 }
 
 body.resistance-mode .delight-toast.success {

@@ -14,15 +14,15 @@
       --text-primary: rgba(239,230,214,0.92);
       --text-secondary: rgba(239,230,214,0.65);
       --text-tertiary: rgba(239,230,214,0.4);
-      --bg-raised: rgba(31,25,23,0.55);
-      --bg-input: #1F1917;
+      --bg-raised: rgba(26,24,23,0.55);
+      --bg-input: #1A1817;
       --border-default: rgba(239,230,214,0.1);
       --border-faint: rgba(239,230,214,0.06);
       --accent: #D8624B;
       --action: #D0563F;
-      --done: #96AD7F;
-      --done-dim: rgba(150,173,127,0.45);
-      --done-faint: rgba(150,173,127,0.12);
+      --done: #8DBD79;
+      --done-dim: rgba(141,189,121,0.45);
+      --done-faint: rgba(141,189,121,0.12);
       --accent-dim: rgba(208,86,63,0.15);
       --accent-faint: rgba(208,86,63,0.07);
       --warn: #D0A652;
@@ -35,7 +35,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: #14100E;
+      background: #100E0D;
       color: var(--text-primary);
       font-family: var(--font-body);
       font-size: 15px;
@@ -116,10 +116,10 @@
     .ready p { color: var(--text-secondary); max-width: 52ch; margin-bottom: 18px; }
     .ready .go, .finish .go, .done-screen .go {
       display: inline-block; padding: 11px 22px; border-radius: 10px;
-      background: var(--action); color: #14100E; font-weight: 600; font-size: 14px;
+      background: var(--action); color: #100E0D; font-weight: 600; font-size: 14px;
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(150,173,127,0.25); }
+    .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(141,189,121,0.25); }
     .g-tabs { margin: -2px 0 12px; }
 
     ol.spine { list-style: none; }
@@ -142,15 +142,15 @@
     }
     .step:first-child .rail::before { top: 14px; }
     .step:last-child .rail::before { bottom: auto; height: 14px; }
-    .step.is-done .rail::before { background: linear-gradient(to bottom, var(--done), rgba(150,173,127,0.25)); }
+    .step.is-done .rail::before { background: linear-gradient(to bottom, var(--done), rgba(141,189,121,0.25)); }
     .node {
       position: absolute; top: 10px; left: 9px;
       width: 9px; height: 9px; border-radius: 50%;
-      border: 1.5px solid rgba(239,230,214,0.25); background: #14100E;
+      border: 1.5px solid rgba(239,230,214,0.25); background: #100E0D;
       transition: all 0.3s ease;
     }
     .step.is-next .node { border-color: var(--text-primary); }
-    .step.is-done .node { background: var(--done); border-color: var(--done); box-shadow: 0 0 10px rgba(150,173,127,0.6); }
+    .step.is-done .node { background: var(--done); border-color: var(--done); box-shadow: 0 0 10px rgba(141,189,121,0.6); }
     .step.just-done .node { animation: detected 1.1s ease-out; }
     @keyframes detected {
       0%   { box-shadow: 0 0 0 0 rgba(208,86,63,0.55); }
@@ -172,7 +172,7 @@
       transition: border-color 0.3s ease, box-shadow 0.3s ease;
       overflow: hidden;
     }
-    .step.is-next .card { border-color: rgba(208,86,63,0.28); box-shadow: 0 0 0 1px rgba(208,86,63,0.08), 0 12px 40px rgba(31,25,23,0.35); }
+    .step.is-next .card { border-color: rgba(208,86,63,0.28); box-shadow: 0 0 0 1px rgba(208,86,63,0.08), 0 12px 40px rgba(26,24,23,0.35); }
     .step.is-done .card { background: transparent; }
     .step.just-done .card { animation: cardflash 1.1s ease-out; }
     @keyframes cardflash {
@@ -225,7 +225,7 @@
     .field input:focus, .field select:focus { border-color: var(--accent-dim); }
     .save-btn {
       padding: 9px 20px; border: none; border-radius: 9px; margin: 4px 0 6px;
-      background: var(--action); color: #14100E; font-family: inherit; font-size: 13.5px;
+      background: var(--action); color: #100E0D; font-family: inherit; font-size: 13.5px;
       font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
     }
     .save-btn:hover { transform: translateY(-1px); }
@@ -268,7 +268,7 @@
     .g-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); }
     .g-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(239,230,214,0.14); margin-left: 6px; }
     .g-dots span.on { background: var(--done); }
-    .g-dots span.done { background: rgba(150,173,127,0.45); }
+    .g-dots span.done { background: rgba(141,189,121,0.45); }
     .g-step { display: none; }
     .g-step.is-on { display: block; }
     .g-step h3 { font-size: 15px; margin: 0 0 6px; }
@@ -280,11 +280,11 @@
     .deep:hover { background: var(--accent-dim); text-decoration: none; }
     .deep.is-locked { pointer-events: none; opacity: 0.35; }
     .note.warn { border-left-color: var(--warn); color: var(--text-secondary); }
-    .code { position: relative; margin: 0 0 12px; background: #14100E; border: 1px solid rgba(239,230,214,0.06); border-radius: 10px; }
+    .code { position: relative; margin: 0 0 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.06); border-radius: 10px; }
     .code pre { padding: 11px 84px 11px 14px; overflow-x: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--text-secondary); margin: 0; }
     .copy { position: absolute; top: 7px; right: 7px; padding: 3px 10px; font-family: inherit; font-size: 11.5px; color: var(--text-tertiary); background: rgba(239,230,214,0.04); border: 1px solid rgba(239,230,214,0.06); border-radius: 7px; cursor: pointer; }
     .copy.did { color: var(--done); border-color: var(--done-dim); }
-    .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #1F1917; border: 1px solid rgba(239,230,214,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
+    .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #1A1817; border: 1px solid rgba(239,230,214,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
     .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
     /* The end of the spine, where the eye is when the last step lands. */
     .finish { margin: 26px 0 0; padding: 26px 28px; border: 1px solid var(--accent-dim); border-radius: 16px;
@@ -302,11 +302,11 @@
     .peek { display: inline-flex; flex-direction: column; gap: 4px; vertical-align: top; margin: 4px 0 12px; text-decoration: none; color: var(--text-tertiary); font-size: 12px; }
     .peek img { width: 168px; border-radius: 8px; border: 1px solid rgba(239,230,214,0.12); cursor: zoom-in; display: block; }
     .peek:hover img { border-color: rgba(239,230,214,0.3); }
-    .lightbox { position: fixed; inset: 0; background: rgba(20,16,14,0.86); display: flex; align-items: center; justify-content: center; z-index: 60; cursor: zoom-out; }
-    .lightbox img { max-width: 92vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 24px 80px rgba(20,16,14,0.6); }
+    .lightbox { position: fixed; inset: 0; background: rgba(16,14,13,0.86); display: flex; align-items: center; justify-content: center; z-index: 60; cursor: zoom-out; }
+    .lightbox img { max-width: 92vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 24px 80px rgba(16,14,13,0.6); }
     .g-nav .cta:disabled { opacity: 0.4; cursor: default; }
     .fb-block .cta { margin-top: 8px; }
-    .fb-done { font-size: 11px; color: #96AD7F; border: 1px solid rgba(150,173,127,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+    .fb-done { font-size: 11px; color: #8DBD79; border: 1px solid rgba(141,189,121,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
     .skip:hover { color: var(--text-secondary); }
     .manual-link {
       display: block; background: none; border: none; cursor: pointer; font-family: inherit;
@@ -347,7 +347,7 @@
   <link rel="stylesheet" href="/interface.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/logocircle.png">
-  <meta name="theme-color" content="#1F1917">
+  <meta name="theme-color" content="#1A1817">
   <link rel="stylesheet" href="/model-settings.css">
   <script src="/model-settings.js"></script>
 </head>

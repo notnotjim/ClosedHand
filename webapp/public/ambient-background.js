@@ -2,12 +2,12 @@ function initAmbientBackground() {
   var container = document.getElementById("ambient-bg");
   if (!container) return;
 
-  // The same clouds in the palette's hues: madder, ochre, moss, and slate kept dim.
+  // The same clouds: one madder, one moss, two cool slate, so the black stays black.
   var spectrumColors = [
     { h: 11, s: 55, l: 30 },
-    { h: 40, s: 50, l: 28 },
-    { h: 85, s: 30, l: 26 },
-    { h: 260, s: 12, l: 24 }
+    { h: 250, s: 22, l: 26 },
+    { h: 105, s: 32, l: 26 },
+    { h: 230, s: 20, l: 24 }
   ];
 
   var cloudBlobs = [
@@ -25,7 +25,7 @@ function initAmbientBackground() {
       size: 1.5 + (i % 4) * 0.5,
       baseOpacity: 0.4 + (i % 3) * 0.2,
       twinkleSpeed: 0.1 + (i % 5) * 0.05,
-      hue: 30 + (i % 6) * 10
+      hue: 200 + (i % 6) * 10
     });
   }
 
@@ -38,7 +38,7 @@ function initAmbientBackground() {
       size: 20 + i * 5,
       baseOpacity: 0.5 + i * 0.1,
       driftSpeed: 0.3 + i * 0.15,
-      hue: 20 + i * 15,
+      hue: 220 + i * 15,
       driftDirection: (i * Math.PI) / 2
     });
   }
@@ -52,7 +52,7 @@ function initAmbientBackground() {
       size: i === 2 ? 37 : i === 1 ? 20 : 35,
       baseOpacity: 0.25 + i * 0.15,
       rotationSpeed: 0.02 + i * 0.01,
-      hue: 40 + i * 20
+      hue: 240 + i * 20
     });
   }
 
@@ -86,7 +86,7 @@ function initAmbientBackground() {
       }
     } else if (el.type === "galaxy") {
       if (el.id === "galaxy-2") {
-        div.style.background = "radial-gradient(ellipse at 30% 40%, hsl(11,60%,45%) 0%, hsl(20,55%,38%) 15%, hsl(35,50%,32%) 30%, hsla(40,45%,24%,0.8) 45%, hsla(85,30%,15%,0.4) 60%, transparent 75%)";
+        div.style.background = "radial-gradient(ellipse at 30% 40%, hsl(11,60%,45%) 0%, hsl(15,50%,36%) 15%, hsl(250,25%,28%) 30%, hsla(240,25%,22%,0.8) 45%, hsla(105,30%,15%,0.4) 60%, transparent 75%)";
         div.style.borderRadius = "35% 65% 45% 55% / 60% 40% 70% 30%";
       } else {
         div.style.background = "radial-gradient(ellipse, hsl(" + el.hue + ",70%,40%) 0%, hsl(" + (el.hue + 30) + ",60%,30%) 40%, hsl(" + el.hue + ",50%,20%) 70%, transparent 100%)";
@@ -154,7 +154,7 @@ function initAmbientBackground() {
         var pPulse = el.baseOpacity + (el.baseOpacity * pAmp) * Math.sin(baseTime * el.driftSpeed * (6 + pid * 2) * sm);
         var fOp = Math.max(0.4, pPulse) * maxBr;
 
-        var glowColor = pid === 0 ? "208,86,63" : pid === 1 ? "208,166,82" : "150,173,127";
+        var glowColor = pid === 0 ? "208,86,63" : pid === 1 ? "208,166,82" : "141,189,121";
         div.style.opacity = fOp;
         div.style.transform = "translate(calc(-50% + " + pdx + "px), calc(-50% + " + pdy + "px)) rotate(" + pRot + "deg) scale(" + pScale + ")";
         div.style.boxShadow = "0 0 " + (el.size * 0.8) + "px " + (el.size * 0.3) + "px rgba(" + glowColor + ", 0.4)";
