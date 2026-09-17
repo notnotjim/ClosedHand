@@ -17,7 +17,7 @@
 body { font-family: var(--font-ui); font-size: var(--ui-body); }
 button, input, textarea, select { font-family: var(--font-ui); }
 .ch-brand { display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--ui-text); text-decoration: none; white-space: nowrap; }
-.ch-brand > img { display: block; width: 28px; height: 28px; margin: 0; opacity: 1; filter: brightness(0) invert(1); flex: none; }
+.ch-brand > img { display: block; width: 28px; height: 28px; margin: 0; opacity: 1; flex: none; }
 .ch-brand > span { display: inline; font-family: var(--font-brand); font-size: 24px; font-weight: 500; font-style: normal; line-height: 1; letter-spacing: -0.02em; font-variation-settings: 'opsz' 48, 'SOFT' 30; color: inherit; }
 .ch-brand:focus-visible { outline: 2px solid #D8624B; outline-offset: 5px; border-radius: 3px; }
 .ch-brand:hover { color: #EFE6D6; }

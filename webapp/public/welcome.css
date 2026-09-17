@@ -40,7 +40,7 @@ dialog.done-screen::backdrop { background: #1A1817; }
 .tour-panel::before { content: ''; position: absolute; top: -6px; left: calc(var(--tour-pointer, 30px) - 6px); width: 12px; height: 12px; transform: rotate(45deg); background: inherit; }
 .tour-panel:popover-open { animation: ch-arrive 160ms ease-out; }
 .tour-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #EFE6D6; font-size: var(--ui-small); }
-.tour-top > img { width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: .8; }
+.tour-top > img { width: 18px; height: 18px; opacity: .8; }
 .tour-top > span { flex: 1; }
 .tour-panel .tour-close { display: grid; place-items: center; background: transparent; border: 0; width: 28px; height: 28px; padding: 0; color: #EFE6D6; cursor: pointer; }
 .tour-panel p { margin: 0; font: inherit; }
