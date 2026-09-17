@@ -862,7 +862,8 @@
      area and the same centred 900px column, so bubbles line up with the box. */
   @media (min-width: 900px) {
     .activity-sidebar.active ~ .chat-messages {
-      margin: 0 0 0 var(--sidebar-width);
+      margin-left: var(--sidebar-width);
+      margin-right: 0;
       width: auto;
       max-width: none;
       /* Percent padding resolves against the parent's width, so the sidebar
@@ -1179,7 +1180,7 @@
     .docked-input:focus-within textarea { min-height: 70px !important; }
     .docked-input:focus-within .input-box-wrap { border-color: rgba(208,86,63,0.3) !important; box-shadow: 0 0 20px rgba(208,86,63,0.08), 0 0 40px rgba(208,86,63,0.04) !important; }
     .docked-input:focus-within .input-box { background: rgba(26,24,23,0.65) !important; }
-    body.chat-active .chat-messages { padding-bottom: 280px !important; }
+    body.chat-active .chat-messages { padding-bottom: 24px !important; }
     body.chat-active { overflow: hidden; height: 100dvh; }
     body.chat-active .page { height: 100dvh !important; }
     /* Fade gradient above the fixed chatbox */
@@ -1725,13 +1726,13 @@
   .computers-view.active .mon-area { opacity:1 !important; animation:none !important; }
   body.chat-active .page-tabs { display:none; }
   body.chat-active .computers-view { display:none !important; }
+  /* The list is exactly the space between its top and the floating input's
+     top edge. --list-h is measured by the page and follows the box as it
+     grows on focus and shrinks again. */
   body.chat-active .chat-messages.active {
-    max-height: calc(100dvh / 0.8 - 280px);
-    transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1);
-  }
-  body.chat-active .docked-input:focus-within ~ .chat-messages.active,
-  body.chat-active:has(.docked-input:focus-within) .chat-messages.active {
-    max-height: calc(100dvh / 0.8 - 370px);
+    height: var(--list-h, calc(100dvh - 380px));
+    max-height: var(--list-h, calc(100dvh - 380px));
+    transition: height 0.25s ease, max-height 0.25s ease;
   }
   body.chat-active .docked-input.active {
     position: fixed;
@@ -1741,9 +1742,14 @@
     z-index: 10;
     padding: 0 20px;
   }
-  /* The input floats over the list, so the list ends with room for it:
-     the last message scrolls clear of the box instead of behind it. */
-  body.chat-active .chat-messages { padding-bottom: 300px; }
+  /* The input floats over the list. The list ends at the input's top edge
+     and its bottom is masked, so the thread fades out before it reaches the
+     box and never shows through it. */
+  body.chat-active .chat-messages {
+    padding-bottom: 24px;
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 72px), transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 72px), transparent 100%);
+  }
   @media (max-width: 899px) {
     body.chat-active .docked-input.active {
       left: 0;
@@ -3023,6 +3029,25 @@
 <!-- Keep the mobile hero within the visible viewport. -->
 <script>
 (function() {
+  // The floating input's height changes as the box grows and shrinks; the
+  // message list ends where the box begins, so it is told the current height.
+  (function trackDock() {
+    var dock = document.querySelector('.docked-input');
+    if (!dock) return;
+    var set = function() {
+      if (!dock.classList.contains('active')) return;
+      var r = dock.getBoundingClientRect();
+      var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+      var list = document.getElementById('chatMessages');
+      var top = list ? list.getBoundingClientRect().top : 0;
+      document.documentElement.style.setProperty('--dock-h', Math.max(0, Math.round(vh - r.top)) + 'px');
+      document.documentElement.style.setProperty('--list-h', Math.max(120, Math.round(r.top - top)) + 'px');
+    };
+    new ResizeObserver(set).observe(dock);
+    window.addEventListener('resize', set);
+    new MutationObserver(set).observe(dock, { attributes: true, attributeFilter: ['class'] });
+  })();
+
   function fitMobileHero() {
     var hero = document.getElementById('heroSection');
     var pageTabs = document.getElementById('pageTabs');
