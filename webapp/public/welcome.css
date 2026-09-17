@@ -9,8 +9,8 @@
 .ch-welcome-message { background: #1A1817; border: 1px solid rgba(239,230,214,0.16); border-radius: 12px 12px 12px 3px; padding: 20px 24px; font-size: var(--ui-body); line-height: 1.6; white-space: pre-line; text-wrap: pretty; }
 .ch-welcome-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; }
 .ch-welcome a, .ch-welcome button { font: 500 var(--ui-label)/1.4 var(--font-ui); cursor: pointer; }
-.ch-welcome-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 10px 16px; border: 0; border-radius: 8px; background: #D0563F; color: rgba(141,189,121,0.18); text-decoration: none; }
-.ch-welcome-primary:hover { background: #D0563F; }
+.ch-welcome-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 10px 16px; border: 0; border-radius: 8px; background: #D0563F; color: #100E0D; font-weight: 600; text-decoration: none; }
+.ch-welcome-primary:hover { background: #D8624B; }
 .ch-welcome-secondary { background: none; border: 0; padding: 10px 0; min-height: 40px; color: var(--ui-muted); text-decoration: underline; text-underline-offset: 4px; }
 .ch-welcome-secondary:hover { color: var(--ui-text); }
 .ch-welcome-status { margin: 12px 0 0; font-size: var(--ui-small); line-height: 1.5; color: var(--ui-muted); }

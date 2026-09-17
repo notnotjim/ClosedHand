@@ -864,7 +864,7 @@
     var showForm = true;
     // "Recall" is the feature (finding your mail and files by meaning);
     // "RAM" is the hardware. The old copy called both "memory".
-    var what = "ClosedHand recalls by meaning, not just keywords. That uses a separate small model, which runs on this computer with your current setup.";
+    var what = "ClosedHand recalls by meaning, not just keywords. That uses a separate small model which runs locally inside ClosedHand.";
     if (modelDone && state.memoryMode === "local") {
       showMemoryPanel = true;
       title = "Recall runs on this machine.";
@@ -875,7 +875,7 @@
       } else if (emb && emb.state === "error") {
         lead = what + " The download hit an error (" + (emb.error || "unknown") + "). It retries on the next sync; nothing is lost.";
       } else if (emb && emb.state === "ready") {
-        lead = what + " The model is in place and recall runs privately here.";
+        lead = what;
       } else {
         lead = what + " It downloads (" + size + ", once only) when the first sync starts.";
       }
@@ -962,7 +962,25 @@
       fin.hidden = true;
     }
     lastAllDone = allDone;
+    if (firstLoad) openFromHash();
     firstLoad = false;
+  }
+
+  // A dashboard card sends people here to set up one app: /setup#step-chat=telegram
+  // (or =whatsapp). Open that step even when it reads Done, unfold the named app,
+  // and bring it into view. A bare #step-<key> opens the step only.
+  function openFromHash() {
+    var m = (window.location.hash || "").match(/^#step-([a-z_]+)(?:=([a-z]+))?$/);
+    if (!m) return;
+    var li = document.getElementById("step-" + m[1]);
+    if (!li) return;
+    li.classList.add("is-open");
+    $(".card-head", li).setAttribute("aria-expanded", "true");
+    if (m[1] === "chat" && m[2]) {
+      var which = /^(tg|telegram)$/.test(m[2]) ? "tg" : /^(wa|whatsapp)$/.test(m[2]) ? "wa" : null;
+      if (which) { _chooserAuto = true; openChooser(which); }
+    }
+    setTimeout(function () { li.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
   }
 
   function poll() {
