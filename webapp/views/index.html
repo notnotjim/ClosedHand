@@ -204,15 +204,33 @@
     45% { color: #EFE6D6; }
     100% { letter-spacing: -0.02em; color: #D8624B; }
   }
-  .hero-stance {
-    margin: -8px auto 28px;
-    font-size: clamp(12px, 1.3vw, 14px);
-    line-height: 1.5;
-    text-align: center;
-    white-space: nowrap;
-    color: #B6AFA4;
+  /* The extra, written in after the fact: a proofreader's caret between
+     "life" and the full stop, with "and your personal data" above it. */
+  /* The insert box has no height and sits on the baseline, so the caret
+     hangs just under it and the note floats clear of the ascenders. */
+  .hero-heading .insert { position: relative; display: inline-block; width: 0.2em; }
+  .hero-heading .caret {
+    position: absolute; left: 50%; top: 0.04em;
+    transform: translateX(-50%);
+    font-size: 0.42em; font-weight: 600; line-height: 1; color: #D8624B;
     opacity: 0;
-    animation: heroIn 0.8s ease forwards 0.7s;
+    animation: heroIn 0.3s ease forwards 2.5s;
+  }
+  .hero-heading .hero-note {
+    position: absolute; left: 50%; bottom: 1.04em;
+    --note-x: -12%;
+    transform: translateX(var(--note-x)) rotate(-3deg);
+    white-space: nowrap;
+    font-size: 0.34em; font-style: italic; font-weight: 400;
+    font-variation-settings: 'opsz' 40, 'SOFT' 100;
+    letter-spacing: 0; line-height: 1;
+    color: #D8624B;
+    opacity: 0;
+    animation: noteIn 0.5s ease forwards 2.7s;
+  }
+  @keyframes noteIn {
+    from { opacity: 0; transform: translateX(var(--note-x)) rotate(-3deg) translateY(6px); }
+    to { opacity: 1; transform: translateX(var(--note-x)) rotate(-3deg) translateY(0); }
   }
   .claw-swap {
     position: relative;
@@ -1153,7 +1171,7 @@
     .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
     .hero-heading { font-size: clamp(30px, 8vw, 46px); letter-spacing: -1px; margin-bottom: 8px; white-space: normal; }
     .hero-heading-sub { font-size: clamp(13px, 3.4vw, 16px); gap: 6px; margin-bottom: 18px; white-space: normal; max-width: 34ch; }
-    .hero-stance { font-size: 12px; margin: -4px auto 20px; white-space: normal; max-width: 36ch; }
+    .hero-heading .hero-note { --note-x: -70%; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
     .input-box-wrap { max-width: 100%; }
@@ -2110,9 +2128,8 @@
   <!-- HERO STATE: heading + brand + big input + suggestions, all centered -->
   <div class="hero-area" id="heroSection">
     <div style="flex:1;max-flex:1;"></div>
-    <div class="hero-heading">Keep a <span class="grip">grip</span> on your personal data.</div>
-    <div class="hero-heading-sub">Speak with all of your apps together, to stay on top of things.</div>
-    <p class="hero-stance">It runs on your computer, so no company gets between you and your own life.</p>
+    <div class="hero-heading">Keep a <span class="grip">grip</span> on your life<span class="insert"><span class="caret" aria-hidden="true">^</span><span class="hero-note">and your personal data</span></span>.</div>
+    <div class="hero-heading-sub">Speak with all of your apps in one chat and hand over the legwork.</div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2176,7 +2193,7 @@
     <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.json,.md,.html,.xml,.js,.py,.ts,.css,.sql,.sh,.yaml,.yml,.log,.doc,.docx,.xls,.xlsx,.pptx,.ogg,.mp3,.wav,.mp4,.mov,.avi,.webm,.m4a,.aac,.flac,.zip,.tar,.gz,.rtf,.epub">
 
     <div class="hero-footer">
-      <span>ClosedHand runs on your computer. Requests use the AI provider you choose.</span>
+      <span>Runs on your computer with no company in between. Requests use the AI provider you choose.</span>
     </div>
 
     <div style="flex:0.5"></div>
