@@ -281,6 +281,46 @@
       color: #D8624B;
     }
 
+    /* The standing invitation at the end of the integrations row. It points
+       at the add box below, which is where every new connection starts. */
+    .dashboard-container .int-card.int-more {
+      padding: 14px 20px; /* two lines of text at the neighbours' height */
+      background: transparent;
+      border-style: dashed;
+      border-color: rgba(239,230,214,0.22);
+      color: #B6AFA4;
+    }
+    .int-card.int-more:hover {
+      border-color: rgba(208,86,63,0.55);
+      background: rgba(208,86,63,0.06);
+      color: #EFE6D6;
+    }
+    .int-card.int-more .int-more-plus {
+      width: 28px; height: 28px; flex: none;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      border: 1px solid rgba(239,230,214,0.22);
+      color: #D8624B;
+      font-size: 18px; line-height: 1;
+      transition: transform 0.2s, border-color 0.15s;
+    }
+    .int-card.int-more:hover .int-more-plus { transform: rotate(90deg); border-color: rgba(208,86,63,0.55); }
+    .int-card.int-more .int-more-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .int-card.int-more .int-name { color: inherit; }
+    .int-card.int-more .int-more-sub { font-size: 12px; color: #B6AFA4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .int-card.int-more .int-more-arrow { margin-left: auto; color: #D8624B; opacity: 0; transform: translateY(-4px); transition: opacity 0.2s, transform 0.2s; }
+    .int-card.int-more:hover .int-more-arrow { opacity: 1; transform: translateY(0); }
+    /* Beckon: the add box answers the card. The border spins up, the logos
+       wake, and the box takes focus. */
+    .mcp-pill.beckon::before {
+      background: conic-gradient(from 0deg, transparent, rgba(208,86,63,0.9), transparent, rgba(208,86,63,0.5), transparent) !important;
+      animation-duration: 2.4s !important;
+    }
+    .mcp-pill.beckon .mcp-pill-inner { box-shadow: 0 0 0 1px rgba(208,86,63,0.35), 0 0 32px rgba(208,86,63,0.18); }
+    .mcp-hero.beckon .mcp-logo-item { opacity: 0.85; }
+    @keyframes bridge-beckon { 0%, 100% { box-shadow: none; } 40% { box-shadow: 0 0 0 1px rgba(208,86,63,0.5), 0 0 24px rgba(208,86,63,0.2); } }
+    .bridge-beckon { animation: bridge-beckon 1.6s ease 1; }
+
     /* Integration card wrapper (card + unfurl in one grid cell) */
     .int-wrap {
       display: flex;
@@ -3010,10 +3050,15 @@
         window._disconnectedServices = [];
       }
 
-      // Also check bridge status before hiding Connected section
-      var bridgeCard = document.getElementById('bridge-connected-card');
-      var hasBridge = bridgeCard && bridgeCard.style.display !== 'none' && bridgeCard.innerHTML;
-      connectedSection.style.display = (hasConnected || hasBridge) ? '' : 'none';
+      // The row always ends with the way to add more, and the section always
+      // shows, so a new dashboard says where connections come from.
+      connectedGrid.insertAdjacentHTML('beforeend',
+        '<div class="int-card int-more" role="button" tabindex="0" onclick="beckonAddBox()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();beckonAddBox();}">' +
+          '<span class="int-more-plus" aria-hidden="true">+</span>' +
+          '<span class="int-more-text"><span class="int-name">Connect more</span><span class="int-more-sub">Any app with a link, plus skills</span></span>' +
+          '<span class="int-more-arrow" aria-hidden="true">&#8595;</span>' +
+        '</div>');
+      connectedSection.style.display = '';
 
       // Cache platforms for tab-switch re-render
       window._platformsCache = data.platforms;
@@ -7455,6 +7500,28 @@
       } catch (e) { showToast('Failed to delete', true); }
     }
 
+    // Bring the add box into view and make it answer: border spins up, the
+    // logos wake, the box takes focus. Used by the Connect more card, and by
+    // the chat's Connect a service and Install a skill.
+    window.beckonAddBox = function() {
+      var pill = document.querySelector('#mcp-section .mcp-pill');
+      var hero = document.querySelector('#mcp-section .mcp-hero');
+      var input = document.getElementById('mcp-url-input');
+      if (!pill) return;
+      pill.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pill.classList.add('beckon');
+      if (hero) hero.classList.add('beckon');
+      setTimeout(function() { if (input) input.focus({ preventScroll: true }); }, 450);
+      clearTimeout(window._beckonTimer);
+      window._beckonTimer = setTimeout(function() { pill.classList.remove('beckon'); if (hero) hero.classList.remove('beckon'); }, 2600);
+    };
+    window.beckonBridge = function() {
+      var card = document.querySelector('#bridge-connected-card .int-card, #bridge-standalone-card > *');
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.remove('bridge-beckon'); void card.offsetWidth; card.classList.add('bridge-beckon');
+    };
+
     // Deep-link: switch to tab from URL hash (e.g. #schedules, #settings)
     const hashTab = window.location.hash.replace('#', '');
     // #agents is what links say now. #workers still resolves, because it is in
@@ -7464,6 +7531,13 @@
       const resolved = (h === 'workers' || h === 'agents' || h === 'schedules') ? 'automations' : h;
       if (['connections', 'automations', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
+      } else if (resolved === 'connect' || resolved === 'skills') {
+        // Both start at the add box: it takes a connection or a skill link.
+        switchTab('connections');
+        setTimeout(window.beckonAddBox, 150);
+      } else if (resolved === 'bridge') {
+        switchTab('connections');
+        setTimeout(window.beckonBridge, 150);
       }
     }
     resolveAndSwitchFromHash();
