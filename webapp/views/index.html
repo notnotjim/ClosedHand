@@ -80,14 +80,14 @@
     color: rgba(239,230,214,0.5); text-decoration: none;
     transition: all 0.2s;
   }
-  .back-arrow:hover { background: rgba(239,230,214,0.06); color: rgba(239,230,214,0.8); }
+  .back-arrow:hover { background: rgba(239,230,214,0.06); color: #B8AC9A; }
   .header-center {
     display: flex;
     align-items: center;
   }
   .header-center .auth-row {
     font-size: 14px;
-    color: rgba(239,230,214,0.4);
+    color: rgba(239,230,214,0.5);
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -122,7 +122,7 @@
     text-decoration: none;
     transition: color 0.2s;
   }
-  .header-right a:hover { color: rgba(239,230,214,0.75); }
+  .header-right a:hover { color: #B8AC9A; }
   .header-right a#dashboardLink {
     padding: 6px 14px;
     border: 1px solid rgba(208,86,63,0.2);
@@ -148,9 +148,9 @@
     background: rgba(239,230,214,0.02);
     border-bottom: 1px solid rgba(239,230,214,0.04);
     font-size: 12px;
-    color: rgba(239,230,214,0.4);
+    color: rgba(239,230,214,0.5);
   }
-  .auth-banner a { color: rgba(239,230,214,0.6); text-decoration: none; font-weight: 500; }
+  .auth-banner a { color: #B8AC9A; text-decoration: none; font-weight: 500; }
 
   /* Sign-in floating card */
   /* Sign-in modal: centered overlay with a dim backdrop so it never overlaps the panels */
@@ -333,7 +333,7 @@
     background: none;
     border: none;
     outline: none;
-    color: rgba(239,230,214,0.88);
+    color: #EFE6D6;
     font-family: 'IBM Plex Sans', sans-serif;
     font-size: 18px;
     font-weight: 300;
@@ -354,7 +354,7 @@
     min-height: 120px;
   }
   .input-textarea-wrap textarea::placeholder {
-    color: rgba(239,230,214,0.4);
+    color: rgba(239,230,214,0.5);
     font-weight: 300;
   }
 
@@ -383,7 +383,7 @@
   }
   .toolbar-btn:hover {
     background: rgba(239,230,214,0.15);
-    color: rgba(239,230,214,0.75);
+    color: #B8AC9A;
   }
   .toolbar-btn svg {
     width: 17px; height: 17px;
@@ -398,7 +398,7 @@
     min-width: 240px; background: rgba(31,25,23,0.97);
     border: 1px solid rgba(239,230,214,0.15); border-radius: 14px;
     backdrop-filter: blur(24px); padding: 6px; z-index: 200;
-    box-shadow: 0 8px 32px rgba(20,16,14,0.5);
+    box-shadow: 0 8px 32px rgba(31,25,23,0.5);
     animation: dropIn 0.15s ease;
   }
   .plus-dropdown.open { display: block; }
@@ -408,11 +408,11 @@
   }
   .plus-dropdown-item {
     display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-    border-radius: 10px; color: rgba(239,230,214,0.7); font-family: 'IBM Plex Sans', sans-serif;
+    border-radius: 10px; color: #B8AC9A; font-family: 'IBM Plex Sans', sans-serif;
     font-size: 14px; cursor: pointer; transition: all 0.15s; text-decoration: none;
     border: none; background: none; width: 100%;
   }
-  .plus-dropdown-item:hover { background: rgba(239,230,214,0.08); color: rgba(239,230,214,0.95); }
+  .plus-dropdown-item:hover { background: rgba(239,230,214,0.08); color: #EFE6D6; }
   .plus-dropdown-item svg {
     width: 16px; height: 16px; stroke: currentColor; fill: none;
     stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
@@ -426,7 +426,7 @@
     border-radius: 12px;
     background: rgba(239,230,214,0.08);
     border: 1px solid rgba(239,230,214,0.12);
-    color: rgba(239,230,214,0.45);
+    color: rgba(239,230,214,0.5);
     font-family: 'IBM Plex Sans', sans-serif;
     font-size: 15px;
     font-weight: 400;
@@ -435,7 +435,7 @@
   }
   .send-btn.active {
     background: rgba(239,230,214,0.18);
-    color: rgba(239,230,214,0.9);
+    color: #EFE6D6;
     cursor: pointer;
     border-color: rgba(239,230,214,0.22);
   }
@@ -464,13 +464,13 @@
   .cat-pill {
     padding: 8px 16px; background: rgba(239,230,214,0.04);
     border: 1px solid rgba(239,230,214,0.08); border-radius: 12px;
-    color: rgba(239,230,214,0.45); font-family: 'IBM Plex Sans', sans-serif;
+    color: rgba(239,230,214,0.5); font-family: 'IBM Plex Sans', sans-serif;
     font-size: 13px; cursor: pointer; transition: all 0.2s;
     display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;
     min-height: 44px;
   }
-  .cat-pill:hover { background: rgba(239,230,214,0.08); color: rgba(239,230,214,0.75); border-color: rgba(239,230,214,0.15); }
-  .cat-pill.active { background: rgba(239,230,214,0.1); color: rgba(239,230,214,0.85); border-color: rgba(239,230,214,0.2); }
+  .cat-pill:hover { background: rgba(239,230,214,0.08); color: #B8AC9A; border-color: rgba(239,230,214,0.15); }
+  .cat-pill.active { background: rgba(239,230,214,0.1); color: #EFE6D6; border-color: rgba(239,230,214,0.2); }
   .cat-pill svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .cat-prompts {
     display: none; flex-wrap: nowrap; gap: 6px; justify-content: flex-start;
@@ -482,11 +482,11 @@
   .cat-prompts.open { display: flex; max-height: 60px; opacity: 1; margin-top: 4px; }
   .suggestion-btn {
     padding: 8px 16px; background: none; border: none; border-left: 2px solid rgba(239,230,214,0.06);
-    color: rgba(239,230,214,0.35); font-family: 'IBM Plex Sans', sans-serif;
+    color: rgba(239,230,214,0.5); font-family: 'IBM Plex Sans', sans-serif;
     font-size: 13px; cursor: pointer; transition: all 0.2s; text-align: left;
     white-space: nowrap; flex-shrink: 0; min-height: 44px;
   }
-  .suggestion-btn:hover { color: rgba(239,230,214,0.8); border-left-color: rgba(208,86,63,0.5); }
+  .suggestion-btn:hover { color: #B8AC9A; border-left-color: rgba(208,86,63,0.5); }
 
   /* Chat using wrap: toggle morphs into icons */
   .chat-using-wrap {
@@ -539,7 +539,7 @@
     border-radius: 6px;
     background: none;
     border: 1px solid rgba(239,230,214,0.1);
-    color: rgba(239,230,214,0.35);
+    color: rgba(239,230,214,0.5);
     cursor: pointer;
     transition: all 0.2s;
     padding: 0;
@@ -547,7 +547,7 @@
   }
   .send-via-close:hover {
     background: rgba(239,230,214,0.08);
-    color: rgba(239,230,214,0.6);
+    color: #B8AC9A;
   }
   .docked-input .send-via-close { display: none; }
   .send-via a {
@@ -566,11 +566,11 @@
   .via-tooltip {
     position: fixed;
     padding: 3px 10px;
-    background: rgba(20,16,14,0.95);
+    background: rgba(31,25,23,0.95);
     border: 1px solid rgba(239,230,214,0.12);
     border-radius: 6px;
     font-size: 11px;
-    color: rgba(239,230,214,0.7);
+    color: #B8AC9A;
     white-space: nowrap;
     pointer-events: none;
     z-index: 9999;
@@ -588,7 +588,7 @@
     font-size: 9px; font-style: italic; font-family: var(--font-ui);
     color: rgba(239,230,214,0.5); cursor: help; flex-shrink: 0;
   }
-  .mon-info:hover { color: rgba(239,230,214,0.9); border-color: rgba(239,230,214,0.5); }
+  .mon-info:hover { color: #EFE6D6; border-color: rgba(239,230,214,0.5); }
 
   .send-via a:hover {
     background: rgba(239,230,214,0.15);
@@ -612,7 +612,7 @@
     border-radius: 12px;
     background: rgba(239,230,214,0.08);
     border: 1px solid rgba(239,230,214,0.12);
-    color: rgba(239,230,214,0.45);
+    color: rgba(239,230,214,0.5);
     font-family: 'IBM Plex Sans', sans-serif;
     font-size: 14px;
     font-weight: 400;
@@ -622,7 +622,7 @@
   }
   .chat-app-toggle:hover {
     background: rgba(239,230,214,0.12);
-    color: rgba(239,230,214,0.65);
+    color: #B8AC9A;
     border-color: rgba(239,230,214,0.18);
   }
   .chat-app-toggle svg {
@@ -637,8 +637,8 @@
 
   /* Bridge download prompt */
   .hero-bridge-prompt { display:flex; align-items:center; justify-content:center; gap:10px; margin:16px 0 8px; }
-  .hero-bridge-link { display:inline-flex; align-items:center; gap:5px; color:rgba(239,230,214,0.55); text-decoration:none; font-size:13px; padding:6px 14px; border:1px solid rgba(239,230,214,0.12); border-radius:8px; transition:all 0.15s; background:rgba(239,230,214,0.04); }
-  .hero-bridge-link:hover { color:rgba(239,230,214,0.9); border-color:rgba(208,86,63,0.3); background:rgba(208,86,63,0.06); }
+  .hero-bridge-link { display:inline-flex; align-items:center; gap:5px; color:#B8AC9A; text-decoration:none; font-size:13px; padding:6px 14px; border:1px solid rgba(239,230,214,0.12); border-radius:8px; transition:all 0.15s; background:rgba(239,230,214,0.04); }
+  .hero-bridge-link:hover { color:#EFE6D6; border-color:rgba(208,86,63,0.3); background:rgba(208,86,63,0.06); }
 
   /* Footer */
   .hero-footer {
@@ -657,7 +657,7 @@
     text-wrap: pretty;
   }
   .hero-footer .footer-sep {
-    color: rgba(239,230,214,0.15);
+    color: rgba(239,230,214,0.5);
   }
   /* Bridge download CTA */
   .bridge-cta {
@@ -670,7 +670,7 @@
     background: rgba(239,230,214,0.1);
     border: 1px solid rgba(239,230,214,0.18);
     text-decoration: none;
-    color: rgba(239,230,214,0.75);
+    color: #B8AC9A;
     transition: background 0.25s, border-color 0.25s, color 0.25s;
     cursor: pointer;
     box-shadow: 0 0 20px rgba(239,230,214,0.04), 0 0 40px rgba(239,230,214,0.02);
@@ -678,7 +678,7 @@
   .bridge-cta:hover {
     background: rgba(239,230,214,0.15);
     border-color: rgba(239,230,214,0.25);
-    color: rgba(239,230,214,0.95);
+    color: #EFE6D6;
     box-shadow: 0 0 30px rgba(239,230,214,0.08), 0 0 60px rgba(239,230,214,0.04);
   }
   .bridge-cta-text {
@@ -689,12 +689,12 @@
   .bridge-cta-text strong {
     font-size: 14px;
     font-weight: 500;
-    color: rgba(239,230,214,0.7);
+    color: #B8AC9A;
   }
-  .bridge-cta:hover .bridge-cta-text strong { color: rgba(239,230,214,0.9); }
+  .bridge-cta:hover .bridge-cta-text strong { color: #EFE6D6; }
   .bridge-cta-text span {
     font-size: 12px;
-    color: rgba(239,230,214,0.35);
+    color: rgba(239,230,214,0.5);
   }
 
   @keyframes heroIn {
@@ -805,7 +805,7 @@
     display: none;
     background: none;
     border: none;
-    color: rgba(239,230,214,0.2);
+    color: rgba(239,230,214,0.5);
     font-size: 14px;
     cursor: pointer;
     padding: 2px 4px;
@@ -823,13 +823,13 @@
   }
   .activity-item-text {
     font-size: 13px;
-    color: rgba(239,230,214,0.7);
+    color: #B8AC9A;
     line-height: 1.4;
     flex: 1;
   }
   .activity-item-time {
     font-size: 10px;
-    color: rgba(239,230,214,0.25);
+    color: rgba(239,230,214,0.5);
     margin-top: 2px;
   }
   /* Push chat content right when sidebar is open on desktop */
@@ -981,9 +981,9 @@
     50% { transform: scale(0.7); opacity: 0.5; }
   }
   .tl-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .tl-desc { color: var(--text-secondary, rgba(239,230,214,0.65)); }
-  .tl-desc.active { color: var(--text-primary, rgba(239,230,214,0.92)); }
-  .tl-desc.muted { color: var(--text-tertiary, rgba(239,230,214,0.4)); }
+  .tl-desc { color: var(--text-secondary, #B8AC9A); }
+  .tl-desc.active { color: var(--text-primary, #EFE6D6); }
+  .tl-desc.muted { color: var(--text-tertiary, rgba(239,230,214,0.5)); }
   .tl-badge {
     font-size: 10px;
     padding: 1px 7px;
@@ -995,8 +995,8 @@
   }
   .tl-badge.success { background: rgba(150,173,127,0.15); color: #96AD7F; }
   .tl-badge.fail { background: rgba(216,98,75,0.15); color: #D0563F; }
-  .tl-elapsed { color: var(--text-tertiary, rgba(239,230,214,0.3)); font-size: 11px; margin-left: auto; flex-shrink: 0; }
-  .tl-collapse { font-size: 11px; color: var(--text-tertiary, rgba(239,230,214,0.25)); padding: 2px 0 2px 20px; }
+  .tl-elapsed { color: var(--text-tertiary, rgba(239,230,214,0.5)); font-size: 11px; margin-left: auto; flex-shrink: 0; }
+  .tl-collapse { font-size: 11px; color: var(--text-tertiary, rgba(239,230,214,0.5)); padding: 2px 0 2px 20px; }
   .tl-thinking {
     display: flex; align-items: center; gap: 8px; padding: 4px 0; position: relative;
   }
@@ -1005,7 +1005,7 @@
     text-shadow: 0 0 6px rgba(208,86,63,0.4);
   }
   @keyframes tlShimmer { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
-  .tl-thinking-text { color: var(--text-tertiary, rgba(239,230,214,0.4)); animation: tlShimmer 2s ease-in-out infinite; font-size: 13px; }
+  .tl-thinking-text { color: var(--text-tertiary, rgba(239,230,214,0.5)); animation: tlShimmer 2s ease-in-out infinite; font-size: 13px; }
   .timeline.fade-out { animation: tlFadeOut 0.4s ease forwards; }
   @keyframes tlFadeOut { to { opacity: 0; transform: translateY(-8px); } }
   @media (max-width: 767px) {
@@ -1070,7 +1070,7 @@
     box-shadow: none;
   }
   .docked-input .input-box {
-    background: rgba(20,16,14,0.35);
+    background: rgba(31,25,23,0.35);
     backdrop-filter: blur(40px) saturate(1.3);
   }
   .docked-input:focus-within .input-box-wrap {
@@ -1078,7 +1078,7 @@
     box-shadow: 0 0 20px rgba(208,86,63,0.08), 0 0 40px rgba(208,86,63,0.04);
   }
   .docked-input:focus-within .input-box {
-    background: rgba(20,16,14,0.55);
+    background: rgba(31,25,23,0.55);
   }
   body.chat-active .input-box { backdrop-filter: none; }
   .docked-input .input-box-wrap {
@@ -1105,7 +1105,7 @@
     color: rgba(216,98,75,0.6);
     font-weight: 400;
     z-index: 10;
-    background: rgba(20,16,14,0.85);
+    background: rgba(31,25,23,0.85);
     border-radius: 26px;
   }
   .chat-messages.drag-over {
@@ -1142,12 +1142,12 @@
     .suggestions-cats { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
     .suggestions-cats::-webkit-scrollbar { display: none; }
     .suggestion-btn, .cat-pill { padding: 8px 14px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
-    .docked-input { padding: 6px 10px 8px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: rgba(20,16,14,0.95); backdrop-filter: blur(20px); }
+    .docked-input { padding: 6px 10px 8px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: rgba(31,25,23,0.95); backdrop-filter: blur(20px); }
     .docked-input .input-box-wrap { border-radius: 12px; }
     .docked-input textarea { min-height: 36px !important; max-height: 120px !important; font-size: 15px !important; transition: min-height 0.2s ease; }
     .docked-input:focus-within textarea { min-height: 70px !important; }
     .docked-input:focus-within .input-box-wrap { border-color: rgba(208,86,63,0.3) !important; box-shadow: 0 0 20px rgba(208,86,63,0.08), 0 0 40px rgba(208,86,63,0.04) !important; }
-    .docked-input:focus-within .input-box { background: rgba(20,16,14,0.65) !important; }
+    .docked-input:focus-within .input-box { background: rgba(31,25,23,0.65) !important; }
     body.chat-active .chat-messages { padding-bottom: 280px !important; }
     body.chat-active { overflow: hidden; height: 100dvh; }
     body.chat-active .page { height: 100dvh !important; }
@@ -1159,7 +1159,7 @@
       left: 0;
       right: 0;
       height: 40px;
-      background: linear-gradient(transparent, rgba(20,16,14,0.95));
+      background: linear-gradient(transparent, rgba(31,25,23,0.95));
       pointer-events: none;
     }
 
@@ -1215,30 +1215,30 @@
   .rag-container { width:100%; max-width:900px; flex:1; display:flex; flex-direction:column; background:rgba(20,16,14,0.92); backdrop-filter:blur(30px); border:1px solid rgba(239,230,214,0.04); border-radius:16px; padding:28px 32px 32px; margin-top:8px; box-shadow:0 8px 40px rgba(20,16,14,0.4); }
   #ragEmpty { flex:1; display:flex; flex-direction:column; }
   .rag-empty-panel { border:2px dashed rgba(239,230,214,0.08); border-radius:16px; padding:48px 32px; text-align:center; background:rgba(239,230,214,0.02); flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .rag-empty-panel svg { color:rgba(239,230,214,0.2); margin-bottom:12px; }
-  .rag-empty-panel h3 { color:rgba(239,230,214,0.7); font-size:16px; margin:0 0 6px; }
-  .rag-empty-panel p { color:rgba(239,230,214,0.3); font-size:13px; line-height:1.5; margin:0 0 16px; }
+  .rag-empty-panel svg { color:rgba(239,230,214,0.5); margin-bottom:12px; }
+  .rag-empty-panel h3 { color:#B8AC9A; font-size:16px; margin:0 0 6px; }
+  .rag-empty-panel p { color:rgba(239,230,214,0.5); font-size:13px; line-height:1.5; margin:0 0 16px; }
   .rag-source { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:rgba(239,230,214,0.03); border:1px solid rgba(239,230,214,0.05); border-radius:10px; margin-bottom:6px; transition:border-color 0.2s; }
   .rag-source:hover { border-color:rgba(239,230,214,0.1); }
   .rag-source-info { display:flex; align-items:center; gap:10px; min-width:0; }
   .rag-source-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; }
   .rag-source-icon.cloud { background:rgba(216,98,75,0.12); color:#D0563F; }
   .rag-source-icon.bridge { background:rgba(208,166,82,0.12); color:#D0A652; }
-  .rag-source-path { font-size:13px; color:rgba(239,230,214,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rag-source-meta { font-size:11px; color:rgba(239,230,214,0.2); margin-top:2px; }
+  .rag-source-path { font-size:13px; color:#B8AC9A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rag-source-meta { font-size:11px; color:rgba(239,230,214,0.5); margin-top:2px; }
   .rag-source-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .rag-source-btn { background:none; border:1px solid rgba(239,230,214,0.08); border-radius:6px; padding:4px 10px; color:rgba(239,230,214,0.4); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.2s; }
-  .rag-source-btn:hover { border-color:rgba(239,230,214,0.2); color:rgba(239,230,214,0.7); }
+  .rag-source-btn { background:none; border:1px solid rgba(239,230,214,0.08); border-radius:6px; padding:4px 10px; color:rgba(239,230,214,0.5); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+  .rag-source-btn:hover { border-color:rgba(239,230,214,0.2); color:#B8AC9A; }
   .rag-source-btn.danger:hover { border-color:rgba(216,98,75,0.3); color:#D0563F; }
-  .rag-browse-item { padding:10px 14px; border:1px solid rgba(239,230,214,0.06); border-radius:8px; margin-bottom:4px; cursor:pointer; display:flex; align-items:center; gap:8px; color:rgba(239,230,214,0.6); font-size:13px; transition:all 0.15s; }
+  .rag-browse-item { padding:10px 14px; border:1px solid rgba(239,230,214,0.06); border-radius:8px; margin-bottom:4px; cursor:pointer; display:flex; align-items:center; gap:8px; color:#B8AC9A; font-size:13px; transition:all 0.15s; }
   .rag-browse-item:hover { background:rgba(208,86,63,0.05); border-color:rgba(208,86,63,0.15); }
   .rag-upload-btn { background:rgba(208,86,63,0.12); border:1px solid rgba(208,86,63,0.25); color:var(--accent); padding:8px 20px; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; }
   .rag-upload-btn:hover { background:rgba(208,86,63,0.2); border-color:rgba(208,86,63,0.4); }
   .rag-upload-btn.small { padding:6px 14px; font-size:12px; }
   .rag-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
   .rag-header-left { display:flex; align-items:center; gap:8px; }
-  .rag-header h3 { color:rgba(239,230,214,0.6); font-size:14px; margin:0; font-weight:500; }
-  .rag-count { font-size:11px; color:rgba(239,230,214,0.25); background:rgba(239,230,214,0.06); padding:2px 8px; border-radius:8px; }
+  .rag-header h3 { color:#B8AC9A; font-size:14px; margin:0; font-weight:500; }
+  .rag-count { font-size:11px; color:rgba(239,230,214,0.5); background:rgba(239,230,214,0.06); padding:2px 8px; border-radius:8px; }
   .rag-header-right { display:flex; gap:8px; align-items:center; }
   .rag-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.08); border-radius:8px; padding:6px 12px; color:#EFE6D6; font-size:13px; font-family:inherit; width:220px; outline:none; transition:border-color 0.2s; }
   .rag-search:focus { border-color:rgba(208,86,63,0.3); }
@@ -1251,29 +1251,29 @@
   .rag-doc-icon.txt { background:rgba(239,230,214,0.12); color:#B8AC9A; }
   .rag-doc-icon.md { background:rgba(239,230,214,0.12); color:#B8AC9A; }
   .rag-doc-icon.csv { background:rgba(208,86,63,0.12); color:#D0563F; }
-  .rag-doc-name { font-size:13px; color:rgba(239,230,214,0.75); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rag-doc-meta { font-size:11px; color:rgba(239,230,214,0.2); margin-top:2px; }
+  .rag-doc-name { font-size:13px; color:#B8AC9A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rag-doc-meta { font-size:11px; color:rgba(239,230,214,0.5); margin-top:2px; }
   .rag-doc-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
   .rag-status { font-size:10px; padding:2px 8px; border-radius:4px; font-weight:500; }
   .rag-status.ready { color:var(--accent); background:rgba(208,86,63,0.1); }
   .rag-status.processing { color:#D0A652; background:rgba(208,166,82,0.1); }
   .rag-status.error { color:#D0563F; background:rgba(216,98,75,0.1); }
-  .rag-status.pending { color:rgba(239,230,214,0.3); background:rgba(239,230,214,0.05); }
-  .rag-delete { background:none; border:none; color:rgba(239,230,214,0.15); cursor:pointer; padding:4px; font-size:16px; line-height:1; transition:color 0.2s; }
+  .rag-status.pending { color:rgba(239,230,214,0.5); background:rgba(239,230,214,0.05); }
+  .rag-delete { background:none; border:none; color:rgba(239,230,214,0.5); cursor:pointer; padding:4px; font-size:16px; line-height:1; transition:color 0.2s; }
   .rag-delete:hover { color:#D8624B; }
   .rag-query-box { display:flex; gap:8px; margin-bottom:16px; }
   .rag-query-input { flex:1; background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.1); border-radius:10px; padding:12px 16px; color:#EFE6D6; font-size:14px; font-family:inherit; outline:none; transition:border-color 0.2s; }
   .rag-query-input:focus { border-color:rgba(208,86,63,0.4); }
-  .rag-query-input::placeholder { color:rgba(239,230,214,0.25); }
+  .rag-query-input::placeholder { color:rgba(239,230,214,0.5); }
   .rag-query-btn { background:rgba(208,86,63,0.15); border:1px solid rgba(208,86,63,0.3); color:var(--accent); padding:12px 24px; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap; }
   .rag-query-btn:hover { background:rgba(208,86,63,0.25); border-color:rgba(208,86,63,0.5); }
   .rag-results-section { margin-bottom:20px; }
-  .rag-results-label { font-size:12px; color:rgba(239,230,214,0.25); margin-bottom:8px; }
+  .rag-results-label { font-size:12px; color:rgba(239,230,214,0.5); margin-bottom:8px; }
   .rag-result { padding:14px 16px; background:rgba(239,230,214,0.03); border:1px solid rgba(239,230,214,0.06); border-radius:12px; margin-bottom:8px; transition:border-color 0.2s; }
   .rag-result:hover { border-color:rgba(208,86,63,0.15); }
   .rag-result-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:6px; }
   .rag-result-title { display:flex; align-items:center; gap:8px; min-width:0; }
-  .rag-result-docname { font-size:13px; color:rgba(239,230,214,0.75); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rag-result-docname { font-size:13px; color:#B8AC9A; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .rag-result-origin { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:500; background:rgba(208,86,63,0.08); color:rgba(208,86,63,0.6); white-space:nowrap; }
   .rag-result-origin.gdrive { background:rgba(216,98,75,0.1); color:#4285f4; }
   .rag-result-origin.onedrive { background:rgba(216,98,75,0.1); color:#D0563F; }
@@ -1284,28 +1284,28 @@
      than the score's green, and in the title row rather than beside the
      percentage, so it reads as a property of the file and never as a second
      number competing with the one on the right. */
-  .rag-result-why { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:500; background:rgba(239,230,214,0.07); color:rgba(239,230,214,0.55); white-space:nowrap; cursor:help; }
+  .rag-result-why { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:500; background:rgba(239,230,214,0.07); color:#B8AC9A; white-space:nowrap; cursor:help; }
   .rag-result-score { font-size:12px; color:rgba(208,86,63,0.6); font-weight:500; flex-shrink:0; }
-  .rag-result-excerpt { font-size:13px; color:rgba(239,230,214,0.45); line-height:1.6; margin-bottom:8px; word-break:break-word; }
-  .rag-result-full { display:none; font-size:13px; color:rgba(239,230,214,0.55); line-height:1.6; margin-bottom:8px; word-break:break-word; white-space:pre-wrap; background:rgba(20,16,14,0.15); padding:10px 12px; border-radius:8px; max-height:300px; overflow-y:auto; }
+  .rag-result-excerpt { font-size:13px; color:rgba(239,230,214,0.5); line-height:1.6; margin-bottom:8px; word-break:break-word; }
+  .rag-result-full { display:none; font-size:13px; color:#B8AC9A; line-height:1.6; margin-bottom:8px; word-break:break-word; white-space:pre-wrap; background:rgba(20,16,14,0.15); padding:10px 12px; border-radius:8px; max-height:300px; overflow-y:auto; }
   .rag-result-full.open { display:block; }
   .rag-result-actions { display:flex; gap:6px; flex-wrap:wrap; }
-  .rag-result-btn { background:none; border:1px solid rgba(239,230,214,0.08); border-radius:6px; padding:4px 10px; color:rgba(239,230,214,0.35); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.2s; text-decoration:none; }
-  .rag-result-btn:hover { border-color:rgba(239,230,214,0.2); color:rgba(239,230,214,0.7); }
+  .rag-result-btn { background:none; border:1px solid rgba(239,230,214,0.08); border-radius:6px; padding:4px 10px; color:rgba(239,230,214,0.5); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.2s; text-decoration:none; }
+  .rag-result-btn:hover { border-color:rgba(239,230,214,0.2); color:#B8AC9A; }
   .rag-ask-btn { border-color:rgba(208,86,63,0.2); color:rgba(208,86,63,0.6); }
   .rag-ask-btn:hover { border-color:rgba(208,86,63,0.4); color:var(--accent); background:rgba(208,86,63,0.06); }
-  .rag-result-meta { font-size:10px; color:rgba(239,230,214,0.15); margin-top:6px; }
+  .rag-result-meta { font-size:10px; color:rgba(239,230,214,0.5); margin-top:6px; }
   .rag-filter-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; position:sticky; top:0; z-index:10; background:var(--bg, #14100E); padding:8px 0; }
-  .rag-filter-btn { background:rgba(239,230,214,0.04); border:1px solid rgba(239,230,214,0.08); border-radius:8px; padding:5px 12px; color:rgba(239,230,214,0.4); font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap; }
-  .rag-filter-btn:hover { border-color:rgba(239,230,214,0.15); color:rgba(239,230,214,0.6); }
+  .rag-filter-btn { background:rgba(239,230,214,0.04); border:1px solid rgba(239,230,214,0.08); border-radius:8px; padding:5px 12px; color:rgba(239,230,214,0.5); font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap; }
+  .rag-filter-btn:hover { border-color:rgba(239,230,214,0.15); color:#B8AC9A; }
   .rag-filter-btn.active { background:rgba(150,173,127,0.1); border-color:rgba(150,173,127,0.3); color:rgba(150,173,127,0.8); }
   .rag-result-with-thumb { display:flex; gap:14px; }
   .rag-result-thumb { width:80px; height:80px; border-radius:8px; overflow:hidden; flex-shrink:0; background:rgba(239,230,214,0.05); }
   .rag-result-thumb img { width:100%; height:100%; object-fit:cover; cursor:pointer; transition:opacity 0.2s; }
   .rag-result-thumb img:hover { opacity:0.8; }
   .rag-result-body { flex:1; min-width:0; }
-  .rag-sources-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 0; color:rgba(239,230,214,0.35); font-size:12px; border:none; background:none; font-family:inherit; transition:color 0.2s; margin-bottom:8px; }
-  .rag-sources-toggle:hover { color:rgba(239,230,214,0.6); }
+  .rag-sources-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 0; color:rgba(239,230,214,0.5); font-size:12px; border:none; background:none; font-family:inherit; transition:color 0.2s; margin-bottom:8px; }
+  .rag-sources-toggle:hover { color:#B8AC9A; }
   .rag-sources-toggle svg { transition:transform 0.2s; }
   .rag-sources-toggle.open svg { transform:rotate(90deg); }
   .rag-toggle { opacity:0.3; transition:all 0.2s; }
@@ -1314,12 +1314,12 @@
   /* RAG Privacy & Storage panel */
   .rag-privacy { margin-top:24px; padding-top:20px; border-top:1px solid rgba(239,230,214,0.06); }
   .rag-privacy-accordion-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:6px 0; }
-  .rag-privacy-accordion-header:hover span { color:rgba(239,230,214,0.6) !important; }
-  .rag-privacy-chevron { color:rgba(239,230,214,0.2); transition:transform 0.2s; }
+  .rag-privacy-accordion-header:hover span { color:#B8AC9A !important; }
+  .rag-privacy-chevron { color:rgba(239,230,214,0.5); transition:transform 0.2s; }
   .rag-privacy.expanded .rag-privacy-chevron { transform:rotate(180deg); }
   .rag-privacy-body { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
   .rag-privacy.expanded .rag-privacy-body { max-height:400px; }
-  .rag-privacy-reassurance { font-size:11px; color:rgba(239,230,214,0.25); line-height:1.5; display:flex; align-items:flex-start; gap:6px; margin-top:10px; }
+  .rag-privacy-reassurance { font-size:11px; color:rgba(239,230,214,0.5); line-height:1.5; display:flex; align-items:flex-start; gap:6px; margin-top:10px; }
   .rag-privacy-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 4px; }
   @media (max-width:640px) { .rag-privacy-cards { grid-template-columns:1fr; } }
   .rag-privacy-card { position:relative; padding:16px; border-radius:12px; border:1.5px solid rgba(239,230,214,0.06); background:rgba(239,230,214,0.02); cursor:pointer; transition:all 0.25s ease; }
@@ -1332,7 +1332,7 @@
   .rag-privacy-card-badge svg { width:16px; height:16px; }
   .rag-privacy-card.standard .rag-privacy-card-badge svg { color:rgba(208,86,63,0.7); }
   .rag-privacy-card.zero .rag-privacy-card-badge svg { color:rgba(216,98,75,0.7); }
-  .rag-privacy-card-title { font-size:14px; font-weight:600; color:rgba(239,230,214,0.85); }
+  .rag-privacy-card-title { font-size:14px; font-weight:600; color:#EFE6D6; }
   .rag-privacy-card-check { width:18px; height:18px; border-radius:50%; border:1.5px solid rgba(239,230,214,0.12); display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
   .rag-privacy-card.active.standard .rag-privacy-card-check { border-color:rgba(150,173,127,0.6); background:rgba(150,173,127,0.15); }
   .rag-privacy-card.active.zero .rag-privacy-card-check { border-color:rgba(216,98,75,0.6); background:rgba(216,98,75,0.15); }
@@ -1340,8 +1340,8 @@
   .rag-privacy-card.active .rag-privacy-card-check svg { opacity:1; }
   .rag-privacy-card.active.standard .rag-privacy-card-check svg { color:rgba(150,173,127,0.9); }
   .rag-privacy-card.active.zero .rag-privacy-card-check svg { color:rgba(216,98,75,0.9); }
-  .rag-privacy-card-desc { font-size:12px; color:rgba(239,230,214,0.35); line-height:1.55; }
-  .rag-privacy-card.active .rag-privacy-card-desc { color:rgba(239,230,214,0.45); }
+  .rag-privacy-card-desc { font-size:12px; color:rgba(239,230,214,0.5); line-height:1.55; }
+  .rag-privacy-card.active .rag-privacy-card-desc { color:rgba(239,230,214,0.5); }
   .rag-zero-placeholder { padding:12px 14px; border-radius:10px; background:rgba(216,98,75,0.05); border:1px solid rgba(216,98,75,0.12); }
   .rag-zero-placeholder-text { font-size:12px; color:rgba(216,98,75,0.6); line-height:1.5; margin-bottom:6px; }
   .rag-zero-placeholder-actions { display:flex; gap:6px; }
@@ -1367,14 +1367,14 @@
     font-variation-settings: 'opsz' 72, 'SOFT' 40;
     font-size: 26px;
     font-weight: 450;
-    color: rgba(239,230,214,0.92);
+    color: #EFE6D6;
     text-align: center;
     margin-bottom: 12px;
     letter-spacing: -0.02em;
   }
   .feat-sub {
     font-size: 18px;
-    color: rgba(239,230,214,0.6);
+    color: #B8AC9A;
     text-align: center;
     margin-bottom: 48px;
     max-width: 600px;
@@ -1404,7 +1404,7 @@
     font-variation-settings: 'opsz' 72, 'SOFT' 40;
     font-size: 26px;
     font-weight: 450;
-    color: rgba(239,230,214,0.92);
+    color: #EFE6D6;
     margin-bottom: 12px;
     letter-spacing: -0.01em;
   }
@@ -1454,13 +1454,13 @@
     font-variation-settings: 'opsz' 48, 'SOFT' 40;
     font-size: 22px;
     font-weight: 450;
-    color: rgba(239,230,214,0.92);
+    color: #EFE6D6;
     margin-bottom: 10px;
     letter-spacing: -0.01em;
   }
   .feat-mini-desc {
     font-size: 16px;
-    color: rgba(239,230,214,0.45);
+    color: rgba(239,230,214,0.5);
     line-height: 1.6;
   }
 
@@ -1479,7 +1479,7 @@
     border-left: 3px solid rgba(208,86,63,0.5);
     border-radius: 12px;
     font-size: 16px;
-    color: rgba(239,230,214,0.8);
+    color: #B8AC9A;
     backdrop-filter: blur(12px);
   }
 
@@ -1506,11 +1506,11 @@
     font-weight: 450;
     font-size: 18px;
     letter-spacing: -0.01em;
-    color: rgba(239,230,214,0.75);
+    color: #B8AC9A;
     border-bottom: 1px solid rgba(239,230,214,0.1);
     background: rgba(31,25,23,0.8);
   }
-  .feat-table th:first-child { color: rgba(239,230,214,0.4); }
+  .feat-table th:first-child { color: rgba(239,230,214,0.5); }
   .feat-table th.highlight {
     color: #D8624B;
     border-bottom: 2px solid rgba(208,86,63,0.4);
@@ -1518,15 +1518,15 @@
   .feat-table td {
     padding: 16px 24px;
     border-bottom: 1px solid rgba(239,230,214,0.06);
-    color: rgba(239,230,214,0.7);
+    color: #B8AC9A;
   }
   .feat-table tr:last-child td { border-bottom: none; }
   .feat-table td:first-child {
-    color: rgba(239,230,214,0.85);
+    color: #EFE6D6;
     font-weight: 400;
   }
   .feat-table .yes { color: #D8624B; }
-  .feat-table .no { color: rgba(239,230,214,0.2); }
+  .feat-table .no { color: rgba(239,230,214,0.5); }
   .feat-table .partial { color: rgba(208,166,82,0.7); }
 
   /* Final CTA */
@@ -1539,7 +1539,7 @@
     font-variation-settings: 'opsz' 72, 'SOFT' 40;
     font-size: clamp(22px, 3vw, 32px);
     font-weight: 450;
-    color: rgba(239,230,214,0.9);
+    color: #EFE6D6;
     margin-bottom: 20px;
     letter-spacing: -0.01em;
   }
@@ -1570,7 +1570,7 @@
   .feat-cta-btns .btn-secondary {
     background: rgba(239,230,214,0.05);
     border: 1px solid rgba(239,230,214,0.1);
-    color: rgba(239,230,214,0.6);
+    color: #B8AC9A;
   }
   .feat-cta-btns .btn-secondary:hover { background: rgba(239,230,214,0.1); }
   .feat-cta-btns img { height: 16px; opacity: 0.7; }
@@ -1579,7 +1579,7 @@
   .canvas-panel {
     display: none; position: fixed; right: 0; top: 0; bottom: 0;
     width: 45vw; min-width: 320px;
-    background: rgba(20,16,14,0.97); border-left: 1px solid rgba(239,230,214,0.08);
+    background: rgba(31,25,23,0.97); border-left: 1px solid rgba(239,230,214,0.08);
     backdrop-filter: blur(20px); z-index: 20; flex-direction: column;
   }
   .canvas-panel.active { display: flex; }
@@ -1627,7 +1627,7 @@
     padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid rgba(239,230,214,0.08);
   }
-  .canvas-title { color: rgba(239,230,214,0.7); font-size: 14px; font-weight: 500; }
+  .canvas-title { color: #B8AC9A; font-size: 14px; font-weight: 500; }
   .canvas-body { flex: 1; overflow: auto; }
   .canvas-body iframe { width: 100%; height: 100%; border: none; background: #EFE6D6; }
   .canvas-body img { max-width: 100%; height: auto; display: block; margin: 20px auto; border-radius: 8px; cursor: pointer; transition: opacity 0.15s; }
@@ -1674,15 +1674,15 @@
     border-radius: 8px; color: rgba(239,230,214,0.5);
     font-size: 18px; cursor: pointer; transition: all 0.15s;
   }
-  .dash-slide-close:hover { background: rgba(239,230,214,0.12); color: rgba(239,230,214,0.9); }
+  .dash-slide-close:hover { background: rgba(239,230,214,0.12); color: #EFE6D6; }
   .dash-slide iframe { flex: 1; border: none; width: 100%; }
   @media (max-width: 700px) { .dash-slide { width: 100vw; max-width: none; } }
 
 
   /* Page tabs (Chat / Computers filing cabinet) */
   .page-tabs { display:inline-flex; justify-content:center; gap:4px; margin:6px auto 0; position:relative; z-index:2; background:rgba(239,230,214,0.04); border-radius:12px; padding:4px; border:1px solid rgba(239,230,214,0.06); }
-  .page-tab { padding:7px 18px; background:none; border:1px solid transparent; color:rgba(239,230,214,0.4); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; border-radius:10px; display:inline-flex; align-items:center; gap:6px; min-height:36px; }
-  .page-tab:hover { color:rgba(239,230,214,0.65); }
+  .page-tab { padding:7px 18px; background:none; border:1px solid transparent; color:rgba(239,230,214,0.5); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; border-radius:10px; display:inline-flex; align-items:center; gap:6px; min-height:36px; }
+  .page-tab:hover { color:#B8AC9A; }
   .page-tab.active { color:var(--accent); background:rgba(150,173,127,0.1); border:1px solid rgba(150,173,127,0.2); }
   .page-tab svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   .page-view { display:none; }
@@ -1730,9 +1730,9 @@
   .mon-dots { display:flex; gap:6px; flex-shrink:0; }
   .mon-dots span { width:8px; height:8px; border-radius:50%; }
   .mon-dots .d-r { background:#D0563F; } .mon-dots .d-y { background:#D0A652; } .mon-dots .d-g { background:#D0563F; }
-  .mon-bar-title { flex:1; text-align:center; font-size:13px; color:rgba(239,230,214,0.6); display:flex; align-items:center; justify-content:center; gap:6px; }
+  .mon-bar-title { flex:1; text-align:center; font-size:13px; color:#B8AC9A; display:flex; align-items:center; justify-content:center; gap:6px; }
   .mon-bar-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .mon-storage { font-size:10px; color:rgba(239,230,214,0.25); display:flex; align-items:center; gap:6px; }
+  .mon-storage { font-size:10px; color:rgba(239,230,214,0.5); display:flex; align-items:center; gap:6px; }
   .mon-storage-bar { width:60px; height:2px; background:rgba(239,230,214,0.08); border-radius:2px; overflow:hidden; }
   .mon-storage-fill { height:100%; background:#D0563F; border-radius:2px; transition:width 0.3s; }
   .mon-status { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
@@ -1767,14 +1767,14 @@
   .mon-wrap.mon-drag-glow { box-shadow:inset 0 0 20px rgba(216,98,75,0.15); }
   .mon-wrap.mon-drag-glow .mon { border-color:rgba(216,98,75,0.4) !important; }
   /* Right-click context menu */
-  .mon-context-menu { position:fixed; z-index:100; background:rgba(31,25,23,0.95); border:1px solid rgba(239,230,214,0.12); border-radius:8px; padding:4px 0; min-width:160px; backdrop-filter:blur(20px); box-shadow:0 8px 30px rgba(20,16,14,0.4); }
-  .mon-context-menu button { display:flex; align-items:center; gap:8px; width:100%; padding:8px 14px; background:none; border:none; color:rgba(239,230,214,0.7); font-size:13px; font-family:inherit; cursor:pointer; text-align:left; }
+  .mon-context-menu { position:fixed; z-index:100; background:rgba(31,25,23,0.95); border:1px solid rgba(239,230,214,0.12); border-radius:8px; padding:4px 0; min-width:160px; backdrop-filter:blur(20px); box-shadow:0 8px 30px rgba(31,25,23,0.4); }
+  .mon-context-menu button { display:flex; align-items:center; gap:8px; width:100%; padding:8px 14px; background:none; border:none; color:#B8AC9A; font-size:13px; font-family:inherit; cursor:pointer; text-align:left; }
   .mon-context-menu button:hover { background:rgba(239,230,214,0.08); color:#EFE6D6; }
   .mon-context-menu button.danger { color:#D0563F; }
   .mon-context-menu button.danger:hover { background:rgba(216,98,75,0.1); }
   .mon-context-menu hr { border:none; border-top:1px solid rgba(239,230,214,0.06); margin:4px 0; }
-  .mon-drag-hint-dismiss { background:none; border:1px solid rgba(239,230,214,0.1); border-radius:6px; color:rgba(239,230,214,0.3); font-size:11px; padding:3px 10px; cursor:pointer; margin-left:8px; font-family:inherit; }
-  .mon-drag-hint-dismiss:hover { color:rgba(239,230,214,0.6); border-color:rgba(239,230,214,0.2); }
+  .mon-drag-hint-dismiss { background:none; border:1px solid rgba(239,230,214,0.1); border-radius:6px; color:rgba(239,230,214,0.5); font-size:11px; padding:3px 10px; cursor:pointer; margin-left:8px; font-family:inherit; }
+  .mon-drag-hint-dismiss:hover { color:#B8AC9A; border-color:rgba(239,230,214,0.2); }
   .mon-drop-target { outline: 2px dashed rgba(208,86,63,0.3); outline-offset: -4px; background: rgba(208,86,63,0.03) !important; transition: all 0.2s; }
   .mon-tile .mon-sync-badge { position:absolute; bottom:0; right:0; display:flex; align-items:center; justify-content:center; width:18px; height:18px; background:rgba(31,25,23,0.85); border-radius:50%; }
   .mon-sync-badge svg { animation:monSyncGlow 2.5s ease-in-out infinite; }
@@ -1793,26 +1793,26 @@
   .mon-row { cursor:default; }
   .mon-crumb-row { display:flex; align-items:center; gap:6px; padding:0 10px; }
   .mon-crumb-row .mon-crumb { flex:1; min-width:0; }
-  .mon-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.06); border-radius:6px; padding:3px 8px; color:rgba(239,230,214,0.6); font-size:11px; font-family:inherit; width:80px; outline:none; flex-shrink:0; transition:border-color 0.2s,width 0.2s; }
+  .mon-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.06); border-radius:6px; padding:3px 8px; color:#B8AC9A; font-size:11px; font-family:inherit; width:80px; outline:none; flex-shrink:0; transition:border-color 0.2s,width 0.2s; }
   .mon-search:focus { border-color:rgba(208,86,63,0.3); width:130px; }
   .mon-search-wrap { position:relative; flex-shrink:0; display:inline-block; }
   .mon-search-scope { display:none; position:absolute; top:calc(100% + 4px); right:0; background:rgba(31,25,23,0.98); border:1px solid rgba(239,230,214,0.08); border-radius:7px; padding:3px; z-index:50; box-shadow:0 8px 24px rgba(20,16,14,0.4); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
   .mon-search-scope.open { display:flex; gap:2px; }
-  .mon-search-scope button { background:transparent; border:none; color:rgba(239,230,214,0.55); padding:6px 10px; font-size:11px; border-radius:5px; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background 0.12s, color 0.12s; }
-  .mon-search-scope button:hover { background:rgba(239,230,214,0.05); color:rgba(239,230,214,0.85); }
+  .mon-search-scope button { background:transparent; border:none; color:#B8AC9A; padding:6px 10px; font-size:11px; border-radius:5px; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background 0.12s, color 0.12s; }
+  .mon-search-scope button:hover { background:rgba(239,230,214,0.05); color:#EFE6D6; }
   .mon-search-scope button.active { background:rgba(150,173,127,0.14); color:rgba(150,173,127,0.95); }
   .mon-search-scope button.active:hover { background:rgba(150,173,127,0.2); }
   .mon-search-pill { flex-shrink:0; padding:7px 14px; display:flex; align-items:center; gap:12px; color:rgba(239,230,214,0.5); font-size:11px; border-bottom:1px solid rgba(239,230,214,0.05); background:rgba(239,230,214,0.01); }
-  .mon-search-pill strong { color:rgba(239,230,214,0.75); font-weight:500; }
+  .mon-search-pill strong { color:#B8AC9A; font-weight:500; }
   .mon-synced-from { font-size: 10px; color: rgba(208,166,82,0.5); margin-left: 4px; }
   .mon-rename-input { width:100%; background:rgba(239,230,214,0.1); border:1px solid rgba(208,86,63,0.4); border-radius:3px; color:#EFE6D6; font-size:12px; font-family:inherit; padding:1px 4px; text-align:center; outline:none; }
 
   /* View toggle */
   .mon-view-toggle { display:flex; border:1px solid rgba(239,230,214,0.1); border-radius:5px; overflow:hidden; }
-  .mon-view-btn { padding:4px 7px; background:transparent; border:none; color:rgba(239,230,214,0.3); cursor:pointer; display:flex; align-items:center; transition:all 0.12s; }
-  .mon-view-btn.active { background:rgba(239,230,214,0.1); color:rgba(239,230,214,0.8); }
-  .mon-btn { padding:4px 12px; background:rgba(239,230,214,0.06); border:1px solid rgba(239,230,214,0.1); border-radius:6px; color:rgba(239,230,214,0.6); font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.12s; }
-  .mon-btn:hover { background:rgba(239,230,214,0.1); color:rgba(239,230,214,0.8); }
+  .mon-view-btn { padding:4px 7px; background:transparent; border:none; color:rgba(239,230,214,0.5); cursor:pointer; display:flex; align-items:center; transition:all 0.12s; }
+  .mon-view-btn.active { background:rgba(239,230,214,0.1); color:#B8AC9A; }
+  .mon-btn { padding:4px 12px; background:rgba(239,230,214,0.06); border:1px solid rgba(239,230,214,0.1); border-radius:6px; color:#B8AC9A; font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.12s; }
+  .mon-btn:hover { background:rgba(239,230,214,0.1); color:#B8AC9A; }
 
   /* Grid view */
   .mon-grid { display:flex; flex-wrap:wrap; gap:8px; padding:16px; align-content:flex-start; min-height:100%; position:relative; }
@@ -1823,22 +1823,22 @@
   .mon-tile-icon { height:56px; display:flex; align-items:center; justify-content:center; overflow:visible; position:relative; }
   .mon-tile-icon svg { width:44px; height:44px; flex-shrink:0; }
   .mon-tile-icon img { max-width:80px; max-height:56px; object-fit:cover; border-radius:6px; display:block; }
-  .mon-tile-name { font-size:12px; color:rgba(239,230,214,0.85); max-width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3; word-break:break-all; }
-  .mon-tile-meta { font-size:10px; color:rgba(239,230,214,0.3); }
+  .mon-tile-name { font-size:12px; color:#EFE6D6; max-width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3; word-break:break-all; }
+  .mon-tile-meta { font-size:10px; color:rgba(239,230,214,0.5); }
 
   /* List view */
   .mon-list { padding:4px 0; min-height:100%; }
   .mon-row { display:flex; align-items:center; gap:10px; padding:6px 16px; cursor:default; transition:background 0.1s; }
   .mon-row:hover { background:rgba(239,230,214,0.04); }
   .mon-row svg { width:20px; height:20px; flex-shrink:0; }
-  .mon-row-name { flex:1; font-size:13px; color:rgba(239,230,214,0.85); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mon-row-meta { font-size:11px; color:rgba(239,230,214,0.3); white-space:nowrap; }
+  .mon-row-name { flex:1; font-size:13px; color:#EFE6D6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mon-row-meta { font-size:11px; color:rgba(239,230,214,0.5); white-space:nowrap; }
   .mon-row-upload { opacity:0; transition:opacity 0.12s; cursor:pointer; }
   .mon-row:hover .mon-row-upload { opacity:0.5; }
   .mon-row-upload:hover { opacity:1 !important; }
   /* Disclosure triangle for folder unfurl */
-  .mon-row-disc { width:14px; height:14px; flex-shrink:0; cursor:pointer; color:rgba(239,230,214,0.25); transition:transform 0.15s,color 0.15s; display:flex; align-items:center; justify-content:center; margin-left:-4px; }
-  .mon-row-disc:hover { color:rgba(239,230,214,0.6); }
+  .mon-row-disc { width:14px; height:14px; flex-shrink:0; cursor:pointer; color:rgba(239,230,214,0.5); transition:transform 0.15s,color 0.15s; display:flex; align-items:center; justify-content:center; margin-left:-4px; }
+  .mon-row-disc:hover { color:#B8AC9A; }
   .mon-row-disc.open { transform:rotate(90deg); }
   .mon-row-children { padding-left:20px; border-left:1px solid rgba(239,230,214,0.04); margin-left:26px; }
 
@@ -1854,9 +1854,9 @@
   /* Folder open animation */
   .mon-nav-in { animation:monNavIn 0.2s ease-out; }
   @keyframes monNavIn { from{opacity:0;transform:scale(0.97) translateY(6px)} to{opacity:1;transform:scale(1) translateY(0)} }
-  .mon-empty svg { width:64px; height:64px; color:rgba(239,230,214,0.12); margin-bottom:14px; animation:monFloat 3s ease-in-out infinite; }
+  .mon-empty svg { width:64px; height:64px; color:rgba(239,230,214,0.5); margin-bottom:14px; animation:monFloat 3s ease-in-out infinite; }
   @keyframes monFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-  .mon-empty-text { font-size:18px; color:rgba(239,230,214,0.35); margin-bottom:6px; }
+  .mon-empty-text { font-size:18px; color:rgba(239,230,214,0.5); margin-bottom:6px; }
   .mon-empty-sub { font-size:13px; color:rgba(208,86,63,0.5); cursor:pointer; } .mon-empty-sub:hover { color:rgba(208,86,63,0.8); }
 
   /* Drop overlay */
@@ -1867,7 +1867,7 @@
   .mon-drop-text { font-size:16px; color:rgba(239,230,214,0.5); }
 
   /* Offline state */
-  .mon-offline { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:200px; color:rgba(239,230,214,0.25); gap:8px; }
+  .mon-offline { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:200px; color:rgba(239,230,214,0.5); gap:8px; }
   .mon-offline svg { width:48px; height:48px; opacity:0.3; }
   /* Bridge CTA — "Ambient Signal" design */
   .bridge-cta { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; min-height:280px; padding:28px 20px; text-align:center; gap:20px; position:relative; overflow:hidden; }
@@ -1878,16 +1878,16 @@
   .bridge-cta-node::after { content:''; position:absolute; inset:-20px; border-radius:50%; border:1px dashed rgba(208,166,82,0.08); animation:bridgeRing 3s ease-in-out infinite reverse; }
   @keyframes bridgeRing { 0%,100%{opacity:0.3;transform:scale(0.95)} 50%{opacity:1;transform:scale(1.05)} }
   .bridge-cta-node svg { width:64px; height:64px; stroke:rgba(208,166,82,0.7); fill:none; stroke-width:1; filter:drop-shadow(0 0 12px rgba(208,166,82,0.2)); }
-  .bridge-cta h3 { font-size:17px; font-weight:600; color:rgba(239,230,214,0.9); margin:0; letter-spacing:-0.03em; position:relative; }
-  .bridge-cta p { font-size:12.5px; color:rgba(239,230,214,0.35); margin:0; max-width:240px; line-height:1.6; position:relative; }
+  .bridge-cta h3 { font-size:17px; font-weight:600; color:#EFE6D6; margin:0; letter-spacing:-0.03em; position:relative; }
+  .bridge-cta p { font-size:12.5px; color:rgba(239,230,214,0.5); margin:0; max-width:240px; line-height:1.6; position:relative; }
   .bridge-cta-dl { display:inline-flex; align-items:center; gap:8px; padding:11px 24px; background:rgba(208,166,82,0.12); border:1px solid rgba(208,166,82,0.25); border-radius:12px; color:#D0A652; font-size:13px; font-weight:600; font-family:inherit; text-decoration:none; cursor:pointer; transition:all 0.3s cubic-bezier(0.16,1,0.3,1); position:relative; letter-spacing:-0.01em; }
   .bridge-cta-dl:hover { background:rgba(208,166,82,0.2); border-color:rgba(208,166,82,0.4); transform:translateY(-2px); box-shadow:0 8px 24px rgba(208,166,82,0.12); }
   .bridge-cta-dl svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.5; }
   .bridge-cta-flow { display:flex; align-items:center; gap:0; position:relative; }
-  .bridge-cta-step { font-size:11px; color:rgba(239,230,214,0.25); display:flex; align-items:center; gap:5px; }
+  .bridge-cta-step { font-size:11px; color:rgba(239,230,214,0.5); display:flex; align-items:center; gap:5px; }
   .bridge-cta-step em { font-style:normal; width:18px; height:18px; border-radius:50%; background:rgba(208,166,82,0.08); border:1px solid rgba(208,166,82,0.15); display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:rgba(208,166,82,0.6); font-weight:700; flex-shrink:0; }
-  .bridge-cta-arrow { color:rgba(239,230,214,0.1); margin:0 8px; font-size:10px; }
-  .bridge-cta-pair { font-size:11.5px; color:rgba(239,230,214,0.2); cursor:pointer; transition:all 0.2s; position:relative; border:none; background:none; font-family:inherit; padding:4px 0; }
+  .bridge-cta-arrow { color:rgba(239,230,214,0.5); margin:0 8px; font-size:10px; }
+  .bridge-cta-pair { font-size:11.5px; color:rgba(239,230,214,0.5); cursor:pointer; transition:all 0.2s; position:relative; border:none; background:none; font-family:inherit; padding:4px 0; }
   .bridge-cta-pair:hover { color:rgba(208,166,82,0.6); }
 
   /* The card .bridge-cta inherits pill styling (background, border, cursor:pointer, hover lift)
@@ -1905,12 +1905,12 @@
 
   /* Context menu */
   .mon-ctx { position:fixed; background:rgba(31,25,23,0.95); backdrop-filter:blur(20px); border:1px solid rgba(239,230,214,0.1); border-radius:8px; padding:4px 0; z-index:999; min-width:130px; box-shadow:0 8px 24px rgba(20,16,14,0.5); }
-  .mon-ctx-item { padding:7px 14px; font-size:13px; color:rgba(239,230,214,0.8); cursor:pointer; } .mon-ctx-item:hover { background:rgba(239,230,214,0.06); }
+  .mon-ctx-item { padding:7px 14px; font-size:13px; color:#B8AC9A; cursor:pointer; } .mon-ctx-item:hover { background:rgba(239,230,214,0.06); }
   .mon-ctx-item.danger { color:#D8624B; }
 
   /* Maximize/restore buttons */
-  .mon-max-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:1px solid rgba(239,230,214,0.08); border-radius:5px; color:rgba(239,230,214,0.35); cursor:pointer; transition:all 0.12s; flex-shrink:0; }
-  .mon-max-btn:hover { background:rgba(239,230,214,0.12); color:rgba(239,230,214,0.7); }
+  .mon-max-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:1px solid rgba(239,230,214,0.08); border-radius:5px; color:rgba(239,230,214,0.5); cursor:pointer; transition:all 0.12s; flex-shrink:0; }
+  .mon-max-btn:hover { background:rgba(239,230,214,0.12); color:#B8AC9A; }
   .mon-wrap { transition:flex 0.3s ease; will-change:width; }
   .mon-wrap.mon-maximized { flex:100 !important; }
   .mon-wrap.mon-hidden { flex:0 !important; overflow:hidden; min-width:0 !important; }
@@ -1926,19 +1926,19 @@
   .mon-term-bar:hover { background:rgba(20,16,14,0.55); }
   .mon-term-bar::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:32px; height:3px; background:rgba(239,230,214,0.12); border-radius:2px; margin-top:-1px; transition:background 0.15s; }
   .mon-term-bar:hover::before { background:rgba(239,230,214,0.25); }
-  .mon-activity-status-inline { font-size:11px; color:rgba(239,230,214,0.2); margin-left:auto; margin-right:8px; display:flex; align-items:center; gap:4px; }
+  .mon-activity-status-inline { font-size:11px; color:rgba(239,230,214,0.5); margin-left:auto; margin-right:8px; display:flex; align-items:center; gap:4px; }
   .mon-term-log { font-family:'Courier New',monospace; font-size:12px; padding:8px 12px; overflow-y:auto; max-height:200px; flex:1; }
   .mon-log-entry { padding:2px 0; display:flex; gap:8px; line-height:1.4; }
-  .mon-log-time { color:rgba(239,230,214,0.15); min-width:45px; flex-shrink:0; }
-  .mon-log-text { color:rgba(239,230,214,0.45); }
+  .mon-log-time { color:rgba(239,230,214,0.5); min-width:45px; flex-shrink:0; }
+  .mon-log-text { color:rgba(239,230,214,0.5); }
   .mon-log-text.running { color:#D0A652; }
   .mon-log-text.completed { color:rgba(150,173,127,0.6); }
   .mon-log-text.failed { color:rgba(216,98,75,0.6); }
   .mon-log-text.synced { color:rgba(216,98,75,0.5); }
   .mon-log-text.cmd { color:rgba(208,86,63,0.8); }
-  .mon-log-text.output { color:rgba(239,230,214,0.35); white-space:pre-wrap; }
-  .mon-log-text.idle { color:rgba(239,230,214,0.15); font-style:italic; }
-  .mon-term-toggle { background:none; border:none; color:rgba(239,230,214,0.3); cursor:pointer; padding:4px; transition:transform 0.2s; }
+  .mon-log-text.output { color:rgba(239,230,214,0.5); white-space:pre-wrap; }
+  .mon-log-text.idle { color:rgba(239,230,214,0.5); font-style:italic; }
+  .mon-term-toggle { background:none; border:none; color:rgba(239,230,214,0.5); cursor:pointer; padding:4px; transition:transform 0.2s; }
   .mon-term-toggle.open { transform:rotate(180deg); }
   .mon-term-chevron { display:none; }
   .mon-term-chevron.open { transform:rotate(180deg); }
@@ -1947,7 +1947,7 @@
   .mon-term *:focus { outline:none; }
   .mon-term-cmd:focus { outline:none; box-shadow:none; border:none; }
   .mon-term-output { padding:8px 12px; font-family:'SF Mono',Menlo,monospace; font-size:12px; color:#D8624B; overflow-y:auto; max-height:calc(100% - 32px); white-space:pre-wrap; word-break:break-all; }
-  .mon-term-input { display:flex; align-items:center; padding:6px 12px; background:rgba(20,16,14,0.3); border-top:1px solid rgba(239,230,214,0.04); }
+  .mon-term-input { display:flex; align-items:center; padding:6px 12px; background:rgba(31,25,23,0.3); border-top:1px solid rgba(239,230,214,0.04); }
   .mon-term-prompt { font-family:'SF Mono',Menlo,monospace; font-size:12px; color:rgba(208,86,63,0.6); flex-shrink:0; }
   .mon-term-cmd { flex:1; background:none; border:none; outline:none; font-family:'SF Mono',Menlo,monospace; font-size:12px; color:#EFE6D6; padding:4px 6px; }
   .mon-activity-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
@@ -1959,12 +1959,12 @@
   @keyframes monSpin { to{transform:rotate(360deg)} }
 
   /* Breadcrumb */
-  .mon-crumb { font-size:12px; color:rgba(239,230,214,0.4); padding:6px 16px; display:flex; align-items:center; gap:3px; flex-shrink:0; border-bottom:1px solid rgba(239,230,214,0.04); }
-  .mon-crumb span { cursor:pointer; padding:2px 6px; border-radius:4px; transition:all 0.12s; } .mon-crumb span:hover { color:rgba(239,230,214,0.8); background:rgba(239,230,214,0.06); }
-  .mon-crumb span:last-child { color:rgba(239,230,214,0.6); cursor:default; }
-  .mon-crumb-sep { color:rgba(239,230,214,0.15); cursor:default !important; padding:0 !important; }
-  .mon-crumb-back { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:5px; cursor:pointer; color:rgba(239,230,214,0.35); transition:all 0.12s; margin-right:4px; flex-shrink:0; }
-  .mon-crumb-back:hover { background:rgba(239,230,214,0.08); color:rgba(239,230,214,0.8); }
+  .mon-crumb { font-size:12px; color:rgba(239,230,214,0.5); padding:6px 16px; display:flex; align-items:center; gap:3px; flex-shrink:0; border-bottom:1px solid rgba(239,230,214,0.04); }
+  .mon-crumb span { cursor:pointer; padding:2px 6px; border-radius:4px; transition:all 0.12s; } .mon-crumb span:hover { color:#B8AC9A; background:rgba(239,230,214,0.06); }
+  .mon-crumb span:last-child { color:#B8AC9A; cursor:default; }
+  .mon-crumb-sep { color:rgba(239,230,214,0.5); cursor:default !important; padding:0 !important; }
+  .mon-crumb-back { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:5px; cursor:pointer; color:rgba(239,230,214,0.5); transition:all 0.12s; margin-right:4px; flex-shrink:0; }
+  .mon-crumb-back:hover { background:rgba(239,230,214,0.08); color:#B8AC9A; }
 
   /* Chat input (flows in page on desktop, fixed on mobile) */
   .float-chat { width:100%; max-width:700px; margin:16px auto 0; opacity:0; animation:heroIn 0.8s ease forwards 0.6s; }
@@ -2014,7 +2014,7 @@
     .float-chat .suggestions { display:none; }
     .float-chat:focus-within .suggestions { display:block; }
     /* Expand button */
-    .mon-expand-btn { display:flex; width:20px; height:20px; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:none; border-radius:4px; color:rgba(239,230,214,0.3); cursor:pointer; flex-shrink:0; }
+    .mon-expand-btn { display:flex; width:20px; height:20px; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:none; border-radius:4px; color:rgba(239,230,214,0.5); cursor:pointer; flex-shrink:0; }
   }
 
 
@@ -2157,7 +2157,7 @@
     <div style="flex:0.5"></div>
 
     <div class="hero-bridge-prompt" id="heroBridgePrompt">
-      <span style="color:rgba(239,230,214,0.45);font-size:12px;">Connect your Mac:</span>
+      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Connect your Mac:</span>
       <a href="/download/ClosedHandBridge.dmg" class="hero-bridge-link" id="heroBridgeMac">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Mac
@@ -2170,7 +2170,7 @@
   <div class="activity-sidebar" id="activitySidebar">
     <div class="sidebar-resize-handle" id="sidebarResizeHandle"><div class="sidebar-resize-pill"></div></div>
     <div style="padding:12px 18px 0;">
-      <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:rgba(239,230,214,0.4);text-decoration:none;font-size:12px;transition:color 0.15s;" onmouseover="this.style.color='rgba(239,230,214,0.7)'" onmouseout="this.style.color='rgba(239,230,214,0.4)'">
+      <a href="/" style="display:inline-flex;align-items:center;gap:6px;color:rgba(239,230,214,0.5);text-decoration:none;font-size:12px;transition:color 0.15s;" onmouseover="this.style.color='rgba(239,230,214,0.7)'" onmouseout="this.style.color='rgba(239,230,214,0.5)'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to home
       </a>
@@ -2180,10 +2180,10 @@
       <button onclick="startNewThread()" style="padding:4px 12px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;">+ New</button>
     </div>
     <div style="padding:0 18px 8px;">
-      <input type="text" id="threadSearchInput" placeholder="Search conversations..." style="width:100%;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.06);border-radius:6px;padding:6px 10px;color:rgba(239,230,214,0.7);font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="searchThreads(this.value)">
+      <input type="text" id="threadSearchInput" placeholder="Search conversations..." style="width:100%;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.06);border-radius:6px;padding:6px 10px;color:#B8AC9A;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="searchThreads(this.value)">
     </div>
     <div class="activity-sidebar-list" id="activityList">
-      <div style="font-size:12px;color:rgba(239,230,214,0.28);padding:12px;">Loading...</div>
+      <div style="font-size:12px;color:rgba(239,230,214,0.6);padding:12px;">Loading...</div>
     </div>
   </div>
 
@@ -2205,7 +2205,7 @@
       <span class="canvas-title" id="canvasTitle">Canvas</span>
       <div style="display:flex;align-items:center;gap:10px;">
         <a id="canvasShareLink" href="#" target="_blank" style="color:#D8624B;font-size:12px;text-decoration:none;">Share</a>
-        <button onclick="closeCanvas()" style="background:none;border:none;color:rgba(239,230,214,0.4);font-size:20px;cursor:pointer;">&times;</button>
+        <button onclick="closeCanvas()" style="background:none;border:none;color:rgba(239,230,214,0.5);font-size:20px;cursor:pointer;">&times;</button>
       </div>
     </div>
     <div class="canvas-body" id="canvasBody"></div>
@@ -2216,11 +2216,11 @@
   </div>
 
   <!-- Worker status bar (shows when agents/teams are running) -->
-  <div id="workerStatusBar" style="display:none;position:fixed;bottom:200px;left:260px;right:0;padding:8px 20px;background:rgba(216,98,75,0.06);border-bottom:1px solid rgba(216,98,75,0.1);font-size:13px;color:rgba(239,230,214,0.55);cursor:pointer;z-index:10;backdrop-filter:blur(10px);" onclick="if(window.openDashSlide)window.openDashSlide('#workers')">
+  <div id="workerStatusBar" style="display:none;position:fixed;bottom:200px;left:260px;right:0;padding:8px 20px;background:rgba(216,98,75,0.06);border-bottom:1px solid rgba(216,98,75,0.1);font-size:13px;color:#B8AC9A;cursor:pointer;z-index:10;backdrop-filter:blur(10px);" onclick="if(window.openDashSlide)window.openDashSlide('#workers')">
     <div style="display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;">
       <span style="animation:typingBounce 1.4s ease-in-out infinite;color:#D8624B;font-size:14px;">&#9881;</span>
       <span id="workerStatusText">Workers active</span>
-      <span style="margin-left:auto;font-size:11px;color:rgba(239,230,214,0.25);">Tap to view</span>
+      <span style="margin-left:auto;font-size:11px;color:rgba(239,230,214,0.5);">Tap to view</span>
     </div>
   </div>
 
@@ -2247,7 +2247,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
               Workspace
               <span class="mon-status on pulse"></span>
-              <span style="font-size:10px;color:rgba(239,230,214,0.3);">Runs on your computer</span>
+              <span style="font-size:10px;color:rgba(239,230,214,0.5);">Runs on your computer</span>
               <span class="mon-info" data-tip="Sign in to any site here once and you stay signed in, so ClosedHand can use it exactly as you would, even when you're offline. That covers sites with no useful API, like Instagram.&#10;&#10;It is your own machine, not shared with anyone.">i</span>
             </div>
             <div class="mon-bar-right">
@@ -2275,14 +2275,14 @@
           <!-- Desktop VNC view (hidden by default, shown when Desktop toggle is clicked) -->
           <div id="monDesktop" style="display:none;flex:1;position:relative;background:#14100E;">
             <iframe id="monVncFrame" style="width:100%;height:100%;border:none;" allow="clipboard-read; clipboard-write"></iframe>
-            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(239,230,214,0.3);font-size:13px;">Starting browser...</div>
-            <div id="monSyncTip" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);border-radius:10px;padding:8px 14px;font-size:12px;color:rgba(239,230,214,0.75);align-items:center;gap:10px;box-shadow:0 4px 16px rgba(20,16,14,0.4);z-index:5;">
+            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(239,230,214,0.5);font-size:13px;">Starting browser...</div>
+            <div id="monSyncTip" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);border-radius:10px;padding:8px 14px;font-size:12px;color:#B8AC9A;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(20,16,14,0.4);z-index:5;">
               <span>Tip: bring your bookmarks and passwords here. In Chrome, click the profile icon (top right) then "Turn on sync".</span>
-              <button onclick="this.parentElement.style.display='none';try{localStorage.setItem('ch_sync_tip_seen','1')}catch(e){}" style="background:none;border:none;color:rgba(239,230,214,0.4);cursor:pointer;font-size:14px;padding:0 2px;">&#10005;</button>
+              <button onclick="this.parentElement.style.display='none';try{localStorage.setItem('ch_sync_tip_seen','1')}catch(e){}" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:14px;padding:0 2px;">&#10005;</button>
             </div>
           </div>
           <div class="mon-term-bar" id="monTermBar" onclick="monToggleTerm()">
-            <span style="font-size:11px;color:rgba(239,230,214,0.3);display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Terminal</span>
+            <span style="font-size:11px;color:rgba(239,230,214,0.5);display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Terminal</span>
             <span class="mon-activity-status-inline" id="monTermStatus"></span>
             <button class="mon-term-toggle" id="monTermToggleBtn" style="position:absolute;left:50%;transform:translateX(-50%);">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
@@ -2311,7 +2311,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
               Local Computer
               <span class="mon-status off" id="monLocalStatus"></span>
-              <span id="monLocalStatusText" style="font-size:10px;color:rgba(239,230,214,0.25);">Offline</span>
+              <span id="monLocalStatusText" style="font-size:10px;color:rgba(239,230,214,0.5);">Offline</span>
             </div>
             <div class="mon-bar-right">
               <div class="mon-view-toggle" id="monLocalViewToggle">
@@ -2341,7 +2341,7 @@
   </div>
 
     <div class="mon-drag-hint" id="monDragHint">
-      <span style="color:rgba(239,230,214,0.35);font-size:12px;">Drag files between panels to keep them online. Right-click for more options.</span>
+      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Drag files between panels to keep them online. Right-click for more options.</span>
       <button class="mon-drag-hint-dismiss" onclick="dismissDragHint()">&times;</button>
     </div>
 
@@ -2365,7 +2365,7 @@
 
     <!-- Source list (shown when sources exist) -->
     <div id="ragSources" style="display:none">
-      <p style="font-size:13px;color:rgba(239,230,214,0.4);margin:0 0 10px 2px;">Semantic search instantly finds relevant files across your drives and computers with plain-English queries.</p>
+      <p style="font-size:13px;color:rgba(239,230,214,0.5);margin:0 0 10px 2px;">Semantic search instantly finds relevant files across your drives and computers with plain-English queries.</p>
       <!-- Query box - always at top -->
       <div class="rag-query-box">
         <input type="text" id="ragSearchInput" class="rag-query-input" placeholder="Describe what you're looking for... e.g. &quot;last year's tax return&quot; or &quot;photos with blue eyes&quot;" onkeydown="if(event.key==='Enter')ragSearch()">
@@ -2400,8 +2400,8 @@
   <div id="ragModal" style="display:none;position:fixed;inset:0;background:rgba(20,16,14,0.6);z-index:100;display:none;align-items:center;justify-content:center;">
     <div style="background:#1F1917;border:1px solid rgba(239,230,214,0.1);border-radius:14px;width:400px;max-height:500px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="padding:16px 18px;border-bottom:1px solid rgba(239,230,214,0.06);display:flex;justify-content:space-between;align-items:center;">
-        <span id="ragModalTitle" style="font-size:14px;color:rgba(239,230,214,0.7);font-weight:500;">Add source</span>
-        <button onclick="ragCloseModal()" style="background:none;border:none;color:rgba(239,230,214,0.3);cursor:pointer;font-size:18px;">&times;</button>
+        <span id="ragModalTitle" style="font-size:14px;color:#B8AC9A;font-weight:500;">Add source</span>
+        <button onclick="ragCloseModal()" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:18px;">&times;</button>
       </div>
       <div id="ragModalBody" style="padding:16px 18px;overflow-y:auto;flex:1;"></div>
     </div>
@@ -2413,7 +2413,7 @@
 <div class="features-inner">
 
   <div class="feat-row reveal">
-    <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(150,173,127,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
+    <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
       <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">A support team at your fingertips</div>
       <div class="feat-card-desc">Ask questions and get work done in your connected chat apps. Keep the computer running ClosedHand awake and online.</div>
@@ -3233,11 +3233,11 @@
     if (wrapper) {
       wrapper.outerHTML =
         '<div style="margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px;width:80%;max-width:320px;">' +
-          '<a href="#" onclick="event.preventDefault();document.getElementById(\'bridgePairModal\').style.display=\'flex\';" id="bridgeConnectPill" style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(239,230,214,0.08);border:1px solid rgba(239,230,214,0.15);border-radius:12px;color:rgba(239,230,214,0.7);text-decoration:none;font-size:13px;width:100%;justify-content:center;">' +
+          '<a href="#" onclick="event.preventDefault();document.getElementById(\'bridgePairModal\').style.display=\'flex\';" id="bridgeConnectPill" style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(239,230,214,0.08);border:1px solid rgba(239,230,214,0.15);border-radius:12px;color:#B8AC9A;text-decoration:none;font-size:13px;width:100%;justify-content:center;">' +
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
-            '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.35);"> Enter your pairing code</span></span>' +
+            '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.5);"> Enter your pairing code</span></span>' +
           '</a>' +
-          '<p style="font-size:12px;color:rgba(239,230,214,0.35);text-align:center;line-height:1.4;margin:0;">Open this dashboard on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
+          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open this dashboard on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
         '</div>';
     }
   }
@@ -3305,7 +3305,7 @@
         if (textareaWrap) textareaWrap.insertBefore(previewArea, input);
       }
       var chip = document.createElement('div');
-      chip.style.cssText = 'display:flex;align-items:center;gap:6px;background:rgba(239,230,214,0.08);border:1px solid rgba(239,230,214,0.12);border-radius:10px;padding:4px 10px 4px 4px;font-size:12px;color:rgba(239,230,214,0.9);';
+      chip.style.cssText = 'display:flex;align-items:center;gap:6px;background:rgba(239,230,214,0.08);border:1px solid rgba(239,230,214,0.12);border-radius:10px;padding:4px 10px 4px 4px;font-size:12px;color:#EFE6D6;';
       if (isImage) {
         var img = document.createElement('img');
         img.src = dataUrl;
@@ -3325,7 +3325,7 @@
       chip.appendChild(nameSpan);
       var removeBtn = document.createElement('span');
       removeBtn.textContent = '\u00d7';
-      removeBtn.style.cssText = 'cursor:pointer;color:rgba(239,230,214,0.64);margin-left:4px;font-size:14px;';
+      removeBtn.style.cssText = 'cursor:pointer;color:#B8AC9A;margin-left:4px;font-size:14px;';
       removeBtn.onclick = function() {
         var idx = pendingFiles.findIndex(function(f) { return f.name === file.name; });
         if (idx >= 0) pendingFiles.splice(idx, 1);
@@ -3689,7 +3689,7 @@
           div.appendChild(img);
         } else if (f.name) {
           var filePill = document.createElement('div');
-          filePill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(239,230,214,0.08);border-radius:8px;font-size:13px;color:rgba(239,230,214,0.6);margin-bottom:8px;margin-right:6px;';
+          filePill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(239,230,214,0.08);border-radius:8px;font-size:13px;color:#B8AC9A;margin-bottom:8px;margin-right:6px;';
           filePill.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>' + (f.name || 'Document');
           div.appendChild(filePill);
         }
@@ -3910,7 +3910,7 @@
         var list = document.getElementById('activityList');
         if (!list) return;
         if (!threads.length) {
-          list.innerHTML = '<div style="font-size:12px;color:rgba(239,230,214,0.2);padding:16px 18px;">No matching conversations</div>';
+          list.innerHTML = '<div style="font-size:12px;color:rgba(239,230,214,0.5);padding:16px 18px;">No matching conversations</div>';
           return;
         }
         list.innerHTML = threads.map(function(t) {
@@ -3921,7 +3921,7 @@
             '<div onclick="switchToThread(\'' + t.id + '\')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' +
               '<span class="activity-item-icon">&#x1F4AC;</span>' +
               '<div style="flex:1;min-width:0;">' +
-                '<div class="activity-item-text" style="color:' + (t.is_active ? '#EFE6D6' : 'rgba(239,230,214,0.9)') + ';">' + title.replace(/</g, '&lt;') + '</div>' +
+                '<div class="activity-item-text" style="color:' + (t.is_active ? '#EFE6D6' : '#EFE6D6') + ';">' + title.replace(/</g, '&lt;') + '</div>' +
                 '<div class="activity-item-time">' + ago + '</div>' +
               '</div>' +
             '</div>' +
@@ -3940,7 +3940,7 @@
       var list = document.getElementById('activityList');
       if (!list) return;
       if (!threads || !threads.length) {
-        list.innerHTML = '<div style="font-size:12px;color:rgba(239,230,214,0.28);padding:16px 18px;">No conversations yet. Start chatting!</div>';
+        list.innerHTML = '<div style="font-size:12px;color:rgba(239,230,214,0.6);padding:16px 18px;">No conversations yet. Start chatting!</div>';
         return;
       }
       // Track active thread
@@ -4057,10 +4057,10 @@
     // Two different intents share this X. Hide is the tidy-up: the thread
     // stops being listed but ClosedHand keeps everything it learned. Delete
     // is the promise: gone from the list, gone from memory.
-    item.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;color:rgba(239,230,214,0.64);">' +
-      '<button onclick="event.stopPropagation();archiveThread(\'' + threadId + '\',this)" title="Put away but kept. ClosedHand remembers it, and you can restore it from Archived below." style="padding:2px 10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);color:rgba(239,230,214,0.9);border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Archive</button>' +
+    item.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;color:#B8AC9A;">' +
+      '<button onclick="event.stopPropagation();archiveThread(\'' + threadId + '\',this)" title="Put away but kept. ClosedHand remembers it, and you can restore it from Archived below." style="padding:2px 10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);color:#EFE6D6;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Archive</button>' +
       '<button onclick="event.stopPropagation();confirmDeleteThread(\'' + threadId + '\',this)" title="Erase this conversation and everything ClosedHand remembers from it." style="padding:2px 10px;background:#D0563F;color:#EFE6D6;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Delete forever</button>' +
-      '<button onclick="event.stopPropagation();cancelDeleteThread(this)" style="padding:2px 10px;background:transparent;border:1px solid rgba(239,230,214,0.28);color:rgba(239,230,214,0.64);border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Cancel</button></div>';
+      '<button onclick="event.stopPropagation();cancelDeleteThread(this)" style="padding:2px 10px;background:transparent;border:1px solid rgba(239,230,214,0.28);color:#B8AC9A;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Cancel</button></div>';
     item._originalHTML = original;
   }
 
@@ -4071,7 +4071,7 @@
   function renderArchivedSection(list) {
     fetch('/api/threads/archived').then(function(r) { return r.json(); }).then(function(rows) {
       if (!rows || !rows.length) return;
-      var html = '<div style="padding:8px 18px 4px;font-size:11px;color:rgba(239,230,214,0.4);cursor:pointer;user-select:none;" onclick="window._toggleArchived()">'
+      var html = '<div style="padding:8px 18px 4px;font-size:11px;color:rgba(239,230,214,0.6);cursor:pointer;user-select:none;" onclick="window._toggleArchived()">'
         + (_archivedOpen ? '\u25be' : '\u25b8') + ' Archived (' + rows.length + ')</div>';
       if (_archivedOpen) {
         html += rows.map(function(t) {
@@ -4229,9 +4229,9 @@
 
     var tag = document.createElement('div');
     tag.id = 'replyContextTag';
-    tag.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;margin:0 auto 4px;max-width:1000px;background:rgba(208,86,63,0.08);border:1px solid rgba(208,86,63,0.2);border-radius:8px;font-size:13px;color:rgba(239,230,214,0.6);';
+    tag.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;margin:0 auto 4px;max-width:1000px;background:rgba(208,86,63,0.08);border:1px solid rgba(208,86,63,0.2);border-radius:8px;font-size:13px;color:#B8AC9A;';
     tag.innerHTML = '<span style="color:rgba(208,86,63,0.7);">Replying to:</span> <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + preview.replace(/</g, '&lt;') + '</span>' +
-      '<span onclick="clearReplyContext()" style="cursor:pointer;color:rgba(239,230,214,0.3);font-size:16px;padding:0 4px;" title="Clear">&times;</span>';
+      '<span onclick="clearReplyContext()" style="cursor:pointer;color:rgba(239,230,214,0.5);font-size:16px;padding:0 4px;" title="Clear">&times;</span>';
 
     var dockedEl = document.getElementById('dockedInput');
     if (dockedEl) {
@@ -4520,7 +4520,7 @@
         if (hc && status.name) {
           var firstName = (status.name || '').split(' ')[0].replace(/</g,'&lt;');
           hc.style.position = 'relative';
-          hc.innerHTML = '<span style="color:rgba(239,230,214,0.4);font-size:14px;">Connected as <strong style="color:rgba(150,173,127,0.7);">' + firstName + '</strong></span>';
+          hc.innerHTML = '<span style="color:rgba(239,230,214,0.5);font-size:14px;">Connected as <strong style="color:rgba(150,173,127,0.7);">' + firstName + '</strong></span>';
         }
         connectChat();
         if (typeof loadRAGModeState === 'function') loadRAGModeState();
@@ -4535,8 +4535,8 @@
             resumeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 12a9 9 0 11-3.4-7.05"/><polyline points="21 3 21 9 15 9"/></svg>Continue conversation';
             var isMobile = window.innerWidth < 600;
             resumeEl.style.cssText = isMobile
-              ? 'position:relative;display:flex;align-items:center;justify-content:center;padding:10px 18px;margin:12px auto 0;background:rgba(20,16,14,0.85);border:1px solid rgba(208,86,63,0.2);border-radius:12px;color:rgba(239,230,214,0.6);font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);cursor:pointer;width:fit-content;box-shadow:0 0 12px rgba(208,86,63,0.08);animation:pillFloat 4s ease-in-out infinite;'
-              : 'position:fixed;bottom:32px;right:24px;z-index:10;display:flex;align-items:center;padding:10px 18px;background:rgba(20,16,14,0.85);border:1px solid rgba(239,230,214,0.1);border-radius:12px;color:rgba(239,230,214,0.55);font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);transition:all 0.2s;cursor:pointer;animation:pillFloat 4s ease-in-out infinite;';
+              ? 'position:relative;display:flex;align-items:center;justify-content:center;padding:10px 18px;margin:12px auto 0;background:rgba(31,25,23,0.85);border:1px solid rgba(208,86,63,0.2);border-radius:12px;color:#B8AC9A;font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);cursor:pointer;width:fit-content;box-shadow:0 0 12px rgba(208,86,63,0.08);animation:pillFloat 4s ease-in-out infinite;'
+              : 'position:fixed;bottom:32px;right:24px;z-index:10;display:flex;align-items:center;padding:10px 18px;background:rgba(31,25,23,0.85);border:1px solid rgba(239,230,214,0.1);border-radius:12px;color:#B8AC9A;font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);transition:all 0.2s;cursor:pointer;animation:pillFloat 4s ease-in-out infinite;';
             resumeEl.onmouseover = function() { this.style.borderColor = 'rgba(239,230,214,0.2)'; this.style.color = 'rgba(239,230,214,0.8)'; };
             resumeEl.onmouseout = function() { this.style.borderColor = 'rgba(239,230,214,0.1)'; this.style.color = 'rgba(239,230,214,0.55)'; };
             resumeEl.onclick = function(e) {
@@ -5031,7 +5031,7 @@ async function ragAddSource() {
   var modal = document.getElementById('ragModal');
   modal.style.display = 'flex';
   document.getElementById('ragModalTitle').textContent = 'Add source';
-  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.3);font-size:13px;">Loading...</div>';
+  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading...</div>';
 
   try {
     var resp = await fetch('/api/rag/available-sources');
@@ -5040,7 +5040,7 @@ async function ragAddSource() {
     var sources = { bridge: true };
   }
 
-  var html = '<p style="color:rgba(239,230,214,0.25);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">Cloud storage</p>';
+  var html = '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">Cloud storage</p>';
 
   // Google Drive: one row per connected account, so a user with several
   // Google logins can index each one's Drive, matching mail search.
@@ -5083,11 +5083,11 @@ async function ragAddSource() {
 
   // Notion - coming soon
   html += '<div class="rag-browse-item" style="opacity:0.35;cursor:default;">'
-    + '<img src="/logos/notion.svg" width="16" height="16" style="flex-shrink:0;"> Notion <span style="font-size:10px;color:rgba(239,230,214,0.52);margin-left:auto;">Coming soon</span></div>';
+    + '<img src="/logos/notion.svg" width="16" height="16" style="flex-shrink:0;"> Notion <span style="font-size:10px;color:#B8AC9A;margin-left:auto;">Coming soon</span></div>';
 
   // ClosedHand section
   html += '<div style="border-top:1px solid rgba(239,230,214,0.06);margin:14px 0 8px;"></div>';
-  html += '<p style="color:rgba(239,230,214,0.25);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">ClosedHand</p>';
+  html += '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">ClosedHand</p>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'cloud\',\'/workspace\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>'
@@ -5128,15 +5128,15 @@ async function ragBrowse(origin, path, folderName, account) {
   var crumbHtml = '';
   for (var ci = 0; ci < _ragBreadcrumbs.length; ci++) {
     var b = _ragBreadcrumbs[ci];
-    if (ci > 0) crumbHtml += ' <span style="color:rgba(239,230,214,0.15);margin:0 2px;">/</span> ';
+    if (ci > 0) crumbHtml += ' <span style="color:rgba(239,230,214,0.5);margin:0 2px;">/</span> ';
     if (ci < _ragBreadcrumbs.length - 1) {
-      crumbHtml += '<a href="#" onclick="event.preventDefault();ragBrowse(\'' + origin + '\',\'' + b.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.4);text-decoration:none;">' + escapeHtml(b.name) + '</a>';
+      crumbHtml += '<a href="#" onclick="event.preventDefault();ragBrowse(\'' + origin + '\',\'' + b.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.5);text-decoration:none;">' + escapeHtml(b.name) + '</a>';
     } else {
-      crumbHtml += '<span style="color:rgba(239,230,214,0.7);">' + escapeHtml(b.name) + '</span>';
+      crumbHtml += '<span style="color:#B8AC9A;">' + escapeHtml(b.name) + '</span>';
     }
   }
   document.getElementById('ragModalTitle').innerHTML = crumbHtml || label;
-  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.3);font-size:13px;">Loading...</div>';
+  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading...</div>';
 
   // Local browsing needs a live Bridge. Check status up front: the browse
   // endpoint can return an empty success when the Bridge is offline, which
@@ -5147,8 +5147,8 @@ async function ragBrowse(origin, path, folderName, account) {
       if (bs.status !== 'connected' && bs.status !== 'reconnecting') {
         document.getElementById('ragModalBody').innerHTML = '<div style="text-align:center;padding:24px 16px;">'
           + '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(239,230,214,0.15)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>'
-          + '<div style="color:rgba(239,230,214,0.4);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
-          + '<div style="color:rgba(239,230,214,0.2);font-size:12px;">Open the ClosedHand Bridge app on your computer to browse and index local files.</div></div>';
+          + '<div style="color:rgba(239,230,214,0.5);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
+          + '<div style="color:rgba(239,230,214,0.5);font-size:12px;">Open the ClosedHand Bridge app on your computer to browse and index local files.</div></div>';
         return;
       }
     } catch (e) {}
@@ -5179,17 +5179,17 @@ async function ragBrowse(origin, path, folderName, account) {
     if (showIndexCta) {
       var ctaLabel = isAtRoot ? 'Index all ' + label + ' files' : 'Index this folder';
       if (docFiles.length > 0) ctaLabel += ' (' + docFiles.length + ' indexable file' + (docFiles.length === 1 ? '' : 's') + ' here)';
-      html += '<div class="rag-browse-item" onclick="ragConnectSource(\'' + origin + '\',\'' + path.replace(/'/g, "\\'") + '\')" style="background:rgba(150,173,127,0.06);border-color:rgba(150,173,127,0.2);color:var(--accent);font-weight:500;">'
+      html += '<div class="rag-browse-item" onclick="ragConnectSource(\'' + origin + '\',\'' + path.replace(/'/g, "\\'") + '\')" style="background:rgba(208,86,63,0.06);border-color:rgba(208,86,63,0.2);color:var(--accent);font-weight:500;">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
         + ctaLabel + '</div>';
     } else {
-      html += '<div style="color:rgba(239,230,214,0.3);font-size:12px;padding:4px 14px 8px;">Pick a folder to index. Indexing your entire computer isn\'t supported.</div>';
+      html += '<div style="color:rgba(239,230,214,0.5);font-size:12px;padding:4px 14px 8px;">Pick a folder to index. Indexing your entire computer isn\'t supported.</div>';
     }
 
     // Back button (only if not at root)
     if (path !== rootPath && _ragBreadcrumbs.length > 1) {
       var parentCrumb = _ragBreadcrumbs[_ragBreadcrumbs.length - 2];
-      html += '<div class="rag-browse-item" onclick="ragBrowse(\'' + origin + '\',\'' + parentCrumb.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.35);">'
+      html += '<div class="rag-browse-item" onclick="ragBrowse(\'' + origin + '\',\'' + parentCrumb.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.5);">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'
         + 'Back</div>';
     }
@@ -5215,8 +5215,8 @@ async function ragBrowse(origin, path, folderName, account) {
     if (docFiles.length > 0) {
       html += '<div style="border-top:1px solid rgba(239,230,214,0.06);margin:6px 0;padding-top:2px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 14px 4px;">'
-        + '<span style="color:rgba(239,230,214,0.2);font-size:10px;text-transform:uppercase;letter-spacing:0.4px;">Files</span>'
-        + '<a href="#" onclick="event.preventDefault();ragSelectAll()" id="ragSelectAllLink" style="color:rgba(239,230,214,0.2);font-size:10px;text-decoration:none;">Select all</a></div>';
+        + '<span style="color:rgba(239,230,214,0.5);font-size:10px;text-transform:uppercase;letter-spacing:0.4px;">Files</span>'
+        + '<a href="#" onclick="event.preventDefault();ragSelectAll()" id="ragSelectAllLink" style="color:rgba(239,230,214,0.5);font-size:10px;text-decoration:none;">Select all</a></div>';
       for (var fi = 0; fi < docFiles.length; fi++) {
         var df = docFiles[fi];
         var fileId = (origin === 'gdrive') ? df.id : (path.replace(/\/$/, '') + '/' + df.name);
@@ -5227,7 +5227,7 @@ async function ragBrowse(origin, path, folderName, account) {
           + '<input type="checkbox" class="rag-file-check" style="width:13px;height:13px;margin:0;flex-shrink:0;accent-color:var(--accent);pointer-events:none;" />'
           + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(239,230,214,0.2)" stroke-width="1.5" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
           + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(df.name) + '</span>'
-          + (sizeStr ? '<span style="color:rgba(239,230,214,0.15);font-size:10px;flex-shrink:0;margin-left:8px;">' + sizeStr + '</span>' : '')
+          + (sizeStr ? '<span style="color:rgba(239,230,214,0.5);font-size:10px;flex-shrink:0;margin-left:8px;">' + sizeStr + '</span>' : '')
           + '</div>';
       }
       html += '<div id="ragSelectActions" style="display:none;padding:4px 0;">'
@@ -5238,7 +5238,7 @@ async function ragBrowse(origin, path, folderName, account) {
     }
 
     if (folders.length === 0 && docFiles.length === 0) {
-      html += '<div style="color:rgba(239,230,214,0.2);font-size:12px;text-align:center;padding:16px;">This folder is empty</div>';
+      html += '<div style="color:rgba(239,230,214,0.5);font-size:12px;text-align:center;padding:16px;">This folder is empty</div>';
     }
 
     document.getElementById('ragModalBody').innerHTML = html;
@@ -5248,8 +5248,8 @@ async function ragBrowse(origin, path, folderName, account) {
     if (isOffline && origin === 'bridge') {
       document.getElementById('ragModalBody').innerHTML = '<div style="text-align:center;padding:24px 16px;">'
         + '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(239,230,214,0.15)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>'
-        + '<div style="color:rgba(239,230,214,0.4);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
-        + '<div style="color:rgba(239,230,214,0.2);font-size:12px;">Open the ClosedHand Bridge app on your Mac to browse local files.</div></div>';
+        + '<div style="color:rgba(239,230,214,0.5);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
+        + '<div style="color:rgba(239,230,214,0.5);font-size:12px;">Open the ClosedHand Bridge app on your Mac to browse local files.</div></div>';
     } else {
       document.getElementById('ragModalBody').innerHTML = '<div style="color:#D8624B;font-size:13px;">' + escapeHtml(errMsg) + '</div>';
     }
@@ -5537,7 +5537,7 @@ function ragPreviewImage(url) {
 function ragRenderResults(allResults) {
   var resultsEl = document.getElementById('ragSearchResults');
   if (!allResults || allResults.length === 0) {
-    resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.3);font-size:13px;padding:12px;">No results for this filter.</div>';
+    resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:12px;">No results for this filter.</div>';
     return;
   }
   var results = allResults.slice(0, _ragVisibleCount);
@@ -5583,7 +5583,7 @@ function ragRenderResults(allResults) {
       + '</div>'
       // Percentage always shown (it is the honest raw score), greyed when it
       // sits at the noise floor so a number is not mistaken for relevance
-      + '<span class="rag-result-score"' + (r.low_confidence ? ' style="color:rgba(239,230,214,0.35);"' : '') + '>' + sim + '% match</span>'
+      + '<span class="rag-result-score"' + (r.low_confidence ? ' style="color:rgba(239,230,214,0.5);"' : '') + '>' + sim + '% match</span>'
       + '</div>';
 
     if (isZeroResidency) {
@@ -5617,7 +5617,7 @@ function ragRenderResults(allResults) {
   if (allResults.length > results.length) {
     var remaining = allResults.length - results.length;
     var next = Math.min(RAG_PAGE_SIZE, remaining);
-    html += '<button onclick="ragShowMore()" style="width:100%;margin-top:8px;padding:10px;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.1);border-radius:8px;color:rgba(239,230,214,0.65);font-size:13px;font-family:inherit;cursor:pointer;">Show ' + next + ' more (' + remaining + ' left)</button>';
+    html += '<button onclick="ragShowMore()" style="width:100%;margin-top:8px;padding:10px;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.1);border-radius:8px;color:#B8AC9A;font-size:13px;font-family:inherit;cursor:pointer;">Show ' + next + ' more (' + remaining + ' left)</button>';
   }
   return html;
 }
@@ -5667,13 +5667,13 @@ async function ragSearch() {
   if (!q) return;
   var resultsEl = document.getElementById('ragSearchResults');
   resultsEl.style.display = '';
-  resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.3);font-size:13px;padding:12px;">Searching...</div>';
+  resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:12px;">Searching...</div>';
   try {
     var resp = await fetch('/api/rag/search?q=' + encodeURIComponent(q));
     var data = await resp.json();
     var results = data.results || data;
     if (!results || results.length === 0) {
-      resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.3);font-size:13px;padding:12px;">No results found.</div>';
+      resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:12px;">No results found.</div>';
       _ragSearchResults = [];
       return;
     }
@@ -5689,7 +5689,7 @@ async function ragSearch() {
     // Everything came back weak: say so rather than dressing up the nearest
     // neighbour as an answer
     var weakHtml = data.no_strong_matches
-      ? '<div style="color:rgba(239,230,214,0.45);font-size:13px;padding:10px 12px;border:1px solid rgba(239,230,214,0.08);border-radius:8px;margin-bottom:10px;">Nothing in your indexed files closely matches that. Closest content shown below, or try different words.</div>'
+      ? '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:10px 12px;border:1px solid rgba(239,230,214,0.08);border-radius:8px;margin-bottom:10px;">Nothing in your indexed files closely matches that. Closest content shown below, or try different words.</div>'
       : '';
     resultsEl.innerHTML = filterHtml + weakHtml + (bodyHtml || '');
   } catch (e) {
@@ -5866,7 +5866,7 @@ function escapeHtml(s) {
       e.ondragover=function(ev){ev.preventDefault();this.classList.add('dragover');};
       e.ondragleave=function(){this.classList.remove('dragover');};
       e.ondrop=function(ev){ev.preventDefault();this.classList.remove('dragover');if(ev.dataTransfer.files&&ev.dataTransfer.files.length>0)monHandleUpload(ev.dataTransfer.files);};
-      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg><div class="mon-empty-text">Your online workspace</div><div style="font-size:12px;color:rgba(239,230,214,0.25);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them from your local computer. They stay available even when your Mac is off.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
+      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg><div class="mon-empty-text">Your online workspace</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them from your local computer. They stay available even when your Mac is off.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
     }
     var sorted=monSort(visible);
     if(_monCloudView==='grid')monRenderGrid(sorted,el,'cloud');
@@ -6361,11 +6361,11 @@ function escapeHtml(s) {
     try {
       var url = side === 'cloud' ? '/api/sandbox/files?path=' + encodeURIComponent(path) : '/api/bridge/files?path=' + encodeURIComponent(path);
       var r = await fetch(url);
-      if (!r.ok) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.25);">Could not load</div>'; return; }
+      if (!r.ok) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.5);">Could not load</div>'; return; }
       var d = await r.json();
       var files = (d.items || d.files || []).filter(function(f){return f.name&&f.name[0]!=='.';});
       files.sort(function(a,b){var ad=a.type==='directory'?0:1,bd=b.type==='directory'?0:1;return ad-bd||(a.name||'').localeCompare(b.name||'');});
-      if (!files.length) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.2);">Empty</div>'; return; }
+      if (!files.length) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.5);">Empty</div>'; return; }
       var navFn = side === 'cloud' ? 'monNav' : 'monNavLocal';
       var html = '';
       for (var i = 0; i < files.length; i++) {
@@ -6389,7 +6389,7 @@ function escapeHtml(s) {
         html += '</div>';
       }
       childContainer.innerHTML = html;
-    } catch(e) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.25);">Error</div>'; }
+    } catch(e) { childContainer.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:rgba(239,230,214,0.5);">Error</div>'; }
   }
   document.getElementById('monGridBtn').addEventListener('click',function(e){e.preventDefault();if(window._monDesktopActive)monToggleDesktop();monSetView('grid');});
   document.getElementById('monListBtn').addEventListener('click',function(e){e.preventDefault();if(window._monDesktopActive)monToggleDesktop();monSetView('list');});
@@ -6496,7 +6496,7 @@ function escapeHtml(s) {
         // Show exit hint
         var hint = document.createElement('div');
         hint.id = 'monFullscreenHint';
-        hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(20,16,14,0.7);color:rgba(239,230,214,0.8);padding:8px 16px;border-radius:8px;font-size:12px;z-index:99999;pointer-events:none;transition:opacity 1s;';
+        hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(20,16,14,0.7);color:#B8AC9A;padding:8px 16px;border-radius:8px;font-size:12px;z-index:99999;pointer-events:none;transition:opacity 1s;';
         hint.textContent = 'Press Esc to exit full screen';
         document.body.appendChild(hint);
         setTimeout(function(){ hint.style.opacity='0'; }, 3000);
@@ -6752,7 +6752,7 @@ function escapeHtml(s) {
       var r = await fetch(url);
       if (seq !== _monSearchSeq[side]) return;
       if (!r.ok) {
-        container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.35);font-size:12px;">Search unavailable</div>';
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.5);font-size:12px;">Search unavailable</div>';
         monHideSearchPill(side);
         return;
       }
@@ -6763,7 +6763,7 @@ function escapeHtml(s) {
       monUpdateSearchPill(side, q, files.length, effective);
     } catch(e) {
       if (seq !== _monSearchSeq[side]) return;
-      container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.35);font-size:12px;">Search failed</div>';
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.5);font-size:12px;">Search failed</div>';
       monHideSearchPill(side);
     }
   }
@@ -6772,7 +6772,7 @@ function escapeHtml(s) {
     var container = document.getElementById(containerId);
     if (!container) return;
     if (!files.length) {
-      container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.35);font-size:12px;">No matches for "'+escapeHtml(query)+'"</div>';
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(239,230,214,0.5);font-size:12px;">No matches for "'+escapeHtml(query)+'"</div>';
       container.className = '';
       return;
     }
@@ -6809,7 +6809,7 @@ function escapeHtml(s) {
       html += '<div class="mon-tile-name">'+escapeHtml(f.name);
       if (side==='cloud' && fp.indexOf('/workspace/synced/') === 0) html += '<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html += '</div>';
-      html += '<div class="mon-tile-meta" style="color:rgba(239,230,214,0.35);">'+escapeHtml(parent)+'</div>';
+      html += '<div class="mon-tile-meta" style="color:rgba(239,230,214,0.5);">'+escapeHtml(parent)+'</div>';
       html += '</div>';
     }
     container.innerHTML = html;
@@ -6842,7 +6842,7 @@ function escapeHtml(s) {
       if (isSyncing) html += '<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if (isSynced) html += '<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(150,173,127,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if (side==='cloud' && fp.indexOf('/workspace/synced/') === 0) html += '<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
-      html += '<span style="color:rgba(239,230,214,0.35);font-size:11px;margin-left:8px;">'+escapeHtml(parent)+'</span>';
+      html += '<span style="color:rgba(239,230,214,0.5);font-size:11px;margin-left:8px;">'+escapeHtml(parent)+'</span>';
       html += '</span>';
       if (side==='local' && !isDir) html += '<span class="mon-row-upload" title="Copy to workspace" onclick="event.stopPropagation();monCopyToCloud(\''+fpAttr+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html += '<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size||0))+'</span>';
@@ -7126,7 +7126,7 @@ function escapeHtml(s) {
     <h3 style="font-size:18px;margin-bottom:8px;">Connect Bridge</h3>
     <p style="font-size:14px;color:rgba(239,230,214,0.5);margin-bottom:20px;">Enter the 6-character code shown in your Bridge menu bar app.</p>
     <input id="bridgePairInput" type="text" maxlength="6" placeholder="ABCDEF" style="width:100%;padding:12px;font-size:24px;letter-spacing:8px;text-align:center;background:rgba(239,230,214,0.06);border:1px solid rgba(239,230,214,0.15);border-radius:10px;color:#EFE6D6;font-family:monospace;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
-    <button onclick="submitBridgePair()" style="margin-top:16px;width:100%;padding:12px;background:rgba(150,173,127,0.15);border:1px solid rgba(150,173,127,0.3);border-radius:10px;color:#96AD7F;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;">Connect</button>
+    <button onclick="submitBridgePair()" style="margin-top:16px;width:100%;padding:12px;background:rgba(208,86,63,0.15);border:1px solid rgba(208,86,63,0.3);border-radius:10px;color:#D0563F;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;">Connect</button>
     <p id="bridgePairError" style="font-size:13px;color:#D8624B;margin-top:10px;display:none;"></p>
   </div>
 </div>

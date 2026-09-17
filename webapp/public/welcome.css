@@ -33,20 +33,20 @@ dialog.done-screen::backdrop { background: #1F1917; }
 .dashboard-help summary::-webkit-details-marker { display: none; }
 .dashboard-help svg, .tour-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .dashboard-help summary:hover { background: rgba(239,230,214,0.1); color: #EFE6D6; }
-.dashboard-help-menu { position: absolute; right: 0; top: 42px; width: 180px; padding: 6px; background: rgba(239,230,214,0.1); border-radius: 8px; box-shadow: 0 8px 24px rgba(20,16,14,0.4); }
+.dashboard-help-menu { position: absolute; right: 0; top: 42px; width: 180px; padding: 6px; background: #1F1917; border-radius: 8px; box-shadow: 0 8px 24px rgba(31,25,23,0.4); }
 .dashboard-help-menu :is(a,button) { display: block; width: 100%; padding: 10px 12px; font: 400 var(--ui-label)/1.4 var(--font-ui); text-align: left; color: var(--ui-text); background: none; border: 0; border-radius: 4px; text-decoration: none; cursor: pointer; }
 .dashboard-help-menu :is(a,button):hover { background: rgba(239,230,214,0.16); }
-.tour-panel { position: fixed; inset: auto; margin: 0; padding: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100dvh - 24px); overflow: visible; border: 0; border-radius: 10px; background: rgba(239,230,214,0.16); color: var(--ui-text); box-shadow: 0 8px 28px rgba(20,16,14,0.53); font: 400 var(--ui-body)/1.5 var(--font-ui); }
+.tour-panel { position: fixed; inset: auto; margin: 0; padding: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100dvh - 24px); overflow: visible; border: 0; border-radius: 10px; background: rgba(239,230,214,0.16); color: var(--ui-text); box-shadow: 0 8px 28px rgba(31,25,23,0.53); font: 400 var(--ui-body)/1.5 var(--font-ui); }
 .tour-panel::before { content: ''; position: absolute; top: -6px; left: calc(var(--tour-pointer, 30px) - 6px); width: 12px; height: 12px; transform: rotate(45deg); background: inherit; }
 .tour-panel:popover-open { animation: ch-arrive 160ms ease-out; }
-.tour-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: rgba(239,230,214,0.9); font-size: var(--ui-small); }
+.tour-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #EFE6D6; font-size: var(--ui-small); }
 .tour-top > img { width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: .8; }
 .tour-top > span { flex: 1; }
-.tour-panel .tour-close { display: grid; place-items: center; background: transparent; border: 0; width: 28px; height: 28px; padding: 0; color: rgba(239,230,214,0.9); cursor: pointer; }
+.tour-panel .tour-close { display: grid; place-items: center; background: transparent; border: 0; width: 28px; height: 28px; padding: 0; color: #EFE6D6; cursor: pointer; }
 .tour-panel p { margin: 0; font: inherit; }
 .tour-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .tour-panel button { font: 500 var(--ui-small)/1.4 var(--font-ui); cursor: pointer; }
-.tour-panel .tour-text-button { border: 0; background: none; color: rgba(239,230,214,0.9); min-height: 36px; padding: 8px; border-radius: 6px; }
+.tour-panel .tour-text-button { border: 0; background: none; color: #EFE6D6; min-height: 36px; padding: 8px; border-radius: 6px; }
 #welcome-skip { margin-right: auto; padding-left: 0; }
 .tour-panel .tour-next { background: #EFE6D6; color: #14100E; border: 0; border-radius: 6px; min-height: 36px; padding: 8px 14px; }
 .tour-next:hover { background: #EFE6D6; }

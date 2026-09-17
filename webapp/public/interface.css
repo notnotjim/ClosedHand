@@ -29,7 +29,7 @@ button, input, textarea, select { font-family: var(--font-ui); }
 .header-right a, .page-tab { font-size: var(--ui-label); }
 .claw-swap { margin: 0 0.12em; }
 .header-center .auth-row { font-size: var(--ui-small); color: var(--ui-muted); }
-body.dashboard-page { display: block; background: #1F1917; color: var(--ui-text); }
+body.dashboard-page { display: block; background: #14100E; color: var(--ui-text); }
 .dashboard-page .dashboard-container { padding: 28px var(--space-page) 64px; }
 .dashboard-container > .card { padding: 0; border: 0; border-radius: 0; background: transparent; backdrop-filter: none; box-shadow: none; }
 .dashboard-container h1 { font: 600 var(--ui-title)/1.25 var(--font-ui); letter-spacing: -0.02em; }

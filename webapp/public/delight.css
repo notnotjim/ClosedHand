@@ -83,7 +83,7 @@
 }
 .int-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(20,16,14,0.3);
+  box-shadow: 0 4px 12px rgba(31,25,23,0.3);
 }
 .int-card:hover img {
   transform: scale(1.05);
@@ -95,7 +95,7 @@
 }
 .plat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(20,16,14,0.3);
+  box-shadow: 0 4px 12px rgba(31,25,23,0.3);
 }
 
 /* --- Connection Success Animation --- */
@@ -208,12 +208,12 @@ body.resistance-mode .int-badge {
 }
 
 body.resistance-mode .plat-card.connected {
-  border-color: rgba(239,230,214,0.1);
+  border-color: #1F1917;
   background: #1F1917;
 }
 
 body.resistance-mode .int-card.connected {
-  border-color: rgba(239,230,214,0.1);
+  border-color: #1F1917;
 }
 
 body.resistance-mode .delight-toast.success {
@@ -232,7 +232,7 @@ body.resistance-mode .delight-toast.success {
   display: inline-block;
   animation: float-z 2s ease infinite;
   font-size: 18px;
-  color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.6);
 }
 
 .lazy-worker-z:nth-child(2) { animation-delay: 0.3s; font-size: 14px; }

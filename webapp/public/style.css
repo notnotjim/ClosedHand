@@ -60,7 +60,7 @@ h2 {
 
 .tagline {
   font-size: 16px;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   margin-bottom: 32px;
 }
 
@@ -88,7 +88,7 @@ h2 {
 
 .signup-desc {
   font-size: 14px;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   margin-bottom: 20px;
   line-height: 1.5;
 }
@@ -122,7 +122,7 @@ h2 {
 
 .note {
   font-size: 12px;
-  color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.6);
   margin-top: 16px;
   line-height: 1.5;
   text-align: center;
@@ -182,13 +182,13 @@ h2 {
 
 .service-detail {
   font-size: 12px;
-  color: rgba(239,230,214,0.52);
+  color: #B8AC9A;
 }
 
 /* Activation code */
 .step-desc {
   font-size: 14px;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   margin-bottom: 16px;
   line-height: 1.5;
 }
@@ -239,7 +239,7 @@ h2 {
   border-radius: 50%;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(239,230,214,0.9);
+  color: #EFE6D6;
   flex-shrink: 0;
 }
 
@@ -252,7 +252,7 @@ h2 {
 
 .logout-link {
   font-size: 13px;
-  color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.6);
   text-decoration: none;
 }
 
@@ -263,7 +263,7 @@ h2 {
 /* Section description */
 .section-desc {
   font-size: 14px;
-  color: rgba(239,230,214,0.52);
+  color: #B8AC9A;
   margin-bottom: 16px;
 }
 
@@ -277,7 +277,7 @@ h2 {
 .platform-card {
   padding: 16px;
   background: #1F1917;
-  border: 1px solid rgba(239,230,214,0.1);
+  border: 1px solid #1F1917;
   border-radius: 10px;
 }
 
@@ -309,7 +309,7 @@ h2 {
 
 .platform-detail {
   font-size: 13px;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   margin-bottom: 12px;
 }
 
@@ -335,12 +335,12 @@ h2 {
 
 .badge-soon {
   background: rgba(239,230,214,0.1);
-  color: rgba(239,230,214,0.52);
+  color: #B8AC9A;
 }
 
 .badge-none {
   background: rgba(239,230,214,0.1);
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
 }
 
 /* Connect button */
@@ -368,7 +368,7 @@ h2 {
   margin-top: 12px;
   padding: 6px 14px;
   background: transparent;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   font-size: 12px;
   font-weight: 500;
   border: 1px solid rgba(239,230,214,0.16);
@@ -379,7 +379,7 @@ h2 {
 
 .btn-small:hover {
   border-color: rgba(239,230,214,0.4);
-  color: rgba(239,230,214,0.9);
+  color: #EFE6D6;
 }
 
 /* Microsoft button */
@@ -425,7 +425,7 @@ h2 {
 /* Disconnect button */
 .btn-disconnect {
   background: transparent;
-  color: #D8624B;
+  color: #D0563F;
   border: 1px solid rgba(239,230,214,0.16);
   border-radius: 6px;
   padding: 6px 14px;
@@ -437,7 +437,7 @@ h2 {
 
 .btn-disconnect:hover {
   background: #1F1917;
-  border-color: #D8624B;
+  border-color: #D0563F;
 }
 
 /* Toast notification */
@@ -467,7 +467,7 @@ h2 {
 
 .footer p {
   font-size: 12px;
-  color: rgba(239,230,214,0.28);
+  color: rgba(239,230,214,0.6);
 }
 
 /* Responsive */
@@ -513,7 +513,7 @@ h2 {
   align-items: center;
   padding: 12px 8px 10px;
   background: transparent;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   border: none;
   border-radius: 8px;
   font-size: 15px;
@@ -523,7 +523,7 @@ h2 {
 }
 
 .seg-btn:hover {
-  color: rgba(239,230,214,0.9);
+  color: #EFE6D6;
 }
 
 .seg-btn.active {
@@ -535,19 +535,19 @@ h2 {
 .seg-desc {
   font-size: 12px;
   font-weight: 400;
-  color: rgba(239,230,214,0.52);
+  color: #B8AC9A;
   margin-top: 2px;
 }
 
 .seg-btn.active .seg-desc {
-  color: rgba(239,230,214,0.28);
+  color: rgba(239,230,214,0.6);
 }
 
 .pulse-label {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 10px;
@@ -568,7 +568,7 @@ h2 {
   background: #1F1917;
   border: 1px solid rgba(239,230,214,0.16);
   border-radius: 20px;
-  color: rgba(239,230,214,0.64);
+  color: #B8AC9A;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -577,7 +577,7 @@ h2 {
 
 .pill:hover {
   border-color: rgba(239,230,214,0.28);
-  color: rgba(239,230,214,0.9);
+  color: #EFE6D6;
 }
 
 .pill.selected {
@@ -588,7 +588,7 @@ h2 {
 
 .pulse-no-platforms {
   font-size: 13px;
-  color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.6);
   font-style: italic;
 }
 
@@ -605,7 +605,7 @@ h2 {
 .time-select {
   padding: 12px 16px;
   background: #1F1917;
-  border: 1px solid rgba(239,230,214,0.1);
+  border: 1px solid #1F1917;
   border-radius: 8px;
   color: #EFE6D6;
   font-size: 15px;
@@ -622,13 +622,13 @@ h2 {
 }
 
 .quiet-separator {
-  color: rgba(239,230,214,0.4);
+  color: rgba(239,230,214,0.6);
   font-size: 14px;
 }
 
 .pulse-note {
   font-size: 12px;
-  color: rgba(239,230,214,0.28);
+  color: rgba(239,230,214,0.6);
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid #1F1917;

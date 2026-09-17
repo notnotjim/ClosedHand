@@ -2,10 +2,10 @@
 .model-fields [hidden] { display: none !important; }
 .model-fields label { display: grid; gap: 10px; font-size: 16px; font-weight: 500; }
 .model-fields input, .model-fields select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; border: 1px solid rgba(239,230,214,0.28); border-radius: 10px; background: #1F1917; color: #EFE6D6; font: inherit; }
-.model-fields button { justify-self: start; min-height: 44px; padding: 11px 18px; border: 1px solid rgba(239,230,214,0.4); border-radius: 10px; background: rgba(239,230,214,0.1); color: #EFE6D6; font: inherit; cursor: pointer; }
+.model-fields button { justify-self: start; min-height: 44px; padding: 11px 18px; border: 1px solid rgba(239,230,214,0.4); border-radius: 10px; background: #1F1917; color: #EFE6D6; font: inherit; cursor: pointer; }
 .model-fields button:disabled { opacity: .55; cursor: progress; }
 .model-fields :is(input,select,button,summary):focus-visible { outline: 2px solid #D0563F; outline-offset: 3px; }
-.model-fields :is(p,.model-hint) { margin: 0; font-size: 15px; line-height: 1.6; color: rgba(239,230,214,0.9); overflow-wrap: anywhere; }
+.model-fields :is(p,.model-hint) { margin: 0; font-size: 15px; line-height: 1.6; color: #EFE6D6; overflow-wrap: anywhere; }
 .model-fields summary { cursor: pointer; padding: 12px 0; font-size: 16px; }
 .model-fields details > .model-fields { padding-top: 16px; }
 .model-result { line-height: 1.6; color: #D8624B; }
@@ -13,8 +13,8 @@
 .model-current { max-width: 760px; padding-bottom: 28px; }
 .model-current[hidden] { display: none; }
 .model-current .model-role-list { grid-template-columns: minmax(130px, 180px) minmax(0,1fr); row-gap: 22px; }
-.model-current dd small { display: block; margin-top: 4px; color: rgba(239,230,214,0.9); font-size: 14px; }
-.model-current .model-hint { color: rgba(239,230,214,0.9); font-size: 15px; line-height: 1.6; margin: 20px 0 0; max-width: 65ch; }
+.model-current dd small { display: block; margin-top: 4px; color: #EFE6D6; font-size: 14px; }
+.model-current .model-hint { color: #EFE6D6; font-size: 15px; line-height: 1.6; margin: 20px 0 0; max-width: 65ch; }
 .model-editor > summary { cursor: pointer; padding: 14px 0; font-size: 16px; color: #EFE6D6; }
 .model-editor > .model-fields { margin-top: 20px; }
 .model-editor > summary:focus-visible { outline: 2px solid #D8624B; outline-offset: 4px; }
@@ -29,9 +29,9 @@
 .model-check dd.is-ok::before { content: "\2713\00a0"; color: #96AD7F; }
 .model-check dd.is-fail { color: #D8624B; }
 .model-check dd.is-fail::before { content: "\2717\00a0"; }
-.model-check dd.is-wait { color: rgba(239,230,214,0.9); }
+.model-check dd.is-wait { color: #EFE6D6; }
 .model-check dd.is-wait::before { content: "\2026\00a0"; }
 .model-role-list { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 14px 24px; margin: 0 0 20px; line-height: 1.5; }
-.model-role-list dt { color: rgba(239,230,214,0.9); }
+.model-role-list dt { color: #EFE6D6; }
 .model-role-list dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 520px) { .model-role-list { grid-template-columns: minmax(0,1fr); gap: 6px; } .model-role-list dd { margin-bottom: 16px; } .model-check { padding: 18px; } }
