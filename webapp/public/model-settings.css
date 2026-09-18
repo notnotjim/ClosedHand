@@ -34,7 +34,9 @@
 .model-role-list { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 14px 24px; margin: 0 0 20px; line-height: 1.5; }
 .model-role-list dt { color: #EFE6D6; }
 /* A role's name explains itself on hover; the note it replaces sat under the list. */
-.model-role-list dt[data-tip] { position: relative; width: max-content; max-width: 100%; cursor: help; text-decoration: underline dotted rgba(239,230,214,0.35); text-underline-offset: 3px; outline: none; }
+.model-role-list dt[data-tip] { position: relative; display: inline-flex; align-items: center; gap: 6px; width: max-content; max-width: 100%; cursor: help; outline: none; }
+.model-role-list .tip-mark { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1px solid rgba(239,230,214,0.35); border-radius: 50%; color: rgba(239,230,214,0.55); font-size: 9.5px; font-style: italic; font-family: Georgia, "Times New Roman", serif; line-height: 1; transition: color 0.15s, border-color 0.15s; }
+.model-role-list dt[data-tip]:hover .tip-mark, .model-role-list dt[data-tip]:focus-visible .tip-mark { color: #EFE6D6; border-color: rgba(239,230,214,0.7); }
 .model-role-list dt[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 7px); z-index: 5; width: max-content; max-width: 280px; padding: 8px 11px; background: #1A1817; border: 1px solid rgba(239,230,214,0.16); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.45); color: #EFE6D6; font-size: 12.5px; line-height: 1.45; white-space: normal; opacity: 0; transform: translateY(-3px); pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease; }
 .model-role-list dt[data-tip]:hover::after, .model-role-list dt[data-tip]:focus-visible::after { opacity: 1; transform: none; }
 .model-role-list dd { margin: 0; overflow-wrap: anywhere; }

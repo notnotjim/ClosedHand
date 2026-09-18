@@ -56,7 +56,11 @@
       };
       rows.forEach(function (row) {
         var term = document.createElement("dt"); term.textContent = row.label;
-        if (tips[row.label]) { term.dataset.tip = tips[row.label]; term.tabIndex = 0; }
+        if (tips[row.label]) {
+          term.dataset.tip = tips[row.label]; term.tabIndex = 0;
+          var mark = document.createElement("span"); mark.className = "tip-mark"; mark.textContent = "i"; mark.setAttribute("aria-hidden", "true");
+          term.append(mark);
+        }
         var definition = document.createElement("dd");
         var name = document.createElement("span"); name.textContent = row.model.replace(/^local:/, "");
         definition.append(name);
