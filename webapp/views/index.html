@@ -812,7 +812,7 @@
     min-height: 0;
     padding: 20px max(20px, calc((100% - 900px) / 2)) 40px;
     flex-direction: column;
-    gap: 12px;
+    gap: 22px;
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
@@ -952,6 +952,20 @@
     .activity-sidebar { width: 240px; }
   }
 
+  /* Hover tools under a message: copy and when it was said. They sit in
+     the gap below the bubble, so the list's gap leaves room for them. */
+  .message { position: relative; }
+  .msg-tools { position: absolute; left: 6px; bottom: -22px; height: 20px; display: flex; align-items: center; gap: 10px; opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+  .message.user .msg-tools { left: auto; right: 6px; }
+  .message:hover .msg-tools { opacity: 1; pointer-events: auto; }
+  .msg-tool { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border: 0; background: none; color: rgba(239,230,214,0.45); cursor: pointer; border-radius: 5px; padding: 0; }
+  .msg-tool:hover { color: #EFE6D6; background: rgba(239,230,214,0.08); }
+  .msg-tool.done { color: #8DBD79; }
+  .msg-time { font-size: 11px; color: rgba(239,230,214,0.4); white-space: nowrap; }
+  /* Back to the latest message, when the reader has scrolled up. */
+  .scroll-latest { position: fixed; right: 28px; z-index: 12; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(239,230,214,0.14); background: rgba(26,24,23,0.92); color: rgba(239,230,214,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+  .scroll-latest.show { opacity: 1; transform: none; pointer-events: auto; }
+  .scroll-latest:hover { color: #EFE6D6; border-color: rgba(239,230,214,0.3); }
   .message {
     max-width: 85%;
     padding: 12px 16px;
@@ -2361,6 +2375,7 @@
   <div class="activity-scrim" id="activityScrim" onclick="toggleMobileActivity()"></div>
 
   <!-- CHAT STATE: messages + docked input at bottom -->
+  <button class="scroll-latest" id="scrollLatest" type="button" aria-label="Latest message" onclick="scrollToBottom()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
   <div class="chat-messages" id="chatMessages">
     <div class="typing-indicator" id="typingIndicator">
       <div id="statusArea" style="display:flex;flex-direction:column;gap:2px;width:100%;"></div>
@@ -3875,7 +3890,42 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  function addMessage(text, role, fileInfo) {
+  // "3 hours ago" inside a day, then the date: "14 Sep", with the year only
+  // when it is not this one.
+  function msgTime(ts) {
+    var t = ts ? Date.parse(ts) : NaN;
+    if (isNaN(t)) return '';
+    var d = new Date(t), now = new Date(), diff = now - t;
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) { var m = Math.round(diff / 60000); return m + (m === 1 ? ' minute ago' : ' minutes ago'); }
+    if (diff < 86400000) { var h = Math.round(diff / 3600000); return h + (h === 1 ? ' hour ago' : ' hours ago'); }
+    var opts = { day: 'numeric', month: 'short' };
+    if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('en-GB', opts);
+  }
+  // The row under a message that shows on hover: when it was said, and copy.
+  function attachMsgTools(div, text, ts) {
+    var tools = document.createElement('div');
+    tools.className = 'msg-tools';
+    var copy = document.createElement('button');
+    copy.type = 'button'; copy.className = 'msg-tool'; copy.title = 'Copy';
+    copy.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+    copy.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var write = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject();
+      write.then(function() { copy.classList.add('done'); setTimeout(function() { copy.classList.remove('done'); }, 1200); }).catch(function() {});
+    });
+    tools.appendChild(copy);
+    var when = document.createElement('span');
+    when.className = 'msg-time';
+    var label = msgTime(ts);
+    when.textContent = label;
+    if (ts && !isNaN(Date.parse(ts))) when.title = new Date(ts).toLocaleString('en-GB');
+    if (label) tools.appendChild(when);
+    div.appendChild(tools);
+  }
+
+  function addMessage(text, role, fileInfo, ts) {
     var div = document.createElement('div');
     div.className = 'message ' + role;
     // Force bright text inline to override any cached CSS
@@ -3917,6 +3967,8 @@
         div.appendChild(textNode);
       }
     }
+    // A live message is stamped now; history passes its own stamp, or null when it has none.
+    attachMsgTools(div, typeof text === 'string' ? text : '', ts === undefined ? new Date().toISOString() : ts);
     messagesEl.insertBefore(div, typingEl);
     scrollToBottom();
   }
@@ -4256,7 +4308,7 @@
         if (thread && thread.messages && thread.messages.length > 0) {
           thread.messages.forEach(function(msg) {
             if (typeof msg.content === 'string' && msg.content.trim()) {
-              addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+              addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
             }
           });
           scrollToBottom();
@@ -4478,6 +4530,26 @@
       messagesEl.scrollTop = messagesEl.scrollHeight + 500;
     });
   }
+  // The arrow shows once the reader is well above the end, and sits just
+  // above the floating input, wherever that is.
+  (function latestArrow() {
+    var btn = document.getElementById('scrollLatest');
+    if (!btn || !messagesEl) return;
+    var place = function() {
+      var dock = document.querySelector('.docked-input');
+      var top = dock ? dock.getBoundingClientRect().top : window.innerHeight;
+      btn.style.bottom = Math.max(16, window.innerHeight - top + 14) + 'px';
+    };
+    var update = function() {
+      var away = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight > 240;
+      var inChat = document.body.classList.contains('chat-active');
+      btn.classList.toggle('show', away && inChat);
+      if (away && inChat) place();
+    };
+    messagesEl.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    new MutationObserver(update).observe(messagesEl, { childList: true });
+  })();
 
   // Canvas functions
   function openCanvas(id, filename, mimeType, content) {
@@ -4848,7 +4920,7 @@
       .then(function(thread) {
         if (thread && thread.messages) {
           thread.messages.forEach(function(msg) {
-            if (typeof msg.content === 'string' && msg.content.trim()) addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+            if (typeof msg.content === 'string' && msg.content.trim()) addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
           });
         }
         [300, 600, 1000, 1500].forEach(function(ms) { setTimeout(scrollToBottom, ms); });

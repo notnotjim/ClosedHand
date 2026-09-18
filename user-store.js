@@ -131,6 +131,7 @@ class UserStore {
 
       if (activeThread) {
         store.conversations = activeThread.messages || [];
+      store._savedCount = store.conversations.length; store._savedTailKey = store.conversations.length + ":" + (store.conversations.length ? String(store.conversations[store.conversations.length - 1].content || "").slice(0, 120) : "");
         store.activeThreadId = activeThread.id;
       } else {
         // No active thread. Auto-resume the most recent thread if it's fresh and short.
@@ -148,10 +149,12 @@ class UserStore {
 
         if (canResume) {
           // Resume recent thread
+          // Resuming is not activity: the thread keeps the time of its last message.
           await supabase.from("conversation_threads")
-            .update({ is_active: true, updated_at: new Date().toISOString() })
+            .update({ is_active: true })
             .eq("id", recentThread.id);
           store.conversations = recentThread.messages || [];
+          store._savedCount = store.conversations.length; store._savedTailKey = store.conversations.length + ":" + (store.conversations.length ? String(store.conversations[store.conversations.length - 1].content || "").slice(0, 120) : "");
           store.activeThreadId = recentThread.id;
         } else if (recentThread && (recentThread.messages || []).length > 2) {
           // Old/long thread not resumable. Vectorise it before starting fresh.
@@ -362,12 +365,26 @@ class UserStore {
     const promises = [];
 
     if (this._dirty.has("conversations")) {
+      // Messages carry the time they arrived, stamped here once on the ones
+      // added since the last save (older history without a stamp is left
+      // alone rather than given a false one). The thread's updated_at moves
+      // only when the messages did: housekeeping, condensing and other
+      // rewrites of the same conversation are not activity, and one of them
+      // had a thread reading "11m ago" hours after its last message.
+      const convo = Array.isArray(this.conversations) ? this.conversations : [];
+      const nowIso = new Date().toISOString();
+      const tailKey = (list) => list.length + ":" + (list.length ? String(list[list.length - 1].content || "").slice(0, 120) : "");
+      const changed = tailKey(convo) !== this._savedTailKey;
+      if (changed) {
+        const from = Math.max(0, Math.min(convo.length, this._savedCount || 0));
+        for (let i = from; i < convo.length; i++) if (convo[i] && typeof convo[i] === "object" && !convo[i].ts) convo[i].ts = nowIso;
+      }
       promises.push(
         supabase.from("conversations").upsert(
           {
             user_id: this.userId,
             messages: this.conversations,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           },
           { onConflict: "user_id" }
         )
@@ -375,13 +392,14 @@ class UserStore {
 
       // Also save to conversation_threads if we have a thread ID
       if (this.activeThreadId) {
+        const patch = { messages: this.conversations };
+        if (changed) patch.updated_at = nowIso;
         promises.push(
-          supabase.from("conversation_threads").update({
-            messages: this.conversations,
-            updated_at: new Date().toISOString(),
-          }).eq("id", this.activeThreadId)
+          supabase.from("conversation_threads").update(patch).eq("id", this.activeThreadId)
         );
       }
+      this._savedTailKey = tailKey(convo);
+      this._savedCount = convo.length;
     }
 
     if (this._dirty.has("facts")) {
