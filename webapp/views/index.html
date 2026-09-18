@@ -688,16 +688,24 @@
   .hero-recent { width: 100%; max-width: 900px; margin: 40px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
   /* A tab on the underside of the box, in the box's own border, and a
      drawer that slides the rows out from under it. Closed by default. */
+    /* The tab is a piece of the box: the same 1.5px madder line, the box's
+       own inside tone as its fill, and its top sits over the box's bottom
+       edge so the outline runs down around it rather than across it. It
+       brightens and scales with the box when the box takes focus. */
     .hero-recent-tab {
       display: inline-flex; align-items: center; gap: 7px;
-      margin: -1px auto 0; padding: 5px 13px 6px;
+      margin: -1.5px auto 0; padding: 6px 14px 7px;
       font: 400 11.5px/1 var(--font-ui, inherit); color: rgba(239,230,214,0.5);
-      background: #100E0D; border: 1px solid rgba(208,86,63,0.16); border-top: 0; border-radius: 0 0 12px 12px;
+      background: #181615;
+      border: 1.5px solid rgba(208,86,63,0.3); border-top: 0; border-radius: 0 0 12px 12px;
+      box-shadow: 0 10px 22px -10px rgba(208,86,63,0.10);
       cursor: pointer; position: relative; z-index: 2;
       opacity: 0; animation: heroIn 0.6s ease forwards 0.9s;
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      transform-origin: 50% 0;
+      transition: color 0.15s, border-color 0.6s ease, background 0.15s, transform 0.5s cubic-bezier(0.16,1,0.3,1);
     }
-    .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; border-color: rgba(208,86,63,0.4); }
+    .input-box-wrap:focus-within + .hero-recent-tab { border-color: rgba(208,86,63,0.4); transform: translateY(3px) scale(1.03); }
+    .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; background: #1A1817; }
     .hero-recent-tab .chev { opacity: 0.7; }
     .hero-recent-tab .chev { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
     .hero-recent-tab[aria-expanded="true"] .chev { transform: rotate(180deg); }
@@ -1232,7 +1240,7 @@
     .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
-    .hero-recent-tab { padding: 4px 11px 5px; font-size: 11px; }
+    .hero-recent-tab { padding: 5px 12px 6px; font-size: 11px; }
     .hero-recent-row { padding: 9px 4px; }
     .hero-recent-row .title { font-size: 13px; }
     .hero-recent-row .meta { font-size: 11px; }
