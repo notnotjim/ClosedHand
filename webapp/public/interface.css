@@ -124,15 +124,16 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .setup-page footer em { font: inherit; }
 @media (max-width: 600px) {
   :root { --space-card: 20px; --space-section: 32px; --space-page: 20px; }
-  .header { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .header { padding: 20px 20px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; }
   .header-left-group { grid-column: 1; grid-row: 1; }
   .header-right { grid-column: 2; grid-row: 1; }
-  .header-center { grid-column: 1 / -1; grid-row: 2; position: static !important; left: auto !important; right: auto !important; transform: none !important; justify-content: flex-start; text-align: left; }
+  /* "Connected as" on its own row, centred, the same space above it as below. */
+  .header-center { grid-column: 1 / -1; grid-row: 2; position: static !important; left: auto !important; right: auto !important; transform: none !important; justify-content: center; text-align: center; padding: 18px 0 8px; }
   .header-center:empty { display: none; }
   .input-toolbar { padding: 12px; }
   .input-textarea-wrap { padding: 24px 20px 20px; }
   .hero-heading { margin-bottom: 16px; }
-  .hero-heading-sub { margin-bottom: 32px; white-space: normal; max-width: 34ch; }
+  .hero-heading-sub { margin-bottom: 32px; }
   .features-page { padding: 64px 20px; }
   .feat-row, .feat-grid { gap: 24px; margin-bottom: 64px; }
   .feat-card, .feat-mini { padding: 28px 24px; }

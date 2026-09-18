@@ -45,8 +45,10 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    background: radial-gradient(ellipse at 50% 45%, rgba(26,24,23,0.8) 0%, rgba(16,14,13,0.4) 40%, transparent 70%),
-                radial-gradient(ellipse at 30% 60%, rgba(16,14,13,0.5) 0%, transparent 50%),
+    /* The still ground: a faint madder ember behind the hero and a lift
+       towards the raised tone, on umber. */
+    background: radial-gradient(ellipse 70% 45% at 50% 42%, rgba(208,86,63,0.10) 0%, rgba(208,86,63,0.03) 45%, transparent 70%),
+                radial-gradient(ellipse at 50% 45%, rgba(26,24,23,0.8) 0%, rgba(16,14,13,0.4) 40%, transparent 70%),
                 #100E0D;
   }
 
@@ -207,6 +209,7 @@
     overflow: hidden;
     white-space: nowrap;
     max-width: 0;
+    padding-left: 0.28em;
     opacity: 0;
     color: #D8624B;
     font-weight: 300;
@@ -1159,9 +1162,13 @@
     /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
     .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
-    .hero-heading { font-size: clamp(26px, 7vw, 40px); letter-spacing: -1px; margin-bottom: 8px; white-space: normal; }
-    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: inline; white-space: normal; max-width: none; transition: opacity 0.9s ease 1.2s; }
-    .hero-heading-sub { font-size: clamp(13px, 3.4vw, 16px); gap: 6px; margin-bottom: 18px; white-space: normal; max-width: 34ch; }
+    /* Phones: the two halves of the heading take a line each, the sub line
+       and each footer sentence hold one line. Sizes follow the width. */
+    .hero-heading { font-size: clamp(20px, 6.8vw, 34px); letter-spacing: -0.5px; margin-bottom: 10px; white-space: nowrap; }
+    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
+    .hero-footer span { font-size: 12px; white-space: nowrap; }
+    .hero-footer .footer-sentence { display: block; }
+    .hero-heading-sub { font-size: clamp(10px, 3.05vw, 16px); gap: 6px; margin-bottom: 18px; white-space: nowrap; max-width: none; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
     .input-box-wrap { max-width: 100%; }
@@ -1215,7 +1222,8 @@
     /* Mobile header: hide Privacy/Terms, centre Connected as X */
     .header-right a[href="/privacy"], .header-right a[href="/terms"] { display: none !important; }
     .header { position: relative; }
-    .header-center { position: absolute; left: 0; right: 0; justify-content: center; text-align: center; font-size: 11px; pointer-events: none; }
+    /* Phone header layout (grid, "Connected as" on its own row) lives in interface.css. */
+    .header-center { font-size: 11px; pointer-events: none; }
     .header-center a, .header-center span { pointer-events: auto; }
     /* Bigger touch targets for back arrow and activity button */
     .back-arrow { min-width: 36px; min-height: 40px; align-items: center; justify-content: center; margin-right: -4px; }
@@ -2138,8 +2146,8 @@
   <!-- HERO STATE: heading + brand + big input + suggestions, all centered -->
   <div class="hero-area" id="heroSection">
     <div style="flex:1;max-flex:1;"></div>
-    <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">&nbsp;And your personal data.</span></div>
-    <div class="hero-heading-sub">Speak with all of your apps and files in one chat.</div>
+    <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
+    <div class="hero-heading-sub">Speak with all your apps and files like a human, in one chat.</div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2203,7 +2211,7 @@
     <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.json,.md,.html,.xml,.js,.py,.ts,.css,.sql,.sh,.yaml,.yml,.log,.doc,.docx,.xls,.xlsx,.pptx,.ogg,.mp3,.wav,.mp4,.mov,.avi,.webm,.m4a,.aac,.flac,.zip,.tar,.gz,.rtf,.epub">
 
     <div class="hero-footer">
-      <span>Runs on your computer with no company in between. Requests use the AI provider you choose.</span>
+      <span><span class="footer-sentence">Runs on your computer with no company in between.</span> <span class="footer-sentence">Requests use the AI provider you choose.</span></span>
     </div>
 
     <div style="flex:0.5"></div>
@@ -2547,10 +2555,15 @@
     };
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
   };
+  // Phones get the still version of the ground: the smoke costs battery and
+  // a shader compile on a small screen that is mostly the chat box anyway.
+  var smallScreen = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
   try {
+    if (isMobileDevice && smallScreen) throw new Error('phone: still background');
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobileDevice, alpha: true });
   } catch(e) {
-    console.warn('WebGL not available:', e.message);
+    if (!/phone:/.test(e.message)) console.warn('WebGL not available:', e.message);
+    if (canvas) canvas.style.display = 'none';
     window.heroLive();
     // Show CSS gradient fallback
     var fallback = document.createElement('div');
