@@ -296,12 +296,13 @@
       color: #EFE6D6;
     }
     .int-card.int-more .int-more-plus {
+      /* Drawn, not typed: a "+" glyph sits low on its baseline and never
+         centres in the circle. */
       width: 28px; height: 28px; flex: none;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
       border: 1px solid rgba(239,230,214,0.22);
       color: #D8624B;
-      font-size: 18px; line-height: 1;
       transition: transform 0.2s, border-color 0.15s;
     }
     .int-card.int-more:hover .int-more-plus { transform: rotate(90deg); border-color: rgba(208,86,63,0.55); }
@@ -3054,7 +3055,7 @@
       // shows, so a new dashboard says where connections come from.
       connectedGrid.insertAdjacentHTML('beforeend',
         '<div class="int-card int-more" role="button" tabindex="0" onclick="beckonAddBox()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();beckonAddBox();}">' +
-          '<span class="int-more-plus" aria-hidden="true">+</span>' +
+          '<span class="int-more-plus" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>' +
           '<span class="int-more-text"><span class="int-name">Connect more</span><span class="int-more-sub">Any app with a link, plus skills</span></span>' +
           '<span class="int-more-arrow" aria-hidden="true">&#8595;</span>' +
         '</div>');
