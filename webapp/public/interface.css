@@ -124,6 +124,9 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .setup-page footer em { font: inherit; }
 @media (max-width: 600px) {
   :root { --space-card: 20px; --space-section: 32px; --space-page: 20px; }
+  /* Type in a field is never under 16px on a phone: iOS Safari zooms the
+     whole page in to focus a smaller field and never zooms back out. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: 16px !important; }
   .header { padding: 20px 20px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; }
   .header-left-group { grid-column: 1; grid-row: 1; }
   .header-right { grid-column: 2; grid-row: 1; }
