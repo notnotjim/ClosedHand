@@ -2225,7 +2225,7 @@
   <div class="page-tabs" id="pageTabs">
     <button class="page-tab active" onclick="switchPageTab('chat')" id="tabChat"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Chat</button>
     <button class="page-tab" onclick="switchPageTab('computers')" id="tabComputers"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Computers</button>
-    <button class="page-tab" onclick="switchPageTab('library')" id="tabLibrary"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg> File Search</button>
+    <button class="page-tab" onclick="switchPageTab('library')" id="tabLibrary"><svg viewBox="0 0 24 24"><path d="M3 17.5V6a2 2 0 012-2h4l2 2h7a2 2 0 012 2v1.5"/><path d="M6.6 9.5h13.7a1.2 1.2 0 011.15 1.52l-2 7.5A2 2 0 0117.5 20H4.6a1.6 1.6 0 01-1.55-2l1.9-7A2 2 0 016.6 9.5z"/></svg> File Search</button>
   </div>
 
   <div class="page-view active" id="viewChat">
@@ -2517,8 +2517,8 @@
     <div id="ragEmpty">
       <div class="rag-empty-panel">
         <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-          <line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/>
+          <path d="M3 17.5V6a2 2 0 012-2h4l2 2h7a2 2 0 012 2v1.5"/><path d="M6.6 9.5h13.7a1.2 1.2 0 011.15 1.52l-2 7.5A2 2 0 0117.5 20H4.6a1.6 1.6 0 01-1.55-2l1.9-7A2 2 0 016.6 9.5z"/>
+          <line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/>
         </svg>
         <h3>File Search</h3>
         <p>Sift through everything on your drives and computers with one plain-English query.<br>"Every invoice from 2025", "photos where someone has blue eyes", "anything about the Osaka trip".<br>Get every match, not just the file you named. Your files stay where they are.</p>
@@ -4802,7 +4802,9 @@
             document.addEventListener('click', function(e) { if (pop.classList.contains('open') && !pop.contains(e.target) && !fl.contains(e.target)) setPop(false); });
             document.addEventListener('keydown', function(e) { if (e.key === 'Escape') setPop(false); });
             new IntersectionObserver(function(entries) {
-              var away = !entries[0].isIntersecting && !document.body.classList.contains('chat-active');
+              // Scrolled away, not hidden: on the Computers or File Search tabs the
+              // box is simply not shown, and the pill has no business there.
+              var away = !entries[0].isIntersecting && box.offsetParent !== null && !document.body.classList.contains('chat-active');
               fl.classList.toggle('show', away);
               if (!away) setPop(false);
             }, { threshold: 0 }).observe(box);

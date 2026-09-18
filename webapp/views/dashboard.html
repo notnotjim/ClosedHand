@@ -2249,17 +2249,15 @@
             <div style="padding:16px;text-align:center;">
               <div style="margin-bottom:16px;">
                 <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.5;">
-                  <!-- Body (slouched in chair) -->
-                  <ellipse cx="40" cy="58" rx="16" ry="12" fill="rgba(239,230,214,0.16)" stroke="rgba(239,230,214,0.28)" stroke-width="1.5"/>
-                  <!-- Head (tilted, sleeping) -->
-                  <circle cx="44" cy="34" r="12" fill="rgba(239,230,214,0.16)" stroke="rgba(239,230,214,0.28)" stroke-width="1.5"/>
-                  <!-- Closed eyes -->
-                  <path d="M39 32 Q41 34 43 32" stroke="rgba(239,230,214,0.52)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-                  <path d="M46 31 Q48 33 50 31" stroke="rgba(239,230,214,0.52)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-                  <!-- Mouth (slight smile) -->
-                  <path d="M42 38 Q45 39 47 38" stroke="rgba(239,230,214,0.4)" stroke-width="1" stroke-linecap="round" fill="none"/>
-                  <!-- Arm dangling -->
-                  <path d="M28 50 Q22 56 24 64" stroke="rgba(239,230,214,0.28)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                  <!-- One stroke, no fills: a head, closed eyes, a small smile, and
+                       rounded shoulders starting clear of the chin. -->
+                  <g stroke="rgba(239,230,214,0.38)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                    <circle cx="40" cy="30" r="12"/>
+                    <path d="M34.5 29.5q2 2.5 4 0"/>
+                    <path d="M41.5 29.5q2 2.5 4 0"/>
+                    <path d="M37.5 35.5q2.5 1.6 5 0"/>
+                    <path d="M22 66v-7a18 15 0 0136 0v7"/>
+                  </g>
                   <!-- Floating Zs -->
                   <text x="56" y="24" fill="rgba(239,230,214,0.4)" font-size="10" font-weight="bold">
                     <animate attributeName="y" values="24;18;24" dur="2s" repeatCount="indefinite"/>
