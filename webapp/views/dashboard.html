@@ -1892,6 +1892,8 @@
     .usage-chart-card { background: var(--u-surface); border: 1px solid rgba(239,230,214,0.16); border-radius: 10px; padding: 14px 14px 8px; position: relative; }
     .usage-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #B6AFA4; margin-bottom: 10px; }
     .usage-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .usage-legend .usage-key { cursor: default; padding: 2px 6px; margin: -2px -6px; border-radius: 6px; transition: background 0.15s, color 0.15s; }
+    .usage-legend .usage-key:hover { background: rgba(239,230,214,0.06); color: #EFE6D6; }
     .usage-chart svg { width: 100%; display: block; }
     .usage-tooltip {
       position: absolute; pointer-events: none; display: none; z-index: 5;
@@ -2754,7 +2756,6 @@
             </div>
           </div>
           <div class="usage-tiles" id="usage-tiles"></div>
-          <div class="usage-models" id="usage-models"></div>
           <div class="usage-chart-card" id="usage-chart-card" style="display:none;">
             <div class="usage-legend-row">
               <div class="usage-legend" id="usage-legend"></div>
@@ -4714,11 +4715,10 @@
       const tableEl = document.getElementById('usage-table');
       const emptyEl = document.getElementById('usage-empty');
 
-      const modelsEl = document.getElementById('usage-models');
       const notesEl = document.getElementById('usage-notes');
       if (!rows.length) {
         tilesEl.innerHTML = '';
-        modelsEl.innerHTML = ''; notesEl.innerHTML = '';
+        notesEl.innerHTML = '';
         chartCard.style.display = 'none';
         tableEl.innerHTML = '';
         emptyEl.style.display = 'block';
@@ -4768,9 +4768,14 @@
       }
       const modelOrder = Object.keys(byModel).sort((a, b) => byModel[b].tokens - byModel[a].tokens);
       const pct = n => grand ? (n / grand >= 0.005 ? Math.round(n / grand * 100) + '%' : 'under 1%') : '';
-      modelsEl.innerHTML = '<div class="m-head">By model</div>' + modelOrder.map(m =>
-        '<span class="m-name">' + escapeHtml(m) + '</span><span>' + fmtTokens(byModel[m].tokens) + ' tokens · ' +
-        byModel[m].calls.toLocaleString() + ' calls · ' + pct(byModel[m].tokens) + '</span>').join('');
+      // Per feature, which models carried it: shown when a feature key is hovered.
+      const byFeatureModel = {};
+      for (const r of rows) {
+        const fk = usageFeatureMeta(r.feature).label === 'Other' ? 'other' : r.feature;
+        const m = r.model || 'unknown';
+        byFeatureModel[fk] = byFeatureModel[fk] || {};
+        byFeatureModel[fk][m] = (byFeatureModel[fk][m] || 0) + r.tokens_in + r.tokens_out;
+      }
 
       // Usage insight: worked out here from the rows, never asked of a model,
       // and written for the person paying the bill: what is costing them and
@@ -4802,10 +4807,45 @@
       const seriesMeta = k => byModelMode
         ? { label: k, color: USAGE_MODEL_COLORS[Math.min(modelOrder.indexOf(k), USAGE_MODEL_COLORS.length - 1)] }
         : (k === 'other' ? { label: 'Other', color: 'var(--u-other)' } : usageFeatureMeta(k));
-      document.getElementById('usage-legend').innerHTML = series.map(k => {
+      const legendEl = document.getElementById('usage-legend');
+      legendEl.innerHTML = series.map(k => {
         const meta = seriesMeta(k);
-        return '<span><span class="usage-swatch" style="background:' + meta.color + '"></span>' + escapeHtml(meta.label) + '</span>';
+        return '<span class="usage-key" data-key="' + escapeHtml(k) + '"><span class="usage-swatch" style="background:' + meta.color + '"></span>' + escapeHtml(meta.label) + '</span>';
       }).join('');
+      // Hover a key for its numbers: a model's tokens, calls and share with
+      // what it carried; a feature's totals with which models carried it.
+      const keyTip = document.getElementById('usage-tooltip');
+      const keyCard = document.getElementById('usage-chart-card');
+      legendEl.querySelectorAll('.usage-key').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          const k = el.dataset.key;
+          let html = '';
+          if (byModelMode) {
+            const m = byModel[k]; if (!m) return;
+            html = '<div class="tt-day">' + escapeHtml(k) + '</div>' +
+              '<div class="tt-row"><span class="n">Tokens</span><span>' + fmtTokens(m.tokens) + ' · ' + pct(m.tokens) + '</span></div>' +
+              '<div class="tt-row"><span class="n">Calls</span><span>' + m.calls.toLocaleString() + '</span></div>';
+            const fks = Object.keys(m.feats).sort((a, b) => m.feats[b] - m.feats[a]);
+            if (fks.length) html += '<div class="tt-row" style="border-top:1px solid rgba(239,230,214,0.16);margin-top:5px;padding-top:4px;"><span class="n">Carried</span><span></span></div>' +
+              fks.map(fk => '<div class="tt-row"><span class="n">' + escapeHtml(usageFeatureMeta(fk).label) + '</span><span>' + fmtTokens(m.feats[fk]) + '</span></div>').join('');
+          } else {
+            const f = byFeature[k]; if (!f) return;
+            const meta = seriesMeta(k);
+            html = '<div class="tt-day">' + escapeHtml(meta.label) + '</div>' +
+              '<div class="tt-row"><span class="n">Tokens</span><span>' + fmtTokens(f.tin + f.tout) + ' · ' + pct(f.tin + f.tout) + '</span></div>' +
+              '<div class="tt-row"><span class="n">Calls</span><span>' + f.calls.toLocaleString() + '</span></div>';
+            const ms = Object.keys(byFeatureModel[k] || {}).sort((a, b) => byFeatureModel[k][b] - byFeatureModel[k][a]);
+            if (ms.length) html += '<div class="tt-row" style="border-top:1px solid rgba(239,230,214,0.16);margin-top:5px;padding-top:4px;"><span class="n">By model</span><span></span></div>' +
+              ms.map(m => '<div class="tt-row"><span class="n">' + escapeHtml(m) + '</span><span>' + fmtTokens(byFeatureModel[k][m]) + '</span></div>').join('');
+          }
+          keyTip.innerHTML = html;
+          keyTip.style.display = 'block';
+          const cr = keyCard.getBoundingClientRect(), er = el.getBoundingClientRect();
+          keyTip.style.left = Math.min(er.left - cr.left, cr.width - 190) + 'px';
+          keyTip.style.top = (er.bottom - cr.top + 8) + 'px';
+        });
+        el.addEventListener('mouseleave', () => { keyTip.style.display = 'none'; });
+      });
 
       // Continuous day axis over the window (missing days render as gaps of zero).
       const days = [];
