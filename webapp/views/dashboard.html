@@ -2699,7 +2699,7 @@
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
             <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned Facts</button>
             <button class="memory-filter" data-filter="knowledge" onclick="setMemoryFilter('knowledge')">Context Notes</button>
-            <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">In Flight</button>
+            <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">Ongoing</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
               <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows ClosedHand's working memory; only then are older stretches condensed into notes here. Empty means nothing has been condensed, not that anything is missing.</div>
@@ -6798,6 +6798,10 @@
 
     function switchBrainView(mode) {
       _brainViewMode = mode;
+      if (mode === 'graph' && _memoryFilter === 'matters') {
+        _memoryFilter = 'all';
+        document.querySelectorAll('.memory-filter').forEach(function(btn) { btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all'); });
+      }
       document.querySelectorAll('.brain-view-btn').forEach(function(btn) {
         if (btn.dataset.view === mode) {
           btn.style.background = 'rgba(239,230,214,0.16)';
@@ -7274,12 +7278,12 @@
       if (!el) return;
       var html = '';
 
-      // Things in flight first: the live picture of what is going on now.
+      // Ongoing matters first: the live picture of what is going on now.
       if ((_memoryFilter === 'matters' || _memoryFilter === 'all') && _matters.length > 0) {
-        html += '<div class="memory-section-label">In Flight</div>';
+        html += '<div class="memory-section-label">Ongoing</div>';
         html += _matters.map(renderMatterCard).join('');
       } else if (_memoryFilter === 'matters') {
-        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing in flight. When a plan with several people or steps is under way in chat, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
+        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in chat, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
       }
 
       // Pinned facts, grouped. One flat list put a note about a spouse next to
@@ -7386,6 +7390,9 @@
 
     function setMemoryFilter(filter) {
       _memoryFilter = filter;
+      // Ongoing matters are cards with no place in the constellation, so this
+      // filter shows the list. (Going back to the graph falls back to All.)
+      if (filter === 'matters' && _brainViewMode === 'graph') switchBrainView('list');
       // An open detail panel from the previous filter reads as that item
       // belonging to the new filter's list; close it with the list it came from.
       closeBrainPanel();
