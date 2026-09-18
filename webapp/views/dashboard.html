@@ -1882,9 +1882,12 @@
     .usage-models { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 14px 0 0; font-size: 12px; color: #B6AFA4; }
     .usage-models .m-head { grid-column: 1 / -1; font-size: 11px; color: #B6AFA4; text-transform: uppercase; letter-spacing: .04em; }
     .usage-models .m-name { color: #EFE6D6; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .usage-notes { margin: 14px 0 0; padding: 12px 14px; border-left: 2px solid rgba(239,230,214,0.16); font-size: 13px; line-height: 1.6; color: #B6AFA4; }
+    .usage-notes { margin: 12px 4px 0; font-size: 12px; line-height: 1.6; color: rgba(239,230,214,0.5); }
     .usage-notes:empty { display: none; }
-    .usage-notes .n-head { font-size: 11px; color: #B6AFA4; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .usage-notes .n-head { font-size: 10px; color: rgba(239,230,214,0.4); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+    .usage-legend-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .usage-legend-row .usage-legend { margin-bottom: 0; }
+    .usage-stack button { font-size: 11px; padding: 3px 9px; }
     .usage-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
     .usage-chart-card { background: var(--u-surface); border: 1px solid rgba(239,230,214,0.16); border-radius: 10px; padding: 14px 14px 8px; position: relative; }
     .usage-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #B6AFA4; margin-bottom: 10px; }
@@ -2752,12 +2755,18 @@
           </div>
           <div class="usage-tiles" id="usage-tiles"></div>
           <div class="usage-models" id="usage-models"></div>
-          <div class="usage-notes" id="usage-notes"></div>
           <div class="usage-chart-card" id="usage-chart-card" style="display:none;">
-            <div class="usage-legend" id="usage-legend"></div>
+            <div class="usage-legend-row">
+              <div class="usage-legend" id="usage-legend"></div>
+              <div class="usage-range usage-stack" id="usage-stack">
+                <button data-stack="feature" class="active" onclick="setUsageStack('feature')">By feature</button>
+                <button data-stack="model" onclick="setUsageStack('model')">By model</button>
+              </div>
+            </div>
             <div class="usage-chart" id="usage-chart"></div>
             <div class="usage-tooltip" id="usage-tooltip"></div>
           </div>
+          <div class="usage-notes" id="usage-notes"></div>
           <div class="usage-table" id="usage-table"></div>
           <div class="usage-empty" id="usage-empty" style="display:none;">
             No usage recorded yet. Numbers appear here after ClosedHand's first model call.
@@ -4660,6 +4669,15 @@
       { key: 'vision', label: 'Images', color: 'var(--u-vision)' },
     ];
     let usageDays = 30;
+    let usageStack = 'feature';
+    let usageRows = [];
+    // Model colours: the palette in a fixed order, biggest model first.
+    const USAGE_MODEL_COLORS = ['#D8624B', '#D0A652', '#8DBD79', '#B6AFA4', '#6D6A71', 'rgba(239,230,214,0.4)'];
+    function setUsageStack(mode) {
+      usageStack = mode;
+      document.querySelectorAll('#usage-stack button').forEach(b => b.classList.toggle('active', b.dataset.stack === mode));
+      renderUsage(usageRows);
+    }
 
     function setUsageRange(days) {
       usageDays = days;
@@ -4683,7 +4701,8 @@
       try {
         const res = await fetch('/api/usage/summary?days=' + usageDays);
         const data = await res.json();
-        renderUsage(data.rows || []);
+        usageRows = data.rows || [];
+        renderUsage(usageRows);
       } catch (e) {
         document.getElementById('usage-empty').style.display = 'block';
       }
@@ -4711,6 +4730,7 @@
       // "Other" folds any unknown future feature rather than minting a hue.
       const byFeature = {};
       const byDay = {};
+      const byDayModel = {};
       for (const r of rows) {
         const meta = usageFeatureMeta(r.feature);
         const fk = meta.label === 'Other' ? 'other' : r.feature;
@@ -4718,6 +4738,9 @@
         byFeature[fk].calls += r.calls; byFeature[fk].tin += r.tokens_in; byFeature[fk].tout += r.tokens_out;
         byDay[r.day] = byDay[r.day] || {};
         byDay[r.day][fk] = (byDay[r.day][fk] || 0) + r.tokens_in + r.tokens_out;
+        const mk = r.model || 'unknown';
+        byDayModel[r.day] = byDayModel[r.day] || {};
+        byDayModel[r.day][mk] = (byDayModel[r.day][mk] || 0) + r.tokens_in + r.tokens_out;
       }
       const featOrder = USAGE_FEATURES.map(f => f.key).concat(['other']).filter(k => byFeature[k]);
 
@@ -4749,34 +4772,39 @@
         '<span class="m-name">' + escapeHtml(m) + '</span><span>' + fmtTokens(byModel[m].tokens) + ' tokens · ' +
         byModel[m].calls.toLocaleString() + ' calls · ' + pct(byModel[m].tokens) + '</span>').join('');
 
-      // What stands out: worked out here from the rows, never asked of a model.
-      // Only a rule that fires is shown, at most three.
+      // Usage insight: worked out here from the rows, never asked of a model,
+      // and written for the person paying the bill: what is costing them and
+      // what they can do about it. At most two, only when a rule fires.
       const notes = [];
       const top = k => modelOrder.slice().sort((a, b) => (byModel[b].feats[k] || 0) - (byModel[a].feats[k] || 0))[0];
       const routine = (byFeature.machinery ? byFeature.machinery.tin + byFeature.machinery.tout : 0) + (byFeature.enrichment ? byFeature.enrichment.tin + byFeature.enrichment.tout : 0);
       const chatModel = byFeature.chat ? top('chat') : null;
       const routineModel = routine ? (top('enrichment') || top('machinery')) : null;
       if (chatModel && routineModel === chatModel && routine / grand >= 0.2) {
-        notes.push('Routine work and reading your data ran on ' + escapeHtml(chatModel) + ', the same model as chat, and took ' + pct(routine) + ' of your tokens. A smaller support model can do that work for less. You can choose one in Settings.');
+        notes.push('Routine work and reading your data ran on ' + escapeHtml(chatModel) + ', the same model you chat with, and took ' + pct(routine) + ' of your tokens. A smaller model does that work well for less. You can pick one in Settings.');
       }
       if (byFeature.chat && byFeature.chat.calls) {
         const avg = (byFeature.chat.tin + byFeature.chat.tout) / byFeature.chat.calls;
         const inShare = byFeature.chat.tin / (byFeature.chat.tin + byFeature.chat.tout);
-        if (avg >= 10000 && inShare >= 0.9) notes.push('Each chat message costs about ' + fmtTokens(Math.round(avg)) + ' tokens on average, nearly all of it what goes in: the history and recall attached to every message.');
+        if (avg >= 10000 && inShare >= 0.9) notes.push('Most of your chat spend is what each message carries with it, the conversation so far and what ClosedHand recalls for you, about ' + fmtTokens(Math.round(avg)) + ' tokens a message. Starting a new conversation once a topic is done keeps that down.');
       }
       const dayTotals = Object.keys(byDay).map(d => [d, Object.values(byDay[d]).reduce((a, b) => a + b, 0)]).sort((a, b) => b[1] - a[1]);
       if (dayTotals.length > 2 && dayTotals[0][1] / grand >= 0.4) {
-        notes.push(dayTotals[0][0].slice(5).replace('-', '/') + ' alone was ' + pct(dayTotals[0][1]) + ' of this window.');
+        const dt = new Date(dayTotals[0][0] + 'T00:00:00');
+        notes.push(pct(dayTotals[0][1]) + ' of this window landed on ' + dt.getDate() + ' ' + dt.toLocaleString('en-GB', { month: 'short' }) + ' alone.');
       }
-      if (modelOrder.length > 1 && byModel[modelOrder[1]].tokens / grand >= 0.05) {
-        notes.push('This window spans more than one model, so the totals above mix them. The list by model separates them.');
-      }
-      notesEl.innerHTML = notes.length ? '<div class="n-head">What stands out</div>' + notes.slice(0, 3).map(n => '<div>' + n + '</div>').join('') : '';
+      notesEl.innerHTML = notes.length ? '<div class="n-head">Usage insight</div>' + notes.slice(0, 2).map(n => '<div>' + n + '</div>').join('') : '';
 
-      // Legend (>1 series shown; identity never colour-alone thanks to tiles + table)
-      document.getElementById('usage-legend').innerHTML = featOrder.map(k => {
-        const meta = k === 'other' ? { label: 'Other', color: 'var(--u-other)' } : usageFeatureMeta(k);
-        return '<span><span class="usage-swatch" style="background:' + meta.color + '"></span>' + meta.label + '</span>';
+      // The chart stacks by feature or by model, whichever the toggle says.
+      const byModelMode = usageStack === 'model';
+      const series = byModelMode ? modelOrder : featOrder;
+      const dayMap = byModelMode ? byDayModel : byDay;
+      const seriesMeta = k => byModelMode
+        ? { label: k, color: USAGE_MODEL_COLORS[Math.min(modelOrder.indexOf(k), USAGE_MODEL_COLORS.length - 1)] }
+        : (k === 'other' ? { label: 'Other', color: 'var(--u-other)' } : usageFeatureMeta(k));
+      document.getElementById('usage-legend').innerHTML = series.map(k => {
+        const meta = seriesMeta(k);
+        return '<span><span class="usage-swatch" style="background:' + meta.color + '"></span>' + escapeHtml(meta.label) + '</span>';
       }).join('');
 
       // Continuous day axis over the window (missing days render as gaps of zero).
@@ -4785,7 +4813,7 @@
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         days.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
       }
-      const maxDay = Math.max(1, ...days.map(day => featOrder.reduce((s, k) => s + ((byDay[day] || {})[k] || 0), 0)));
+      const maxDay = Math.max(1, ...days.map(day => series.reduce((s, k) => s + ((dayMap[day] || {})[k] || 0), 0)));
 
       // SVG stacked bars: thin marks, 2px surface gaps between segments,
       // 4px rounded top on the outermost segment, recessive grid.
@@ -4795,7 +4823,7 @@
       const xFor = i => padL + (plotW / days.length) * i + ((plotW / days.length) - bw) / 2;
       const yFor = v => padT + plotH - (v / maxDay) * plotH;
 
-      let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Daily token usage, stacked by feature">';
+      let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Daily token usage, stacked by ' + (byModelMode ? 'model' : 'feature') + '">';
       for (let g = 1; g <= 3; g++) {
         const gy = padT + plotH - (plotH * g / 3);
         svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="rgba(239,230,214,0.1)" stroke-width="1"/>';
@@ -4809,9 +4837,9 @@
           svg += '<text x="' + (xFor(i) + bw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="rgba(239,230,214,0.52)" font-family="inherit">' + day.slice(5).replace('-', '/') + '</text>';
         }
         let acc = 0;
-        const segs = featOrder.map(k => ({ k: k, v: (byDay[day] || {})[k] || 0 })).filter(s => s.v > 0);
+        const segs = series.map(k => ({ k: k, v: (dayMap[day] || {})[k] || 0 })).filter(s => s.v > 0);
         segs.forEach((seg, si) => {
-          const meta = seg.k === 'other' ? { color: 'var(--u-other)' } : usageFeatureMeta(seg.k);
+          const meta = seriesMeta(seg.k);
           const y1 = yFor(acc + seg.v), y2 = yFor(acc);
           const h = Math.max(1, y2 - y1);
           const isTop = si === segs.length - 1;
@@ -4839,13 +4867,13 @@
       document.querySelectorAll('.usage-hit').forEach(hit => {
         hit.addEventListener('mousemove', (ev) => {
           const day = hit.dataset.day;
-          const stacks = byDay[day] || {};
-          const total = featOrder.reduce((s, k) => s + (stacks[k] || 0), 0);
+          const stacks = dayMap[day] || {};
+          const total = series.reduce((s, k) => s + (stacks[k] || 0), 0);
           let html = '<div class="tt-day">' + day + '</div>';
-          featOrder.forEach(k => {
+          series.forEach(k => {
             if (!stacks[k]) return;
-            const meta = k === 'other' ? { label: 'Other', color: 'var(--u-other)' } : usageFeatureMeta(k);
-            html += '<div class="tt-row"><span class="n"><span class="usage-swatch" style="background:' + meta.color + '"></span>' + meta.label + '</span><span>' + fmtTokens(stacks[k]) + '</span></div>';
+            const meta = seriesMeta(k);
+            html += '<div class="tt-row"><span class="n"><span class="usage-swatch" style="background:' + meta.color + '"></span>' + escapeHtml(meta.label) + '</span><span>' + fmtTokens(stacks[k]) + '</span></div>';
           });
           html += '<div class="tt-row" style="border-top:1px solid rgba(239,230,214,0.16);margin-top:5px;padding-top:4px;"><span class="n">Total</span><span>' + fmtTokens(total) + '</span></div>';
           tooltip.innerHTML = html;
