@@ -1233,6 +1233,10 @@
     /* Mobile activity sidebar: always rendered off-screen, slides in */
     body.chat-active .activity-sidebar { display: block !important; position: fixed; top: 0; left: 0; bottom: 0; z-index: 30; background: rgba(16,14,13,0.97); backdrop-filter: blur(20px); transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); pointer-events: none; }
     body.chat-active .activity-sidebar.mobile-open { transform: translateX(0); pointer-events: auto; }
+    /* The scrim sits under the list and over the chat: a tap on the chat
+       closes the list, the same as swiping it away. */
+    .activity-scrim { position: fixed; inset: 0; z-index: 29; background: rgba(16,14,13,0.45); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    body.chat-active .activity-sidebar.mobile-open ~ .activity-scrim { opacity: 1; pointer-events: auto; }
 
     /* Back to home link in chat mode */
     body.chat-active .header .back-arrow { display: flex !important; }
@@ -2280,6 +2284,8 @@
       <div style="font-size:12px;color:rgba(239,230,214,0.6);padding:12px;">Loading...</div>
     </div>
   </div>
+  <!-- Phones: the chat dims behind the open list, and a tap on it closes the list. -->
+  <div class="activity-scrim" id="activityScrim" onclick="toggleMobileActivity()"></div>
 
   <!-- CHAT STATE: messages + docked input at bottom -->
   <div class="chat-messages" id="chatMessages">
