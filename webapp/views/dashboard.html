@@ -2099,6 +2099,19 @@
           .wallet-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#B6AFA4; }
           .wallet-field input { padding:7px 10px; background:rgba(26,24,23,0.95); border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:13px; outline:none; font-family:inherit; }
           .wallet-field input:focus { border-color:#D8624B; }
+          .wallet-field select { padding:7px 30px 7px 10px; background:rgba(26,24,23,0.95) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23B6AFA4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 10px center; border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:13px; outline:none; font-family:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }
+          .wallet-field select:focus { border-color:#D8624B; }
+          /* An amount: the currency sits inside the field on the left, and a
+             cross on the right takes a typed value back to "no limit". The
+             native spinners are hidden; a step of a penny from an empty
+             field is never what anyone meant. */
+          .wallet-field .amount { position:relative; display:flex; align-items:center; }
+          .wallet-field .amount input { width:100%; padding-left:44px; padding-right:28px; -moz-appearance:textfield; }
+          .wallet-field .amount input::-webkit-outer-spin-button, .wallet-field .amount input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+          .wallet-field .amount .cur { position:absolute; left:10px; font-size:12px; color:#B6AFA4; pointer-events:none; }
+          .wallet-field .amount .clear { position:absolute; right:4px; width:22px; height:22px; display:none; align-items:center; justify-content:center; border:none; background:none; color:#B6AFA4; cursor:pointer; border-radius:6px; padding:0; }
+          .wallet-field .amount .clear:hover { color:#EFE6D6; background:rgba(239,230,214,0.08); }
+          .wallet-field .amount.has-value .clear { display:flex; }
           .wallet-card-row { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#1A1817; border:1px solid rgba(239,230,214,0.16); border-radius:10px; font-size:13px; color:#EFE6D6; }
           .wallet-card-row .muted { color:#B6AFA4; font-size:12px; }
           .mcp-pill { position: relative; border-radius: 18px; padding: 2px; overflow: hidden; }
@@ -2442,7 +2455,7 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <div class="settings-group-header">
               <h2>Wallet</h2>
-              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. The number is kept on this machine, typed into the checkout for you, and never read by the model. Every purchase is put to you first unless you say otherwise here.</p>
+              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. The number is stored encrypted on this computer, unlocked only by a key this install keeps, and typed into the checkout for you. The model never sees it. Every purchase is put to you first unless you say otherwise here.</p>
             </div>
             <div style="padding:12px 16px;">
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
@@ -2452,15 +2465,15 @@
                   <label class="wallet-field"><span>Currency</span><select id="sl-currency">
                     <option value="USD">USD, US dollar</option><option value="GBP">GBP, British pound</option><option value="EUR">EUR, euro</option><option value="JPY">JPY, Japanese yen</option><option value="AUD">AUD, Australian dollar</option><option value="CAD">CAD, Canadian dollar</option><option value="NZD">NZD, New Zealand dollar</option><option value="CHF">CHF, Swiss franc</option><option value="SGD">SGD, Singapore dollar</option><option value="HKD">HKD, Hong Kong dollar</option><option value="VND">VND, Vietnamese dong</option><option value="THB">THB, Thai baht</option><option value="KRW">KRW, South Korean won</option><option value="INR">INR, Indian rupee</option><option value="AED">AED, UAE dirham</option><option value="SEK">SEK, Swedish krona</option><option value="NOK">NOK, Norwegian krone</option><option value="DKK">DKK, Danish krone</option><option value="PLN">PLN, Polish zloty</option><option value="ZAR">ZAR, South African rand</option><option value="BRL">BRL, Brazilian real</option><option value="MXN">MXN, Mexican peso</option>
                   </select></label>
-                  <label class="wallet-field"><span>Per purchase, at most <span data-spend-currency></span></span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"></label>
-                  <label class="wallet-field"><span>Per day, at most <span data-spend-currency></span></span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"></label>
-                  <label class="wallet-field"><span>Per month, at most <span data-spend-currency></span></span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"></label>
+                  <label class="wallet-field"><span>Max per purchase</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-per-purchase" min="0" step="0.01" placeholder="no limit"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
+                  <label class="wallet-field"><span>Max per day</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
+                  <label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
                 </div>
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#EFE6D6;cursor:pointer;margin:4px 0 6px;">
                   <input type="checkbox" id="sl-always-ask" checked style="width:14px;height:14px;margin:0;accent-color:#D0563F;">
                   Ask me before every purchase
                 </label>
-                <label class="wallet-field" id="sl-auto-wrap" style="max-width:360px;opacity:0.5;"><span>Go ahead without asking under <span data-spend-currency></span></span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled></label>
+                <label class="wallet-field" id="sl-auto-wrap" style="max-width:360px;opacity:0.5;"><span>Go ahead without asking under</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
                 <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
                   <button class="account-action-btn" onclick="saveSpendLimits()">Save rules</button>
                   <span id="sl-status" style="font-size:12.5px;color:#B6AFA4;"></span>
@@ -2480,8 +2493,7 @@
                     <label class="wallet-field"><span>Name on card</span><input type="text" id="wc-holder" placeholder="As printed"></label>
                     <label class="wallet-field"><span>Billing postcode</span><input type="text" id="wc-postcode" placeholder="Optional"></label>
                     <label class="wallet-field"><span>Label</span><input type="text" id="wc-label" placeholder="e.g. Monzo virtual"></label>
-                    <label class="wallet-field"><span>This card, per purchase</span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="use the rules above"></label>
-                    <label class="wallet-field"><span>This card, per month</span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="use the rules above"></label>
+                    <div style="grid-column:1/-1;margin-top:6px;"><div style="font-size:12px;color:#B6AFA4;margin-bottom:6px;">Limits for this card alone. The rules above still apply.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;max-width:480px;"><label class="wallet-field"><span>Max per purchase</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label><label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label></div></div>
                   </div>
                   <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
                     <button class="account-action-btn" onclick="addWalletCard()">Save card</button>
@@ -4431,7 +4443,19 @@
     }
     function updateSpendCurrency() {
       var currency = document.getElementById('sl-currency').value;
-      document.querySelectorAll('[data-spend-currency]').forEach(function (el) { el.textContent = '(' + currency + ')'; });
+      document.querySelectorAll('[data-spend-currency]').forEach(function (el) { el.textContent = currency; });
+    }
+    // Amount fields show their cross only while they hold a value.
+    function syncAmountFields() {
+      document.querySelectorAll('.wallet-field .amount').forEach(function (wrap) {
+        var input = wrap.querySelector('input');
+        wrap.classList.toggle('has-value', input.value !== '');
+        if (!input._amountBound) { input._amountBound = true; input.addEventListener('input', function () { wrap.classList.toggle('has-value', input.value !== ''); }); }
+      });
+    }
+    function clearAmount(btn) {
+      var input = btn.parentNode.querySelector('input');
+      input.value = ''; input.dispatchEvent(new Event('input')); input.focus();
     }
     async function loadWallet() {
       try {
@@ -4463,6 +4487,7 @@
         document.getElementById('sl-auto-under').value = l.auto_under ?? '';
         document.getElementById('sl-always-ask').onchange = autoUnderToggle;
         autoUnderToggle();
+        syncAmountFields();
         var cards = w.cards || [];
         document.getElementById('wallet-cards').innerHTML = cards.length ? cards.map(function(c) {
           var lim = [];
@@ -4547,6 +4572,7 @@
       if (!res.ok) { st.textContent = data.error || 'Could not save the card'; return; }
       st.textContent = '';
       ['wc-number','wc-exp-month','wc-exp-year','wc-cvc','wc-holder','wc-postcode','wc-label','wc-per-purchase','wc-per-month'].forEach(function(id) { document.getElementById(id).value = ''; });
+      syncAmountFields();
       document.getElementById('wallet-add').style.display = 'none';
       showToast('Card added');
       loadWallet();
