@@ -692,14 +692,15 @@
   @media (min-width: 601px) {
     .hero-recent-tab {
       display: inline-flex; align-items: center; gap: 7px;
-      margin: -1px auto 0; padding: 6px 14px 7px;
-      font: 500 12px/1 var(--font-ui, inherit); letter-spacing: 0.01em; color: #B6AFA4;
-      background: #100E0D; border: 1px solid rgba(208,86,63,0.28); border-top: 0; border-radius: 0 0 12px 12px;
+      margin: -1px auto 0; padding: 5px 13px 6px;
+      font: 400 11.5px/1 var(--font-ui, inherit); color: rgba(239,230,214,0.5);
+      background: #100E0D; border: 1px solid rgba(208,86,63,0.16); border-top: 0; border-radius: 0 0 12px 12px;
       cursor: pointer; position: relative; z-index: 2;
       opacity: 0; animation: heroIn 0.6s ease forwards 0.9s;
       transition: color 0.15s, border-color 0.15s, background 0.15s;
     }
-    .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; border-color: rgba(208,86,63,0.5); }
+    .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; border-color: rgba(208,86,63,0.4); }
+    .hero-recent-tab .chev { opacity: 0.7; }
     .hero-recent-tab .chev { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
     .hero-recent-tab[aria-expanded="true"] .chev { transform: rotate(180deg); }
     .hero-recent { margin: 0 auto; max-height: 0; opacity: 1; animation: none; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -2277,8 +2278,8 @@
          underside of the box that opens a drawer of rows. On a phone: a card
          on a deck, placed after the footer line (flex order). -->
     <button class="hero-recent-tab" id="heroRecentTab" type="button" aria-expanded="false" aria-controls="heroRecent" hidden>
-      <span>Pick up where you left off</span>
-      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      <span>or pick up where you left off</span>
+      <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     <div class="hero-recent" id="heroRecent" hidden>
       <div class="hero-recent-label">Pick up where you left off</div>
