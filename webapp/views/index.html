@@ -686,6 +686,34 @@
   }
   /* Recent conversations: thin rows, no boxes, the box's width. */
   .hero-recent { width: 100%; max-width: 900px; margin: 40px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
+  /* Desk: a tab on the underside of the box, in the box's own border, and a
+     drawer that slides the rows out from under it. Closed by default. */
+  .hero-recent-tab { display: none; }
+  @media (min-width: 601px) {
+    .hero-recent-tab {
+      display: inline-flex; align-items: center; gap: 7px;
+      margin: -1px auto 0; padding: 6px 14px 7px;
+      font: 500 12px/1 var(--font-ui, inherit); letter-spacing: 0.01em; color: #B6AFA4;
+      background: #100E0D; border: 1px solid rgba(208,86,63,0.28); border-top: 0; border-radius: 0 0 12px 12px;
+      cursor: pointer; position: relative; z-index: 2;
+      opacity: 0; animation: heroIn 0.6s ease forwards 0.9s;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; border-color: rgba(208,86,63,0.5); }
+    .hero-recent-tab .chev { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .hero-recent-tab[aria-expanded="true"] .chev { transform: rotate(180deg); }
+    .hero-recent { margin: 0 auto; max-height: 0; opacity: 1; animation: none; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .hero-recent.open { max-height: 320px; }
+    .hero-recent-label { display: none; }
+    .hero-recent-list { padding-top: 10px; }
+    .hero-recent-row { opacity: 0; transform: translateY(-8px); transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .hero-recent.open .hero-recent-row { opacity: 1; transform: none; }
+    .hero-recent.open .hero-recent-row:nth-child(2) { transition-delay: 0.05s; }
+    .hero-recent.open .hero-recent-row:nth-child(3) { transition-delay: 0.1s; }
+    .hero-recent-all { opacity: 0; transition: opacity 0.3s ease 0.15s; }
+    .hero-recent.open .hero-recent-all { opacity: 1; }
+    .hero-footer { margin-top: 16px; }
+  }
   .hero-recent-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(239,230,214,0.42); margin: 0 0 4px 6px; }
   .hero-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(239,230,214,0.07); text-decoration: none; }
   .hero-recent-row:first-child { border-top: 0; }
@@ -1189,7 +1217,10 @@
     .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
-    .hero-recent { margin-top: 30px; }
+    .hero-recent { margin-top: 30px; order: 1; }
+    .hero-recent ~ * { order: 2; }
+    .hero-recent ~ .hero-footer { order: 0; }
+    .hero-recent-tab { display: none; }
     .hero-recent-all { display: none; }
     .hero-recent-deck { display: block; }
     .hero-recent-row { position: relative; z-index: 1; padding: 12px 14px; background: #1A1817; border: 1px solid rgba(239,230,214,0.10); border-radius: 12px; }
@@ -2242,14 +2273,19 @@
     </div>
     <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.json,.md,.html,.xml,.js,.py,.ts,.css,.sql,.sh,.yaml,.yml,.log,.doc,.docx,.xls,.xlsx,.pptx,.ogg,.mp3,.wav,.mp4,.mov,.avi,.webm,.m4a,.aac,.flac,.zip,.tar,.gz,.rtf,.epub">
 
-    <div class="hero-footer">
-      <span><span class="footer-sentence">Runs on your computer with no company in between.</span> <span class="footer-sentence">Requests use the AI provider you choose.</span></span>
-    </div>
-
-    <!-- Past conversations, only when there are any: a few quiet rows under the box. -->
+    <!-- Past conversations, only when there are any. On a desk: a tab on the
+         underside of the box that opens a drawer of rows. On a phone: a card
+         on a deck, placed after the footer line (flex order). -->
+    <button class="hero-recent-tab" id="heroRecentTab" type="button" aria-expanded="false" aria-controls="heroRecent" hidden>
+      <span>Pick up where you left off</span>
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <div class="hero-recent" id="heroRecent" hidden>
       <div class="hero-recent-label">Pick up where you left off</div>
       <div class="hero-recent-list" id="heroRecentList"></div>
+    </div>
+    <div class="hero-footer">
+      <span><span class="footer-sentence">Runs on your computer with no company in between.</span> <span class="footer-sentence">Requests use the AI provider you choose.</span></span>
     </div>
 
     <div style="flex:0.5"></div>
@@ -4729,6 +4765,18 @@
             setTimeout(function() { openRecentThread(rows[0].id); }, 220);
           });
           wrap.hidden = false;
+          var tab = document.getElementById('heroRecentTab');
+          if (tab) {
+            tab.hidden = false;
+            tab.addEventListener('click', function() {
+              var open = !wrap.classList.contains('open');
+              wrap.classList.toggle('open', open);
+              tab.setAttribute('aria-expanded', String(open));
+            });
+            document.addEventListener('keydown', function(e) {
+              if (e.key === 'Escape' && wrap.classList.contains('open')) { wrap.classList.remove('open'); tab.setAttribute('aria-expanded', 'false'); }
+            });
+          }
           if (typeof fitMobileHero === 'function') fitMobileHero();
         }).catch(function() {});
       }
