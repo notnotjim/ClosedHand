@@ -202,6 +202,20 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .notification-options { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 .notification-options + .pulse-no-platforms { margin-top: 20px !important; }
 .notification-options .pill[aria-pressed="true"]::before { content: "✓ "; }
+.notification-options .pill { display: inline-flex; align-items: center; gap: 8px; }
+.notification-options .pill-logo { width: 16px; height: 16px; border-radius: 3px; opacity: 0.85; }
+/* Apps not linked yet: the same pill, drawn dashed and quiet, brightening on hover. */
+.notification-options .pill-add { border-style: dashed; border-color: rgba(239,230,214,0.26); background: transparent; color: #B6AFA4; }
+.notification-options .pill-add .pill-logo { opacity: 0.7; transition: opacity 0.15s; }
+.notification-options .pill-add .pill-add-plus { font-size: 15px; line-height: 1; margin-left: -2px; color: #D8624B; }
+.notification-options .pill-add:hover { border-style: solid; border-color: rgba(208,86,63,0.55); color: #EFE6D6; background: rgba(208,86,63,0.06); }
+.notification-options .pill-add:hover .pill-logo { opacity: 1; }
+.notification-options .pill-add-more { border-style: dashed; border-color: rgba(239,230,214,0.22); background: transparent; color: #B6AFA4; padding: 6px 18px 6px 8px; }
+.notification-options .pill-add-more .int-more-plus { width: 26px; height: 26px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(239,230,214,0.22); color: #D8624B; transition: transform 0.25s, border-color 0.2s; }
+.notification-options .pill-add-more:hover { border-style: dashed; border-color: rgba(208,86,63,0.55); background: rgba(208,86,63,0.06); color: #EFE6D6; }
+.notification-options .pill-add-more:hover .int-more-plus { transform: rotate(90deg); border-color: rgba(208,86,63,0.55); }
+.notification-options .pill-add { animation: pillIn 0.25s ease both; }
+@keyframes pillIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .notification-retry { background: none; border: 0; padding: 4px; font: inherit; text-decoration: underline; cursor: pointer; }
 .preference-row { display: flex; align-items: flex-start; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--ui-border, rgba(239,230,214,0.16)); }
 .preference-row input { width: 20px; height: 20px; margin: 3px 0 0; flex: 0 0 20px; accent-color: #D0563F; }

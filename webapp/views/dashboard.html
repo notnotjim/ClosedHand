@@ -3083,6 +3083,7 @@
 
       // Cache platforms for tab-switch re-render
       window._platformsCache = data.platforms;
+      window._selfHost = !!data.selfHost;
       renderPlatformPills(data.platforms);
 
       // Toast on connect/error
@@ -4175,11 +4176,21 @@
         container.innerHTML = '<p class="pulse-no-platforms">Connect a chat app to receive updates and scheduled results. <a href="#connections" onclick="switchTab(\'connections\');return false;">Connect a chat app</a>.</p>';
         return;
       }
+      const pillLogo = (key) => PLATFORM_LOGOS[key] ? `<img class="pill-logo" src="${PLATFORM_LOGOS[key]}" alt="">` : "";
       const pills = connected.map(([key, info]) => {
         const deliveryKey = info.linkedDevice ? "whatsapp_linked" : key;
         const selected = pulseState.deliveryPlatforms.includes(deliveryKey);
-        return `<button class="pill ${selected ? "selected" : ""}" aria-pressed="${selected}" data-platform="${escAttribute(deliveryKey)}"${_pulseSaving ? " disabled" : ""}>${escHtml(info.name || key)}</button>`;
+        return `<button class="pill ${selected ? "selected" : ""}" aria-pressed="${selected}" data-platform="${escAttribute(deliveryKey)}"${_pulseSaving ? " disabled" : ""}>${pillLogo(key)}${escHtml(info.name || key)}</button>`;
       }).join("");
+      // After the linked apps sits one dashed "Link another app" pill, in the
+      // Connect more card's manner. A click unfolds the apps not yet linked
+      // as quiet pills; each takes the same route the Connections tab would.
+      const addable = Object.entries(platforms).filter(([, info]) => !info.connected && (info.available || window._selfHost));
+      const adds = !addable.length ? "" : container.dataset.showAdds
+        ? addable.map(([key, info]) =>
+            `<button class="pill pill-add" data-add-platform="${escAttribute(key)}" title="Link ${escAttribute(info.name || key)}">${pillLogo(key)}${escHtml(info.name || key)}<span class="pill-add-plus" aria-hidden="true">+</span></button>`
+          ).join("")
+        : `<button class="pill pill-add-more" id="pill-add-more" aria-expanded="false"><span class="int-more-plus" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>Link another app</button>`;
       const businessWhatsApp = connected.some(([key, info]) => key === "whatsapp" && !info.linkedDevice);
       const note = businessWhatsApp && pulseState.deliveryPlatforms.includes("whatsapp")
         ? '<p class="pulse-no-platforms">WhatsApp accepts these updates within 24 hours of your last message there. Outside that window, ClosedHand uses your other selected apps.</p>'
@@ -4187,8 +4198,13 @@
       const help = pulseState.deliveryPlatforms.length
         ? "Choose the apps where you want to receive updates and scheduled results."
         : "No apps selected. ClosedHand will not send updates or scheduled results to your chat apps.";
-      container.innerHTML = '<p class="notification-help">' + help + '</p><div class="notification-options">' + pills + '</div>' + note;
-      container.querySelectorAll(".pill").forEach(pill => {
+      container.innerHTML = '<p class="notification-help">' + help + '</p><div class="notification-options">' + pills + adds + '</div>' + note;
+      const more = container.querySelector("#pill-add-more");
+      if (more) more.addEventListener("click", () => { container.dataset.showAdds = "1"; renderPlatformPills(platforms); });
+      container.querySelectorAll(".pill-add").forEach(pill => {
+        pill.addEventListener("click", () => startPlatformLink(pill.dataset.addPlatform));
+      });
+      container.querySelectorAll(".pill:not(.pill-add):not(.pill-add-more)").forEach(pill => {
         pill.addEventListener("click", async () => {
           if (_pulseSaving) return;
           const previous = pulseState.deliveryPlatforms.slice();
@@ -4200,6 +4216,21 @@
           renderPlatformPills(platforms);
         });
       });
+    }
+
+    // The one route to linking a chat app, the same one the Connections
+    // tab's card takes for that app in its current state.
+    function startPlatformLink(key) {
+      const platform = (window._platformsCache || {})[key];
+      if (!platform) return;
+      if (window._selfHost && key === 'telegram' && platform.configured && platform.botUsername) {
+        window.open('https://t.me/' + platform.botUsername + '?start=hello', '_blank', 'noopener');
+        return;
+      }
+      if (window._selfHost && (key === 'telegram' || key === 'whatsapp')) { window.top.location.href = '/setup#step-chat=' + key; return; }
+      if (window._selfHost && !platform.available) { openChatAppSetup(key); return; }
+      switchTab('connections');
+      if (!platform.pendingCode) generateCode(key);
     }
 
     function renderQuietHours() {
