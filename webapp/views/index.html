@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>ClosedHand</title>
 <link rel="icon" href="/logocircle.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1242,6 +1242,10 @@
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
     .hero-recent-tab { padding: 5px 12px 6px; font-size: 11px; }
+    /* Full-width on a phone: a box scaled up on focus pokes past the screen
+       edges and Safari pans to it. Brighten, do not grow. */
+    .input-box-wrap:focus-within { transform: none; }
+    .input-box-wrap:focus-within + .hero-recent-tab { transform: none; }
     .hero-recent-row { padding: 9px 4px; }
     .hero-recent-row .title { font-size: 13px; }
     .hero-recent-row .meta { font-size: 11px; }
