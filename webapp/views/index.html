@@ -695,6 +695,16 @@
   .hero-recent-row:hover .arrow { color: #D8624B; transform: translateX(2px); }
   .hero-recent-all { display: block; text-align: right; font-size: 12px; color: #B6AFA4; padding: 8px 6px 0; text-decoration: none; }
   .hero-recent-all:hover { color: #D8624B; }
+  /* On phones the one row is a card on a small deck: two edges peek out
+     beneath it with the count of what is under. Tapping the deck fans it and
+     opens the list. Hidden on a desk, where the rows and the link do the job. */
+  .hero-recent-deck { display: none; position: relative; height: 30px; margin: 0 10px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  .hero-recent-deck .deck-edge { position: absolute; left: 0; right: 0; height: 12px; border: 1px solid rgba(239,230,214,0.10); border-top: 0; border-radius: 0 0 12px 12px; background: rgba(26,24,23,0.55); transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .hero-recent-deck .deck-edge.e1 { top: -1px; }
+  .hero-recent-deck .deck-edge.e2 { top: 5px; left: 8px; right: 8px; opacity: 0.6; }
+  .hero-recent-deck .deck-count { position: absolute; left: 50%; top: 13px; transform: translateX(-50%); font-size: 11px; letter-spacing: 0.02em; color: #B6AFA4; background: #100E0D; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+  .hero-recent-deck.fan .deck-edge.e1 { transform: translateY(5px); }
+  .hero-recent-deck.fan .deck-edge.e2 { transform: translateY(10px); }
   .hero-footer .footer-sep {
     color: rgba(239,230,214,0.5);
   }
@@ -1172,7 +1182,7 @@
 
     /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
-    .hero-area { padding: 0 16px 16px; flex: none !important; min-height: 0 !important; height: calc(100svh - 110px); }
+    .hero-area { padding: 0 16px 16px; flex: none !important; min-height: calc(100svh - 110px) !important; height: auto; }
     /* Phones: the two halves of the heading take a line each, the sub line
        and each footer sentence hold one line. Sizes follow the width. */
     .hero-heading { font-size: clamp(20px, 6.8vw, 34px); letter-spacing: -0.5px; margin-bottom: 10px; white-space: nowrap; }
@@ -1180,7 +1190,9 @@
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
     .hero-recent { margin-top: 30px; }
-    .hero-recent-all { text-align: center; padding-top: 12px; }
+    .hero-recent-all { display: none; }
+    .hero-recent-deck { display: block; }
+    .hero-recent-row { position: relative; z-index: 1; padding: 12px 14px; background: #1A1817; border: 1px solid rgba(239,230,214,0.10); border-radius: 12px; }
     .hero-recent-label { font-size: 10px; }
     .hero-recent-row { padding: 8px 4px; }
     .hero-recent-row .title { font-size: 13px; }
@@ -3103,7 +3115,7 @@
     }
     if (!hero) return;
     if (window.innerWidth > 600 || document.body.classList.contains('chat-active')) {
-      hero.style.height = ''; // desktop / chat mode: hand back to CSS
+      hero.style.minHeight = ''; // desktop / chat mode: hand back to CSS
       return;
     }
     var header = document.querySelector('.header');
@@ -3115,7 +3127,10 @@
     var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
     var chrome = (header ? header.getBoundingClientRect().height : 0) + (tabs ? tabs.getBoundingClientRect().height : 0);
     var target = vh - 2 * chrome;
-    if (target > 0) hero.style.height = target + 'px';
+    // A minimum, not a fixed height: when the content is taller (recent
+    // conversations, the Bridge prompt) the hero grows and the page scrolls,
+    // rather than centring its overflow up into the tabs.
+    if (target > 0) hero.style.minHeight = target + 'px';
   }
   // Header rows can change after sign-in or when the available width changes.
   var headerObserver = new ResizeObserver(fitMobileHero);
@@ -4692,12 +4707,21 @@
               '<span class="title">' + esc(t.title || 'Untitled') + '</span>' +
               '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span>' +
               '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
-          }).join('') + (withMsgs.length > rows.length ? '<a class="hero-recent-all" href="#" id="heroRecentAll">All conversations &#8250;</a>' : '');
+          }).join('') + (withMsgs.length > rows.length
+            ? '<a class="hero-recent-all" href="#" id="heroRecentAll">All conversations &#8250;</a>' +
+              '<a class="hero-recent-deck" href="#" id="heroRecentDeck" aria-label="All conversations"><span class="deck-edge e1"></span><span class="deck-edge e2"></span><span class="deck-count">+' + (withMsgs.length - rows.length) + ' more</span></a>'
+            : '');
           list.querySelectorAll('.hero-recent-row').forEach(function(a) {
             a.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(a.getAttribute('data-thread')); });
           });
           var all = document.getElementById('heroRecentAll');
           if (all) all.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(rows[0].id); });
+          var deck = document.getElementById('heroRecentDeck');
+          if (deck) deck.addEventListener('click', function(e) {
+            e.preventDefault();
+            deck.classList.add('fan');
+            setTimeout(function() { openRecentThread(rows[0].id); }, 220);
+          });
           wrap.hidden = false;
           if (typeof fitMobileHero === 'function') fitMobileHero();
         }).catch(function() {});
