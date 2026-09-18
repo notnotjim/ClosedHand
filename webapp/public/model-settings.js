@@ -45,8 +45,18 @@
       current.hidden = !rows.length;
       if (!rows.length) return;
       var list = document.createElement("dl"); list.className = "model-role-list";
+      // What each role does, shown on hover over its name.
+      var tips = {
+        "Chat model": "Talks with you. Every message you send goes through this model.",
+        "Support model": "Does routine work like naming conversations and writing summaries.",
+        "Images": "Looks at photos and screenshots you send.",
+        "Document summaries": "Summarises mail and documents as they are indexed.",
+        "Recall": "Finds the memories, mail and files that relate to what you ask. Stays the same when you change your chat model.",
+        "Search ranking": "Puts the closest matches first. Stays the same when you change your chat model."
+      };
       rows.forEach(function (row) {
         var term = document.createElement("dt"); term.textContent = row.label;
+        if (tips[row.label]) { term.dataset.tip = tips[row.label]; term.tabIndex = 0; }
         var definition = document.createElement("dd");
         var name = document.createElement("span"); name.textContent = row.model.replace(/^local:/, "");
         definition.append(name);
@@ -54,9 +64,6 @@
         list.append(term, definition);
       });
       current.append(list);
-      var note = document.createElement("p"); note.className = "model-hint";
-      note.textContent = "Recall helps find relevant information. Search ranking puts the closest matches first. These models stay the same when you change your chat model.";
-      current.append(note);
       var download = data.localModels?.embedder;
       if (download && ["downloading", "error"].includes(download.state)) {
         var status = document.createElement("p"); status.className = "model-hint";
