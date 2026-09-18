@@ -8,7 +8,8 @@ const html = fs.readFileSync(require.resolve("../webapp/views/dashboard.html"), 
 const block = (start, end) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)));
 function notifications() {
   const container = {
-    innerHTML: "", buttons: [],
+    innerHTML: "", buttons: [], dataset: {},
+    querySelector() { return null; },
     querySelectorAll() {
       this.buttons = [...this.innerHTML.matchAll(/data-platform="([^"]+)"/g)].map(match => ({
         dataset: { platform: match[1] }, addEventListener(_, fn) { this.click = fn; },
@@ -17,7 +18,7 @@ function notifications() {
     },
   };
   const state = vm.createContext({
-    window: {}, console: { error() {} },
+    window: {}, console: { error() {} }, PLATFORM_LOGOS: {},
     document: { getElementById: id => id === "platform-pills" ? container : null },
     renderPulseLevel() {}, renderQuietHours() {}, loadAllowedHosts() {}, showToast() {},
     escHtml: s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]),
