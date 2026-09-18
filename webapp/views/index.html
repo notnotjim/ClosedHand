@@ -684,6 +684,17 @@
     text-align: center;
     text-wrap: pretty;
   }
+  /* Recent conversations: thin rows, no boxes, the box's width. */
+  .hero-recent { width: 100%; max-width: 900px; margin: 26px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
+  .hero-recent-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(239,230,214,0.42); margin: 0 0 4px 6px; }
+  .hero-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(239,230,214,0.07); text-decoration: none; }
+  .hero-recent-row:first-child { border-top: 0; }
+  .hero-recent-row .title { flex: 1; min-width: 0; font-size: 14px; color: #EFE6D6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero-recent-row .meta { font-size: 12px; color: #B6AFA4; white-space: nowrap; }
+  .hero-recent-row .arrow { color: rgba(239,230,214,0.35); font-size: 16px; line-height: 1; transition: color 0.15s, transform 0.15s; }
+  .hero-recent-row:hover .arrow { color: #D8624B; transform: translateX(2px); }
+  .hero-recent-all { display: block; text-align: right; font-size: 12px; color: #B6AFA4; padding: 8px 6px 0; text-decoration: none; }
+  .hero-recent-all:hover { color: #D8624B; }
   .hero-footer .footer-sep {
     color: rgba(239,230,214,0.5);
   }
@@ -1168,6 +1179,10 @@
     .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
+    .hero-recent { margin-top: 18px; }
+    .hero-recent-label { font-size: 10px; }
+    .hero-recent-row { padding: 8px 4px; }
+    .hero-recent-row .title { font-size: 13px; }
     .hero-heading-sub { font-size: clamp(10px, 3.05vw, 16px); gap: 6px; margin-bottom: 18px; white-space: nowrap; max-width: none; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
@@ -2212,6 +2227,12 @@
 
     <div class="hero-footer">
       <span><span class="footer-sentence">Runs on your computer with no company in between.</span> <span class="footer-sentence">Requests use the AI provider you choose.</span></span>
+    </div>
+
+    <!-- Past conversations, only when there are any: a few quiet rows under the box. -->
+    <div class="hero-recent" id="heroRecent" hidden>
+      <div class="hero-recent-label">Pick up where you left off</div>
+      <div class="hero-recent-list" id="heroRecentList"></div>
     </div>
 
     <div style="flex:0.5"></div>
@@ -4651,58 +4672,56 @@
         connectChat();
         if (typeof loadRAGModeState === 'function') loadRAGModeState();
         if (typeof window.monLoadCloud === 'function') window.monLoadCloud();
-        // Check for previous conversation - show resume option
-        fetch('/api/chat/history').then(function(r) { return r.json(); }).then(function(hist) {
-          if (hist.messages && hist.messages.length > 0) {
-            window._chatHistory = hist.messages;
-            // Show floating resume pill at bottom-right with subtle float
-            var resumeEl = document.createElement('a');
-            resumeEl.href = '#';
-            resumeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 12a9 9 0 11-3.4-7.05"/><polyline points="21 3 21 9 15 9"/></svg>Continue conversation';
-            var isMobile = window.innerWidth < 600;
-            resumeEl.style.cssText = isMobile
-              ? 'position:relative;display:flex;align-items:center;justify-content:center;padding:10px 18px;margin:12px auto 0;background:rgba(26,24,23,0.85);border:1px solid rgba(208,86,63,0.2);border-radius:12px;color:#B6AFA4;font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);cursor:pointer;width:fit-content;box-shadow:0 0 12px rgba(208,86,63,0.08);animation:pillFloat 4s ease-in-out infinite;'
-              : 'position:fixed;bottom:32px;right:24px;z-index:10;display:flex;align-items:center;padding:10px 18px;background:rgba(26,24,23,0.85);border:1px solid rgba(239,230,214,0.1);border-radius:12px;color:#B6AFA4;font-size:14px;font-family:inherit;text-decoration:none;backdrop-filter:blur(20px);transition:all 0.2s;cursor:pointer;animation:pillFloat 4s ease-in-out infinite;';
-            resumeEl.onmouseover = function() { this.style.borderColor = 'rgba(239,230,214,0.2)'; this.style.color = 'rgba(239,230,214,0.8)'; };
-            resumeEl.onmouseout = function() { this.style.borderColor = 'rgba(239,230,214,0.1)'; this.style.color = 'rgba(239,230,214,0.55)'; };
-            resumeEl.onclick = function(e) {
-              e.preventDefault();
-              enterChatMode();
-              window._chatHistory.forEach(function(msg) {
-                renderHistoryMsg(msg);
-              });
-              // Scroll to bottom after chat mode transition completes (350ms + render)
-              setTimeout(scrollToBottom, 300);
-              setTimeout(scrollToBottom, 600);
-              setTimeout(scrollToBottom, 1000);
-              setTimeout(scrollToBottom, 1500);
-              this.remove();
-            };
-            // Add float animation if not already defined
-            if (!document.getElementById('pillFloatStyle')) {
-              var style = document.createElement('style');
-              style.id = 'pillFloatStyle';
-              style.textContent = '@keyframes pillFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }';
-              document.head.appendChild(style);
-            }
-            resumeEl.id = 'resumePill';
-            if (window.innerWidth < 600) {
-              // On mobile, insert before the bridge pill inside hero
-              var heroSection = document.getElementById('heroSection');
-              var bridgeArea = heroSection ? (heroSection.querySelector('.bridge-pill-wrap') || heroSection.querySelector('#bridgeConnectPill')) : null;
-              if (bridgeArea) {
-                var insertTarget = bridgeArea.closest('div') || bridgeArea.parentNode;
-                insertTarget.parentNode.insertBefore(resumeEl, insertTarget);
-              } else {
-                document.body.appendChild(resumeEl);
-              }
-            } else {
-              document.body.appendChild(resumeEl);
-            }
-          }
+        // Past conversations: a few rows under the box, from the same list
+        // the sidebar shows. One on a phone, three on a desk. Nothing at all
+        // for someone with no history.
+        fetch('/api/threads').then(function(r) { return r.json(); }).then(function(threads) {
+          if (!Array.isArray(threads)) return;
+          var withMsgs = threads.filter(function(t) { return (t.message_count || 0) > 0; });
+          if (!withMsgs.length) return;
+          var esc = function(x) { return String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+          var max = window.innerWidth < 600 ? 1 : 3;
+          var rows = withMsgs.slice(0, max);
+          var list = document.getElementById('heroRecentList');
+          var wrap = document.getElementById('heroRecent');
+          if (!list || !wrap) return;
+          list.innerHTML = rows.map(function(t) {
+            var count = t.message_count ? ' \u00b7 ' + t.message_count : '';
+            return '<a class="hero-recent-row" href="#" data-thread="' + esc(t.id) + '">' +
+              '<span class="title">' + esc(t.title || 'Untitled') + '</span>' +
+              '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span>' +
+              '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
+          }).join('') + (withMsgs.length > rows.length ? '<a class="hero-recent-all" href="#" id="heroRecentAll">All conversations &#8250;</a>' : '');
+          list.querySelectorAll('.hero-recent-row').forEach(function(a) {
+            a.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(a.getAttribute('data-thread')); });
+          });
+          var all = document.getElementById('heroRecentAll');
+          if (all) all.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(rows[0].id); });
+          wrap.hidden = false;
+          if (typeof fitMobileHero === 'function') fitMobileHero();
         }).catch(function() {});
       }
     }).catch(function() {});
+  }
+
+  // Open a past conversation from the home page: into chat mode, that
+  // thread made active, its messages drawn, scrolled to the end.
+  function openRecentThread(threadId) {
+    enterChatMode();
+    _activeThreadId = threadId;
+    fetch('/api/threads/' + threadId + '/activate', { method: 'POST' }).catch(function() {});
+    fetch('/api/threads/' + threadId)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(thread) {
+        if (thread && thread.messages) {
+          thread.messages.forEach(function(msg) {
+            if (typeof msg.content === 'string' && msg.content.trim()) addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+          });
+        }
+        [300, 600, 1000, 1500].forEach(function(ms) { setTimeout(scrollToBottom, ms); });
+        loadActivityFeed();
+      })
+      .catch(function() { loadActivityFeed(); });
   }
 
 
