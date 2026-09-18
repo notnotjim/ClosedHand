@@ -686,10 +686,8 @@
   }
   /* Recent conversations: thin rows, no boxes, the box's width. */
   .hero-recent { width: 100%; max-width: 900px; margin: 40px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
-  /* Desk: a tab on the underside of the box, in the box's own border, and a
+  /* A tab on the underside of the box, in the box's own border, and a
      drawer that slides the rows out from under it. Closed by default. */
-  .hero-recent-tab { display: none; }
-  @media (min-width: 601px) {
     .hero-recent-tab {
       display: inline-flex; align-items: center; gap: 7px;
       margin: -1px auto 0; padding: 5px 13px 6px;
@@ -714,7 +712,33 @@
     .hero-recent-all { opacity: 0; transition: opacity 0.3s ease 0.15s; }
     .hero-recent.open .hero-recent-all { opacity: 1; }
     .hero-footer { margin-top: 16px; }
+  /* Once the box has scrolled out of view, a pill in the corner opens the
+     same rows in a small sheet right there. Gone once a chat is open. */
+  .hero-recent-float {
+    position: fixed; right: 24px; bottom: 24px; z-index: 40;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px; font: 400 12px/1 var(--font-ui, inherit); color: rgba(239,230,214,0.7);
+    background: rgba(26,24,23,0.92); border: 1px solid rgba(208,86,63,0.25); border-radius: 999px;
+    backdrop-filter: blur(12px); cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s, border-color 0.15s;
   }
+  .hero-recent-float.show { opacity: 1; transform: none; pointer-events: auto; }
+  .hero-recent-float:hover, .hero-recent-float[aria-expanded="true"] { color: #EFE6D6; border-color: rgba(208,86,63,0.5); }
+  .hero-recent-float .chev { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); opacity: 0.7; }
+  .hero-recent-float[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .hero-recent-pop {
+    position: fixed; right: 24px; bottom: 66px; z-index: 40;
+    width: min(440px, calc(100vw - 32px));
+    background: #1A1817; border: 1px solid rgba(239,230,214,0.12); border-radius: 14px;
+    padding: 4px 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+    opacity: 0; transform: translateY(6px); pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .hero-recent-pop.open { opacity: 1; transform: none; pointer-events: auto; }
+  .hero-recent-pop .hero-recent-row { opacity: 1; transform: none; transition: none; }
+  body.chat-active .hero-recent-float, body.chat-active .hero-recent-pop { display: none !important; }
+  .hero-recent-row.hero-recent-more .title { color: #B6AFA4; }
   .hero-recent-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(239,230,214,0.42); margin: 0 0 4px 6px; }
   .hero-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(239,230,214,0.07); text-decoration: none; }
   .hero-recent-row:first-child { border-top: 0; }
@@ -724,16 +748,6 @@
   .hero-recent-row:hover .arrow { color: #D8624B; transform: translateX(2px); }
   .hero-recent-all { display: block; text-align: right; font-size: 12px; color: #B6AFA4; padding: 8px 6px 0; text-decoration: none; }
   .hero-recent-all:hover { color: #D8624B; }
-  /* On phones the one row is a card on a small deck: two edges peek out
-     beneath it with the count of what is under. Tapping the deck fans it and
-     opens the list. Hidden on a desk, where the rows and the link do the job. */
-  .hero-recent-deck { display: none; position: relative; height: 30px; margin: 0 10px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
-  .hero-recent-deck .deck-edge { position: absolute; left: 0; right: 0; height: 12px; border: 1px solid rgba(239,230,214,0.10); border-top: 0; border-radius: 0 0 12px 12px; background: rgba(26,24,23,0.55); transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1); }
-  .hero-recent-deck .deck-edge.e1 { top: -1px; }
-  .hero-recent-deck .deck-edge.e2 { top: 5px; left: 8px; right: 8px; opacity: 0.6; }
-  .hero-recent-deck .deck-count { position: absolute; left: 50%; top: 13px; transform: translateX(-50%); font-size: 11px; letter-spacing: 0.02em; color: #B6AFA4; background: #100E0D; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
-  .hero-recent-deck.fan .deck-edge.e1 { transform: translateY(5px); }
-  .hero-recent-deck.fan .deck-edge.e2 { transform: translateY(10px); }
   .hero-footer .footer-sep {
     color: rgba(239,230,214,0.5);
   }
@@ -1218,16 +1232,12 @@
     .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
     .hero-footer span { font-size: 12px; white-space: nowrap; }
     .hero-footer .footer-sentence { display: block; }
-    .hero-recent { margin-top: 30px; order: 1; }
-    .hero-recent ~ * { order: 2; }
-    .hero-recent ~ .hero-footer { order: 0; }
-    .hero-recent-tab { display: none; }
-    .hero-recent-all { display: none; }
-    .hero-recent-deck { display: block; }
-    .hero-recent-row { position: relative; z-index: 1; padding: 12px 14px; background: #1A1817; border: 1px solid rgba(239,230,214,0.10); border-radius: 12px; }
-    .hero-recent-label { font-size: 10px; }
-    .hero-recent-row { padding: 8px 4px; }
+    .hero-recent-tab { padding: 4px 11px 5px; font-size: 11px; }
+    .hero-recent-row { padding: 9px 4px; }
     .hero-recent-row .title { font-size: 13px; }
+    .hero-recent-row .meta { font-size: 11px; }
+    .hero-recent-float { right: 14px; bottom: 14px; padding: 8px 12px; font-size: 11.5px; }
+    .hero-recent-pop { right: 14px; bottom: 54px; }
     .hero-heading-sub { font-size: clamp(10px, 3.05vw, 16px); gap: 6px; margin-bottom: 18px; white-space: nowrap; max-width: none; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
@@ -2285,6 +2295,11 @@
       <div class="hero-recent-label">Pick up where you left off</div>
       <div class="hero-recent-list" id="heroRecentList"></div>
     </div>
+    <button class="hero-recent-float" id="heroRecentFloat" type="button" aria-expanded="false" aria-controls="heroRecentPop" hidden>
+      <span>Pick up where you left off</span>
+      <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+    </button>
+    <div class="hero-recent-pop" id="heroRecentPop" hidden></div>
     <div class="hero-footer">
       <span><span class="footer-sentence">Runs on your computer with no company in between.</span> <span class="footer-sentence">Requests use the AI provider you choose.</span></span>
     </div>
@@ -4739,8 +4754,7 @@
           var withMsgs = threads.filter(function(t) { return (t.message_count || 0) > 0; });
           if (!withMsgs.length) return;
           var esc = function(x) { return String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
-          var max = window.innerWidth < 600 ? 1 : 3;
-          var rows = withMsgs.slice(0, max);
+          var rows = withMsgs.slice(0, 3);
           var list = document.getElementById('heroRecentList');
           var wrap = document.getElementById('heroRecent');
           if (!list || !wrap) return;
@@ -4751,21 +4765,37 @@
               '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span>' +
               '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
           }).join('') + (withMsgs.length > rows.length
-            ? '<a class="hero-recent-all" href="#" id="heroRecentAll">All conversations &#8250;</a>' +
-              '<a class="hero-recent-deck" href="#" id="heroRecentDeck" aria-label="All conversations"><span class="deck-edge e1"></span><span class="deck-edge e2"></span><span class="deck-count">+' + (withMsgs.length - rows.length) + ' more</span></a>'
+            ? '<a class="hero-recent-row hero-recent-more" href="#" data-all="1"><span class="title">+' + (withMsgs.length - rows.length) + ' more</span><span class="arrow" aria-hidden="true">&#8250;</span></a>'
             : '');
-          list.querySelectorAll('.hero-recent-row').forEach(function(a) {
-            a.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(a.getAttribute('data-thread')); });
-          });
-          var all = document.getElementById('heroRecentAll');
-          if (all) all.addEventListener('click', function(e) { e.preventDefault(); openRecentThread(rows[0].id); });
-          var deck = document.getElementById('heroRecentDeck');
-          if (deck) deck.addEventListener('click', function(e) {
+          var rowsHtml = list.innerHTML;
+          var onRow = function(e) {
+            var a = e.target.closest('.hero-recent-row'); if (!a) return;
             e.preventDefault();
-            deck.classList.add('fan');
-            setTimeout(function() { openRecentThread(rows[0].id); }, 220);
-          });
+            openRecentThread(a.getAttribute('data-all') ? rows[0].id : a.getAttribute('data-thread'));
+          };
+          list.addEventListener('click', onRow);
           wrap.hidden = false;
+          // The corner pill and its sheet, for when the box has scrolled away.
+          var fl = document.getElementById('heroRecentFloat');
+          var pop = document.getElementById('heroRecentPop');
+          var box = document.getElementById('heroInputWrap');
+          if (fl && pop && box && 'IntersectionObserver' in window) {
+            // Out of the hero and onto the body, so no ancestor's stacking
+            // context or transform can pin them under the page.
+            document.body.appendChild(fl); document.body.appendChild(pop);
+            pop.innerHTML = rowsHtml;
+            pop.addEventListener('click', onRow);
+            fl.hidden = false; pop.hidden = false;
+            var setPop = function(open) { pop.classList.toggle('open', open); fl.setAttribute('aria-expanded', String(open)); };
+            fl.addEventListener('click', function() { setPop(!pop.classList.contains('open')); });
+            document.addEventListener('click', function(e) { if (pop.classList.contains('open') && !pop.contains(e.target) && !fl.contains(e.target)) setPop(false); });
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape') setPop(false); });
+            new IntersectionObserver(function(entries) {
+              var away = !entries[0].isIntersecting && !document.body.classList.contains('chat-active');
+              fl.classList.toggle('show', away);
+              if (!away) setPop(false);
+            }, { threshold: 0 }).observe(box);
+          }
           var tab = document.getElementById('heroRecentTab');
           if (tab) {
             tab.hidden = false;
