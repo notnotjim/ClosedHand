@@ -2455,7 +2455,7 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <div class="settings-group-header">
               <h2>Wallet</h2>
-              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. The number is stored encrypted on this computer, unlocked only by a key this install keeps, and typed into the checkout for you. The model never sees it. Every purchase is put to you first unless you say otherwise here.</p>
+              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. The number is stored encrypted on this computer, unlocked only by a key your copy of ClosedHand keeps, and typed into the checkout for you. The model never sees it. Every purchase is put to you first unless you say otherwise here.</p>
             </div>
             <div style="padding:12px 16px;">
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
@@ -4466,8 +4466,8 @@
         if (!w.available) {
           un.style.display = 'block';
           un.textContent = w.reason === 'no encryption key'
-            ? 'This install has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
-            : 'The Wallet is for installs you run yourself.';
+            ? 'Your copy of ClosedHand has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
+            : 'The Wallet is for a ClosedHand you run yourself.';
           main.style.display = 'none';
           return;
         }

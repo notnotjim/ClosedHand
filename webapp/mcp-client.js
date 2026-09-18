@@ -331,7 +331,7 @@ async function openClient(row, io = {}) {
   const kind = row.transport || "http";
 
   if (kind === "stdio") {
-    if (!isSelfHost()) throw Object.assign(new Error("Command-style servers run on your own machine. This install cannot start one."), { code: "ENOSTDIO" });
+    if (!isSelfHost()) throw Object.assign(new Error("Command-style servers run on your own machine. This copy of ClosedHand cannot start one."), { code: "ENOSTDIO" });
     if (!row.command) throw new Error("This connection has no command to run");
     const stderrChunks = [];
     const transport = new StdioClientTransport({

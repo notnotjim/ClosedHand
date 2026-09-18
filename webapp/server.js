@@ -638,8 +638,8 @@ app.get("/api/wallet", async (req, res) => {
 app.post("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for installs you run yourself." });
-  if (!walletAvailable()) return res.status(400).json({ error: "This install has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a ClosedHand you run yourself." });
+  if (!walletAvailable()) return res.status(400).json({ error: "Your copy of ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
   try {
     const b = req.body || {};
     const number = String(b.number || "").replace(/[\s-]/g, "");
@@ -858,7 +858,7 @@ app.post("/api/setup/password", async (req, res) => {
     if (!(await requireSetupAccess(req, res))) return;
     const pw = String((req.body || {}).password || "");
     if (!pw) return res.status(400).json({ error: "Type a password first" });
-    if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD environment variable on this install" });
+    if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD setting in your .env file" });
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
     setAdminSessionCookie(res);
     res.json({ success: true });
@@ -1092,7 +1092,7 @@ app.get("/api/chat-apps", async (req, res) => {
 
 app.post("/api/chat-apps/:app", async (req, res) => {
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for installs you run yourself." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
   const keys = {};
@@ -1112,7 +1112,7 @@ app.post("/api/chat-apps/:app", async (req, res) => {
 
 app.delete("/api/chat-apps/:app", async (req, res) => {
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for installs you run yourself." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
   const patch = {};
