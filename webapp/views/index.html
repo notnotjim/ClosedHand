@@ -1695,6 +1695,17 @@
     display: flex; flex-direction: column;
   }
   .dash-overlay.active .dash-slide { transform: translateX(0); }
+  /* While a finger drags the panel it follows exactly, no easing. */
+  .dash-slide.dragging { transition: none; }
+  /* On touch screens a slim bar on the panel's left edge says it can be
+     pulled, and the first time it opens it peeks right once. */
+  .dash-grab {
+    position: absolute; left: 6px; top: 50%; width: 4px; height: 44px; margin-top: -22px;
+    border-radius: 2px; background: rgba(239,230,214,0.22); display: none; pointer-events: none;
+  }
+  @media (hover: none) and (pointer: coarse) { .dash-grab { display: block; } }
+  @keyframes dashPeek { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(28px); } }
+  .dash-overlay.active .dash-slide.peek { animation: dashPeek 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.6s 1; }
   .dash-slide-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 20px; border-bottom: 1px solid rgba(239,230,214,0.08);
@@ -2080,6 +2091,7 @@
       <button class="dash-slide-close" aria-label="Close dashboard">&times;</button>
     </div>
     <iframe id="dashIframe" src="about:blank"></iframe>
+    <span class="dash-grab" aria-hidden="true"></span>
   </div>
 </div>
 
@@ -4463,6 +4475,17 @@
       try { iframe.contentWindow.postMessage({ type: 'dash-nav', hash: hash }, '*'); } catch (e) {}
     }
     overlay.classList.add('active');
+    // First open on a touch screen: the panel peeks right once, a nod that
+    // it can be swiped away.
+    try {
+      var coarse = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+      if (coarse && !localStorage.getItem('dashPeeked')) {
+        var slide = overlay.querySelector('.dash-slide');
+        slide.classList.add('peek');
+        slide.addEventListener('animationend', function() { slide.classList.remove('peek'); }, { once: true });
+        localStorage.setItem('dashPeeked', '1');
+      }
+    } catch (e) {}
   };
   // Arriving from a /dashboard redirect: open the slide-over and hand it the
   // params it was carrying, so a "connected" or "error" notice still shows.
@@ -4518,9 +4541,23 @@
       if (dx > 80 && dy < 60) closeDashSlide();
     }, { passive: true });
   })();
-  // Listen for close message from dashboard iframe
+  // Messages from the dashboard iframe: close, or a finger dragging the
+  // panel right. Touches inside the iframe never reach this page, so the
+  // dashboard reports them and the panel follows here.
   window.addEventListener('message', function(e) {
-    if (e.data === 'closeDashSlide') closeDashSlide();
+    if (e.data === 'closeDashSlide') { closeDashSlide(); return; }
+    if (!e.data || typeof e.data !== 'object') return;
+    var slide = document.querySelector('.dash-slide');
+    if (e.data.type === 'dash-drag') {
+      slide.classList.add('dragging');
+      slide.style.transform = 'translateX(' + Math.max(0, e.data.dx) + 'px)';
+    } else if (e.data.type === 'dash-drag-end') {
+      slide.classList.remove('dragging');
+      slide.style.transform = '';
+      var far = e.data.dx > slide.getBoundingClientRect().width * 0.3;
+      var flick = e.data.dx > 40 && e.data.vx > 0.5;
+      if (far || flick) closeDashSlide();
+    }
   });
   function addCanvasMessage(msg) {
     var div = document.createElement('div');
