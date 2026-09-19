@@ -1,0 +1,115 @@
+#!/bin/sh
+# Builds ClosedHand.app: the Swift shell plus everything it runs.
+#
+#   desktop/build.sh                 ad-hoc signed, for this Mac
+#   IDENTITY="Developer ID Application: ..." desktop/build.sh
+#                                    signed for distribution (notarise after)
+#
+# Inputs it fetches or builds once and caches in desktop/.cache:
+#   node   the Node 22 runtime for this architecture (official tarball)
+#   pg     relocatable Postgres 16 + pgvector (built from source, see pg.sh)
+#   app    the repo at HEAD with production node_modules for this architecture
+# Output: desktop/dist/ClosedHand.app
+set -e
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+CACHE="$HERE/.cache"
+ARCH="${ARCH:-$(uname -m)}"            # arm64 or x86_64
+NODE_ARCH="$([ "$ARCH" = "x86_64" ] && echo x64 || echo arm64)"
+NODE_VERSION="${NODE_VERSION:-v22.23.2}"
+VERSION="${VERSION:-2.0.0}"
+SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
+DIST="$HERE/dist"
+APP="$DIST/ClosedHand.app"
+mkdir -p "$CACHE"
+
+say() { printf '\033[1m%s\033[0m\n' "$*"; }
+
+# --- node runtime -------------------------------------------------------------
+NODE_DIR="$CACHE/node-$NODE_VERSION-$NODE_ARCH"
+if [ ! -x "$NODE_DIR/bin/node" ]; then
+  say "Fetching Node $NODE_VERSION ($NODE_ARCH)"
+  curl -sfL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-$NODE_ARCH.tar.gz" -o "$CACHE/node.tgz"
+  rm -rf "$CACHE/node-tmp" && mkdir -p "$CACHE/node-tmp"
+  tar xzf "$CACHE/node.tgz" -C "$CACHE/node-tmp"
+  mv "$CACHE/node-tmp"/node-* "$NODE_DIR"
+  rm -rf "$CACHE/node-tmp" "$CACHE/node.tgz"
+fi
+
+# --- postgres -----------------------------------------------------------------
+PG_DIR="$CACHE/pg-$ARCH"
+if [ ! -x "$PG_DIR/bin/postgres" ]; then
+  say "Building Postgres + pgvector ($ARCH), this takes a few minutes"
+  PREFIX="$PG_DIR" sh "$HERE/pg.sh"
+fi
+
+# --- app source with production dependencies ---------------------------------
+APP_SRC="$CACHE/app"
+if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
+  say "Staging the app at $SHA"
+  rm -rf "$APP_SRC" && mkdir -p "$APP_SRC"
+  if [ "${SOURCE:-head}" = "worktree" ]; then
+    # Uncommitted changes included, for trying a fix before it is committed.
+    rsync -a --exclude .git --exclude node_modules --exclude 'webapp/node_modules' --exclude desktop --exclude data "$ROOT/" "$APP_SRC/"
+  else
+    git -C "$ROOT" archive HEAD | tar -x -C "$APP_SRC"
+  fi
+  rm -rf "$APP_SRC/desktop" "$APP_SRC/bridge-app" "$APP_SRC/sandbox-image" "$APP_SRC/.github" "$APP_SRC/install.sh" "$APP_SRC/Dockerfile" "$APP_SRC/docker-compose"*.yml
+  say "Installing dependencies"
+  export PATH="$NODE_DIR/bin:$PATH" npm_config_cache="$CACHE/npm"
+  (cd "$APP_SRC" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+  (cd "$APP_SRC/webapp" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+  # Only this platform's native binaries ship; the others are dead weight.
+  ONNX="$APP_SRC/node_modules/onnxruntime-node/bin/napi-v6"
+  if [ -d "$ONNX" ]; then
+    find "$ONNX" -mindepth 1 -maxdepth 1 -type d ! -name darwin -exec rm -rf {} +
+    find "$ONNX/darwin" -mindepth 1 -maxdepth 1 -type d ! -name "$NODE_ARCH" -exec rm -rf {} + 2>/dev/null || true
+  fi
+  for m in "$APP_SRC/node_modules/@img" "$APP_SRC/webapp/node_modules/@img"; do
+    # Only the platform packages (sharp-<os>-<arch>, sharp-libvips-<os>-<arch>);
+    # @img also holds plain code sharp needs everywhere, like @img/colour.
+    [ -d "$m" ] && find "$m" -mindepth 1 -maxdepth 1 -type d -name "sharp-*" ! -name "*darwin-$NODE_ARCH" -exec rm -rf {} +
+  done
+fi
+
+# --- the shell ----------------------------------------------------------------
+say "Building the app"
+(cd "$HERE" && swift build -c release --arch "$ARCH" 2>&1 | grep -v "^\[" | grep -v "^$" || true)
+BIN="$HERE/.build/$ARCH-apple-macosx/release/ClosedHand"
+[ -x "$BIN" ] || BIN="$HERE/.build/release/ClosedHand"
+[ -x "$BIN" ] || { echo "swift build produced no executable"; exit 1; }
+BUNDLE_RES="$(dirname "$BIN")/ClosedHand_ClosedHand.bundle"
+
+# --- assemble -----------------------------------------------------------------
+say "Assembling $APP"
+rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/ClosedHand"
+[ -d "$BUNDLE_RES" ] && cp -R "$BUNDLE_RES" "$APP/Contents/Resources/"
+cp "$HERE/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+sed -e "s/__VERSION__/$VERSION/g" -e "s/__SHA__/$SHA/g" "$HERE/Info.plist" > "$APP/Contents/Info.plist"
+mkdir -p "$APP/Contents/Resources/node/bin" "$APP/Contents/Resources/node/lib"
+cp "$NODE_DIR/bin/node" "$APP/Contents/Resources/node/bin/"
+cp -R "$NODE_DIR/lib/node_modules" "$APP/Contents/Resources/node/lib/"   # npm and npx, for MCP servers run by command
+ln -sf ../lib/node_modules/npm/bin/npm-cli.js "$APP/Contents/Resources/node/bin/npm"
+ln -sf ../lib/node_modules/npm/bin/npx-cli.js "$APP/Contents/Resources/node/bin/npx"
+cp -R "$PG_DIR" "$APP/Contents/Resources/pg"
+cp -R "$APP_SRC" "$APP/Contents/Resources/app"
+
+# --- sign ---------------------------------------------------------------------
+if [ -n "${IDENTITY:-}" ]; then
+  say "Signing with $IDENTITY"
+  SIGN="codesign --force --timestamp --options runtime --sign $IDENTITY"
+else
+  say "Signing ad hoc (this Mac only)"
+  SIGN="codesign --force --sign -"
+fi
+# Every Mach-O inside gets its own signature first: dylibs, .node addons,
+# the Node and Postgres executables. Then the app seals the lot.
+find "$APP/Contents/Resources" -type f \( -name "*.dylib" -o -name "*.node" -o -name "*.so" \) -print0 \
+  | xargs -0 -n1 sh -c 'eval "$0" "$1"' "$SIGN" 2>/dev/null || true
+for exe in "$APP/Contents/Resources/node/bin/node" "$APP/Contents/Resources/pg/bin/"*; do
+  [ -f "$exe" ] && file "$exe" | grep -q Mach-O && eval "$SIGN" --entitlements "$HERE/Runtime.entitlements" "$exe"
+done
+eval "$SIGN" --entitlements "$HERE/ClosedHand.entitlements" "$APP"
+codesign --verify --deep --strict "$APP" && say "Signed OK"
+du -sh "$APP"

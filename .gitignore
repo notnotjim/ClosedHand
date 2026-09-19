@@ -49,3 +49,8 @@ CLAUDE.local.md
 
 # Maintainer working notes, local only
 OSS-NOTES.md
+
+# Desktop app build outputs
+desktop/.build/
+desktop/.cache/
+desktop/dist/

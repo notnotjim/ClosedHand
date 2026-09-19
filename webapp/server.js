@@ -6225,7 +6225,10 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
 // table, which a static box never writes to, so on every self-host install
 // the Workspace panel said "No active sandbox" and its browser never showed.
 function staticSandbox() {
-  const url = process.env.SANDBOX_URL || (mcpClient.isSelfHost() ? "http://sandbox:8080" : "");
+  // The desktop app has no compose sandbox; it says so by leaving SANDBOX_URL
+  // empty, and the Computers tab shows its "not yet" state instead of a box
+  // that cannot be reached.
+  const url = process.env.SANDBOX_URL || (mcpClient.isSelfHost() && !process.env.CLOSEDHAND_DESKTOP ? "http://sandbox:8080" : "");
   if (!url) return null;
   let u;
   try { u = new URL(url.includes("://") ? url : `http://${url}`); } catch (_) { return null; }
