@@ -2259,9 +2259,12 @@
   <div class="page-view active" id="viewChat">
   <!-- HERO STATE: heading + brand + big input + suggestions, all centered -->
   <div class="hero-area" id="heroSection">
-    <div style="flex:1;max-flex:1;"></div>
+    <!-- The header above the hero is not part of it, so the room above the
+         heading is kept smaller than the room below to centre the block
+         on the screen rather than in the hero. -->
+    <div style="flex:0.35"></div>
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
-    <div class="hero-heading-sub">ClosedHand keeps track of everything and enables you to query anything going on in your life in one chat.</div>
+    <div class="hero-heading-sub">ClosedHand keeps track of everything going on in your life so you can ask about any of it in one chat.</div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2344,7 +2347,7 @@
       <span>Runs on your computer with no company in between.</span>
     </div>
 
-    <div style="flex:0.5"></div>
+    <div style="flex:1"></div>
 
   </div>
 
