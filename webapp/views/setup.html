@@ -874,7 +874,7 @@
         lead = what + " It is downloading now (" + size + ", " + (emb.pct || 0) + "% done, once only). Chat works already; recall switches on when the download finishes.";
       } else if (emb && emb.state === "error") {
         lead = what + " The download hit an error (" + (emb.error || "unknown") + "). It retries on the next sync; nothing is lost.";
-      } else if (emb && emb.state === "ready") {
+      } else if (emb && (emb.state === "ready" || emb.state === "loading")) {
         lead = what;
       } else {
         lead = what + " It downloads (" + size + ", once only) when the first sync starts.";
