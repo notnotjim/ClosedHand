@@ -5,6 +5,8 @@ set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$HERE/dist/ClosedHand.app"
 [ -d "$APP" ] || { echo "Build the app first: desktop/build.sh"; exit 1; }
+# Never wrap a half-signed app: the notary rejects the whole archive for one bad binary.
+codesign --verify --deep --strict "$APP" || { echo "The app's signature does not verify; rebuild first."; exit 1; }
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 ARCH="${ARCH:-$(uname -m)}"
 OUT="$HERE/dist/ClosedHand-$VERSION-$ARCH.dmg"

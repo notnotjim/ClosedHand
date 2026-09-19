@@ -106,8 +106,10 @@ cp -R "$NODE_DIR/lib/node_modules" "$APP/Contents/Resources/node/lib/"   # npm a
 ln -sf ../lib/node_modules/npm/bin/npm-cli.js "$APP/Contents/Resources/node/bin/npm"
 ln -sf ../lib/node_modules/npm/bin/npx-cli.js "$APP/Contents/Resources/node/bin/npx"
 cp -R "$PG_DIR" "$APP/Contents/Resources/pg"
+rm -rf "$APP/Contents/Resources/pg/lib/postgresql/pgxs"   # build-time files, with test binaries the notary rejects
 mkdir -p "$APP/Contents/Resources/uv" && cp "$UV_DIR/uv" "$UV_DIR/uvx" "$APP/Contents/Resources/uv/"
 cp -R "$APP_SRC" "$APP/Contents/Resources/app"
+rm -rf "$APP/Contents/Resources/app/node_modules/mammoth/test" "$APP/Contents/Resources/app/webapp/node_modules/mammoth/test"
 
 # --- sign ---------------------------------------------------------------------
 if [ -n "${IDENTITY:-}" ]; then
@@ -121,9 +123,13 @@ fi
 # the Node and Postgres executables. Then the app seals the lot.
 find "$APP/Contents/Resources" -type f \( -name "*.dylib" -o -name "*.node" -o -name "*.so" \) -print0 \
   | xargs -0 -n1 sh -c 'eval "$0" "$1"' "$SIGN" 2>/dev/null || true
-for exe in "$APP/Contents/Resources/node/bin/node" "$APP/Contents/Resources/pg/bin/"* "$APP/Contents/Resources/uv/"*; do
-  [ -f "$exe" ] && file "$exe" | grep -q Mach-O && eval "$SIGN" --entitlements "$HERE/Runtime.entitlements" "$exe"
-done
+# Every executable Mach-O anywhere inside (Node, Postgres, uv, Google's gws
+# CLI, whatever a dependency ships) is signed with the runtime entitlements;
+# one unsigned binary and the notary rejects the whole archive.
+find "$APP/Contents/Resources" -type f -perm +111 ! -name "*.dylib" ! -name "*.node" ! -name "*.so" -print0 \
+  | while IFS= read -r -d '' exe; do
+      if file -b "$exe" | grep -q "Mach-O"; then eval "$SIGN" --entitlements "$HERE/Runtime.entitlements" "$exe" 2>/dev/null || echo "could not sign $exe"; fi
+    done
 eval "$SIGN" --entitlements "$HERE/ClosedHand.entitlements" "$APP"
 codesign --verify --deep --strict "$APP" && say "Signed OK"
 du -sh "$APP"
