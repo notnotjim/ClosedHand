@@ -84,6 +84,8 @@ final class Supervisor: ObservableObject {
     private var socketDir: String { NSTemporaryDirectory() + "closedhand-pg" }
 
     var dashboardURL: URL { URL(string: "http://localhost:\(webPort)/")! }
+    /// The one account a self-hosted ClosedHand has (lib/admin.js).
+    static let adminUserId = "00000000-0000-0000-0000-0000000000ad"
 
     // MARK: lifecycle
 
@@ -139,7 +141,7 @@ final class Supervisor: ObservableObject {
             }
         }
         var changed = false
-        for key in ["POSTGRES_PASSWORD", "WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET"] where conf[key] == nil {
+        for key in ["POSTGRES_PASSWORD", "WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "BRIDGE_TOKEN"] where conf[key] == nil {
             conf[key] = randomHex(24); changed = true
         }
         if conf["TOKEN_ENCRYPTION_KEY"] == nil { conf["TOKEN_ENCRYPTION_KEY"] = randomBase64(32); changed = true }
@@ -226,7 +228,7 @@ final class Supervisor: ObservableObject {
         env["DATABASE_URL"] = "postgres://postgres:\(config["POSTGRES_PASSWORD"]!)@127.0.0.1:\(pgPort)/closedhand"
         env["STORAGE_DIR"] = storageDir.path
         env["npm_config_cache"] = storageDir.appendingPathComponent("cache/npm").path
-        for key in ["WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "TOKEN_ENCRYPTION_KEY"] { env[key] = config[key] }
+        for key in ["WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "TOKEN_ENCRYPTION_KEY", "BRIDGE_TOKEN"] { env[key] = config[key] }
         env["BASE_URL"] = "http://localhost:\(webPort)"
         env["BOT_INTERNAL_URL"] = "http://127.0.0.1:\(botPort)"
         env["BOT_WS_URL"] = "http://127.0.0.1:\(botPort)"
@@ -297,6 +299,11 @@ final class Supervisor: ObservableObject {
                 self.backoff["web"] = nil
                 if self.web != .running {
                     self.web = .running
+                    // The Mac side of ClosedHand connects to the server it
+                    // shares a bundle with: no pairing code, the token was
+                    // made here and given to both.
+                    let url = "ws://127.0.0.1:\(self.webPort)/bridge", token = self.config["BRIDGE_TOKEN"] ?? ""
+                    Task { @MainActor in BridgeManager.shared.adopt(serverUrl: url, token: token, userId: Supervisor.adminUserId) }
                     // The first time the dashboard is up in this session, and
                     // only on a brand new install, show it: there is a setup
                     // page waiting. Every later launch stays in the menu bar.

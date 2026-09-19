@@ -7718,12 +7718,23 @@ wss.on("connection", (ws) => {
       if (msg.type === "auth" && msg.token) {
         // Bridge app reconnecting with saved token
         console.log("[Bridge] Auth attempt with token");
-        const { data } = await supabase
+        let { data } = await supabase
           .from("user_bridges")
           .select("user_id")
           .eq("token", msg.token)
           .eq("status", "connected")
           .single();
+        // The desktop app is Bridge and server in one: it made BRIDGE_TOKEN
+        // itself and handed it to both sides, so its Bridge is paired from
+        // the first launch. The row is kept so the dashboard reads it as any
+        // other pairing.
+        if (!data && process.env.CLOSEDHAND_DESKTOP && process.env.BRIDGE_TOKEN && msg.token === process.env.BRIDGE_TOKEN) {
+          const adminId = getAdminUserId();
+          const { error: pairError } = await supabase.from("user_bridges")
+            .upsert({ user_id: adminId, token: msg.token, status: "connected", paired_at: new Date().toISOString() }, { onConflict: "user_id" });
+          if (pairError) console.error("[Bridge] could not record the desktop pairing:", pairError.message);
+          data = { user_id: adminId };
+        }
         if (data) {
           // If there's an old connection for this user, clean it up first
           const existingWs = bridgeConnections.get("user:" + data.user_id);

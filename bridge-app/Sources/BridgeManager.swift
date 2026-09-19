@@ -101,6 +101,20 @@ class BridgeManager: ObservableObject {
         connect()
     }
 
+    /// The desktop app's route in: it runs the server itself, on this Mac,
+    /// and holds a token the server already trusts, so there is no code to
+    /// type. Replaces whatever a previous Bridge pairing left in defaults.
+    func adopt(serverUrl url: String, token: String, userId id: String) {
+        disconnect()
+        serverUrl = url
+        bridgeToken = token
+        userId = id
+        isPaired = true
+        pairingCode = ""
+        saveSettings()
+        connect()
+    }
+
     func unpair() {
         // Tell server we're disconnecting so dashboard updates
         sendJSON(["type": "disconnect"])

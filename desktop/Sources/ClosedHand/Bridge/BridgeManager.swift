@@ -1,0 +1,1 @@
+../../../../bridge-app/Sources/BridgeManager.swift
