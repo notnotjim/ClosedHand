@@ -38,6 +38,7 @@ final class Supervisor: ObservableObject {
     @Published var database: ServiceState = .stopped
     @Published var bot: ServiceState = .stopped
     @Published var web: ServiceState = .stopped
+    @Published var agent: ServiceState = .stopped
     @Published var address: String = ""
     @Published var firstRun = false
 
@@ -48,8 +49,9 @@ final class Supervisor: ObservableObject {
     private var pgPort = 54329
     private var botPort = 3001
     private var webPort = 3000
-    private var botProc: Process?
-    private var webProc: Process?
+    private var agentPort = 8080
+    private var cdpPort = 9333
+    private var procs: [String: Process] = [:]
     private var stopping = false
     private var started = false
     private var openedOnce = false
@@ -77,6 +79,10 @@ final class Supervisor: ObservableObject {
     private var appDir: URL { resources.appendingPathComponent("app", isDirectory: true) }
     private var pgData: URL { supportDir.appendingPathComponent("pgdata", isDirectory: true) }
     private var storageDir: URL { supportDir.appendingPathComponent("storage", isDirectory: true) }
+    /// ClosedHand's own working folder and browser profile: the Workspace.
+    private var workspaceDir: URL { supportDir.appendingPathComponent("workspace", isDirectory: true) }
+    private var agentDir: URL { appDir.appendingPathComponent("sandbox-image/agent", isDirectory: true) }
+    private var uvBin: URL { resources.appendingPathComponent("uv/uv") }
     private var configFile: URL { supportDir.appendingPathComponent("config.env") }
     // Unix socket paths are limited to about a hundred characters, and a long
     // account name would push Application Support past that, so the socket
@@ -101,6 +107,7 @@ final class Supervisor: ObservableObject {
             try loadConfig()
             choosePorts()
             try startPostgres()
+            launch("agent")
             launch("bot")
             launch("web")
             DispatchQueue.main.async { self.startHealthTimer() }
@@ -115,19 +122,19 @@ final class Supervisor: ObservableObject {
     func stop() {
         stopping = true
         DispatchQueue.main.async { self.healthTimer?.invalidate() }
-        for proc in [webProc, botProc] { terminate(proc) }
-        botProc = nil; webProc = nil
+        for which in ["web", "bot", "agent"] { terminate(procs[which]) }
+        procs.removeAll()
         _ = run(pgBin.appendingPathComponent("pg_ctl"), ["-D", pgData.path, "-m", "fast", "-w", "-t", "20", "stop"])
-        publish { self.bot = .stopped; self.web = .stopped; self.database = .stopped }
+        publish { self.bot = .stopped; self.web = .stopped; self.agent = .stopped; self.database = .stopped }
     }
 
     // MARK: setup
 
     private func ensureDirectories() throws {
-        for dir in [supportDir, logsDir, storageDir, URL(fileURLWithPath: socketDir)] {
+        for dir in [supportDir, logsDir, storageDir, workspaceDir, URL(fileURLWithPath: socketDir)] {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        for name in ["postgres", "bot", "web", "supervisor"] { rotate(name) }
+        for name in ["postgres", "bot", "web", "agent", "supervisor"] { rotate(name) }
     }
 
     /// The generated secrets, made once and kept: the same set install.sh puts
@@ -148,6 +155,8 @@ final class Supervisor: ObservableObject {
         if conf["WEB_PORT"] == nil { conf["WEB_PORT"] = "3000"; changed = true }
         if conf["BOT_PORT"] == nil { conf["BOT_PORT"] = "3001"; changed = true }
         if conf["PG_PORT"] == nil { conf["PG_PORT"] = "54329"; changed = true }
+        if conf["AGENT_PORT"] == nil { conf["AGENT_PORT"] = "8080"; changed = true }
+        if conf["CDP_PORT"] == nil { conf["CDP_PORT"] = "9333"; changed = true }
         config = conf
         if changed { try saveConfig() }
     }
@@ -165,16 +174,23 @@ final class Supervisor: ObservableObject {
         pgPort = Int(config["PG_PORT"] ?? "") ?? 54329
         botPort = Int(config["BOT_PORT"] ?? "") ?? 3001
         webPort = Int(config["WEB_PORT"] ?? "") ?? 3000
+        agentPort = Int(config["AGENT_PORT"] ?? "") ?? 8080
+        cdpPort = Int(config["CDP_PORT"] ?? "") ?? 9333
         // Postgres may still be running from the last session (the app was
         // force-quit, say); then its port is taken by us and stays.
         if !postgresRunning() { pgPort = freePort(from: pgPort) }
         webPort = freePort(from: webPort)
         botPort = freePort(from: botPort == webPort ? botPort + 1 : botPort, avoiding: webPort)
+        agentPort = freePort(from: agentPort)
+        // Chrome may still be up from the last session on its debugging port; the
+        // agent adopts a running one, so a taken port here is kept, not moved.
+        if portFree(cdpPort) == false && !chromeAnswering(cdpPort) { cdpPort = freePort(from: cdpPort) }
         // The ports that worked are the ones to try first next time, so the
         // address stays the same from one launch to the next.
         config["PG_PORT"] = "\(pgPort)"; config["BOT_PORT"] = "\(botPort)"; config["WEB_PORT"] = "\(webPort)"
+        config["AGENT_PORT"] = "\(agentPort)"; config["CDP_PORT"] = "\(cdpPort)"
         try? saveConfig()
-        log("supervisor", "ports: dashboard \(webPort), bot \(botPort), database \(pgPort)")
+        log("supervisor", "ports: dashboard \(webPort), bot \(botPort), database \(pgPort), workspace \(agentPort), browser \(cdpPort)")
         publish { self.address = "localhost:\(self.webPort)" }
     }
 
@@ -232,7 +248,7 @@ final class Supervisor: ObservableObject {
         env["BASE_URL"] = "http://localhost:\(webPort)"
         env["BOT_INTERNAL_URL"] = "http://127.0.0.1:\(botPort)"
         env["BOT_WS_URL"] = "http://127.0.0.1:\(botPort)"
-        env["SANDBOX_URL"] = ""
+        env["SANDBOX_URL"] = "http://127.0.0.1:\(agentPort)"
         if let sha = Bundle.main.object(forInfoDictionaryKey: "ClosedHandSHA") as? String { env["CLOSEDHAND_SHA"] = sha }
         return env
     }
@@ -242,11 +258,27 @@ final class Supervisor: ObservableObject {
         let proc = Process()
         proc.executableURL = nodeBin
         var env = environment()
-        if which == "bot" {
+        switch which {
+        case "bot":
             proc.currentDirectoryURL = appDir
             proc.arguments = ["index.js"]
             env["PORT"] = "\(botPort)"
-        } else {
+        case "agent":
+            // The container's agent, run here: the same code, told where the
+            // workspace, Python, uv and the browser are on this Mac.
+            proc.currentDirectoryURL = agentDir
+            proc.arguments = ["server.js"]
+            env["PORT"] = "\(agentPort)"
+            env["SANDBOX_MODE"] = "desktop"
+            env["WORKSPACE"] = workspaceDir.path
+            env["EXEC_HOME"] = workspaceDir.path
+            env["PYTHON"] = workspaceDir.appendingPathComponent(".venv/bin/python").path
+            env["UV"] = uvBin.path
+            env["UV_CACHE_DIR"] = storageDir.appendingPathComponent("cache/uv").path
+            env["UV_PYTHON_INSTALL_DIR"] = storageDir.appendingPathComponent("cache/uv-python").path
+            env["CDP_PORT"] = "\(cdpPort)"
+            env["BROWSER_CMD"] = browserCommand() ?? ""
+        default:
             proc.currentDirectoryURL = appDir.appendingPathComponent("webapp", isDirectory: true)
             proc.arguments = ["server.js"]
             env["PORT"] = "\(webPort)"
@@ -258,7 +290,7 @@ final class Supervisor: ObservableObject {
         proc.terminationHandler = { [weak self] p in
             guard let self = self, !self.stopping else { return }
             let why = "Stopped (\(p.terminationStatus)). Restarting."
-            self.publish { if which == "bot" { self.bot = .failed(why) } else { self.web = .failed(why) } }
+            self.publish { self.set(which, .failed(why)) }
             let delay = min(30, self.backoff[which] ?? 2)
             self.backoff[which] = delay * 2
             self.log("supervisor", "\(which) exited with \(p.terminationStatus); restarting in \(Int(delay))s")
@@ -266,12 +298,47 @@ final class Supervisor: ObservableObject {
         }
         do {
             try proc.run()
-            if which == "bot" { botProc = proc } else { webProc = proc }
-            publish { if which == "bot" { self.bot = .starting } else { self.web = .starting } }
+            procs[which] = proc
+            publish { self.set(which, .starting) }
             log("supervisor", "\(which) started (pid \(proc.processIdentifier))")
         } catch {
-            publish { if which == "bot" { self.bot = .failed(error.localizedDescription) } else { self.web = .failed(error.localizedDescription) } }
+            publish { self.set(which, .failed(error.localizedDescription)) }
         }
+    }
+
+    private func set(_ which: String, _ state: ServiceState) {
+        switch which {
+        case "bot": bot = state
+        case "agent": agent = state
+        default: web = state
+        }
+    }
+
+    /// A Chrome-family browser on this Mac, for the Workspace's own window.
+    /// Launched with its own profile, so it never touches the user's tabs.
+    private func browserCommand() -> String? {
+        let candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
+            "/Applications/Arc.app/Contents/MacOS/Arc",
+        ]
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        for c in candidates + candidates.map({ home + $0 }) where FileManager.default.isExecutableFile(atPath: c) { return c }
+        return nil
+    }
+
+    private func chromeAnswering(_ port: Int) -> Bool {
+        // Only used at boot, before any child exists: a plain blocking fetch.
+        var answered = false
+        let sem = DispatchSemaphore(value: 0)
+        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/json/version")!)
+        req.timeoutInterval = 2
+        URLSession.shared.dataTask(with: req) { data, _, _ in answered = (data?.count ?? 0) > 0; sem.signal() }.resume()
+        _ = sem.wait(timeout: .now() + 3)
+        return answered
     }
 
     private func terminate(_ proc: Process?) {
@@ -293,6 +360,9 @@ final class Supervisor: ObservableObject {
     private func checkHealth() {
         probe(port: botPort) { ok in
             if ok { self.backoff["bot"] = nil; if self.bot != .running { self.bot = .running } }
+        }
+        probe(port: agentPort) { ok in
+            if ok { self.backoff["agent"] = nil; if self.agent != .running { self.agent = .running } }
         }
         probe(port: webPort) { ok in
             if ok {

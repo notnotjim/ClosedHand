@@ -5727,7 +5727,7 @@ app.get("/api/sandbox", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
-    if (staticSandbox()) return res.json({ exists: true, status: "active", static: true });
+    if (staticSandbox()) return res.json({ exists: true, status: "active", static: true, desktop: !!process.env.CLOSEDHAND_DESKTOP });
     const { data } = await supabase
       .from("sandboxes")
       .select("status, created_at, last_used_at, total_exec_count, volume_size_mb")
@@ -6249,7 +6249,7 @@ async function getSandboxInfo(userId) {
 
 function sandboxFetch(info, method, path, body, timeout = 15000) {
   return new Promise((resolve, reject) => {
-    const url = `http://${info.hostname}:8080${path}`;
+    const url = `http://${info.hostname}:${info.port || 8080}${path}`;
     const parsed = new URL(url);
     const headers = { "X-Sandbox-Token": info.token, "Content-Type": "application/json" };
     let postData = null;
@@ -7556,6 +7556,40 @@ app.post("/api/bridge/request", async (req, res) => {
 // ============================================================
 
 // Token endpoint for VNC connections
+// The desktop app's Workspace browser is a Chrome window on the Mac, not a
+// VNC desktop. The Computers tab watches it through screenshots from the
+// agent and can bring the window forward.
+app.get("/api/sandbox/screenshot", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const info = await getSandboxInfo(userId);
+  if (!info) return res.status(404).json({ error: "No sandbox" });
+  try {
+    const r = await sandboxFetch(info, "POST", "/desktop/screenshot", {}, 12000);
+    if (!r || !r.screenshot) return res.status(503).json({ error: (r && r.error) || "no browser" });
+    res.set("Content-Type", r.format === "png" ? "image/png" : "image/jpeg");
+    res.set("Cache-Control", "no-store");
+    if (r.title) res.set("X-Page-Title", encodeURIComponent(String(r.title).slice(0, 200)));
+    res.send(Buffer.from(r.screenshot, "base64"));
+  } catch (e) { res.status(503).json({ error: e.message }); }
+});
+app.get("/api/sandbox/desktop-status", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const info = await getSandboxInfo(userId);
+  if (!info) return res.status(404).json({ error: "No sandbox" });
+  try { res.json(await sandboxFetch(info, "GET", "/desktop/status", null, 8000)); }
+  catch (e) { res.status(503).json({ error: e.message }); }
+});
+app.post("/api/sandbox/browser", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const info = await getSandboxInfo(userId);
+  if (!info) return res.status(404).json({ error: "No sandbox" });
+  try { res.json(await sandboxFetch(info, "POST", "/desktop/browser", req.body || {}, 15000)); }
+  catch (e) { res.status(503).json({ error: e.message }); }
+});
+
 app.get("/api/sandbox/vnc-token", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

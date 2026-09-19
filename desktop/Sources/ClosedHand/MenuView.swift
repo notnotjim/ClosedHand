@@ -41,6 +41,7 @@ struct MenuView: View {
                 row("Database", stack.database)
                 row("ClosedHand", stack.bot)
                 row("Dashboard", stack.web)
+                row("Workspace", stack.agent)
                 row("This Mac", bridge.isConnected ? .running : (stack.web == .running ? .starting : .stopped))
             }
 

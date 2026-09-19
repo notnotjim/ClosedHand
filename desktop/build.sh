@@ -43,6 +43,16 @@ if [ ! -x "$PG_DIR/bin/postgres" ]; then
   PREFIX="$PG_DIR" sh "$HERE/pg.sh"
 fi
 
+# --- uv: Python for the Workspace, fetched on first run by the agent ------------
+UV_DIR="$CACHE/uv-$ARCH"
+if [ ! -x "$UV_DIR/uv" ]; then
+  say "Fetching uv ($ARCH)"
+  UV_ASSET="$([ "$ARCH" = "x86_64" ] && echo uv-x86_64-apple-darwin || echo uv-aarch64-apple-darwin)"
+  curl -sfL "https://github.com/astral-sh/uv/releases/latest/download/$UV_ASSET.tar.gz" -o "$CACHE/uv.tgz"
+  rm -rf "$CACHE/uv-tmp" && mkdir -p "$CACHE/uv-tmp" && tar xzf "$CACHE/uv.tgz" -C "$CACHE/uv-tmp"
+  rm -rf "$UV_DIR" && mv "$CACHE/uv-tmp"/* "$UV_DIR" && rm -rf "$CACHE/uv-tmp" "$CACHE/uv.tgz"
+fi
+
 # --- app source with production dependencies ---------------------------------
 APP_SRC="$CACHE/app"
 if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
@@ -54,11 +64,14 @@ if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
   else
     git -C "$ROOT" archive HEAD | tar -x -C "$APP_SRC"
   fi
-  rm -rf "$APP_SRC/desktop" "$APP_SRC/bridge-app" "$APP_SRC/sandbox-image" "$APP_SRC/.github" "$APP_SRC/install.sh" "$APP_SRC/Dockerfile" "$APP_SRC/docker-compose"*.yml
+  rm -rf "$APP_SRC/desktop" "$APP_SRC/bridge-app" "$APP_SRC/.github" "$APP_SRC/install.sh" "$APP_SRC/Dockerfile" "$APP_SRC/docker-compose"*.yml
+  # Of the sandbox image only its agent comes along: it runs on the Mac as the Workspace.
+  find "$APP_SRC/sandbox-image" -mindepth 1 -maxdepth 1 ! -name agent -exec rm -rf {} +
   say "Installing dependencies"
   export PATH="$NODE_DIR/bin:$PATH" npm_config_cache="$CACHE/npm"
   (cd "$APP_SRC" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
   (cd "$APP_SRC/webapp" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+  (cd "$APP_SRC/sandbox-image/agent" && npm install --omit=dev --no-audit --no-fund --loglevel=error --no-package-lock)
   # Only this platform's native binaries ship; the others are dead weight.
   ONNX="$APP_SRC/node_modules/onnxruntime-node/bin/napi-v6"
   if [ -d "$ONNX" ]; then
@@ -93,6 +106,7 @@ cp -R "$NODE_DIR/lib/node_modules" "$APP/Contents/Resources/node/lib/"   # npm a
 ln -sf ../lib/node_modules/npm/bin/npm-cli.js "$APP/Contents/Resources/node/bin/npm"
 ln -sf ../lib/node_modules/npm/bin/npx-cli.js "$APP/Contents/Resources/node/bin/npx"
 cp -R "$PG_DIR" "$APP/Contents/Resources/pg"
+mkdir -p "$APP/Contents/Resources/uv" && cp "$UV_DIR/uv" "$UV_DIR/uvx" "$APP/Contents/Resources/uv/"
 cp -R "$APP_SRC" "$APP/Contents/Resources/app"
 
 # --- sign ---------------------------------------------------------------------
@@ -107,7 +121,7 @@ fi
 # the Node and Postgres executables. Then the app seals the lot.
 find "$APP/Contents/Resources" -type f \( -name "*.dylib" -o -name "*.node" -o -name "*.so" \) -print0 \
   | xargs -0 -n1 sh -c 'eval "$0" "$1"' "$SIGN" 2>/dev/null || true
-for exe in "$APP/Contents/Resources/node/bin/node" "$APP/Contents/Resources/pg/bin/"*; do
+for exe in "$APP/Contents/Resources/node/bin/node" "$APP/Contents/Resources/pg/bin/"* "$APP/Contents/Resources/uv/"*; do
   [ -f "$exe" ] && file "$exe" | grep -q Mach-O && eval "$SIGN" --entitlements "$HERE/Runtime.entitlements" "$exe"
 done
 eval "$SIGN" --entitlements "$HERE/ClosedHand.entitlements" "$APP"

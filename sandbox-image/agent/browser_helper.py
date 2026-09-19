@@ -21,7 +21,10 @@ import base64
 import json
 import time
 
-CDP_URL = "http://localhost:9222"
+import os
+
+# The container's Chrome listens on 9222; the desktop app says where its own is.
+CDP_URL = os.environ.get("CDP_URL", "http://localhost:9222")
 
 # Every call from the bot is a separate Python process, so a Playwright page
 # object cannot be held between them. Chrome is the thing that persists, so the

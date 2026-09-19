@@ -13,7 +13,20 @@ app.use(express.json({ limit: "500mb" }));
 
 const PORT = process.env.PORT || 8080;
 const SANDBOX_TOKEN = process.env.SANDBOX_TOKEN;
-const WORKSPACE = "/workspace";
+// Inside the container the workspace is /workspace and every tool is on PATH.
+// The desktop app runs this same agent on the Mac and says where things are:
+// a workspace folder in its data directory, a Python it sets up with uv, a
+// Chrome of the user's own launched with ClosedHand's profile.
+const DESKTOP = process.env.SANDBOX_MODE === "desktop";
+const WORKSPACE = process.env.WORKSPACE || "/workspace";
+const EXEC_HOME = process.env.EXEC_HOME || "/home/sandbox";
+const PYTHON = process.env.PYTHON || "python3";
+const UV = process.env.UV || "";
+const CDP_PORT = process.env.CDP_PORT || "9222";
+const BROWSER_CMD = process.env.BROWSER_CMD || "";
+const BROWSER_PROFILE = path.join(WORKSPACE, ".chromium-profile");
+// What the container image pre-installs, so code written for one runs on the other.
+const PY_PACKAGES = ["pandas", "numpy", "requests", "matplotlib", "beautifulsoup4", "pillow", "openpyxl", "playwright", "lxml", "scipy", "scikit-learn", "seaborn", "tabulate", "python-dateutil", "pytz", "httpx", "pydantic", "chardet"];
 const MAX_TIMEOUT = 120000; // 120s absolute max
 const DEFAULT_TIMEOUT = 30000; // 30s default
 const MAX_OUTPUT = 8000; // chars
@@ -45,6 +58,89 @@ function truncate(str, max) {
   return str.substring(0, max) + `\n... (truncated, ${str.length} chars total)`;
 }
 
+// --- Python on the desktop ---
+// The container has Python baked in. On a Mac the agent makes its own with uv
+// on first start (a managed 3.12 in a venv beside the workspace), so nothing
+// depends on what the Mac happens to have installed. Until it is ready, code
+// runs say so instead of failing strangely.
+let pythonState = DESKTOP ? "checking" : "ready";
+let pythonError = "";
+function ensurePython() {
+  if (!DESKTOP) return;
+  if (fs.existsSync(PYTHON)) { pythonState = "ready"; return; }
+  if (!UV) { pythonState = "missing"; pythonError = "No uv bundled"; return; }
+  pythonState = "installing";
+  const venv = path.dirname(path.dirname(PYTHON));
+  const uv = (args) => new Promise((resolve) => execFile(UV, args, { cwd: WORKSPACE, timeout: 20 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => resolve({ err, stdout, stderr })));
+  (async () => {
+    console.log("[python] setting up a Python for the workspace with uv");
+    let r = await uv(["venv", "--python", "3.12", "--allow-existing", venv]);
+    if (!r.err) r = await uv(["pip", "install", "--python", PYTHON, ...PY_PACKAGES]);
+    if (r.err) { pythonState = "error"; pythonError = truncate(r.stderr || r.err.message, 600); console.error("[python] setup failed:", pythonError); }
+    else { pythonState = "ready"; console.log("[python] ready"); }
+  })();
+}
+ensurePython();
+
+// The environment code runs in. On the desktop the helper modules sit beside
+// this file and the browser is wherever the app put it.
+function execEnv() {
+  const env = { ...process.env, HOME: EXEC_HOME, CDP_URL: `http://127.0.0.1:${CDP_PORT}` };
+  if (DESKTOP) env.PYTHONPATH = __dirname + (process.env.PYTHONPATH ? ":" + process.env.PYTHONPATH : "");
+  return env;
+}
+
+// --- The browser on the desktop: Chrome over its debugging port ---
+function httpJson(url, timeout = 3000) {
+  return new Promise((resolve, reject) => {
+    const req = require("http").get(url, { timeout }, (r) => {
+      let body = ""; r.on("data", (c) => body += c); r.on("end", () => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } });
+    });
+    req.on("error", reject); req.on("timeout", () => { req.destroy(new Error("timeout")); });
+  });
+}
+async function cdpTargets() {
+  try { return await httpJson(`http://127.0.0.1:${CDP_PORT}/json/list`); } catch { return null; }
+}
+let browserPid = null;
+function launchBrowser(url) {
+  if (!BROWSER_CMD) throw new Error("No Chrome, Chromium, Brave or Edge found on this Mac.");
+  fs.mkdirSync(BROWSER_PROFILE, { recursive: true });
+  const child = spawn(BROWSER_CMD, [
+    `--user-data-dir=${BROWSER_PROFILE}`, `--remote-debugging-port=${CDP_PORT}`,
+    "--no-first-run", "--no-default-browser-check", "--new-window", url || "about:blank",
+  ], { detached: true, stdio: "ignore" });
+  child.unref();
+  browserPid = child.pid;
+  return child.pid;
+}
+function focusBrowser() {
+  if (!browserPid) return;
+  execFile("osascript", ["-e", `tell application "System Events" to set frontmost of (every process whose unix id is ${browserPid}) to true`], { timeout: 4000 }, () => {});
+}
+// One screenshot of the page in front, over the debugging protocol.
+function cdpScreenshot() {
+  return new Promise(async (resolve, reject) => {
+    const targets = await cdpTargets();
+    const page = (targets || []).find((t) => t.type === "page" && !/^(chrome|devtools):/.test(t.url || "")) || (targets || []).find((t) => t.type === "page");
+    if (!page || !page.webSocketDebuggerUrl) return reject(new Error("no browser"));
+    const WebSocket = require("ws");
+    const ws = new WebSocket(page.webSocketDebuggerUrl, { perMessageDeflate: false });
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error("screenshot timed out")); }, 8000);
+    ws.on("open", () => ws.send(JSON.stringify({ id: 1, method: "Page.captureScreenshot", params: { format: "jpeg", quality: 60 } })));
+    ws.on("message", (raw) => {
+      let msg; try { msg = JSON.parse(raw.toString()); } catch { return; }
+      if (msg.id !== 1) return;
+      clearTimeout(timer); ws.close();
+      if (msg.error || !msg.result) return reject(new Error((msg.error && msg.error.message) || "no screenshot"));
+      resolve({ screenshot: msg.result.data, format: "jpeg", title: page.title || "", url: page.url || "" });
+    });
+    ws.on("error", (e) => { clearTimeout(timer); reject(e); });
+  });
+}
+// The browser was started by this agent; it goes when the agent goes.
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } process.exit(0); });
+
 // --- Health ---
 app.get("/health", (_req, res) => {
   res.json({
@@ -56,7 +152,12 @@ app.get("/health", (_req, res) => {
 });
 
 // --- Desktop environment ---
-app.get("/desktop/status", auth, (_req, res) => {
+app.get("/desktop/status", auth, async (_req, res) => {
+  if (DESKTOP) {
+    const targets = await cdpTargets();
+    return res.json({ status: targets ? "running" : "no-browser", desktop: "browser", cdp_port: Number(CDP_PORT),
+      browser: BROWSER_CMD ? "available" : "missing", python: pythonState, python_error: pythonError || undefined });
+  }
   try {
     const xvfb = require("child_process").execSync("pgrep -c Xvfb", { timeout: 2000 }).toString().trim();
     const vnc = require("child_process").execSync("pgrep -c x11vnc", { timeout: 2000 }).toString().trim();
@@ -67,7 +168,11 @@ app.get("/desktop/status", auth, (_req, res) => {
   }
 });
 
-app.post("/desktop/screenshot", auth, (_req, res) => {
+app.post("/desktop/screenshot", auth, async (_req, res) => {
+  if (DESKTOP) {
+    try { return res.json(await cdpScreenshot()); }
+    catch (e) { return res.status(503).json({ error: e.message }); }
+  }
   const tmpPath = `/tmp/screen_${crypto.randomBytes(4).toString("hex")}.png`;
   execFile("scrot", [tmpPath], { timeout: 5000, env: { ...process.env, DISPLAY: ":99" } }, (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -79,8 +184,17 @@ app.post("/desktop/screenshot", auth, (_req, res) => {
   });
 });
 
-app.post("/desktop/browser", auth, (req, res) => {
-  const { url } = req.body || {};
+app.post("/desktop/browser", auth, async (req, res) => {
+  const { url, focus } = req.body || {};
+  if (DESKTOP) {
+    try {
+      const running = !!(await cdpTargets());
+      let status = "already_running";
+      if (!running) { launchBrowser(url); status = "launched"; }
+      if (focus) setTimeout(focusBrowser, running ? 0 : 1500);
+      return res.json({ status, url: url || undefined });
+    } catch (e) { return res.status(409).json({ error: e.message }); }
+  }
   // Check if already running
   try {
     require("child_process").execSync("pgrep -f 'chromium.*user-data-dir'", { timeout: 2000 });
@@ -112,7 +226,13 @@ app.post("/exec", (req, res) => {
       // Unbuffered, so a run stopped at the time cap still shows what it had
       // printed; buffered output died with the process and every timeout read
       // as "no output".
-      cmd = "python3";
+      if (pythonState !== "ready") {
+        return res.json({ stdout: "", exit_code: -1, duration_ms: 0,
+          stderr: pythonState === "installing" || pythonState === "checking"
+            ? "Python is still being set up on this Mac (a one-time download). Try again in a minute or two."
+            : `Python is not available here: ${pythonError || pythonState}.` });
+      }
+      cmd = PYTHON;
       args = ["-u", tmpFile];
       break;
     }
@@ -137,7 +257,7 @@ app.post("/exec", (req, res) => {
   const child = spawn(cmd, args, {
     cwd: WORKSPACE,
     timeout,
-    env: { ...process.env, HOME: "/home/sandbox" },
+    env: execEnv(),
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -303,7 +423,10 @@ app.post("/packages/install", (req, res) => {
   }
 
   let cmd, args;
-  if (manager === "pip") {
+  if (manager === "pip" && DESKTOP) {
+    cmd = UV;
+    args = ["pip", "install", "--python", PYTHON, ...packages];
+  } else if (manager === "pip") {
     cmd = "pip";
     args = ["install", "--user", ...packages];
   } else if (manager === "npm") {
@@ -331,7 +454,9 @@ app.post("/packages/install", (req, res) => {
 app.post("/packages/list", (req, res) => {
   const { manager } = req.body;
   if (manager === "pip") {
-    execFile("pip", ["list", "--format=json"], { timeout: 10000 }, (err, stdout) => {
+    const listCmd = DESKTOP ? UV : "pip";
+    const listArgs = DESKTOP ? ["pip", "list", "--python", PYTHON, "--format=json"] : ["list", "--format=json"];
+    execFile(listCmd, listArgs, { timeout: 10000 }, (err, stdout) => {
       if (err) return res.json({ packages: [], error: err.message });
       try {
         const pkgs = JSON.parse(stdout);
