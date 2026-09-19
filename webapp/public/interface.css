@@ -86,7 +86,7 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .input-toolbar { padding: 16px 24px 20px; }
 .suggestions { margin-top: 24px; gap: 12px; }
 .hero-bridge-prompt { margin: 28px 0 16px; flex-wrap: wrap; gap: 12px; }
-.features-page { padding: 96px var(--space-page) 80px; }
+.features-page { padding: 48px var(--space-page) 80px; }
 .feat-row { gap: 32px; margin-bottom: 80px; }
 .feat-card { padding: 40px; }
 .feat-grid { gap: 28px; }

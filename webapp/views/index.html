@@ -169,7 +169,9 @@
     justify-content: center;
     padding: 0 20px 20px;
     gap: 0;
-    min-height: calc(100dvh - 120px);
+    /* Header and tabs above take about 157px; the hero fills the rest of the
+       first screen and no more, so the cards below start just under the fold. */
+    min-height: calc(100dvh - 157px);
   }
   @media (prefers-reduced-motion: reduce) {
     .hero-area *, .hero-heading, .hero-heading-sub, .input-box-wrap, .suggestions { animation: none !important; opacity: 1 !important; }
@@ -2604,7 +2606,7 @@
     <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
       <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">A support team at your fingertips</div>
-      <div class="feat-card-desc">Ask questions and get work done in your connected chat apps. Keep the computer running ClosedHand awake and online.</div>
+      <div class="feat-card-desc">Ask questions and get work done from your connected chat apps, wherever you happen to be.</div>
       <div class="feat-card-icons">
         <img src="/logos/whatsapp.svg" alt="WhatsApp"><img src="/logos/telegram.svg" alt="Telegram"><img src="/logos/discord.svg" alt="Discord"><img src="/logos/slack.svg" alt="Slack"><img src="/logos/line.svg" alt="LINE">
       </div>
@@ -2640,7 +2642,7 @@
 
   <div class="reveal" style="margin-bottom:64px;">
     <div class="feat-heading">Let tasks run while you do something else</div>
-    <div class="feat-sub">Agents work in the background and reply in chat. The computer running ClosedHand must stay awake; your phone can be offline.</div>
+    <div class="feat-sub">Agents work in the background and bring the answer back to the chat. A bigger job gets a short answer there and the full write-up on your dashboard.</div>
     <div class="feat-pills">
       <div class="feat-pill">Find new leads and draft personalised outreach</div>
       <div class="feat-pill">Check ticket availability</div>
@@ -2657,9 +2659,9 @@
     <div class="feat-table-wrap">
       <table class="feat-table">
         <tbody>
-          <tr><th scope="row">Your computer</th><td>Keep it awake for chat replies, background tasks and dashboard access from another device.</td></tr>
+          <tr><th scope="row">A home for it</th><td>A Mac or PC you leave on, a Mac mini in a cupboard, or a rented server (a VPS). ClosedHand answers while that machine is on; your phone can be off.</td></tr>
           <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
-          <tr><th scope="row">Your dashboard</th><td>Open it on the computer running ClosedHand, or use a configured password-protected link from another device.</td></tr>
+          <tr><th scope="row">Your dashboard</th><td>Open it on the machine running ClosedHand, or from your phone through a password-protected link you turn on in Settings.</td></tr>
           <tr><th scope="row">Optional Mac Bridge</th><td>Connect your Mac to work with its files and apps, using the permissions you choose.</td></tr>
         </tbody>
       </table>
@@ -2839,17 +2841,18 @@
     'vec3 iridescence(float angle, float disp) {',
     '  float film = 0.5 + disp * 0.2 + angle * 0.3;',
     '  float phase = film * 14.0 + uTime * 0.08;',
-    '  // The film cycles through the palette rather than the rainbow:',
-    '  // madder, moss, a cool slate and cream soft, blended by phase.',
+    '  // The film cycles through the warm end of the palette, the same',
+    '  // ember the still phone ground uses: madder, ochre, a deep plum',
+    '  // and cream soft, blended by phase. Never white.',
     '  vec3 madder = vec3(0.816, 0.337, 0.247);',
-    '  vec3 slate = vec3(0.52, 0.50, 0.62);',
-    '  vec3 moss = vec3(0.553, 0.741, 0.475);',
-    '  vec3 soft = vec3(0.714, 0.686, 0.643);',
+    '  vec3 plum = vec3(0.42, 0.22, 0.30);',
+    '  vec3 ochre = vec3(0.816, 0.651, 0.322);',
+    '  vec3 soft = vec3(0.714, 0.60, 0.50);',
     '  float w0 = sin(phase) * 0.5 + 0.5;',
     '  float w1 = sin(phase + 1.57) * 0.5 + 0.5;',
     '  float w2 = sin(phase + 3.14) * 0.5 + 0.5;',
     '  float w3 = sin(phase + 4.71) * 0.5 + 0.5;',
-    '  return (madder * w0 + moss * w1 + slate * w2 + soft * w3) / (w0 + w1 + w2 + w3);',
+    '  return (madder * w0 + ochre * w1 + plum * w2 + soft * w3) / (w0 + w1 + w2 + w3);',
     '}',
     '',
     'void main() {',
@@ -2865,14 +2868,14 @@
     '  // Subtle iridescent colour on the wispy edges',
     '  vec3 color = base + iridCol * edgeFresnel * 0.3;',
     '',
-    '  // Faint rim light',
-    '  color += vec3(0.6, 0.59, 0.58) * pow(fresnel, 4.5) * 0.08;',
+    '  // Faint rim light, ember rather than white',
+    '  color += vec3(0.78, 0.42, 0.30) * pow(fresnel, 4.5) * 0.09;',
     '',
     '  // Specular',
     '  vec3 lightDir = normalize(vec3(0.3, 1.0, 0.6));',
     '  vec3 halfDir = normalize(lightDir + viewDir);',
     '  float spec = pow(max(dot(n, halfDir), 0.0), 60.0);',
-    '  color += vec3(0.8, 0.79, 0.78) * spec * 0.06;',
+    '  color += vec3(0.9, 0.66, 0.50) * spec * 0.06;',
     '',
     '  // Pulse flash: briefly brightens everything',
     '  color += color * uPulse * 3.0;',
