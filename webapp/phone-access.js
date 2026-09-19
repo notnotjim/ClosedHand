@@ -112,6 +112,14 @@ async function start() {
     if (run !== generation) return;
     state = "error"; lastError = e.message;
     console.error("[Phone]", lastError);
+    // A failure before the tunnel even started used to be final: one
+    // database hiccup ("the database system is in recovery mode", a few
+    // seconds long) left phone access dead for hours, until a restart.
+    // While it is wanted, keep trying.
+    if (wanted && proc === null) {
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => { if (wanted && !proc) void start(); }, 15000);
+    }
   }
 }
 async function enable(nextMode = "quick") {

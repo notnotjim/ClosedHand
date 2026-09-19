@@ -5727,6 +5727,7 @@ app.get("/api/sandbox", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
+    if (staticSandbox()) return res.json({ exists: true, status: "active", static: true });
     const { data } = await supabase
       .from("sandboxes")
       .select("status, created_at, last_used_at, total_exec_count, volume_size_mb")
@@ -6218,7 +6219,22 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
   }
 });
 
+// A self-host install has one fixed sandbox, the compose service, reached as
+// http://sandbox:8080 by both the bot and the webapp. The bot has always
+// known it from SANDBOX_URL; the webapp only ever looked in the sandboxes
+// table, which a static box never writes to, so on every self-host install
+// the Workspace panel said "No active sandbox" and its browser never showed.
+function staticSandbox() {
+  const url = process.env.SANDBOX_URL || (mcpClient.isSelfHost() ? "http://sandbox:8080" : "");
+  if (!url) return null;
+  let u;
+  try { u = new URL(url.includes("://") ? url : `http://${url}`); } catch (_) { return null; }
+  return { hostname: u.hostname, port: Number(u.port) || 8080, token: process.env.SANDBOX_TOKEN || "change-me-sandbox-token", volume_size_mb: 0, static: true };
+}
+
 async function getSandboxInfo(userId) {
+  const fixed = staticSandbox();
+  if (fixed) return fixed;
   const { data } = await supabase
     .from("sandboxes")
     .select("hostname, sandbox_token, status, volume_size_mb")
@@ -7540,12 +7556,11 @@ app.post("/api/bridge/request", async (req, res) => {
 app.get("/api/sandbox/vnc-token", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { data: sandbox } = await supabase.from("sandboxes")
-    .select("hostname, sandbox_token").eq("user_id", userId).eq("status", "active").single();
+  const sandbox = await getSandboxInfo(userId);
   if (!sandbox?.hostname) return res.status(404).json({ error: "No active sandbox" });
   const token = crypto.randomBytes(16).toString("hex");
   if (!global._vncTokens) global._vncTokens = {};
-  global._vncTokens[token] = { userId, hostname: sandbox.hostname, sandboxToken: sandbox.sandbox_token, expires: Date.now() + 300000 };
+  global._vncTokens[token] = { userId, hostname: sandbox.hostname, sandboxToken: sandbox.token, expires: Date.now() + 300000 };
   res.json({ token });
 });
 
@@ -7553,8 +7568,7 @@ app.get("/api/sandbox/vnc-token", async (req, res) => {
 app.get("/api/sandbox/vnc-diag", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { data: sandbox } = await supabase.from("sandboxes")
-    .select("hostname, sandbox_token").eq("user_id", userId).eq("status", "active").single();
+  const sandbox = await getSandboxInfo(userId);
   if (!sandbox?.hostname) return res.json({ error: "No active sandbox in DB" });
 
   const diag = { hostname: sandbox.hostname, tests: {} };
@@ -7602,7 +7616,7 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
     const desktopStatus = await new Promise((resolve) => {
       const r = http.get(`http://${sandbox.hostname}:8080/desktop/status`, {
         timeout: 5000,
-        headers: { "X-Sandbox-Token": sandbox.sandbox_token },
+        headers: { "X-Sandbox-Token": sandbox.token },
       }, (resp) => {
         let d = ""; resp.on("data", c => d += c); resp.on("end", () => resolve(d));
       });
@@ -7618,7 +7632,7 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
     const execResult = await new Promise((resolve) => {
       const payload = JSON.stringify({ language: "bash", code: "ps aux | grep -E 'Xvfb|x11vnc|websockify|fluxbox' | grep -v grep; echo '---WHICH---'; which Xvfb x11vnc websockify 2>&1; echo '---ENTRY---'; head -5 /entrypoint.sh 2>&1; echo '---DISPLAY---'; echo $DISPLAY" });
       const opts = { hostname: sandbox.hostname, port: 8080, path: "/exec", method: "POST", timeout: 10000,
-        headers: { "Content-Type": "application/json", "X-Sandbox-Token": sandbox.sandbox_token, "Content-Length": Buffer.byteLength(payload) } };
+        headers: { "Content-Type": "application/json", "X-Sandbox-Token": sandbox.token, "Content-Length": Buffer.byteLength(payload) } };
       const r = http.request(opts, (resp) => { let d = ""; resp.on("data", c => d += c); resp.on("end", () => resolve(d)); });
       r.on("error", (e) => resolve("error: " + e.message));
       r.on("timeout", () => { r.destroy(); resolve("timeout"); });
