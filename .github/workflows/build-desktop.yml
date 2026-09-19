@@ -1,0 +1,70 @@
+name: Build desktop app
+
+# Builds ClosedHand.app for Apple Silicon and Intel. Signs and notarises when
+# the secrets are present (a Developer ID certificate as base64 .p12, its
+# password, and notary credentials); otherwise the build is ad hoc signed and
+# only useful for checking that it still builds. On a tag (v*) the DMGs are
+# attached to the release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: desktop/.cache/pg-${{ matrix.arch }}
+          key: pg-16.15-pgvector-${{ matrix.arch }}-${{ hashFiles('desktop/pg.sh') }}
+
+      - name: Import signing certificate
+        if: ${{ env.CERT != '' }}
+        env:
+          CERT: ${{ secrets.MAC_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          echo "$CERT" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p ci build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p ci build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
+          echo "IDENTITY=\"$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | sed 's/.*"\(.*\)"/\1/')\"" >> "$GITHUB_ENV"
+
+      - name: Build
+        env:
+          ARCH: ${{ matrix.arch }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
+        run: |
+          VERSION="${VERSION#v}" desktop/build.sh
+          ARCH="$ARCH" desktop/dmg.sh
+
+      - name: Notarise
+        if: ${{ env.IDENTITY != '' && env.NOTARY_PASSWORD != '' }}
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials closedhand --apple-id "$NOTARY_APPLE_ID" --team-id 826NDD62L9 --password "$NOTARY_PASSWORD"
+          desktop/notarize.sh desktop/dist/ClosedHand-*.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClosedHand-${{ matrix.arch }}
+          path: desktop/dist/ClosedHand-*.dmg
+
+      - name: Attach to release
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" desktop/dist/ClosedHand-*.dmg --clobber
