@@ -278,6 +278,10 @@ final class Supervisor: ObservableObject {
             env["UV_PYTHON_INSTALL_DIR"] = storageDir.appendingPathComponent("cache/uv-python").path
             env["CDP_PORT"] = "\(cdpPort)"
             env["BROWSER_CMD"] = browserCommand() ?? ""
+            // sandbox_gateway: code in the Workspace calling the user's connected
+            // services goes through the bot, as it does from the container.
+            env["GATEWAY_URL"] = "http://127.0.0.1:\(botPort)"
+            env["USER_ID"] = "admin"
         default:
             proc.currentDirectoryURL = appDir.appendingPathComponent("webapp", isDirectory: true)
             proc.arguments = ["server.js"]
