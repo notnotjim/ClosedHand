@@ -67,17 +67,24 @@ let pythonState = DESKTOP ? "checking" : "ready";
 let pythonError = "";
 function ensurePython() {
   if (!DESKTOP) return;
-  if (fs.existsSync(PYTHON)) { pythonState = "ready"; return; }
-  if (!UV) { pythonState = "missing"; pythonError = "No uv bundled"; return; }
-  pythonState = "installing";
+  if (!UV) { pythonState = fs.existsSync(PYTHON) ? "ready" : "missing"; pythonError = "No uv bundled"; return; }
   const venv = path.dirname(path.dirname(PYTHON));
+  // The package set is recorded beside the venv; when a release adds to the
+  // list, an existing Workspace tops itself up (quick when nothing is missing)
+  // and stays usable meanwhile.
+  const marker = path.join(venv, ".closedhand-packages");
+  const wanted = PY_PACKAGES.join(" ");
+  const have = fs.existsSync(PYTHON);
+  let recorded = ""; try { recorded = fs.readFileSync(marker, "utf8").trim(); } catch {}
+  if (have && recorded === wanted) { pythonState = "ready"; return; }
+  pythonState = have ? "ready" : "installing";
   const uv = (args) => new Promise((resolve) => execFile(UV, args, { cwd: WORKSPACE, timeout: 20 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => resolve({ err, stdout, stderr })));
   (async () => {
-    console.log("[python] setting up a Python for the workspace with uv");
-    let r = await uv(["venv", "--python", "3.12", "--allow-existing", venv]);
+    console.log(have ? "[python] topping up the workspace's packages" : "[python] setting up a Python for the workspace with uv");
+    let r = have ? { err: null } : await uv(["venv", "--python", "3.12", "--allow-existing", venv]);
     if (!r.err) r = await uv(["pip", "install", "--python", PYTHON, ...PY_PACKAGES]);
-    if (r.err) { pythonState = "error"; pythonError = truncate(r.stderr || r.err.message, 600); console.error("[python] setup failed:", pythonError); }
-    else { pythonState = "ready"; console.log("[python] ready"); }
+    if (r.err) { if (!have) pythonState = "error"; pythonError = truncate(r.stderr || r.err.message, 600); console.error("[python] setup failed:", pythonError); }
+    else { pythonState = "ready"; pythonError = ""; try { fs.writeFileSync(marker, wanted + "\n"); } catch {} console.log("[python] ready"); }
   })();
 }
 ensurePython();
