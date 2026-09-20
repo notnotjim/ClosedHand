@@ -1931,7 +1931,7 @@
   // and a bookmark or a refresh lands the same way.
   if (window.self === window.top) {
     var inner = window.location.search + window.location.hash;
-    window.location.replace("/" + (inner ? "?dash=" + encodeURIComponent(inner) : "?dash=1"));
+    window.location.replace("/" + (inner ? "?dash=" + encodeURIComponent(inner) : ""));
   }
 </script>
   <div id="ambient-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:-1;"></div>
@@ -2619,12 +2619,16 @@
             <p id="phone-desc" role="status">Loading your link…</p>
             <div id="phone-live" hidden>
               <div class="dashboard-copy-box">
-                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open your dashboard"></a>
+                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open ClosedHand"></a>
                 <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
               </div>
               <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
             </div>
-            <p id="phone-setup" hidden><a id="phone-setup-link" href="/keep" target="_top">Set up a permanent link</a></p>
+            <div id="phone-setup" hidden>
+              <p>Personal addresses currently need to be prepared by ClosedHand. Once yours is prepared, sign in with its assigned Google account to confirm it. ClosedHand and Cloudflare connect the address to this computer.</p>
+              <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Connect a prepared address</button>
+              <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your dashboard link</a>
+            </div>
             <details id="phone-options" hidden>
               <summary>Link options</summary>
               <div class="dashboard-link-options">
@@ -4661,7 +4665,11 @@
       live.hidden = !base;
       setup.hidden = !!base && permanent;
       document.getElementById('phone-options').hidden = !base && !p.enabled;
-      document.getElementById('phone-setup-link').textContent = p.state === 'pairing' ? 'Finish setting up your link' : 'Set up a permanent link';
+      var pair = document.getElementById('phone-setup-link');
+      pair.hidden = !p.pairingUrl;
+      if (p.pairingUrl) pair.href = p.pairingUrl;
+      document.getElementById('phone-start').textContent = p.pairingUrl ? 'Get a new confirmation link' : 'Connect a prepared address';
+      document.getElementById('phone-start').disabled = false;
       document.getElementById('phone-save').hidden = !permanent;
       document.getElementById('phone-copy-status').textContent = '';
       document.getElementById('phone-copy').textContent = 'Copy';
@@ -4670,8 +4678,8 @@
         ? 'Pausing stops this link from opening your dashboard. Resume it from Settings on your computer.'
         : 'Resume this link to open your dashboard from other devices.';
       if (base) {
-        var url = new URL('/dashboard', base).href;
-        document.getElementById('phone-url').innerHTML = escHtml(new URL(url).host) + '<wbr><span class="dashboard-link-path">/dashboard</span>';
+        var url = new URL('/', base).href;
+        document.getElementById('phone-url').textContent = new URL(url).host;
         document.getElementById('phone-url').href = url;
         // The code is optional, and opens the same dashboard address as Copy.
         document.getElementById('phone-qr').src = '/api/phone/qr.svg?destination=dashboard';
@@ -4686,9 +4694,11 @@
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
           : 'Set up your personal dashboard address to open ClosedHand from any device, wherever you are.';
       } else if (p.state === 'pairing') {
-        desc.textContent = 'Finish setup to reserve your permanent dashboard link.';
+        desc.textContent = 'Confirm the prepared address with its assigned account. This does not change your dashboard password.';
         setup.hidden = false;
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
+      } else if (p.error && !base) {
+        desc.textContent = p.error;
       } else if (p.state !== 'on' || !p.url) {
         desc.textContent = base ? 'Reconnecting. Your saved link stays the same.'
           : 'Connecting. Your dashboard link will appear here when it is ready.';
@@ -4696,6 +4706,16 @@
       } else {
         desc.textContent = 'Open this link from any device, wherever you are, and sign in with your dashboard password. Keep the computer running ClosedHand awake and online.';
       }
+    }
+    async function startDashboardLink() {
+      var btn = document.getElementById('phone-start'); btn.disabled = true;
+      try {
+        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true, mode: 'managed' }) });
+        var data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Could not connect your address. Try again.');
+        renderPhone(data);
+      } catch (e) { document.getElementById('phone-desc').textContent = e.message; }
+      finally { btn.disabled = false; }
     }
     async function copyDashboardLink() {
       var link = document.getElementById('phone-url');
@@ -7715,7 +7735,10 @@
     function resolveAndSwitchFromHash() {
       const h = window.location.hash.replace('#', '');
       const resolved = (h === 'workers' || h === 'agents' || h === 'schedules') ? 'automations' : h;
-      if (['connections', 'automations', 'settings', 'brain'].includes(resolved)) {
+      if (resolved === 'dashboard-link') {
+        switchTab('settings');
+        setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+      } else if (['connections', 'automations', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'connect' || resolved === 'skills') {
         // Both start at the add box: it takes a connection or a skill link.

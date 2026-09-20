@@ -533,19 +533,28 @@ done
 step 100 "Ready"
 
 OPENED=0
-if command -v open >/dev/null 2>&1; then
+if [ -n "${SSH_CONNECTION:-}" ]; then
+  # The browser belongs on the connecting computer, not this SSH host.
+  OPENED=0
+elif command -v open >/dev/null 2>&1; then
   open "$DASH_URL" 2>/dev/null && OPENED=1
 elif command -v xdg-open >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
   xdg-open "$DASH_URL" 2>/dev/null && OPENED=1
 fi
 
 say ""
-if [ "$OPENED" = "1" ]; then
+if [ -n "${SSH_CONNECTION:-}" ]; then
+  say "ClosedHand is running on this server. On your own computer, open a second"
+  say "terminal and run the command below, using the same user and server address"
+  say "you used to connect here:"
+  say "  ssh -N -L 3000:127.0.0.1:3000 user@server"
+  say "Keep that terminal open, then open $DASH_URL on your computer."
+  say "After setup, Settings > Dashboard link explains personal address access."
+elif [ "$OPENED" = "1" ]; then
   say "Opening the setup page in your browser: $DASH_URL"
 else
   say "Open $DASH_URL in a browser to reach the setup page."
 fi
 say ""
 say "ClosedHand browses and runs code on its own sandboxed computer. It cannot"
-say "see your files or the rest of your machine. Watch it work at"
-say "http://localhost:6080 whenever you like."
+say "see your files or the rest of your machine. Watch it work in Computers."

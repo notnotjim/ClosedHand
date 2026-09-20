@@ -806,7 +806,7 @@ app.get("/api/phone/qr.svg", async (req, res) => {
   const url = await require("./config").dashboardBase() || phoneAccess.status().url;
   if (!url) return res.status(404).end();
   try {
-    const destination = req.query.destination === "dashboard" ? "/dashboard" : "/keep";
+    const destination = req.query.destination === "dashboard" ? "/" : "/keep";
     const svg = await require("qrcode").toString(new URL(destination, url).href, { type: "svg", margin: 1, color: { dark: "#e8e8e8ff", light: "#00000000" } });
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-store").send(svg);
   } catch (e) {
@@ -1433,7 +1433,7 @@ app.get("/", async (req, res) => {
   // A fresh install lands in the wizard until the required pieces (db + model) run.
   try {
     const state = await require("./setup-state").getSetupState();
-    if (!state.ready) return res.redirect("/setup");
+    if (!state.ready) return res.redirect("/setup" + (req.originalUrl !== "/" ? "?next=" + encodeURIComponent(req.originalUrl) : ""));
   } catch (e) { /* status failure never blocks the homepage */ }
   assets.sendPage(res, "index.html");
 });

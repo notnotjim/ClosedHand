@@ -369,7 +369,7 @@
   <section class="ready" id="ready-banner">
     <h2>ClosedHand is <span>alive.</span></h2>
     <p id="ready-line">The required pieces are running.</p>
-    <a class="go" id="ready-cta" href="/dashboard">Open the dashboard</a>
+    <a class="go" id="ready-cta" href="/">Open ClosedHand</a>
     <p class="note" id="ready-cta-note" style="display:none;margin-top:10px;"></p>
   </section>
 
@@ -647,7 +647,7 @@
     <p id="finish-line">Your dashboard is the control room. Everything ClosedHand keeps lives there, yours to
        read or delete, along with every connection and setting. Your chat app is where you talk to it.</p>
     <div class="finish-actions">
-      <a class="go" href="/dashboard">Go to your dashboard</a>
+      <a class="go" href="/">Open ClosedHand</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
       <a class="deep" id="finish-tg" href="#" target="_blank" rel="noopener" hidden>Open your Telegram bot</a>
     </div>
@@ -662,8 +662,8 @@
         <div class="ch-welcome-message" id="done-words">Getting your welcome ready...</div>
         <p class="ch-welcome-status" id="done-status" role="status"></p>
         <div class="ch-welcome-actions">
-          <a class="ch-welcome-primary" href="/keep?welcome=1">Keep my dashboard handy</a>
-          <a class="ch-welcome-secondary" href="/?dash=1">I'll explore myself</a>
+          <a class="ch-welcome-primary" href="/">Open ClosedHand</a>
+          <a class="ch-welcome-secondary" href="/dashboard#dashboard-link">Set up a personal address</a>
           <button class="ch-welcome-secondary" id="done-close" type="button">Back to setup</button>
         </div>
       </div>
@@ -684,13 +684,24 @@
 
   <footer>
     <span><em>ClosedHand</em> · self-host edition</span>
-    <a href="/dashboard">Dashboard</a>
+    <a href="/">Open ClosedHand</a>
   </footer>
 </div>
 
 <script>
 (function () {
   "use strict";
+
+  function setupDestination() {
+    var next = new URLSearchParams(location.search).get('next');
+    if (!next || !next.startsWith('/') || /[\\\x00-\x20]/.test(next)) return '/';
+    try {
+      var url = new URL(next, location.origin);
+      return url.origin === location.origin && ['/', '/dashboard', '/keep'].includes(url.pathname)
+        ? url.pathname + url.search + url.hash : '/';
+    } catch (_) { return '/'; }
+  }
+  document.querySelectorAll('.finish .go, .ch-welcome-primary').forEach(function(link) { link.href = setupDestination(); });
 
   var POLL_MS = 2500;
   var lastDone = {};
@@ -917,8 +928,8 @@
     var cta = $("#ready-cta"), ctaNote = $("#ready-cta-note");
     if (cta) {
       if (pwSettled) {
-        cta.textContent = "Open the dashboard";
-        cta.setAttribute("href", "/dashboard");
+        cta.textContent = "Open ClosedHand";
+        cta.setAttribute("href", setupDestination());
         cta.removeAttribute("target");
         cta.onclick = null;
         if (ctaNote) ctaNote.style.display = "none";

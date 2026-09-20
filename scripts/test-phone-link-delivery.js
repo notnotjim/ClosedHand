@@ -15,7 +15,7 @@ function worker(values, linked = true, failed = false) {
 function initial() { return { PHONE_ACCESS: '1', PHONE_ACCESS_MODE:'managed', PHONE_PERMANENT_URL:'https://ch-fixture.closedhand.com', PHONE_LINK_DELIVERY: {id:'fixture-message',state:'pending',platform:'whatsapp_linked',chatId:'self',url:'https://ch-fixture.closedhand.com'} }; }
 test('an explicit request sends its stable dashboard link once, without using a model', async () => {
   const values=initial(), w=worker(values);await w.deliver();await w.deliver();
-  assert.equal(w.sends.length,1);assert.equal(w.sends[0][0],'self');assert.match(w.sends[0][1],/https:\/\/ch-fixture.closedhand.com\/dashboard/);assert.equal(w.sends[0][2],'fixture-message');assert.equal(values.PHONE_LINK_DELIVERY.state,'sent');
+  assert.equal(w.sends.length,1);assert.equal(w.sends[0][0],'self');assert.match(w.sends[0][1],/https:\/\/ch-fixture.closedhand.com\//);assert.equal(w.sends[0][2],'fixture-message');assert.equal(values.PHONE_LINK_DELIVERY.state,'sent');
 });
 test('a disconnected chat, stopped phone access, or failed send does not report success', async () => {
   for(const kind of ['unlinked','off','failure']) {

@@ -30,19 +30,19 @@ test("a ready address is copyable without showing setup or expanded instructions
   const { state, el } = page();
   state.renderPhone(ready);
   assert.equal(el("phone-live").hidden, false);
-  assert.equal(el("phone-url").href, address + "/dashboard");
+  assert.equal(el("phone-url").href, address + "/");
   assert.equal(el("phone-setup").hidden, true);
   assert.equal(el("phone-options").open, undefined);
   assert.equal(state.polls, 0);
   await state.copyDashboardLink();
-  assert.equal(state.copied, address + "/dashboard");
+  assert.equal(state.copied, address + "/");
   assert.equal(el("phone-copy").textContent, "Copied");
 });
 test("a paused or reconnecting permanent address stays copyable, without claiming it is ready", () => {
   for (const status of [{ enabled: false, state: "off" }, { enabled: true, state: "error" }]) {
     const { state, el } = page();
     state.renderPhone({ ...ready, ...status, url: null });
-    assert.equal(el("phone-url").href, address + "/dashboard");
+    assert.equal(el("phone-url").href, address + "/");
     assert.equal(el("phone-setup").hidden, true);
     assert.match(el("phone-desc").textContent, status.enabled ? /Reconnecting/ : /paused/);
     assert.equal(el("phone-qr-details").hidden, true);
@@ -55,9 +55,10 @@ test("first setup, pairing and temporary connections have distinct next steps", 
   assert.equal(el("phone-live").hidden, true);
   assert.equal(el("phone-setup").hidden, false);
   assert.equal(el("phone-options").hidden, true);
-  state.renderPhone({ enabled: true, state: "pairing", permanent: true });
+  state.renderPhone({ enabled: true, state: "pairing", permanent: true, pairingUrl: "https://closedhand.com/phone-access/pair#fixture" });
   assert.equal(el("phone-live").hidden, true);
-  assert.match(el("phone-setup-link").textContent, /Finish/);
+  assert.equal(el("phone-setup-link").hidden, false);
+  assert.equal(el("phone-setup-link").href, "https://closedhand.com/phone-access/pair#fixture");
   state.renderPhone({ enabled: true, state: "on", url: "https://test.trycloudflare.com" });
   assert.equal(el("phone-setup").hidden, false);
   assert.equal(el("phone-save").hidden, true);
@@ -98,7 +99,7 @@ test("pausing and resuming preserve the address and managed mode; cancelled paus
   await state.togglePhoneAccess();
   assert.equal(calls, 1);
   assert.equal(el("phone-btn").textContent, "Resume link");
-  assert.equal(el("phone-url").href, address + "/dashboard");
+  assert.equal(el("phone-url").href, address + "/");
   await state.togglePhoneAccess();
   assert.equal(calls, 2);
   assert.match(el("phone-desc").textContent, /Reconnecting/);
@@ -148,7 +149,7 @@ test("the optional dashboard QR encodes the same address as Copy while preservin
   vm.runInContext(region(source, 'app.get("/api/phone/qr.svg",', 'phoneAccess.boot();'), state);
   const response = { set() { return this; }, send() {} };
   await handler({ query: { destination: "dashboard" } }, response);
-  assert.equal(encoded, address + "/dashboard");
+  assert.equal(encoded, address + "/");
   await handler({ query: { destination: "//untrusted.example" } }, response);
   assert.equal(encoded, address + "/keep");
 });
