@@ -213,6 +213,11 @@
     white-space: nowrap;
     max-width: 0;
     padding-left: 0.28em;
+    /* The box clips for the unfold, and at line-height 1.1 it is shorter
+       than the letters: the descender of "your" was cut off. Room below,
+       taken back with the margin so nothing moves. */
+    padding-bottom: 0.18em;
+    margin-bottom: -0.18em;
     opacity: 0;
     color: #D8624B;
     font-weight: 300;
