@@ -13,7 +13,9 @@ It is strictly single-tenant. One install serves one person, and the first accou
 
 ## Quickstart
 
-Docker is the reference install and runs anywhere: a Mac, a Linux box, a Mac mini in a cupboard, a VPS. One line:
+**Download the ClosedHand app for Mac** from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. The current download is for Apple Silicon Macs. It runs ClosedHand from the menu bar and opens the setup page on first launch. Access to that Mac’s files and apps is built in; choose what to allow from the menu bar. Your data lives in `~/Library/Application Support/ClosedHand`. The app is signed and notarised; source is in [`desktop/`](desktop/).
+
+**Or install with Docker** on Mac, Windows or Linux, including a rented server (VPS). A Mac can use either installation method. With Docker installed, run:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh
@@ -36,7 +38,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-**On a Mac with no Docker**, there is also a single app: download `ClosedHand-<version>-arm64.dmg` (Apple Silicon) or `-x86_64.dmg` (Intel) from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. It runs the same ClosedHand from the menu bar, with its own database, and opens the setup page on first launch. It includes what Bridge does, so there is nothing else to install on that Mac. Your data lives in `~/Library/Application Support/ClosedHand`. Signed and notarised; source in [`desktop/`](desktop/).
+To give a Docker installation access to a Mac’s files and apps, download the optional ClosedHand Bridge app from your dashboard and install it on that Mac. This can be the Mac running Docker or a different Mac. Choose what to allow from Bridge in the menu bar.
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
@@ -93,11 +95,11 @@ Two Node services (bot and dashboard) that share a Postgres with pgvector and ne
 
 ## Requirements
 
-Docker with the compose plugin, and at least one model provider key. Works on amd64 and arm64, including Apple Silicon and ARM VPSes.
+The Mac app, or Docker with the compose plugin, and at least one model provider key. Docker supports amd64 and arm64, including Apple Silicon and ARM VPSes.
 
-To open agent links from WhatsApp or Telegram on your phone, choose a dashboard password during setup, then turn on **Your phone** in **Settings**. Your dashboard and data stay on the machine running ClosedHand, whether that is your laptop, a Mac mini or a VPS; Cloudflare only forwards the connection, so it works while that machine is on. This uses a [temporary Cloudflare address](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/), which changes when ClosedHand restarts or phone access is turned off and back on. New messages use the current address; older links expire.
+Set up your personal dashboard address under **Settings → Dashboard link** to open ClosedHand from any device, wherever you are. Your dashboard and data stay on the computer running ClosedHand. Keep it awake and online, and sign in with your dashboard password. Reserving a permanent address requires signing in to ClosedHand. Temporary addresses are also available, but change when the connection restarts.
 
-For lasting chat links, set `WEBAPP_URL` in `.env` to your own permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary phone address.
+For Docker installations using their own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
 
 Memory depends on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so memory works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
@@ -126,22 +128,22 @@ Issues and PRs welcome. Open an issue before starting anything sizeable so the a
 [MIT](LICENSE).
 
 
-### Open your local dashboard from your phone
+### Open your dashboard from anywhere
 
 On your computer, open [the dashboard](http://localhost:3000/dashboard). Under
-Settings, choose **Your phone → Set up or save your phone address**. The same
+Settings, choose **Dashboard link → Set up a permanent link**. The same
 page is available from the dashboard’s help menu and after linking a chat app.
 
-Lasting phone access is optional. Sign in to ClosedHand to reserve an address
+Your personal dashboard address is optional. Sign in to ClosedHand to reserve an address
 for this installation, then copy it, send it to your connected chat, or scan its
 QR code. You can bookmark that address or pin the message and reuse it after
 restarts. In Safari on iPhone, use **Share → Add to Home Screen → Add**. Browsers
 that support an install prompt also show an install button.
 
 The dashboard and database stay on the machine running ClosedHand. ClosedHand
-stores the address and connection details, and Cloudflare relays phone traffic
-to that machine, so it works while the machine is on (always, on a Mac mini or
-a VPS). Your dashboard password is required.
+stores the address and connection details, and Cloudflare relays the connection
+to that machine. Open the address from any device, wherever you are, while the
+computer running ClosedHand is awake and online. Your dashboard password is required.
 Turning phone access off stops the connection; re-enabling the same installation
 keeps its reserved address. Local access needs no ClosedHand account.
 

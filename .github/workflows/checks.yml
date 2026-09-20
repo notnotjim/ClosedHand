@@ -60,6 +60,9 @@ jobs:
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
 
+      - name: Mac access setup and recovery
+        run: node --test scripts/test-mac-access.js
+
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
 

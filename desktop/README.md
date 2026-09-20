@@ -5,9 +5,10 @@ on this Mac. It grew out of the Bridge app and keeps Bridge's bundle identity
 (`ai.closedhand.bridge`, signed by the same team), so a Mac that already
 granted Bridge its permissions keeps them.
 
-The Docker install in the repo root is untouched by any of this. It stays the
-route for a Mac mini, a VPS, Windows and Linux, and for anyone who prefers
-containers. Same code, same database layout, same setup page.
+The Docker install in the repo root is another way to run ClosedHand on Mac,
+Windows or Linux, including a VPS. A Mac can use either method. Same code, same
+database layout, same setup page. Docker uses the separate Bridge app for access
+to a Mac’s files and apps; this app includes that access.
 
 ## What the app does
 
@@ -78,6 +79,5 @@ on a `v*` tag, given the signing and notary secrets.
 ## Not yet
 
 - Auto-update (Sparkle), an Intel test, bundle trimming.
-- The download page: Docker first, the app as the quieter alternative.
 - The sandbox image in a Linux VM (Virtualization.framework), the fuller
   isolation story for the Workspace.

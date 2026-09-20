@@ -3284,22 +3284,28 @@
     }
 
     async function openAppleModal() {
-      document.getElementById('apple-error').style.display = 'none';
-      // Check if already paired
+      var error = document.getElementById('apple-error');
+      error.style.display = 'none';
+      ['apple-step-setup', 'apple-step-connected', 'apple-step-desktop'].forEach(function(id) {
+        document.getElementById(id).style.display = 'none';
+      });
       try {
         var res = await fetch('/api/bridge/status');
         var data = await res.json();
-        if (data.status === 'connected') {
-          document.getElementById('apple-step-setup').style.display = 'none';
+        if (!res.ok || data.status === 'unavailable') throw new Error('Could not check Mac access. Close this window and try again.');
+        document.getElementById('apple-modal-title').textContent = data.desktop ? 'Mac access' : 'Connect your Mac';
+        if (data.desktop) {
+          document.getElementById('apple-step-desktop').style.display = 'block';
+        } else if (data.status === 'connected' || data.status === 'reconnecting') {
           document.getElementById('apple-step-connected').style.display = 'block';
+          document.getElementById('apple-connected-status').textContent = data.status === 'connected' ? 'Your Mac is connected' : 'Reconnecting to your Mac';
         } else {
           document.getElementById('apple-step-setup').style.display = 'block';
-          document.getElementById('apple-step-connected').style.display = 'none';
           document.getElementById('bridge-code-input').value = '';
         }
       } catch (e) {
-        document.getElementById('apple-step-setup').style.display = 'block';
-        document.getElementById('apple-step-connected').style.display = 'none';
+        error.textContent = 'Could not check Mac access. Close this window and try again.';
+        error.style.display = 'block';
       }
       document.getElementById('apple-modal').classList.add('visible');
     }
@@ -4678,7 +4684,7 @@
         setup.hidden = true;
       } else if (!p.enabled) {
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
-          : 'Create a password-protected link to open your dashboard on other devices.';
+          : 'Set up your personal dashboard address to open ClosedHand from any device, wherever you are.';
       } else if (p.state === 'pairing') {
         desc.textContent = 'Finish setup to reserve your permanent dashboard link.';
         setup.hidden = false;
@@ -4688,7 +4694,7 @@
           : 'Connecting. Your dashboard link will appear here when it is ready.';
         _phonePoll = setTimeout(loadPhoneAccess, 2000);
       } else {
-        desc.textContent = 'Open this link on any device and sign in with your dashboard password. ClosedHand must be running on your computer.';
+        desc.textContent = 'Open this link from any device, wherever you are, and sign in with your dashboard password. Keep the computer running ClosedHand awake and online.';
       }
     }
     async function copyDashboardLink() {
@@ -6719,12 +6725,15 @@
       try {
         var res = await fetch('/api/bridge/status');
         var data = await res.json();
+        if (!res.ok || data.status === 'unavailable') return;
+        var existing = document.getElementById('bridge-unfurl');
+        var expanded = existing && existing.classList.contains('open');
         var card = document.getElementById('bridge-connected-card');
         var connSection = document.getElementById('connected-section');
         // Hide/show Apple in Available grid based on bridge status
         var appleAvailCard = document.querySelector('#disconnected-grid [data-key="apple"]');
 
-        if (card && data.status === 'connected') {
+        if (card && (data.desktop || data.status === 'connected' || data.status === 'reconnecting')) {
           if (appleAvailCard) appleAvailCard.style.display = 'none';
           // Bridge always renders as the full-width card below the grid,
           // connected or not, so the label never truncates.
@@ -6737,24 +6746,17 @@
             appleStandalone2.innerHTML =
               '<div onclick="toggleBridgeUnfurl()" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(239,230,214,0.1);border:1px solid rgba(208,86,63,0.2);border-radius:10px;cursor:pointer;">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
-                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">Mac Bridge <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">Your Mac\'s apps and files are available to ClosedHand while the Bridge is running</div></div>' +
-                '<span style="font-size:13px;color:#8DBD79;font-weight:500;">Connected &#10003;</span>' +
+                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
+                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">' + (data.desktop ? 'Included in the ClosedHand app running on your Mac.' : 'ClosedHand can use the Mac apps and files you allow.') + '</div></div>' +
+                '<span style="font-size:13px;color:#B6AFA4;font-weight:500;">' + (data.status === 'connected' ? 'Connected' : data.status === 'reconnecting' ? 'Reconnecting' : 'Not connected') + '</span>' +
                 '<span class="int-chevron" id="bridge-chevron"><span class="chevron-down"></span></span>' +
               '</div>' +
-              '<div class="int-unfurl" id="bridge-unfurl">' +
+              '<div class="int-unfurl' + (expanded ? ' open' : '') + '" id="bridge-unfurl">' +
                 '<div class="int-unfurl-inner">' +
-                  '<div style="display:flex;flex-direction:column;gap:6px;">' +
-                    bridgePermToggle('Calendar', 'calendar', true) +
-                    bridgePermToggle('Files', 'files', true) +
-                    bridgePermToggle('Shell', 'shell', true) +
-                    bridgePermToggle('Reminders', 'reminders', true) +
-                    bridgePermToggle('Contacts', 'contacts', true) +
-                    bridgePermToggle('Notes', 'notes', true) +
-                  '</div>' +
-                  '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(239,230,214,0.1);">' +
-                    '<button onclick="disconnectBridge()" class="conn-btn conn-btn-disconnect">Disconnect</button>' +
-                  '</div>' +
+                  '<p style="font-size:14px;color:#B6AFA4;line-height:1.6;margin:0;">' +
+                    (data.desktop ? 'Choose what ClosedHand may use from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions. File changes and terminal commands also need Computer Control enabled.' : 'Choose what ClosedHand may use from the ClosedHand Bridge menu on your Mac. Keep Bridge open while you want access to that Mac.') +
+                  '</p>' +
+                  (data.desktop ? '' : '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(239,230,214,0.1);"><button onclick="disconnectBridge()" class="conn-btn conn-btn-disconnect">Disconnect</button></div>') +
                 '</div>' +
               '</div>';
           }
@@ -6772,22 +6774,13 @@
                 'onmouseover="this.style.borderColor=\'rgba(208,86,63,0.4)\';this.style.boxShadow=\'0 0 16px rgba(208,86,63,0.1), 0 0 32px rgba(208,86,63,0.05)\';this.style.transform=\'translateY(-1px)\'" ' +
                 'onmouseout="this.style.borderColor=\'rgba(208,86,63,0.2)\';this.style.boxShadow=\'0 0 8px rgba(208,86,63,0.04)\';this.style.transform=\'translateY(0)\'">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
-                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">Mac Bridge <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
+                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
                 '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect Calendar, Files, Terminal, Reminders, Contacts, Notes</div></div>' +
                 '<span style="font-size: 14px;color:#D8624B;font-weight:500;">Set up &#8250;</span>' +
               '</div>';
           }
         }
       } catch (e) {}
-    }
-
-    function bridgePermToggle(label, key, isOn) {
-      var color = isOn ? '#D8624B' : '#D8624B';
-      var bg = isOn ? 'rgba(208,86,63,0.1)' : 'rgba(216,98,75,0.1)';
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">' +
-        '<span style="font-size: 14px;color:#EFE6D6;">' + label + '</span>' +
-        '<span style="font-size: 13px;padding:2px 8px;border-radius:10px;background:' + bg + ';color:' + color + ';">' + (isOn ? 'Shared' : 'Off') + '</span>' +
-      '</div>';
     }
 
     function toggleBridgeUnfurl() {
@@ -8155,9 +8148,13 @@
     <div class="modal" style="max-width:420px;">
       <div style="text-align:center;margin-bottom:16px;">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <h3 style="margin:0;">Connect your Mac</h3>
+        <h3 id="apple-modal-title" style="margin:0;">Connect your Mac</h3>
       </div>
-      <p style="font-size:13px;color:#B6AFA4;text-align:center;line-height:1.6;margin-bottom:20px;">This lets ClosedHand see your Mac's email, calendars, reminders, contacts, and notes. You choose what to share. Content needed for a request is processed by your selected AI provider.</p>
+      <p style="font-size:13px;color:#B6AFA4;text-align:center;line-height:1.6;margin-bottom:20px;">Choose which Mac files and apps ClosedHand may use. Content needed for a request is processed by your selected AI provider.</p>
+
+      <div id="apple-step-desktop" style="display:none;">
+        <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into the ClosedHand app and connects automatically. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
+      </div>
 
       <!-- Step 1: Not paired yet -->
       <div id="apple-step-setup">
@@ -8166,7 +8163,7 @@
             <span style="width:24px;height:24px;border-radius:50%;background:rgba(239,230,214,0.1);color:#B6AFA4;font-size: 14px;font-weight:600;display:flex;align-items:center;justify-content:center;">1</span>
             <span style="font-size:13px;color:#EFE6D6;">Download the ClosedHand Bridge app</span>
           </div>
-          <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download style="display:block;text-align:center;padding:10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;text-decoration:none;transition:background 0.12s;margin-bottom:6px;" onmouseover="this.style.background='rgba(239,230,214,0.16)'" onmouseout="this.style.background='rgba(239,230,214,0.1)'">Download for Mac (1MB)</a>
+          <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download style="display:block;text-align:center;padding:10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;text-decoration:none;transition:background 0.12s;margin-bottom:6px;" onmouseover="this.style.background='rgba(239,230,214,0.16)'" onmouseout="this.style.background='rgba(239,230,214,0.1)'">Download Bridge for Mac</a>
 
           <div id="bridge-mobile-notice" style="display:none;text-align:center;padding:12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#B6AFA4;font-size: 14px;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files ClosedHand can access.</div>
           <script>(function(){var ua=navigator.userAgent;if(!/Macintosh|Mac OS X/i.test(ua)||/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}})()</script>
@@ -8194,9 +8191,8 @@
 
       <!-- Step 2: Already paired -->
       <div id="apple-step-connected" style="display:none;text-align:center;">
-        <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,230,214,0.16);color:#8DBD79;font-size:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">&#10003;</div>
-        <p style="font-size:14px;color:#EFE6D6;margin-bottom:4px;">Your Mac is connected</p>
-        <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:16px;">ClosedHand can access your Mac's apps while the Bridge is running.</p>
+        <p id="apple-connected-status" style="font-size:14px;color:#EFE6D6;margin-bottom:4px;">Your Mac is connected</p>
+        <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:16px;">Keep ClosedHand Bridge open on that Mac. Choose what to allow from its menu bar.</p>
         <button onclick="disconnectBridge();closeAppleModal()" style="background:none;border:1px solid rgba(239,230,214,0.1);color:#D0563F;padding:6px 14px;border-radius:6px;font-size: 14px;cursor:pointer;">Disconnect</button>
       </div>
 

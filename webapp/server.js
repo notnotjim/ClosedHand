@@ -7359,23 +7359,25 @@ app.post("/api/bridge/pair", async (req, res) => {
 
 // Check bridge status
 app.get("/api/bridge/status", async (req, res) => {
+  const desktop = !!process.env.CLOSEDHAND_DESKTOP;
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_bridges")
       .select("status, paired_at")
       .eq("user_id", userId)
       .single();
-    if (!data) return res.json({ status: "not_paired" });
+    if (error && error.code !== "PGRST116") throw error;
+    if (!data) return res.json({ status: "not_paired", desktop });
     // Check if there's actually a live WebSocket
     const ws = bridgeConnections.get("user:" + userId);
     const actuallyConnected = ws && ws.readyState === 1;
     // Return connected only if WS is live. Do NOT delete the pairing record
     // if WS is temporarily absent - Bridge may reconnect.
-    res.json({ status: actuallyConnected ? "connected" : data.status === "connected" ? "reconnecting" : data.status, paired_at: data.paired_at, desktop: !!process.env.CLOSEDHAND_DESKTOP });
+    res.json({ status: actuallyConnected ? "connected" : data.status === "connected" ? "reconnecting" : data.status, paired_at: data.paired_at, desktop });
   } catch (e) {
-    res.json({ status: "not_paired" });
+    res.status(503).json({ status: "unavailable", desktop, error: "Could not check Mac access" });
   }
 });
 

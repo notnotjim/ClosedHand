@@ -1573,6 +1573,10 @@
     transition: opacity 0.2s;
   }
   .feat-card-icons img:hover { opacity: 0.85; }
+  @media (max-width: 600px) {
+    .feat-card-icons { gap: 12px; flex-wrap: nowrap; }
+    .feat-card-icons img { flex: 0 1 38px; min-width: 0; height: auto; aspect-ratio: 1; }
+  }
   /* The Bridge card's one action, styled as the card's button and lit by
      the card's own hover. Once Bridge is connected it reads as a state. */
   .feat-card-action { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: #B6AFA4; padding: 8px 16px; border: 1px solid rgba(239,230,214,0.12); border-radius: 8px; background: rgba(239,230,214,0.04); transition: color 0.15s, border-color 0.15s, background 0.15s; }
@@ -2302,7 +2306,7 @@
                 </a>
                 <a class="plus-dropdown-item" href="/dashboard#bridge" onclick="event.preventDefault();document.getElementById('plusDropdown').classList.remove('open');openDashSlide('#bridge');">
                   <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                  Set up Bridge
+                  Mac access
                 </a>
               </div>
             </div>
@@ -2446,7 +2450,7 @@
               Workspace
               <span class="mon-status on pulse"></span>
               <span style="font-size:10px;color:rgba(239,230,214,0.5);">ClosedHand's own computer</span>
-              <span class="mon-info" data-tip="A sealed computer of ClosedHand's own, with its own browser and files, running inside your ClosedHand. Sign in to a site here once and it stays signed in, so ClosedHand can use it as you would, even sites with no useful API like Instagram.&#10;&#10;Files here are what ClosedHand works on. They stay put while your Mac is shut, and if ClosedHand lives on a Mac mini or a server, they are there around the clock.">i</span>
+              <span class="mon-info" data-tip="ClosedHand’s separate workspace for its browser, files and code. Sign in to a site here so ClosedHand can use it for your tasks.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
             </div>
             <div class="mon-bar-right">
               <input type="file" id="monUploadInput" multiple style="display:none" onchange="monHandleUpload(this.files)">
@@ -2510,7 +2514,7 @@
               Local Computer
               <span class="mon-status off" id="monLocalStatus"></span>
               <span id="monLocalStatusText" style="font-size:10px;color:rgba(239,230,214,0.5);">Offline</span>
-              <span class="mon-info" data-tip="This Mac, through Bridge. ClosedHand can open your files and apps here with the permissions you choose.&#10;&#10;Drag a file across to the Workspace to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
+              <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; Docker installations use the separate Bridge app.&#10;&#10;Drag a file across to the Workspace to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
             </div>
             <div class="mon-bar-right">
               <div class="mon-view-toggle" id="monLocalViewToggle">
@@ -2622,11 +2626,11 @@
     </a>
     <a href="#" id="bridgeFeatureCard" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
       <canvas class="feat-3d" id="feat3dMac" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
-      <div class="feat-card-title">Bridge: your desktop, your rules</div>
-      <div class="feat-card-desc">The optional Mac app lets ClosedHand work with your files, apps and screen. Choose its permissions in the dashboard.</div>
+      <div class="feat-card-title">Work with your Mac’s files and apps</div>
+      <div class="feat-card-desc">The optional Bridge app lets ClosedHand work with your Mac’s files, apps and screen. Choose what to allow from Bridge in your Mac’s menu bar.</div>
       <div class="feat-card-action" id="bridgeCardAction">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        <span id="bridgeCardActionLabel">Download for Mac</span>
+        <span id="bridgeCardActionLabel">Download Bridge for Mac</span>
       </div>
     </a>
   </div>
@@ -2668,10 +2672,10 @@
     <div class="feat-table-wrap">
       <table class="feat-table">
         <tbody>
-          <tr><th scope="row">A home for it</th><td>A Mac or PC you leave on, or a rented server (a VPS). ClosedHand answers while that machine is on; your phone can be off.</td></tr>
+          <tr><th scope="row">A home for it</th><td>Keep the computer running ClosedHand awake and online for it to keep working. The Mac app and Docker are two ways to run the same ClosedHand.</td></tr>
           <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
-          <tr><th scope="row">Your dashboard</th><td>Open it on the machine running ClosedHand, or from any phone or computer through your own link: a private address that reaches your ClosedHand and nothing else, behind your password. Turn it on in Settings.</td></tr>
-          <tr><th scope="row" data-row="bridge">Optional Mac Bridge</th><td>Connect your Mac to work with its files and apps, using the permissions you choose.</td></tr>
+          <tr><th scope="row">Your dashboard</th><td>Set up your personal dashboard address in Settings to open ClosedHand from any device, wherever you are. Your dashboard stays on the computer running ClosedHand, protected by your password.</td></tr>
+          <tr><th scope="row" data-row="bridge">Optional Mac Bridge</th><td>With Docker, install Bridge on the Mac whose files and apps you want to use, even if Docker runs on that same Mac. Choose what to allow from Bridge in the menu bar.</td></tr>
         </tbody>
       </table>
     </div>
@@ -3467,11 +3471,11 @@
       var act = document.getElementById('bridgeCardAction');
       if (act) { act.dataset.macOnly = 'true'; document.getElementById('bridgeCardActionLabel').textContent = 'Available for Mac only'; }
     }
-    bridgeFeatureCard.addEventListener('click', function(e) {
+    bridgeFeatureCard.addEventListener('click', async function(e) {
       e.preventDefault();
-      var act = document.getElementById('bridgeCardAction');
-      if (act && (act.dataset.connected === 'true' || bridgeFeatureCard.dataset.desktop === 'true')) { openDashSlide('#bridge'); return; }
-      if (!/Macintosh|Mac OS X/.test(navigator.userAgent) || isMobile) { winBridgeSoon(); return; }
+      var state = await readMacAccessStatus();
+      if (state.desktop || state.status !== 'not_paired') { openDashSlide('#bridge'); return; }
+      if (!/Macintosh|Mac OS X/.test(navigator.userAgent) || isMobile) { openDashSlide('#bridge'); return; }
       var dl = document.createElement('a');
       dl.href = '/download/ClosedHandBridge.dmg';
       dl.download = 'ClosedHandBridge.dmg';
@@ -5192,8 +5196,34 @@ function winBridgeSoon(e) {
 }
 window.winBridgeSoon = winBridgeSoon;
 
+// Installation identity comes from ClosedHand, not the viewing device.
+async function readMacAccessStatus() {
+  try {
+    var response = await fetch('/api/bridge/status');
+    var data = await response.json();
+    if (typeof data.desktop === 'boolean') window._macDesktop = data.desktop;
+    if (!response.ok) return { status: 'unavailable', desktop: window._macDesktop === true };
+    return data;
+  } catch (e) { return { status: 'unavailable', desktop: window._macDesktop === true }; }
+}
+
+function macAccessHelp(data) {
+  if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when ClosedHand is reachable.' };
+  if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'ClosedHand’s' : 'ClosedHand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
+  if (data.desktop) return { title: 'Mac access is not connected', text: 'The ClosedHand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running ClosedHand.' };
+  if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep ClosedHand Bridge open on the connected Mac. It will reconnect automatically.' };
+  return { title: 'Connect a Mac', text: 'Install Bridge on the Mac whose files and apps you want ClosedHand to use. With Docker, this can be the same Mac or a different one.', setup: true };
+}
+
+function macAccessNotice(data) {
+  var help = macAccessHelp(data);
+  return '<div style="padding:24px 16px;text-align:center;color:#B6AFA4;font-size:14px;line-height:1.6;">'
+    + '<p style="color:#EFE6D6;margin:0 0 8px;">' + help.title + '</p><p style="margin:0;">' + help.text + '</p>'
+    + '<button class="bridge-cta-pair" onclick="ragCloseModal();openDashSlide(\'#bridge\')">Mac access settings</button></div>';
+}
+
 function checkBridgeStatus() {
-  fetch('/api/bridge/status').then(function(r) { return r.json(); }).then(function(data) {
+  readMacAccessStatus().then(function(data) {
     var pill = document.getElementById('bridgeConnectPill');
     var label = document.getElementById('bridgeConnectLabel');
     // Update monitor local status
@@ -5208,21 +5238,21 @@ function checkBridgeStatus() {
       window._desktopCardDone = true;
       var card = document.getElementById('bridgeFeatureCard');
       if (card) {
-        card.querySelector('.feat-card-title').textContent = 'Your Mac, your rules';
-        card.querySelector('.feat-card-desc').textContent = 'ClosedHand can work with this Mac\u2019s files, apps and screen, with the permissions you choose. Change them any time from the fist in the menu bar.';
+        card.querySelector('.feat-card-title').textContent = 'Work with your Mac’s files and apps';
+        card.querySelector('.feat-card-desc').textContent = 'Mac access is built into the ClosedHand app running on your Mac. Choose what to allow from the fist in that Mac’s menu bar.';
         card.dataset.desktop = 'true';
       }
       var req = document.querySelector('.feat-table th[data-row="bridge"]');
-      if (req) { req.textContent = 'This Mac'; req.nextElementSibling.textContent = 'ClosedHand works with its files and apps using the permissions you choose in the menu bar.'; }
+      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Included in the ClosedHand app. Choose what to allow from the fist in the menu bar on the Mac running ClosedHand.'; }
     }
     if (cardAction) {
-      var on = data.status === 'connected' || data.status === 'reconnecting';
+      var on = data.status === 'connected';
       cardAction.dataset.connected = on ? 'true' : '';
-      if (cardLabel) cardLabel.textContent = on ? (data.desktop ? 'Connected' : 'Bridge is connected') : data.desktop ? 'Starting' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download for Mac');
+      if (cardLabel) cardLabel.textContent = on ? (data.desktop ? 'Connected' : 'Bridge is connected') : data.desktop ? 'Check Mac access' : data.status === 'reconnecting' ? 'Reconnecting' : data.status === 'unavailable' ? 'Check Mac access' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download Bridge for Mac');
     }
-    if (data.status === 'connected' || data.status === 'reconnecting') {
+    if (data.status === 'connected') {
       if (pill) pill.dataset.connected = 'true';
-      if (label) label.textContent = 'Bridge Connected';
+      if (label) label.textContent = data.desktop ? 'Mac connected' : 'Bridge connected';
       if (label) label.style.color = '#8DBD79';
       var icon = document.getElementById('bridgeConnectIcon');
       if (icon) icon.style.stroke = '#8DBD79';
@@ -5233,10 +5263,10 @@ function checkBridgeStatus() {
       if (wasOff && typeof monLoadLocal === 'function') monLoadLocal();
     } else {
       if (pill) delete pill.dataset.connected;
-      if (label) label.textContent = 'Connect with pairing code';
+      if (label) label.textContent = data.desktop ? 'Mac access' : 'Mac access settings';
       if (label) label.style.color = '';
       if (monDot) monDot.className = 'mon-status off';
-      if (monStatusText) { monStatusText.textContent = 'Offline'; monStatusText.style.color = 'rgba(239,230,214,0.25)'; }
+      if (monStatusText) { monStatusText.textContent = data.status === 'reconnecting' ? 'Reconnecting' : 'Unavailable'; monStatusText.style.color = 'rgba(239,230,214,0.25)'; }
     }
   }).catch(function() {});
 }
@@ -5486,7 +5516,7 @@ async function ragAddSource() {
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'bridge\',\'~\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D0A652" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
-    + 'Local Computer (Bridge)</div>';
+    + 'Mac files</div>';
 
   document.getElementById('ragModalBody').innerHTML = html;
 }
@@ -5534,12 +5564,9 @@ async function ragBrowse(origin, path, folderName, account) {
   // used to render a useless "Index all / empty folder" UI.
   if (origin === 'bridge') {
     try {
-      var bs = await fetch('/api/bridge/status').then(function(r){ return r.json(); });
-      if (bs.status !== 'connected' && bs.status !== 'reconnecting') {
-        document.getElementById('ragModalBody').innerHTML = '<div style="text-align:center;padding:24px 16px;">'
-          + '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(239,230,214,0.15)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>'
-          + '<div style="color:rgba(239,230,214,0.5);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
-          + '<div style="color:rgba(239,230,214,0.5);font-size:12px;">Open the ClosedHand Bridge app on your computer to browse and index local files.</div></div>';
+      var bs = await readMacAccessStatus();
+      if (bs.status !== 'connected') {
+        document.getElementById('ragModalBody').innerHTML = macAccessNotice(bs);
         return;
       }
     } catch (e) {}
@@ -5635,12 +5662,8 @@ async function ragBrowse(origin, path, folderName, account) {
     document.getElementById('ragModalBody').innerHTML = html;
   } catch (e) {
     var errMsg = e.message || 'Failed to browse';
-    var isOffline = errMsg.indexOf('not connected') !== -1 || errMsg.indexOf('Bridge') !== -1 || errMsg.indexOf('offline') !== -1;
-    if (isOffline && origin === 'bridge') {
-      document.getElementById('ragModalBody').innerHTML = '<div style="text-align:center;padding:24px 16px;">'
-        + '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(239,230,214,0.15)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>'
-        + '<div style="color:rgba(239,230,214,0.5);font-size:13px;margin-bottom:6px;">Bridge not connected</div>'
-        + '<div style="color:rgba(239,230,214,0.5);font-size:12px;">Open the ClosedHand Bridge app on your Mac to browse local files.</div></div>';
+    if (origin === 'bridge') {
+      document.getElementById('ragModalBody').innerHTML = macAccessNotice(await readMacAccessStatus());
     } else {
       document.getElementById('ragModalBody').innerHTML = '<div style="color:#D8624B;font-size:13px;">' + escapeHtml(errMsg) + '</div>';
     }
@@ -6376,17 +6399,24 @@ function escapeHtml(s) {
     var snap = reset ? null : _monSnapshotState('local');
     if (typeof monHideSearchPill === 'function') monHideSearchPill('local');
     monLocalCrumb(_monLocalPath);
-    function setOffline(){
+    async function setOffline(){
       if(dot)dot.className='mon-status off';
       if(stxt){stxt.textContent='Offline';stxt.style.color='rgba(239,230,214,0.25)';}
       // Hide view toggles and breadcrumb when offline
       var vt=document.getElementById('monLocalViewToggle');if(vt)vt.style.display='none';
       var cr=document.getElementById('monLocalCrumb');if(cr)cr.style.display='none';
       el.style.display='flex';el.style.flexDirection='column';el.style.flex='1';
+      var state = await readMacAccessStatus(), help = macAccessHelp(state);
+      if (!help.setup) {
+        if(stxt)stxt.textContent = state.status === 'connected' ? 'Connected' : state.status === 'reconnecting' ? 'Reconnecting' : 'Unavailable';
+        if(dot && state.status === 'connected')dot.className='mon-status on';
+        el.innerHTML = '<div class="bridge-cta"><h3>' + help.title + '</h3><p>' + help.text + '</p><button class="bridge-cta-pair" onclick="monLoadLocal()">Try again</button></div>';
+        return;
+      }
       var isMac=/Macintosh|Mac OS X/.test(navigator.userAgent)&&!/iPhone|iPad|iPod/.test(navigator.userAgent);
       var dlUrl=isMac?'/download/ClosedHandBridge.dmg':'#';
       var dlAttrs=isMac?' download':' onclick="winBridgeSoon(event)"';
-      var dlLabel=isMac?'Download for Mac':'Bridge is available for Mac only';
+      var dlLabel=isMac?'Download Bridge for Mac':'Bridge is available for Mac only';
       el.innerHTML='<div class="bridge-cta">'
         // One stroke, one colour: the box ClosedHand lives in on the left, this
         // computer on the right, a dashed arc between them for the bridge.
@@ -6398,8 +6428,8 @@ function escapeHtml(s) {
         +'<path d="M39 50h24"/>'
         +'<path d="M13 28 Q32 6 51 34" stroke-dasharray="2.5 3.5" stroke-width="1.25"/>'
         +'</svg></div>'
-        +'<h3>Bring in this Mac</h3>'
-        +'<p>With Bridge, ClosedHand can open your files and apps here, with the permissions you choose, and you can drag anything across to its Workspace.</p>'
+        +'<h3>Connect a Mac</h3>'
+        +'<p>Install Bridge on the Mac whose files and apps you want ClosedHand to use. This can be the Mac running Docker or a different Mac.</p>'
         +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open this dashboard on your Mac to download Bridge.</p>')
         +'<div class="bridge-cta-flow">'
         +'<div class="bridge-cta-step"><em>1</em> Download</div>'
@@ -6418,9 +6448,9 @@ function escapeHtml(s) {
       var cr=document.getElementById('monLocalCrumb');if(cr)cr.style.display='';
     }
     try{var r=await fetch('/api/bridge/files?path='+encodeURIComponent(_monLocalPath));
-      if(!r.ok){setOffline();return;}
+      if(!r.ok){await setOffline();return;}
       setOnline();var d=await r.json();monRenderLocal(d.files||[]);_monRestoreState('local',snap);_monAnimateIn('monLocalFiles');}
-    catch(e){setOffline();}
+    catch(e){await setOffline();}
   }
   async function monLoadStorage(){try{var r=await fetch('/api/sandbox');var d=await r.json();if(d.exists){var u=d.volume_size_used_mb||0,t=d.volume_size_mb||10240;document.getElementById('monStorageLabel').textContent=(u/1024).toFixed(1)+'/'+( t/1024).toFixed(0)+' GB';document.getElementById('monStorageFill').style.width=Math.min(100,(u/t)*100)+'%';}}catch(e){}}
 
