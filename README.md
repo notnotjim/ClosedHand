@@ -13,7 +13,7 @@ It is strictly single-tenant. One install serves one person, and the first accou
 
 ## Quickstart
 
-One line:
+Docker is the reference install and runs anywhere: a Mac, a Linux box, a Mac mini in a cupboard, a VPS. One line:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh
@@ -35,6 +35,8 @@ cd closedhand
 cp .env.example .env
 docker compose up -d
 ```
+
+**On a Mac with no Docker**, there is also a single app: download `ClosedHand-<version>-arm64.dmg` (Apple Silicon) or `-x86_64.dmg` (Intel) from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. It runs the same ClosedHand from the menu bar, with its own database, and opens the setup page on first launch. It includes what Bridge does, so there is nothing else to install on that Mac. Your data lives in `~/Library/Application Support/ClosedHand`. Signed and notarised; source in [`desktop/`](desktop/).
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 

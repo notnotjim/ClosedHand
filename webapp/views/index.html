@@ -2666,7 +2666,7 @@
           <tr><th scope="row">A home for it</th><td>A Mac or PC you leave on, a Mac mini in a cupboard, or a rented server (a VPS). ClosedHand answers while that machine is on; your phone can be off.</td></tr>
           <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
           <tr><th scope="row">Your dashboard</th><td>Open it on the machine running ClosedHand, or from your phone through a password-protected link you turn on in Settings.</td></tr>
-          <tr><th scope="row">Optional Mac Bridge</th><td>Connect your Mac to work with its files and apps, using the permissions you choose.</td></tr>
+          <tr><th scope="row" data-row="bridge">Optional Mac Bridge</th><td>Connect your Mac to work with its files and apps, using the permissions you choose.</td></tr>
         </tbody>
       </table>
     </div>
@@ -3465,7 +3465,7 @@
     bridgeFeatureCard.addEventListener('click', function(e) {
       e.preventDefault();
       var act = document.getElementById('bridgeCardAction');
-      if (act && act.dataset.connected === 'true') { openDashSlide('#bridge'); return; }
+      if (act && (act.dataset.connected === 'true' || bridgeFeatureCard.dataset.desktop === 'true')) { openDashSlide('#bridge'); return; }
       if (!/Macintosh|Mac OS X/.test(navigator.userAgent) || isMobile) { winBridgeSoon(); return; }
       var dl = document.createElement('a');
       dl.href = '/download/ClosedHandBridge.dmg';
@@ -5196,10 +5196,24 @@ function checkBridgeStatus() {
     var monStatusText = document.getElementById('monLocalStatusText');
     var cardLabel = document.getElementById('bridgeCardActionLabel');
     var cardAction = document.getElementById('bridgeCardAction');
+    // On the Mac app there is no Bridge to download: the app is the Mac
+    // access, connected from the first launch, with its permissions in the
+    // menu bar. The card says that instead, once.
+    if (data.desktop && !window._desktopCardDone) {
+      window._desktopCardDone = true;
+      var card = document.getElementById('bridgeFeatureCard');
+      if (card) {
+        card.querySelector('.feat-card-title').textContent = 'Your Mac, your rules';
+        card.querySelector('.feat-card-desc').textContent = 'ClosedHand can work with this Mac\u2019s files, apps and screen, with the permissions you choose. Change them any time from the fist in the menu bar.';
+        card.dataset.desktop = 'true';
+      }
+      var req = document.querySelector('.feat-table th[data-row="bridge"]');
+      if (req) { req.textContent = 'This Mac'; req.nextElementSibling.textContent = 'ClosedHand works with its files and apps using the permissions you choose in the menu bar.'; }
+    }
     if (cardAction) {
       var on = data.status === 'connected' || data.status === 'reconnecting';
       cardAction.dataset.connected = on ? 'true' : '';
-      if (cardLabel) cardLabel.textContent = on ? 'Bridge is connected' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download for Mac');
+      if (cardLabel) cardLabel.textContent = on ? (data.desktop ? 'Connected' : 'Bridge is connected') : data.desktop ? 'Starting' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download for Mac');
     }
     if (data.status === 'connected' || data.status === 'reconnecting') {
       if (pill) pill.dataset.connected = 'true';

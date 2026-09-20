@@ -7367,7 +7367,7 @@ app.get("/api/bridge/status", async (req, res) => {
     const actuallyConnected = ws && ws.readyState === 1;
     // Return connected only if WS is live. Do NOT delete the pairing record
     // if WS is temporarily absent - Bridge may reconnect.
-    res.json({ status: actuallyConnected ? "connected" : data.status === "connected" ? "reconnecting" : data.status, paired_at: data.paired_at });
+    res.json({ status: actuallyConnected ? "connected" : data.status === "connected" ? "reconnecting" : data.status, paired_at: data.paired_at, desktop: !!process.env.CLOSEDHAND_DESKTOP });
   } catch (e) {
     res.json({ status: "not_paired" });
   }
