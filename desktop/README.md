@@ -57,10 +57,27 @@ ClosedHand.app/Contents/
   Resources/app/                   the repo: index.js, lib/, webapp/, migrations/, skills/
 ```
 
+## The Workspace
+
+The container's agent (`sandbox-image/agent`) runs on the Mac with
+`SANDBOX_MODE=desktop`: a workspace folder in the app's data, a Python that uv
+(bundled) sets up on first start with the image's package set, and the user's
+own Chrome launched with ClosedHand's profile on a debugging port. Code the
+model runs is confined with `sandbox-exec` and a profile the app writes
+(`workspace.sb`): it can read the system, the bundle and the workspace, write
+only the workspace, and use the network. The Computers tab watches the
+Workspace browser through screenshots.
+
+## Release
+
+`desktop/dmg.sh` wraps the built app in a signed DMG; `desktop/notarize.sh`
+submits it to Apple with the `closedhand` keychain profile and staples the
+ticket. `.github/workflows/build-desktop.yml` does both for arm64 and x86_64
+on a `v*` tag, given the signing and notary secrets.
+
 ## Not yet
 
-- Bridge's Mac capabilities in-process (files, apps, screen): milestone 2.
-- The sandbox (ClosedHand's own browser): milestone 3. `SANDBOX_URL` is empty
-  and the webapp knows it is the desktop app (`CLOSEDHAND_DESKTOP=1`).
-- Notarisation, auto-update, an Intel build and the download page: milestone 4.
-- MCP servers run with `uvx` need Python's `uv`, which the app does not bundle.
+- Auto-update (Sparkle), an Intel test, bundle trimming.
+- The download page: Docker first, the app as the quieter alternative.
+- The sandbox image in a Linux VM (Virtualization.framework), the fuller
+  isolation story for the Workspace.

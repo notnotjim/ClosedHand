@@ -282,6 +282,10 @@ final class Supervisor: ObservableObject {
             // services goes through the bot, as it does from the container.
             env["GATEWAY_URL"] = "http://127.0.0.1:\(botPort)"
             env["USER_ID"] = "admin"
+            // uv must fetch its own Python rather than borrow whatever this Mac
+            // has, so every install runs the same interpreter.
+            env["UV_PYTHON_PREFERENCE"] = "only-managed"
+            if let profile = try? writeSandboxProfile() { env["SANDBOX_PROFILE"] = profile.path }
         default:
             proc.currentDirectoryURL = appDir.appendingPathComponent("webapp", isDirectory: true)
             proc.arguments = ["server.js"]
@@ -316,6 +320,36 @@ final class Supervisor: ObservableObject {
         case "agent": agent = state
         default: web = state
         }
+    }
+
+    /// The fence around code the model runs in the Workspace, for sandbox-exec.
+    /// Reads: the system, the app bundle, the workspace and uv's caches (where
+    /// its Python lives). Writes: the workspace and the temporary folder. The
+    /// network is open, since fetching pages and calling APIs is the point.
+    /// Everything else on the Mac, the user's home above all, is out of reach.
+    private func writeSandboxProfile() throws -> URL {
+        let q = { (u: URL) in "\"" + u.standardizedFileURL.path.replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
+        let tmp = URL(fileURLWithPath: NSTemporaryDirectory()).resolvingSymlinksInPath()
+        let cache = storageDir.appendingPathComponent("cache", isDirectory: true)
+        let bundle = Bundle.main.bundleURL
+        let profile = """
+        (version 1)
+        (deny default)
+        (allow process-exec process-fork signal)
+        (allow sysctl-read)
+        (allow mach-lookup)
+        (allow network*)
+        (allow file-read-metadata)
+        (allow file-read* (literal "/") (subpath "/usr") (subpath "/bin") (subpath "/sbin") (subpath "/System") (subpath "/Library") (subpath "/private/etc") (subpath "/private/var/db") (subpath "/dev") (subpath "/Applications"))
+        (allow file-read* (subpath \(q(bundle))) (subpath \(q(resources))) (subpath \(q(cache))))
+        (allow file-read* (subpath \(q(workspaceDir))) (subpath \(q(tmp))) (subpath "/private/var/folders"))
+        (allow file-write* (subpath \(q(workspaceDir))) (subpath \(q(tmp))) (subpath "/private/var/folders"))
+        (allow file-write* (subpath \(q(cache.appendingPathComponent("uv")))) (subpath \(q(cache.appendingPathComponent("uv-python")))))
+
+        """
+        let url = supportDir.appendingPathComponent("workspace.sb")
+        try profile.write(to: url, atomically: true, encoding: .utf8)
+        return url
     }
 
     /// A Chrome-family browser on this Mac, for the Workspace's own window.

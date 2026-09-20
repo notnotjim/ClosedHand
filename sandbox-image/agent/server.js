@@ -24,6 +24,12 @@ const PYTHON = process.env.PYTHON || "python3";
 const UV = process.env.UV || "";
 const CDP_PORT = process.env.CDP_PORT || "9222";
 const BROWSER_CMD = process.env.BROWSER_CMD || "";
+// On the desktop, code the model runs is confined with the system sandbox: a
+// profile (written by the app) that lets it read the system, the app bundle
+// and the workspace, write only the workspace and the temporary folder, and
+// use the network. Without it the Workspace would be an open door onto the
+// Mac; the container needs nothing, it is the fence.
+const SANDBOX_PROFILE = process.env.SANDBOX_PROFILE || "";
 const BROWSER_PROFILE = path.join(WORKSPACE, ".chromium-profile");
 // What the container image pre-installs, so code written for one runs on the other.
 const PY_PACKAGES = ["pandas", "numpy", "requests", "matplotlib", "beautifulsoup4", "pillow", "openpyxl", "playwright", "lxml", "scipy", "scikit-learn", "seaborn", "tabulate", "python-dateutil", "pytz", "httpx", "pydantic", "chardet", "plotly"];
@@ -155,6 +161,7 @@ app.get("/health", (_req, res) => {
     uptime: process.uptime(),
     workspace: WORKSPACE,
     user: os.userInfo().username,
+    confined: !!SANDBOX_PROFILE || !DESKTOP,
   });
 });
 
@@ -261,6 +268,7 @@ app.post("/exec", (req, res) => {
       return res.status(400).json({ error: `Unsupported language: ${language}` });
   }
 
+  if (SANDBOX_PROFILE) { args = ["-f", SANDBOX_PROFILE, cmd, ...args]; cmd = "/usr/bin/sandbox-exec"; }
   const child = spawn(cmd, args, {
     cwd: WORKSPACE,
     timeout,
