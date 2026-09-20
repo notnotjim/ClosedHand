@@ -89,17 +89,19 @@ async function getSetupState() {
   const steps = [
     { key: "database", label: "Database", done: db, required: true },
     { key: "model", label: "Model provider", done: model, required: true },
-    { key: "admin_password", label: "Admin password", done: adminPassword, required: false },
+    { key: "admin_password", label: "Admin password", done: adminPassword, required: true },
     { key: "google", label: "Google", done: google, required: true },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
   ];
   const nextUnlock = steps.find((s) => !s.done) || null;
 
   return {
-    // Ready = a database, a model provider and Google. Without mail and
-    // calendar ClosedHand is a chat window round a model, so Google is part of
-    // the floor, not an extra. The password and chat apps can follow.
-    ready: db && model && google,
+    // Ready = a database, a model provider, a password and Google. Without
+    // mail and calendar ClosedHand is a chat window round a model, so Google
+    // is part of the floor, not an extra. Without a password the dashboard is
+    // open to anyone on the same network, so it is part of the floor too.
+    // Chat apps can follow.
+    ready: db && model && adminPassword && google,
     steps,
     connections,
     nextUnlock: nextUnlock ? nextUnlock.key : null,

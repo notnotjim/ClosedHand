@@ -62,7 +62,7 @@
     }
     .watch-chip .dot {
       width: 7px; height: 7px; border-radius: 50%;
-      background: var(--accent); box-shadow: 0 0 8px rgba(208,86,63,0.8);
+      background: var(--done); box-shadow: 0 0 8px rgba(141,189,121,0.7);
       animation: breathe 2.6s ease-in-out infinite;
     }
     .watch-chip.is-offline .dot { background: var(--warn); box-shadow: 0 0 8px rgba(208,166,82,0.8); animation: none; }
@@ -426,12 +426,12 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Dashboard password</h2>
-            <p class="whisper">Protect access to your dashboard with a password.</p>
+            <p class="whisper">The one thing between your dashboard and anyone else who can reach this address.</p>
           </span>
-          <span class="state-chip">Recommended</span>
+          <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>Choose a password to protect your dashboard on this computer and when opening it from another device.</p>
+          <p>Without a password, anyone on the same network who finds this address can open your dashboard. With one, only you can, here or from your own link on any phone or computer.</p>
           <form id="password-form">
             <div class="field">
               <label for="pw-input">Choose a password</label>
