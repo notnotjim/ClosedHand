@@ -877,12 +877,13 @@ app.post("/api/setup/detect", async (req, res) => {
     if (!(await requireSetupAccess(req, res))) return;
     const apiKey = String((req.body || {}).apiKey || "").trim();
     if (apiKey.length < 8) return res.json({ detected: false });
-    const candidates = ["anthropic", "openai", "groq", "xai", "gemini", "deepinfra"];
+    const candidates = ["anthropic", "openai", "groq", "xai", "gemini", "deepinfra", "deepseek", "openrouter", "moonshot"].filter((p) => caps.PROVIDERS[p]);
     const hint =
       apiKey.startsWith("sk-ant-") ? "anthropic" :
       apiKey.startsWith("gsk_") ? "groq" :
       apiKey.startsWith("xai-") ? "xai" :
       apiKey.startsWith("AIza") ? "gemini" :
+      apiKey.startsWith("sk-or-") && caps.PROVIDERS.openrouter ? "openrouter" :
       null;
 
     // Per-provider probe: the models list (capabilities + verification), then
@@ -892,7 +893,12 @@ app.post("/api/setup/detect", async (req, res) => {
       let modelsStatus = null;
       try {
         const ids = await caps.listModels(prov, { apiKey });
-        return { prov, ids, ok: true };
+        // A public model list (OpenRouter, DeepInfra) succeeds with any key at
+        // all; only a call the key must authenticate says whose it is. A
+        // DeepSeek key was once claimed by OpenRouter this way.
+        if (!caps.PROVIDERS[prov].publicModels) return { prov, ids, ok: true };
+        const v = await caps.verifyChatKey(prov, { apiKey });
+        return { prov, ids, ok: v.valid, keyStatus: v.status };
       } catch (e2) { modelsStatus = e2.status ?? 0; }
       const v = await caps.verifyChatKey(prov, { apiKey });
       return { prov, ids: [], ok: v.valid, modelsStatus, keyStatus: v.status };

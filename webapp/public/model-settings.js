@@ -10,6 +10,15 @@
     root.dataset.mounted = "true";
     var options = '<option value="">Choose a provider</option>' + Object.keys(providers).map(function (key) { return '<option value="' + key + '">' + providers[key] + '</option>'; }).join('');
     root.innerHTML = '<div class="model-current" data-region="current" hidden></div><details class="model-editor" data-region="editor" open><summary>Change models</summary><div class="model-fields">' +
+      // The simple way: one key. Its provider is detected and sensible models
+      // are picked for every job; the check below says what was chosen.
+      '<div data-region="simple" class="model-fields">' +
+      '<label>Your provider\u2019s key<input data-field="quickKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key from DeepInfra, OpenAI, Anthropic, Google, Groq, xAI, DeepSeek or OpenRouter"></label>' +
+      '<p class="model-hint">The key goes only to its own provider. ClosedHand works out whose it is and picks a model for each job; you can change any of them.</p>' +
+      '<p class="model-hint model-links"><button type="button" class="model-link" data-action="advanced">Choose the models yourself</button><span aria-hidden="true"> \u00b7 </span><button type="button" class="model-link" data-action="ollama">Use a model running on this computer</button></p>' +
+      '</div>' +
+      '<div data-region="advanced" class="model-fields" hidden>' +
+      '<p class="model-hint model-links"><button type="button" class="model-link" data-action="simple">Back to the simple way: paste one key</button></p>' +
       '<label>Provider<select data-field="provider">' + options + '</select></label>' +
       '<label data-region="address" hidden>Base URL<input data-field="baseUrl" type="url" placeholder="https://provider.example/v1" spellcheck="false"></label>' +
       '<label>API key<input data-field="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>' +
@@ -26,6 +35,7 @@
       '<button type="button" data-action="load-vision" hidden>Try loading the image models again</button>' +
       '<label>Image model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Image model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</div></details>' +
+      '</div>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl><p class="model-hint" data-region="memory" hidden></p>' +
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
       '<div class="model-result" role="status" aria-live="polite" tabindex="-1"></div>' +
@@ -41,7 +51,7 @@
     function renderCurrent(data) {
       var current = region("current");
       current.replaceChildren();
-      var rows = data.activeModels || [];
+      var rows = data.config ? (data.activeModels || []) : [];
       current.hidden = !rows.length;
       if (!rows.length) return;
       var list = document.createElement("dl"); list.className = "model-role-list";
@@ -264,7 +274,60 @@
       save.hidden = kind !== "passed";
       again.hidden = kind !== "failed";
     }
+    function showAdvanced(on) {
+      region("advanced").hidden = !on;
+      region("simple").hidden = on;
+    }
+    var detectTimer = null, detects = 0;
+    // One key: ask the server whose it is, take its recommended chat model
+    // (or the first tool-capable one it lists), and let the usual check run.
+    async function detectKey() {
+      var key = value("quickKey"), token = ++detects;
+      if (key.length < 8) return;
+      show("Working out whose key this is...");
+      var data;
+      try {
+        var response = await fetch("/api/setup/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: key }) });
+        // An install without detection (the hosted product) just asks whose key it is.
+        if (response.status === 404) { if (token !== detects) return; field("apiKey").value = key; showAdvanced(true); show("Choose the provider this key belongs to."); return; }
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error || "detection failed");
+      } catch (e) {
+        if (token !== detects) return;
+        field("apiKey").value = key; showAdvanced(true); show("Could not check the key from here. Choose the provider yourself.", true); return;
+      }
+      if (token !== detects) return;
+      if (!data.detected || !providers[data.provider]) {
+        field("apiKey").value = key; showAdvanced(true);
+        show(data.hintLabel ? data.hintLabel + " did not accept this key. Check it, or choose the provider yourself." : "No provider accepted this key. Check it, or choose the provider yourself.", true);
+        return;
+      }
+      field("provider").value = data.provider; field("baseUrl").value = ""; field("apiKey").value = key;
+      field("model").value = ""; field("backgroundModel").value = ""; field("visionMode").value = "same";
+      models = []; imageModels = []; refreshPickers(); visibility(); invalidate();
+      show(data.label + " key. Finding a model...");
+      await loadModels("primary", true);
+      if (token !== detects) return;
+      var pick = data.chatModel && models.some(function (m) { return m.id === data.chatModel; }) ? data.chatModel
+        : (models.find(function (m) { return m.capabilities && m.capabilities.tools !== false && m.capabilities.vision !== false; }) || models.find(function (m) { return !m.capabilities || m.capabilities.tools !== false; }) || {}).id || data.chatModel || "";
+      if (!pick) { showAdvanced(true); show(data.label + " key accepted, but no chat model could be picked. Choose one below.", true); return; }
+      field("model").value = pick; refreshPickers();
+      show(data.label + " key. Checking " + modelName({ id: pick }, data.provider) + "...");
+      scheduleCheck();
+    }
+    root.querySelector('[data-action="advanced"]').onclick = function () {
+      if (value("quickKey") && !value("apiKey")) field("apiKey").value = value("quickKey");
+      showAdvanced(true); field("provider").focus();
+    };
+    root.querySelector('[data-action="simple"]').onclick = function () { showAdvanced(false); field("quickKey").focus(); };
+    root.querySelector('[data-action="ollama"]').onclick = function () {
+      showAdvanced(true);
+      field("provider").value = "ollama";
+      field("provider").dispatchEvent(new Event("change", { bubbles: true }));
+      field("baseUrl").focus();
+    };
     root.addEventListener("input", function (ev) {
+      if (ev.target === field("quickKey")) { clearTimeout(detectTimer); detectTimer = setTimeout(detectKey, 700); return; }
       invalidate(); scheduleCheck();
       if (ev.target === field("apiKey") || ev.target === field("baseUrl")) scheduleLoad("primary");
       if (ev.target === field("visionKey") || ev.target === field("visionBaseUrl")) scheduleLoad("vision");
@@ -301,6 +364,7 @@
       show("Saving models..."); await call("/save", { ticket: ticket });
       field("apiKey").value = ""; field("visionKey").value = ""; invalidate(); clearTimeout(checkTimer); checks++;
       var updated = await call(""); saved = updated.config; renderCurrent(updated);
+      region("editor").querySelector("summary").hidden = false;
       check = { kind: "saved", config: saved }; renderCheck();
       region("default").hidden = !allowDefault;
       show("Models updated. New requests use these choices."); result.focus();
@@ -318,12 +382,15 @@
     perform(async function () {
       var data = await call(""); saved = data.config; renderCurrent(data);
       region("editor").open = !saved && !data.allowDefault;
+      // "Change models" only makes sense once there are models to change.
+      region("editor").querySelector("summary").hidden = !saved && !data.allowDefault;
       allowDefault = !!data.allowDefault;
       region("default").hidden = !allowDefault || !saved;
       if (!saved) { refreshPickers(); visibility(); if (data.allowDefault) show("ClosedHand's hosted models are active. You can connect your own models here."); return; }
       var primary = saved.connections.primary;
       field("provider").value = primary.provider; field("baseUrl").value = primary.baseUrl;
       field("apiKey").placeholder = primary.hasKey ? "Saved key, leave blank to keep it" : "Paste your key";
+      field("quickKey").placeholder = "Your " + (providers[primary.provider] || "provider") + " key is saved. Paste a new key to switch.";
       field("model").value = saved.roles.chat.model;
       field("backgroundModel").value = saved.roles.background?.model || "";
       var vision = saved.roles.vision;

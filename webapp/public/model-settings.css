@@ -8,6 +8,9 @@
 .model-fields :is(p,.model-hint) { margin: 0; font-size: 15px; line-height: 1.6; color: #EFE6D6; overflow-wrap: anywhere; }
 .model-fields summary { cursor: pointer; padding: 12px 0; font-size: 16px; }
 .model-fields details > .model-fields { padding-top: 16px; }
+.model-links { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
+.model-fields .model-link { background: none; border: 0; border-radius: 0; padding: 0; min-height: 0; color: #B6AFA4; font: inherit; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(239,230,214,0.3); cursor: pointer; justify-self: start; }
+.model-fields .model-link:hover { color: #EFE6D6; text-decoration-color: rgba(239,230,214,0.6); }
 .model-result { line-height: 1.6; color: #D8624B; }
 .model-result:empty { display: none; }
 .model-current { max-width: 760px; padding-bottom: 28px; }
