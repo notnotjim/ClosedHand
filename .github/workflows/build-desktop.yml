@@ -63,8 +63,10 @@ jobs:
           name: ClosedHand-${{ matrix.arch }}
           path: desktop/dist/ClosedHand-*.dmg
 
+      # An unsigned build must never replace a notarised one on a release, so
+      # attaching needs the signing identity to have been present.
       - name: Attach to release
-        if: ${{ github.ref_type == 'tag' }}
+        if: ${{ github.ref_type == 'tag' && env.IDENTITY != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.ref_name }}" desktop/dist/ClosedHand-*.dmg --clobber
