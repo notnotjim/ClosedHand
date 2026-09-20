@@ -39,7 +39,7 @@ jobs:
           security unlock-keychain -p ci build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
-          echo "IDENTITY=\"$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | sed 's/.*"\(.*\)"/\1/')\"" >> "$GITHUB_ENV"
+          echo "IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | sed 's/.*"\(.*\)"/\1/')" >> "$GITHUB_ENV"
 
       - name: Build
         env:
