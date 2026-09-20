@@ -1685,6 +1685,12 @@
   .feat-table .yes { color: #D8624B; }
   .feat-table .no { color: rgba(239,230,214,0.5); }
   .feat-table .partial { color: rgba(208,166,82,0.7); }
+  @media (max-width: 600px) {
+    .feat-table { min-width: 0; }
+    .feat-table, .feat-table tbody, .feat-table tr, .feat-table th, .feat-table td { display: block; }
+    .feat-table th { padding: 20px 20px 8px; border-bottom: 0; background: none; }
+    .feat-table td { padding: 0 20px 24px; }
+  }
 
   /* Final CTA */
   .feat-cta {

@@ -114,22 +114,29 @@ rm -rf "$APP/Contents/Resources/app/node_modules/mammoth/test" "$APP/Contents/Re
 # --- sign ---------------------------------------------------------------------
 if [ -n "${IDENTITY:-}" ]; then
   say "Signing with $IDENTITY"
-  SIGN="codesign --force --timestamp --options runtime --sign $IDENTITY"
 else
   say "Signing ad hoc (this Mac only)"
-  SIGN="codesign --force --sign -"
 fi
+sign_code() {
+  if [ -n "${IDENTITY:-}" ]; then
+    codesign --force --timestamp --options runtime --sign "$IDENTITY" "$@"
+  else
+    codesign --force --sign - "$@"
+  fi
+}
 # Every Mach-O inside gets its own signature first: dylibs, .node addons,
 # the Node and Postgres executables. Then the app seals the lot.
 find "$APP/Contents/Resources" -type f \( -name "*.dylib" -o -name "*.node" -o -name "*.so" \) -print0 \
-  | xargs -0 -n1 sh -c 'eval "$0" "$1"' "$SIGN" 2>/dev/null || true
+  | while IFS= read -r -d '' lib; do
+      if file -b "$lib" | grep -q "Mach-O"; then sign_code "$lib"; fi
+    done
 # Every executable Mach-O anywhere inside (Node, Postgres, uv, Google's gws
 # CLI, whatever a dependency ships) is signed with the runtime entitlements;
 # one unsigned binary and the notary rejects the whole archive.
 find "$APP/Contents/Resources" -type f -perm +111 ! -name "*.dylib" ! -name "*.node" ! -name "*.so" -print0 \
   | while IFS= read -r -d '' exe; do
-      if file -b "$exe" | grep -q "Mach-O"; then eval "$SIGN" --entitlements "$HERE/Runtime.entitlements" "$exe" 2>/dev/null || echo "could not sign $exe"; fi
+      if file -b "$exe" | grep -q "Mach-O"; then sign_code --entitlements "$HERE/Runtime.entitlements" "$exe"; fi
     done
-eval "$SIGN" --entitlements "$HERE/ClosedHand.entitlements" "$APP"
+sign_code --entitlements "$HERE/ClosedHand.entitlements" "$APP"
 codesign --verify --deep --strict "$APP" && say "Signed OK"
 du -sh "$APP"
