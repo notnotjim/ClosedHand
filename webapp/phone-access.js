@@ -165,6 +165,14 @@ async function disable() {
   await save({ PHONE_ACCESS: null, PHONE_ACCESS_URL: null });
 }
 function status() { return { enabled: wanted, state, url, error: lastError, mode, permanent: mode === "managed", pairingUrl }; }
+function shutdown() {
+  // Quitting the app must stop its child connection without turning off the
+  // saved preference, so the same address resumes on the next launch.
+  wanted = false; ++generation; ++upgradeGeneration;
+  clearTimeout(retryTimer); clearTimeout(upgradeTimer);
+  const child = proc; proc = null;
+  if (child) child.kill();
+}
 async function boot() {
   try {
     mode = (await getConf("PHONE_ACCESS_MODE")) === "managed" ? "managed" : "quick";
@@ -173,4 +181,4 @@ async function boot() {
     else await save({ PHONE_ACCESS_URL: null });
   } catch (e) { console.error("[Phone] Could not restore phone access:", e.message); }
 }
-module.exports = { enable, disable, status, boot };
+module.exports = { enable, disable, status, boot, shutdown };

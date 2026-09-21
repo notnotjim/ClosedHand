@@ -572,6 +572,8 @@ app.post("/api/login", async (req, res) => {
 
 // --- Reach the dashboard from your phone (see phone-access.js) -------------
 const phoneAccess = require("./phone-access");
+process.once('exit', () => phoneAccess.shutdown());
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => process.exit(0));
 // ---------------------------------------------------------------------------
 // Wallet: cards ClosedHand may pay with, and the rules for using them.
 //

@@ -63,6 +63,17 @@ test('phone access requires a password on enable and on restart', async () => {
   assert.equal(t.children.length, 0);
   assert.equal(t.values.PHONE_ACCESS_URL, null);
 });
+test('quitting stops the tunnel but retains the setting needed to resume', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.api.shutdown();
+  assert.equal(t.children[0].killed, true);
+  assert.equal(t.values.PHONE_ACCESS, '1');
+  assert.equal(t.api.status().enabled, false);
+  const resumed = tunnel(t.values);
+  await resumed.api.boot();
+  assert.equal(resumed.children.length, 1);
+});
 test('phone URL is published only after connection, clears on failure and ignores old children', async () => {
   const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
   await t.api.enable();
