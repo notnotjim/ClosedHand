@@ -37,31 +37,30 @@ def render(path, W, H):
     scale = h / H
     tw = int(round(w / scale))
     ox = (W - tw) // 2
-    # Shade at source resolution, then average coverage instead of snapping
-    # partially covered pixels to a full outline block. This preserves the
-    # silhouette and finger gaps at the installer's fixed 48-column size.
-    tone = Image.new("L", (w, h), round(3 / LEVELS * 255))
-    coverage = Image.new("L", (w, h), 0)
-    pixels = tone.load()
-    for y in range(h):
-        for x in range(w):
-            if stroke[y][x] or not outside[y][x]:
-                coverage.putpixel((x, y), 255)
-            if stroke[y][x]:
-                pixels[x, y] = round(8 / LEVELS * 255)
-            elif not outside[y][x]:
-                light = 0.5 * x / max(1, w - 1) + 0.5 * y / max(1, h - 1)
-                pixels[x, y] = round((22 - 7 * light) / LEVELS * 255)
-    # Box filtering gives area coverage without halos around the dark outline.
-    # Level 3 is a typical dark terminal background; lower greys would create
-    # a black fringe. Empty pixels still use the terminal's own background.
-    small = tone.resize((tw, H), Image.Resampling.BOX)
-    mask = coverage.resize((tw, H), Image.Resampling.BOX)
+    # Measure coverage at the target grid, but keep outline and fill separate.
+    # Blending either with a guessed terminal background produces a soft fringe.
+    # A majority-covered pixel belongs to the fist; boundary pixels use the
+    # same solid outline as internal strokes, with no intermediate edge greys.
+    silhouette = Image.new("L", (w, h))
+    strokes = Image.new("L", (w, h))
+    silhouette.putdata([255 if stroke[y][x] or not outside[y][x] else 0
+                        for y in range(h) for x in range(w)])
+    strokes.putdata([255 if stroke[y][x] else 0
+                    for y in range(h) for x in range(w)])
+    mask = silhouette.resize((tw, H), Image.Resampling.BOX)
+    ink = strokes.resize((tw, H), Image.Resampling.BOX)
     out = [[0] * W for _ in range(H)]
     for y in range(H):
         for x in range(tw):
-            if mask.getpixel((x, y)) >= 4:
-                out[y][ox + x] = max(3, min(LEVELS, round(small.getpixel((x, y)) / 255 * LEVELS)))
+            covered = mask.getpixel((x, y))
+            if covered < 128:
+                continue
+            if covered < 230 or ink.getpixel((x, y)) >= 77:
+                tone = 8
+            else:
+                light = 0.5 * x / max(1, tw - 1) + 0.5 * y / max(1, H - 1)
+                tone = round(22 - 7 * light)
+            out[y][ox + x] = tone
 
     return out
 
