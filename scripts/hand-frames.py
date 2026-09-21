@@ -37,31 +37,26 @@ def render(path, W, H):
     scale = h / H
     tw = int(round(w / scale))
     ox = (W - tw) // 2
-    # Measure coverage at the target grid, but keep outline and fill separate.
-    # Blending either with a guessed terminal background produces a soft fringe.
-    # A majority-covered pixel belongs to the fist; boundary pixels use the
-    # same solid outline as internal strokes, with no intermediate edge greys.
-    silhouette = Image.new("L", (w, h))
-    strokes = Image.new("L", (w, h))
-    silhouette.putdata([255 if stroke[y][x] or not outside[y][x] else 0
-                        for y in range(h) for x in range(w)])
-    strokes.putdata([255 if stroke[y][x] else 0
-                    for y in range(h) for x in range(w)])
-    mask = silhouette.resize((tw, H), Image.Resampling.BOX)
-    ink = strokes.resize((tw, H), Image.Resampling.BOX)
     out = [[0] * W for _ in range(H)]
-    for y in range(H):
-        for x in range(tw):
-            covered = mask.getpixel((x, y))
-            if covered < 128:
-                continue
-            if covered < 230 or ink.getpixel((x, y)) >= 77:
-                tone = 8
-            else:
-                light = 0.5 * x / max(1, tw - 1) + 0.5 * y / max(1, H - 1)
-                tone = round(22 - 7 * light)
-            out[y][ox + x] = tone
-
+    for ty in range(H):
+        for tx in range(tw):
+            x0, x1 = int(tx * scale), max(int(tx * scale) + 1, int((tx + 1) * scale))
+            y0, y1 = int(ty * scale), max(int(ty * scale) + 1, int((ty + 1) * scale))
+            n = s = i = 0
+            for y in range(y0, min(y1, h)):
+                for x in range(x0, min(x1, w)):
+                    n += 1
+                    if stroke[y][x]: s += 1
+                    elif not outside[y][x]: i += 1
+            if not n: continue
+            sf, inf = s / n, i / n
+            if sf >= 0.30: v = 8                                     # outline
+            elif inf + sf >= 0.5:
+                # fill, lit from the top left
+                t = 0.5 * (tx / max(1, tw - 1)) + 0.5 * (ty / max(1, H - 1))
+                v = int(round(22 - 7 * t))
+            else: continue
+            out[ty][ox + tx] = v
     return out
 
 def encode(fr):
@@ -75,15 +70,15 @@ def encode(fr):
 
 if __name__ == "__main__":
     src = sys.argv[1]
-    sizes = [(32, 28), (48, 42), (64, 56)]
+    sizes = [(32, 28), (64, 56)]
     frames = [render(src, W, H) for W, H in sizes]
     if len(sys.argv) > 2 and sys.argv[2] == "export":
         for f in frames: print(encode(f))
         sys.exit(0)
     from PIL import ImageDraw
     gap = 16
-    px = [6, 4, 3]
-    im = Image.new("RGB", (sum(W * p for (W, H), p in zip(sizes, px)) + gap * 4, 28 * 6 + gap * 2), (30, 30, 30))
+    px = [10, 5]
+    im = Image.new("RGB", (sum(W * p for (W, H), p in zip(sizes, px)) + gap * 3, 28 * 10 + gap * 2), (30, 30, 30))
     d = ImageDraw.Draw(im)
     ox = gap
     for (W, H), p, f in zip(sizes, px, frames):
