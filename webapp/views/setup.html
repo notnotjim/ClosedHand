@@ -213,6 +213,12 @@
     .card-body ol.mini li::marker { color: var(--text-tertiary); }
 
     /* Forms: the wizard writes config itself; nobody edits files. */
+    #step-admin_password [hidden] { display: none !important; }
+    #setup-personal-url h3 { margin-bottom: 12px; }
+    #setup-personal-url .field label { color: var(--text-primary); }
+    #setup-personal-url .save-btn { min-height: 44px; white-space: normal; }
+    #url-continue { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
+    #url-preview { color: var(--text-primary); }
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 6px; }
     .field input, .field select {
@@ -332,6 +338,8 @@
     footer a:hover { color: var(--text-primary); }
 
     @media (max-width: 620px) {
+      #step-admin_password .card-head { flex-wrap: wrap; }
+      #step-admin_password .card-head > span:first-child { flex: 1 1 220px; }
       :root { --rail-w: 52px; }
       .num { display: none; }
       .wrap { padding: 30px 18px 72px; }
@@ -350,6 +358,7 @@
   <meta name="theme-color" content="#1A1817">
   <link rel="stylesheet" href="/model-settings.css">
   <script src="/model-settings.js"></script>
+  <script src="/setup-personal-url.js"></script>
 </head>
 <body class="setup-page">
 <div class="wrap">
@@ -425,13 +434,14 @@
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
-            <h2>Dashboard password</h2>
-            <p class="whisper">The one thing between your dashboard and anyone else who can reach this address.</p>
+            <h2>Password and personal URL</h2>
+            <p class="whisper">Protect your dashboard and choose how to open it.</p>
           </span>
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>Your password protects the dashboard on this computer and through your personal dashboard address, if you choose to set one up. That address lets you open ClosedHand from any device, wherever you are.</p>
+          <p>Your password protects your dashboard, both on this computer and through your personal URL.</p>
+          <p id="password-saved" hidden>Your dashboard password is set.</p>
           <form id="password-form">
             <div class="field">
               <label for="pw-input">Choose a password</label>
@@ -441,6 +451,31 @@
             <p class="form-msg" id="pw-msg"></p>
           </form>
           <button class="skip" type="button">Skip for now (only if nobody else can reach this computer)</button>
+          <section id="setup-personal-url" aria-labelledby="personal-url-heading" style="margin-top:32px">
+            <h3 id="personal-url-heading">Personal URL <span class="whisper">Optional</span></h3>
+            <p>Open ClosedHand from any device, wherever you are. The computer or server running ClosedHand needs to stay awake and online.</p>
+            <p id="url-password-note">Set your password above to choose a personal URL.</p>
+            <div id="url-controls" hidden>
+              <form id="url-form">
+                <div class="field">
+                  <label for="url-name">Choose your personal URL</label>
+                  <input id="url-name" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" required pattern="[a-zA-Z][a-zA-Z0-9\-]{1,30}[a-zA-Z0-9]" aria-describedby="url-preview url-name-help">
+                  <p id="url-preview" style="overflow-wrap:anywhere">https://your-name.closedhand.ai</p>
+                  <p id="url-name-help">Use 3 to 32 letters, numbers or hyphens, starting with a letter and ending with a letter or number.</p>
+                </div>
+                <p>Confirm ownership with your Google account. This is separate from connecting your mail and calendar and does not need a Google project.</p>
+                <button class="save-btn" id="url-start" type="submit">Set up personal URL</button>
+              </form>
+              <p id="url-status" role="status" aria-live="polite"></p>
+              <p id="url-confirm-wrap" hidden><a id="url-confirm" target="_blank" rel="noopener">Confirm your personal URL</a></p>
+              <div id="url-saved" hidden>
+                <div class="field"><label for="url-value">Your personal URL</label><input id="url-value" readonly></div>
+                <button class="save-btn" id="url-copy" type="button">Copy personal URL</button>
+              </div>
+              <p><button class="save-btn" id="url-continue" type="button">Continue without a personal URL</button></p>
+              <p>You can manage your personal URL later in <a href="/dashboard#dashboard-link">Settings → Personal URL</a>.</p>
+            </div>
+          </section>
         </div>
       </article>
     </li>
@@ -663,7 +698,7 @@
         <p class="ch-welcome-status" id="done-status" role="status"></p>
         <div class="ch-welcome-actions">
           <a class="ch-welcome-primary" href="/">Open ClosedHand</a>
-          <a class="ch-welcome-secondary" href="/dashboard#dashboard-link">Set up a personal address</a>
+          <a class="ch-welcome-secondary" href="/dashboard#dashboard-link">Manage your personal URL</a>
           <button class="ch-welcome-secondary" id="done-close" type="button">Back to setup</button>
         </div>
       </div>
@@ -765,18 +800,17 @@
   }
 
   // --- Model provider form -------------------------------------------------
-  // Key-first: the key itself says whose it is. Pasting one probes the
-  // candidates (the same models call that verifies a key), shows what was
-  // detected plus what that key covers, and the save runs on the detection.
-  // Manual mode exists for Ollama (no key), custom endpoints (undetectable),
-  // and the escape hatch when detection gets it wrong.
   window.ClosedHandModels.mount(document.getElementById("model-configuration"));
+
+  var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("setup-personal-url"), function () {
+    if (lastState) render(lastState);
+  });
 
   // --- Password form -------------------------------------------------------
   $("#password-form").addEventListener("submit", function (ev) {
     ev.preventDefault();
     postJSON("/api/setup/password", "POST", { password: $("#pw-input").value }, $("#pw-msg"), null,
-      function () { return "Password set. You're logged in on this browser."; });
+      function () { $("#pw-input").value = ""; return "Password set. You're logged in on this browser."; });
   });
 
   // --- Telegram form -------------------------------------------------------
@@ -800,10 +834,21 @@
   // --- Render --------------------------------------------------------------
   function render(state) {
     lastState = state;
+    var passwordDone = state.steps.some(function (s) { return s.key === "admin_password" && s.done; });
+    personalUrl.update(state.installId, passwordDone);
+    $("#password-form").hidden = passwordDone;
+    $("#password-saved").hidden = !passwordDone;
+    $("#step-admin_password .skip").hidden = passwordDone;
     var doneCount = 0;
     var next = null;
 
-    state.steps.forEach(function (s) {
+    state.steps.forEach(function (serverStep) {
+      var s = Object.assign({}, serverStep);
+      if (s.key === "admin_password") {
+        s.label = "Password and personal URL";
+        s.done = s.done && personalUrl.settled();
+        s.required = !passwordDone;
+      }
       var li = $("#step-" + s.key);
       if (!li) return;
       var chip = $(".state-chip", li);
@@ -838,7 +883,7 @@
         chip.style.cursor = "";
         chip.title = "";
         chip.onclick = null;
-        chip.textContent = s.required ? "Required" : "Recommended";
+        chip.textContent = s.key === "admin_password" && passwordDone ? "Personal URL optional" : s.required ? "Required" : "Recommended";
       }
 
       if (!next && !s.done && !skips[s.key]) next = s;
