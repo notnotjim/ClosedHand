@@ -31,16 +31,16 @@
       $('url-form').hidden = !!saved;
       $('url-saved').hidden = !saved;
       $('url-value').value = saved || '';
-      $('url-confirm-wrap').hidden = !confirm || !!saved;
-      if (confirm) $('url-confirm').href = confirm;
-      else $('url-confirm').removeAttribute('href');
+      if (!$('url-name').value && /^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(state.addressName || '')) {
+        $('url-name').value = state.addressName;
+        $('url-preview').textContent = 'https://' + state.addressName + '.closedhand.ai';
+      }
       $('url-start').disabled = busy || !password;
-      $('url-start').textContent = busy ? 'Preparing confirmation…' : confirm ? 'Refresh confirmation link' : 'Set up personal URL';
-      $('url-start').classList.toggle('secondary', !!confirm);
+      $('url-start').textContent = busy ? 'Opening Google…' : 'Confirm with Google';
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (saved
         ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')
-        : confirm ? 'Choose Confirm with Google below. It opens a sign-in page in a new tab, then you can return here. Nothing is sent by email.'
+        : confirm ? ''
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
       $('url-continue').textContent = saved ? 'Continue setup' : state.enabled ? 'Continue setup while this finishes' : 'Continue without a personal URL';
     }
@@ -75,16 +75,23 @@
         state.error = 'Use 3 to 32 letters, numbers or hyphens, starting with a letter and ending with a letter or number.';
         display(); return;
       }
+      // Open during the click, before awaiting the fresh ticket, so browsers
+      // do not mistake the confirmation tab for an unsolicited popup.
+      var confirmationTab = window.open('about:blank', '_blank');
+      if (confirmationTab) confirmationTab.opener = null;
       busy = true; actionError = null; var run = ++generation; display();
-      $('url-status').textContent = 'Preparing your confirmation link…';
       try {
         var result = await request('POST', { enabled: true, mode: 'managed', addressName: name || undefined });
-        if (run !== generation) return;
+        if (run !== generation) { if (confirmationTab) confirmationTab.close(); return; }
         state = result;
-      } catch (e) { if (run === generation) actionError = e.message; }
-      finally { if (run === generation) { busy = false; lastCheck = 0; display();
-        if (pairingUrl(state.pairingUrl) && !actionError) $('url-confirm').focus();
-      } }
+        var destination = pairingUrl(state.pairingUrl);
+        if (!destination) throw new Error('Could not open Google confirmation. Please try again.');
+        if (confirmationTab && !confirmationTab.closed) confirmationTab.location.replace(destination);
+        else window.location.assign(destination);
+      } catch (e) {
+        if (confirmationTab) confirmationTab.close();
+        if (run === generation) actionError = e.message;
+      } finally { if (run === generation) { busy = false; lastCheck = 0; display(); } }
     });
     $('url-continue').addEventListener('click', function () {
       if (!password) return;

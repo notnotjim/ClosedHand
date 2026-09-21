@@ -797,7 +797,7 @@ app.get("/api/phone", async (req, res) => {
   // Keep the reserved public address visible while its connection is paused.
   const saved = await getRuntimeConf("PHONE_PERMANENT_URL");
   const savedUrl = require("./phone-registration").validAddress(saved) ? saved : null;
-  res.set("Cache-Control", "no-store").json({ ...phoneAccess.status(), savedUrl });
+  res.set("Cache-Control", "no-store").json({ ...phoneAccess.status(), savedUrl, addressName: await getRuntimeConf("PHONE_ADDRESS_NAME") || null });
 });
 app.post("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;

@@ -213,8 +213,6 @@
     #setup-personal-url .field label { color: var(--text-primary); }
     #setup-personal-url .save-btn { min-height: 44px; white-space: normal; }
     #url-continue { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
-    #setup-personal-url a.save-btn { display: inline-flex; align-items: center; color: #100E0D; text-decoration: none; }
-    #setup-personal-url .secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
     #url-password-note { color: var(--text-primary); font-weight: 500; }
     #url-preview { color: var(--text-primary); }
     .field { margin-bottom: 12px; }
@@ -460,11 +458,10 @@
                   <p id="url-preview" style="overflow-wrap:anywhere">https://your-name.closedhand.ai</p>
                   <p id="url-name-help">Use 3 to 32 letters, numbers or hyphens, starting with a letter and ending with a letter or number.</p>
                 </div>
-                <p>Confirm ownership with your Google account. This is separate from connecting your mail and calendar and does not need a Google project.</p>
-                <button class="save-btn" id="url-start" type="submit">Set up personal URL</button>
+                <p>Your Google account confirms ownership.</p>
+                <button class="save-btn" id="url-start" type="submit">Confirm with Google</button>
               </form>
               <p id="url-status" role="status" aria-live="polite"></p>
-              <p id="url-confirm-wrap" hidden><a id="url-confirm" class="save-btn" target="_blank" rel="noopener">Confirm with Google</a></p>
               <div id="url-saved" hidden>
                 <div class="field"><label for="url-value">Your personal URL</label><input id="url-value" readonly></div>
                 <button class="save-btn" id="url-copy" type="button">Copy personal URL</button>
