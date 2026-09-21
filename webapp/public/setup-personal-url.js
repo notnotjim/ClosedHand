@@ -3,7 +3,7 @@
   'use strict';
   function mount(container, changed) {
     var $ = function (id) { return container.querySelector('#' + id); };
-    var key = null, password = false, settled = false, state = {}, busy = false;
+    var key = null, password = false, settled = false, state = {}, busy = false, checking = false;
     var lastCheck = 0, generation = 0, actionError = null;
     function remember() {
       settled = true;
@@ -35,15 +35,17 @@
       if (confirm) $('url-confirm').href = confirm;
       else $('url-confirm').removeAttribute('href');
       $('url-start').disabled = busy || !password;
-      $('url-start').textContent = confirm ? 'Get a new confirmation link' : 'Set up personal URL';
+      $('url-start').textContent = busy ? 'Preparing confirmation…' : confirm ? 'Refresh confirmation link' : 'Set up personal URL';
+      $('url-start').classList.toggle('secondary', !!confirm);
+      $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (saved
         ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')
-        : confirm ? 'Open the confirmation link and sign in with Google. Then return here. If you close that page, you can reopen it below.'
+        : confirm ? 'Choose Confirm with Google below. It opens a sign-in page in a new tab, then you can return here. Nothing is sent by email.'
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
       $('url-continue').textContent = saved ? 'Continue setup' : state.enabled ? 'Continue setup while this finishes' : 'Continue without a personal URL';
     }
     async function request(method, body) {
-      var response = await fetch('/api/phone', { method: method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) });
+      var response = await fetch('/api/phone', { method: method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(20000) });
       if (!response.ok) {
         var failure = await response.json().catch(function () { return {}; });
         throw new Error(failure.error || 'Could not check your personal URL. Try again, or continue setup without one.');
@@ -51,15 +53,15 @@
       return response.json();
     }
     async function check() {
-      if (!password || busy || Date.now() - lastCheck < 4000) return;
-      busy = true; lastCheck = Date.now();
+      if (!password || busy || checking || Date.now() - lastCheck < 4000) return;
+      checking = true; lastCheck = Date.now();
       var run = generation;
       try {
         var result = await request('GET');
         if (run !== generation) return;
         state = result;
       } catch (e) { if (run === generation) state.error = e.message; }
-      finally { if (run === generation) { busy = false; display(); } }
+      finally { checking = false; if (run === generation) display(); }
     }
     $('url-name').addEventListener('input', function () {
       actionError = null;
@@ -69,18 +71,20 @@
       event.preventDefault();
       if (!password || busy) return;
       var name = $('url-name').value.trim().toLowerCase();
-      if (!/^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(name)) {
+      if (!(pairingUrl(state.pairingUrl) && !name) && !/^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(name)) {
         state.error = 'Use 3 to 32 letters, numbers or hyphens, starting with a letter and ending with a letter or number.';
         display(); return;
       }
-      busy = true; actionError = null; var run = generation; display();
+      busy = true; actionError = null; var run = ++generation; display();
       $('url-status').textContent = 'Preparing your confirmation link…';
       try {
-        var result = await request('POST', { enabled: true, mode: 'managed', addressName: name });
+        var result = await request('POST', { enabled: true, mode: 'managed', addressName: name || undefined });
         if (run !== generation) return;
         state = result;
       } catch (e) { if (run === generation) actionError = e.message; }
-      finally { if (run === generation) { busy = false; lastCheck = 0; display(); } }
+      finally { if (run === generation) { busy = false; lastCheck = 0; display();
+        if (pairingUrl(state.pairingUrl) && !actionError) $('url-confirm').focus();
+      } }
     });
     $('url-continue').addEventListener('click', function () {
       if (!password) return;

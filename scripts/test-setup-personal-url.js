@@ -8,10 +8,10 @@ function fixture(respond = () => ({ state: 'off' })) {
   const nodes = new Map(), storage = new Map(), calls = [], copied = [];
   let now = 10000, changes = 0;
   function node(selector) {
-    if (!nodes.has(selector)) nodes.set(selector, { value: '', hidden: false, handlers: {}, addEventListener(name, fn) { this.handlers[name] = fn; }, removeAttribute(name) { delete this[name]; }, focus() {}, select() {} });
+    if (!nodes.has(selector)) nodes.set(selector, { value: '', hidden: false, handlers: {}, classList: { toggle() {} }, addEventListener(name, fn) { this.handlers[name] = fn; }, removeAttribute(name) { delete this[name]; }, focus() {}, select() {} });
     return nodes.get(selector);
   }
-  const context = { window: {}, URL, Date: { now: () => now },
+  const context = { window: {}, URL, AbortSignal, Date: { now: () => now },
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
     navigator: { clipboard: { writeText: async text => copied.push(text) } }, document: { execCommand: () => true },
     fetch: async (_, options) => { calls.push(options); const result = await respond(options); return { ok: !result.error, json: async () => result }; }
@@ -79,4 +79,23 @@ test('enrollment errors remain readable across background status checks', async 
   await f.update(); f.node('url-name').value = 'example'; await f.event('url-form', 'submit');
   await f.update(); assert.match(f.node('url-status').textContent, /already taken/);
   f.event('url-continue', 'click'); assert.equal(f.api.settled(), true);
+});
+test('background polling cannot silently swallow an enrollment click or overwrite its result', async () => {
+  let finishPoll;
+  const f = fixture(o => o.method === 'GET' ? new Promise(resolve => { finishPoll = resolve; }) :
+    { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#new-ticket' });
+  await f.update(); f.node('url-name').value = 'example'; await f.event('url-form', 'submit');
+  assert.equal(f.calls.filter(c => c.method === 'POST').length, 1);
+  finishPoll({ state: 'off' }); await tick();
+  assert.equal(f.node('url-confirm-wrap').hidden, false);
+  assert.match(f.node('url-status').textContent, /Nothing is sent by email/);
+  assert.equal(f.node('url-start').disabled, false);
+});
+test('a pending confirmation can be refreshed after reload without retyping the URL name', async () => {
+  const f = fixture(() => ({ state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#ticket' }));
+  await f.update(); assert.equal(f.node('url-name').value, '');
+  assert.equal(f.node('url-start').formNoValidate, true);
+  await f.event('url-form', 'submit');
+  assert.deepEqual(JSON.parse(f.calls.at(-1).body), { enabled: true, mode: 'managed' });
+  assert.equal(f.node('url-confirm-wrap').hidden, false);
 });

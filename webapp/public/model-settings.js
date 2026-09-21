@@ -20,8 +20,13 @@
       '</div><div data-region="selection" class="model-fields" hidden>' +
       '<label>Chat model<select data-picker="model"></select></label><label data-manual="model" hidden>Chat model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
       '<details data-region="extras"><summary>Support and image models</summary><div class="model-fields">' +
-      '<label>Support model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Support model ID<input data-field="backgroundModel" spellcheck="false"></label>' +
-      '<p class="model-hint">The support model does routine work, like naming conversations and writing summaries, so it can be a smaller model from the same provider.</p>' +
+      '<p class="model-hint">The support model does routine work, like naming conversations and writing summaries.</p>' +
+      '<label>Support model<select data-field="backgroundMode"><option value="same">Use the chat model</option><option value="separate">Choose another support model</option></select></label>' +
+      '<div data-region="background" class="model-fields" hidden><label>Support provider<select data-field="backgroundProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
+      '<div data-region="background-connection" class="model-fields" hidden><label data-region="background-address" hidden>Service URL<input type="url" data-field="backgroundBaseUrl" spellcheck="false"></label>' +
+      '<label data-region="background-key">Support provider API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
+      '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
+      '<label>Support model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Support model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
       '<label>Images<select data-field="visionMode"><option value="same">Use the chat model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
       '<div data-region="vision" class="model-fields" hidden><label>Image provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Service URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
@@ -29,17 +34,17 @@
       '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
       '<label>Image model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Image model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</div></details>' +
-      '</div>' +
+      '<p class="model-hint">You can change these models later in Settings.</p></div>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl><p class="model-hint" data-region="memory" hidden></p>' +
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
       '<div class="model-result" role="status" aria-live="polite" tabindex="-1"></div><button type="button" data-action="reload" hidden>Retry loading settings</button>' +
       '<details data-region="default" hidden><summary>Return to the hosted models</summary><div class="model-fields">' +
       '<p>This removes your own model connections from ClosedHand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
       '<button type="button" data-action="default">Use the hosted models</button></div></details></div></details>';
-    var saved = null, ticket = null, models = [], imageModels = [], busy = false, allowDefault = false;
-    var loads = { primary: 0, vision: 0 }, runtime = "", initialized = false;
+    var saved = null, ticket = null, models = [], imageModels = [], supportModels = [], busy = false, allowDefault = false;
+    var loads = { primary: 0, vision: 0, background: 0 }, runtime = "", initialized = false;
     var check = null, checkTimer = null, checks = 0;
-    var loadTimers = { primary: null, vision: null }, connectionValues = { primary: null, vision: null };
+    var loadTimers = { primary: null, vision: null, background: null }, connectionValues = { primary: null, vision: null, background: null };
     var field = function (key) { return root.querySelector('[data-field="' + key + '"]'); };
     var region = function (key) { return root.querySelector('[data-region="' + key + '"]'); };
     var result = root.querySelector(".model-result");
@@ -94,7 +99,7 @@
       var current = value(key);
       picker.replaceChildren();
       function add(id, label) { var option = document.createElement("option"); option.value = id; option.textContent = label; picker.append(option); }
-      add("", key === "backgroundModel" ? "Use the chat model" : "Choose a model");
+      add("", "Choose a model");
       available.forEach(function (model) {
         var name = modelName(model, provider);
         add(model.id, name);
@@ -116,7 +121,7 @@
     }
     function refreshPickers() {
       refreshPicker("model", models, value("provider"));
-      refreshPicker("backgroundModel", models, value("provider"));
+      refreshPicker("backgroundModel", value("backgroundProvider") ? supportModels : models, value("backgroundProvider") || value("provider"));
       var images = value("visionProvider") ? imageModels : models.filter(function (model) { return model.capabilities?.vision !== false; });
       refreshPicker("visionModel", images, value("visionProvider") || value("provider"));
     }
@@ -142,6 +147,10 @@
       region("vision-connection").hidden = !value("visionProvider");
       region("vision-address").hidden = !["custom", "ollama"].includes(value("visionProvider"));
       region("vision-key").hidden = value("visionProvider") === "ollama";
+      region("background").hidden = value("backgroundMode") !== "separate";
+      region("background-connection").hidden = !value("backgroundProvider");
+      region("background-address").hidden = !["custom", "ollama"].includes(value("backgroundProvider"));
+      region("background-key").hidden = value("backgroundProvider") === "ollama";
     }
     function savedKey(kind, provider, baseUrl, apiKey) {
       var prior = saved?.connections?.[kind];
@@ -150,7 +159,9 @@
     function input() {
       return { primary: { provider: value("provider"), baseUrl: value("baseUrl"), apiKey: value("apiKey"),
         useSavedKey: savedKey("primary", value("provider"), value("baseUrl"), value("apiKey")) },
-        model: value("model"), backgroundModel: value("backgroundModel"), visionMode: value("visionMode"),
+        model: value("model"), backgroundMode: value("backgroundMode"), backgroundModel: value("backgroundModel"), visionMode: value("visionMode"),
+        background: { provider: value("backgroundProvider"), baseUrl: value("backgroundBaseUrl"), apiKey: value("backgroundKey"),
+          useSavedKey: savedKey("background", value("backgroundProvider"), value("backgroundBaseUrl"), value("backgroundKey")) },
         vision: { provider: value("visionProvider"), baseUrl: value("visionBaseUrl"), apiKey: value("visionKey"),
           useSavedKey: savedKey("vision", value("visionProvider"), value("visionBaseUrl"), value("visionKey")) },
         visionModel: value("visionModel") };
@@ -186,13 +197,10 @@
       }
     }
     function ready(kind) {
-      var vision = kind === "vision";
-      var provider = vision ? value("visionProvider") : value("provider");
-      var key = vision ? value("visionKey") : value("apiKey");
-      var base = vision ? value("visionBaseUrl") : value("baseUrl");
+      var conn = input()[kind], provider = conn.provider, key = conn.apiKey, base = conn.baseUrl;
       var prior = saved?.connections?.[kind];
       if (!provider) return false;
-      if (vision && value("visionMode") !== "separate") return false;
+      if (kind !== "primary" && value(kind + "Mode") !== "separate") return false;
       if (["ollama", "custom"].includes(provider)) {
         try { var url = new URL(base); return ["http:", "https:"].includes(url.protocol) && !!url.hostname; }
         catch (_) { return false; }
@@ -201,23 +209,24 @@
     }
     async function loadModels(kind, quiet) {
       clearTimeout(loadTimers[kind]);
-      var token = ++loads[kind], vision = kind === "vision";
-      var retry = root.querySelector('[data-action="' + (vision ? "load-vision" : "load") + '"]');
+      var token = ++loads[kind], vision = kind === "vision", support = kind === "background";
+      var retry = root.querySelector('[data-action="' + (kind === "primary" ? "load" : "load-" + kind) + '"]');
       retry.hidden = true;
       if (!ready(kind)) { if (!quiet) show("Choose a provider and complete its connection details first.", true); return; }
-      if (!quiet) show(vision ? "Loading image models..." : "Loading available models...");
+      if (!quiet) show(vision ? "Loading image models..." : support ? "Loading support models..." : "Loading available models...");
       try {
         var body = input(); body.connection = kind;
         var data = await call("/models", body);
         if (token !== loads[kind]) return;
         if (vision) imageModels = data.models.filter(function (model) { return model.capabilities.vision !== false; });
+        else if (support) supportModels = data.models;
         else models = data.models;
-        retry.hidden = !!(vision ? imageModels : models).length;
+        retry.hidden = !!(vision ? imageModels : support ? supportModels : models).length;
         refreshPickers();
         region("selection").hidden = false;
-        if (!vision) renderCheck();
+        if (kind === "primary") renderCheck();
         if (!quiet) {
-          show((vision ? imageModels : models).length ? (vision ? "Choose an image model from the list." : "Choose a chat model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
+          show((vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a chat model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
             : "The service returned no models. Check that a model is available, or enter its model ID below.");
           scheduleCheck();
         }
@@ -230,6 +239,10 @@
     function chosen(key) { var v = value(key); return v && v !== "__manual__" ? v : ""; }
     function complete() {
       if (!value("provider") || !ready("primary") || !chosen("model")) return false;
+      if (value("backgroundMode") === "separate") {
+        if (!chosen("backgroundModel")) return false;
+        if (value("backgroundProvider") && !ready("background")) return false;
+      }
       if (value("visionMode") === "separate") {
         if (!chosen("visionModel")) return false;
         if (value("visionProvider") && !ready("vision")) return false;
@@ -303,8 +316,10 @@
       row("Thinking effort", cap.reasoning ? "ClosedHand sets it per task" : "Fixed by the model", cap.reasoning ? "ok" : "");
       row("Context limit", cap.contextWindow ? cap.contextWindow.toLocaleString() + " tokens" : "Not published by the provider");
       var supportId = support ? support.model : chosen("backgroundModel");
-      var sameSupport = !supportId || supportId === (chat ? chat.model : chosen("model"));
-      row("Support model", sameSupport ? "Same as the chat model" : modelName({ id: supportId }, chatProvider),
+      var supportProvider = cfg && support ? cfg.connections[support.connection].provider : value("backgroundProvider") || chatProvider;
+      var sameConnection = support ? support.connection === chat.connection : !value("backgroundProvider");
+      var sameSupport = support ? sameConnection && supportId === chat.model : value("backgroundMode") !== "separate";
+      row("Support model", sameSupport ? "Same as the chat model" : !supportId ? "Choose a support model" : modelName({ id: supportId }, supportProvider) + " via " + (providers[supportProvider] || supportProvider),
         sameSupport ? "" : settled ? "ok" : kind === "checking" ? "wait" : "");
       if (kind === "passed" && check.memory) { memory.textContent = check.memory; memory.hidden = false; }
       save.hidden = kind !== "passed";
@@ -326,20 +341,23 @@
     }
     function connectionEdited(kind) {
       clearTimeout(loadTimers[kind]); connectionValues[kind] = null;
-      root.querySelector('[data-action="' + (kind === "vision" ? "load-vision" : "load") + '"]').hidden = true;
+      root.querySelector('[data-action="' + (kind === "primary" ? "load" : "load-" + kind) + '"]').hidden = true;
       loads[kind]++; checks++; clearTimeout(checkTimer);
       ticket = null; check = null; renderCheck(); show("");
       if (kind === "primary") {
-        models = []; field("model").value = ""; field("backgroundModel").value = "";
+        models = []; field("model").value = "";
+        if (!value("backgroundProvider")) field("backgroundModel").value = "";
         if (!value("visionProvider")) field("visionModel").value = "";
         region("selection").hidden = true;
-      } else { imageModels = []; field("visionModel").value = ""; }
+      } else if (kind === "background") { supportModels = []; field("backgroundModel").value = ""; }
+      else { imageModels = []; field("visionModel").value = ""; }
 
       refreshPickers();
     }
     function connectionField(target) {
       if ([field("apiKey"), field("baseUrl")].includes(target)) return "primary";
       if ([field("visionKey"), field("visionBaseUrl")].includes(target)) return "vision";
+      if ([field("backgroundKey"), field("backgroundBaseUrl")].includes(target)) return "background";
       return null;
     }
     root.addEventListener("input", function (ev) {
@@ -361,10 +379,11 @@
       }
       invalidate(); visibility(); scheduleCheck();
       if (ev.target === field("provider")) {
-        connectionEdited("primary"); connectionEdited("vision"); region("selection").hidden = true;
+        connectionEdited("primary"); connectionEdited("vision"); connectionEdited("background"); region("selection").hidden = true;
         models = []; field("apiKey").value = ""; field("apiKey").placeholder = "Paste the API key from this provider"; field("model").value = ""; field("backgroundModel").value = "";
         field("baseUrl").value = value("provider") === "ollama" ? (runtime === "desktop" ? "http://localhost:11434/v1" : runtime === "docker" ? "http://host.docker.internal:11434/v1" : "") : "";
         imageModels = []; field("visionModel").value = ""; field("visionProvider").value = ""; field("visionKey").value = ""; field("visionBaseUrl").value = ""; field("visionMode").value = "same"; refreshPickers();
+        supportModels = []; field("backgroundModel").value = ""; field("backgroundProvider").value = ""; field("backgroundKey").value = ""; field("backgroundBaseUrl").value = ""; field("backgroundMode").value = "same"; refreshPickers();
         visibility(); show("");
         connectionValues.primary = JSON.stringify(input().primary); scheduleLoad("primary");
       }
@@ -381,17 +400,33 @@
         root.querySelector('[data-action="load-vision"]').hidden = true;
         if (value("visionMode") === "separate") scheduleLoad("vision");
       }
+      if (ev.target === field("backgroundProvider")) {
+        field("backgroundKey").value = ""; field("backgroundModel").value = "";
+        field("backgroundBaseUrl").value = value("backgroundProvider") === "ollama" ? (runtime === "desktop" ? "http://localhost:11434/v1" : runtime === "docker" ? "http://host.docker.internal:11434/v1" : "") : "";
+        supportModels = []; refreshPickers();
+        connectionEdited("background"); visibility();
+        if (!value("backgroundProvider")) scheduleCheck();
+        connectionValues.background = JSON.stringify(input().background); scheduleLoad("background");
+      }
+      if (ev.target === field("backgroundMode")) {
+        clearTimeout(loadTimers.background); loads.background++;
+        root.querySelector('[data-action="load-background"]').hidden = true;
+        if (value("backgroundMode") === "separate") scheduleLoad("background");
+      }
     });
     root.querySelector('[data-action="load"]').onclick = function () { loadModels("primary"); };
     root.querySelector('[data-action="load-vision"]').onclick = function () { loadModels("vision"); };
+    root.querySelector('[data-action="load-background"]').onclick = function () { loadModels("background"); };
     root.querySelector('[data-action="recheck"]').onclick = function () { runCheck(); };
     root.querySelector('[data-action="save"]').onclick = function () { if (!ticket) return; perform(async function () {
       show("Saving models..."); await call("/save", { ticket: ticket });
-      field("apiKey").value = ""; field("visionKey").value = "";
+      field("apiKey").value = ""; field("visionKey").value = ""; field("backgroundKey").value = "";
+      field("backgroundKey").placeholder = "Saved key, leave blank to keep it";
       field("visionKey").placeholder = "Saved key, leave blank to keep it"; invalidate(); clearTimeout(checkTimer); checks++;
       var updated = await call(""); saved = updated.config; renderCurrent(updated);
       field("baseUrl").value = saved.connections.primary.baseUrl || "";
       field("visionBaseUrl").value = saved.connections.vision?.baseUrl || "";
+      field("backgroundBaseUrl").value = saved.connections.background?.baseUrl || "";
       field("apiKey").placeholder = saved.connections.primary.hasKey ? "Saved key, leave blank to keep it" : "Paste the API key from this provider";
       region("editor").querySelector("summary").hidden = false;
       check = { kind: "saved", config: saved }; renderCheck();
@@ -400,11 +435,12 @@
       if (onSaved) onSaved();
     }); };
     root.querySelector('[data-action="default"]').onclick = function () { perform(async function () {
-      clearTimeout(loadTimers.primary); clearTimeout(loadTimers.vision);
+      clearTimeout(loadTimers.primary); clearTimeout(loadTimers.vision); clearTimeout(loadTimers.background);
       await call("/default", {}); saved = null; invalidate(); renderCurrent(await call(""));
       root.querySelectorAll("input").forEach(function (el) { el.value = ""; });
       field("provider").value = ""; field("visionProvider").value = ""; field("visionMode").value = "same";
-      region("selection").hidden = true; loads.primary++; loads.vision++; models = []; imageModels = []; refreshPickers(); visibility();
+      field("backgroundProvider").value = ""; field("backgroundMode").value = "same";
+      region("selection").hidden = true; loads.primary++; loads.vision++; loads.background++; models = []; imageModels = []; supportModels = []; refreshPickers(); visibility();
       clearTimeout(checkTimer); checks++; check = null; renderCheck();
       region("default").hidden = true;
       show("ClosedHand's hosted models are active."); result.focus();
@@ -427,6 +463,16 @@
       region("selection").hidden = false;
       field("model").value = saved.roles.chat.model;
       field("backgroundModel").value = saved.roles.background?.model || "";
+      var background = saved.roles.background;
+      field("backgroundMode").value = !background ? "same" : background.connection === "primary" && background.model === saved.roles.chat.model ? "same" : "separate";
+      if (background) {
+        field("backgroundModel").value = background.model;
+        if (background.connection === "background") {
+          field("backgroundProvider").value = saved.connections.background.provider;
+          field("backgroundBaseUrl").value = saved.connections.background.baseUrl;
+          field("backgroundKey").placeholder = "Saved key, leave blank to keep it";
+        }
+      }
       var vision = saved.roles.vision;
       field("visionMode").value = !vision ? (data.legacy ? "same" : "off") : vision.connection === "primary" && vision.model === saved.roles.chat.model ? "same" : "separate";
       if (vision) {
@@ -441,6 +487,7 @@
       if (data.legacy) show("The models shown above are active. Check and review your choices here before applying a change.");
       loadModels("primary", true);
       if (vision && vision.connection === "vision") loadModels("vision", true);
+      if (background && background.connection === "background") loadModels("background", true);
       }); } finally {
         root.querySelector('[data-action="reload"]').hidden = initialized;
         field("provider").disabled = !initialized;

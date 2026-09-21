@@ -60,11 +60,20 @@ async function prepare(input, settings) {
   const catalog = await wire.listModels(connections.primary).catch(() => []);
   const model = String(input.model || "").trim();
   const chat = await checkModel(connections.primary, model, "chat", catalog);
-  const backgroundModel = String(input.backgroundModel || model).trim();
-  const background = backgroundModel === model ? chat : await checkModel(connections.primary, backgroundModel, "support", catalog);
+  const supportMode = input.backgroundMode || (input.backgroundModel ? "separate" : "same");
+  if (!["same", "separate"].includes(supportMode)) throw new Error("Choose how ClosedHand should handle support work.");
+  let supportConnection = "primary", supportCatalog = catalog;
+  if (supportMode === "separate" && input.background?.provider) {
+    connections.background = resolveConnection(input.background, saved, "background");
+    supportConnection = "background";
+    supportCatalog = await wire.listModels(connections.background).catch(() => []);
+  }
+  const backgroundModel = supportMode === "same" ? model : String(input.backgroundModel || "").trim();
+  const background = supportConnection === "primary" && backgroundModel === model ? chat
+    : await checkModel(connections[supportConnection], backgroundModel, "support", supportCatalog);
   const roles = {
     chat: { connection: "primary", model, capabilities: chat },
-    background: { connection: "primary", model: backgroundModel, capabilities: background },
+    background: { connection: supportConnection, model: backgroundModel, capabilities: background },
     vision: null,
   };
   const mode = input.visionMode || "same";
@@ -130,7 +139,7 @@ function install(app, deps) {
   }));
   app.post("/api/model-config/models", route(async (req, res, id) => {
     const settings = await profile(id);
-    const connectionId = req.body.connection === "vision" ? "vision" : "primary";
+    const connectionId = ["vision", "background"].includes(req.body.connection) ? req.body.connection : "primary";
     const conn = resolveConnection(req.body[connectionId] || {}, settings.model_config || legacyConfig(settings), connectionId);
     const models = await wire.listModels(conn);
     res.json({ models: models.map(m => ({ id: m.id,

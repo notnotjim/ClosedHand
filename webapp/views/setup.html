@@ -60,12 +60,7 @@
       display: inline-flex; align-items: center; gap: 8px;
       font-size: 12px; color: var(--text-tertiary); white-space: nowrap;
     }
-    .watch-chip .dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--done); box-shadow: 0 0 8px rgba(141,189,121,0.7);
-      animation: breathe 2.6s ease-in-out infinite;
-    }
-    .watch-chip.is-offline .dot { background: var(--warn); box-shadow: 0 0 8px rgba(208,166,82,0.8); animation: none; }
+    .watch-chip.is-offline { color: var(--warn); }
     @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
     /* A note that is waiting on something: a breathing dot in front of it,
        so a sentence that does not change is still visibly alive. */
@@ -218,6 +213,9 @@
     #setup-personal-url .field label { color: var(--text-primary); }
     #setup-personal-url .save-btn { min-height: 44px; white-space: normal; }
     #url-continue { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
+    #setup-personal-url a.save-btn { display: inline-flex; align-items: center; color: #100E0D; text-decoration: none; }
+    #setup-personal-url .secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
+    #url-password-note { color: var(--text-primary); font-weight: 500; }
     #url-preview { color: var(--text-primary); }
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 6px; }
@@ -366,7 +364,7 @@
   <header class="top">
     <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
     <span class="watch-chip" id="watch-chip" role="status" aria-live="polite">
-      <span class="dot"></span><span id="watch-text">Checking setup</span>
+      <span id="watch-text">Setting up ClosedHand</span>
     </span>
   </header>
 
@@ -423,7 +421,7 @@
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>Use a hosted provider or models you run yourself. You can change these choices later in Settings.</p>
+          <p>Use a hosted provider or models you run yourself.</p>
           <div id="model-configuration"></div>
         </div>
       </article>
@@ -450,11 +448,10 @@
             <button class="save-btn" type="submit">Set password</button>
             <p class="form-msg" id="pw-msg"></p>
           </form>
-          <button class="skip" type="button">Skip for now (only if nobody else can reach this computer)</button>
           <section id="setup-personal-url" aria-labelledby="personal-url-heading" style="margin-top:32px">
             <h3 id="personal-url-heading">Personal URL <span class="whisper">Optional</span></h3>
-            <p>Open ClosedHand from any device, wherever you are. The computer or server running ClosedHand needs to stay awake and online.</p>
             <p id="url-password-note">Set your password above to choose a personal URL.</p>
+            <p>Open ClosedHand from any device, wherever you are. The computer or server running ClosedHand needs to stay awake and online.</p>
             <div id="url-controls" hidden>
               <form id="url-form">
                 <div class="field">
@@ -467,7 +464,7 @@
                 <button class="save-btn" id="url-start" type="submit">Set up personal URL</button>
               </form>
               <p id="url-status" role="status" aria-live="polite"></p>
-              <p id="url-confirm-wrap" hidden><a id="url-confirm" target="_blank" rel="noopener">Confirm your personal URL</a></p>
+              <p id="url-confirm-wrap" hidden><a id="url-confirm" class="save-btn" target="_blank" rel="noopener">Confirm with Google</a></p>
               <div id="url-saved" hidden>
                 <div class="field"><label for="url-value">Your personal URL</label><input id="url-value" readonly></div>
                 <button class="save-btn" id="url-copy" type="button">Copy personal URL</button>
@@ -747,7 +744,7 @@
   // Only optional steps can hold a skip. The filter also heals stale
   // localStorage from a build where a styling-class collision let the manual
   // toggle write a bogus skip for the (required) model step.
-  var SKIPPABLE = { admin_password: 1, chat: 1 };
+  var SKIPPABLE = { chat: 1 };
   var skips = {};
   // Skips are per install, not per browser: the same localhost answered for
   // every install this machine has ever run, so a skip clicked in a previous
@@ -838,7 +835,6 @@
     personalUrl.update(state.installId, passwordDone);
     $("#password-form").hidden = passwordDone;
     $("#password-saved").hidden = !passwordDone;
-    $("#step-admin_password .skip").hidden = passwordDone;
     var doneCount = 0;
     var next = null;
 
@@ -966,10 +962,10 @@
       : "Mail and calendar are connected and ClosedHand is reading them. Connect a chat app below and it will introduce itself.";
     // This banner is where people leave the wizard, so it must not invite
     // them out through a door that is still unlocked. Until the password step
-    // is either done or deliberately skipped, the button points at it rather
+    // is done, the button points at it rather
     // than at the dashboard it protects.
     var pwStep = (state.steps || []).find(function (s) { return s.key === "admin_password"; });
-    var pwSettled = !!(pwStep && pwStep.done) || !!skips.admin_password;
+    var pwSettled = !!(pwStep && pwStep.done);
     var cta = $("#ready-cta"), ctaNote = $("#ready-cta-note");
     if (cta) {
       if (pwSettled) {
@@ -992,7 +988,7 @@
         };
         if (ctaNote) {
           ctaNote.style.display = "";
-          ctaNote.textContent = "The dashboard holds everything ClosedHand knows about you, and right now it opens to anyone who can reach this address. Set a password, or skip it in step three only if nobody else can reach this computer.";
+          ctaNote.textContent = "The dashboard holds everything ClosedHand knows about you, and right now it opens to anyone who can reach this address. Set your password in step three to continue.";
         }
       }
     }
@@ -1044,7 +1040,7 @@
         return res.json();
       })
       .then(function (state) {
-        setChip("Checking setup", false);
+        setChip("Setting up ClosedHand", false);
         loadSkipsFor(state.installId);
         if (_gKey === null) gLoad(state.installId);
         _celebKey = "ch-celebrated:" + (state.installId || "x");
@@ -1056,7 +1052,7 @@
         autoOpenChooser("wa");
       })
       .catch(function () {
-        setChip("can't reach the server, retrying", true);
+        setChip("Connection lost. Retrying…", true);
       });
   }
 
@@ -1078,7 +1074,7 @@
       if (!SKIPPABLE[key]) return;
       skips[key] = !skips[key];
       saveSkips();
-      btn.textContent = skips[key] ? "Changed my mind, show this step" : (key === "admin_password" ? "Skip for now (only if nobody else can reach this computer)" : "Skip for now");
+      btn.textContent = skips[key] ? "Changed my mind, show this step" : "Skip for now";
       if (skips[key]) li.classList.remove("is-open");
       poll();
     });

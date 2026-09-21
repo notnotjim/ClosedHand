@@ -319,3 +319,38 @@ test("an assistant turn with only provider state is sent with empty content, nev
   assert.equal(turn.content, "");
   assert.equal(turn.tool_calls, undefined);
 });
+
+test('support work uses its separately checked provider, including matching model IDs', async () => {
+  const calls = mockProvider();
+  const prepared = await config.prepare({ primary: { provider: 'custom', baseUrl: 'https://chat.example/v1', apiKey: 'chat-key' },
+    model: 'chat', backgroundMode: 'separate', backgroundModel: 'chat',
+    background: { provider: 'custom', baseUrl: 'https://support.example/v1', apiKey: 'support-key' }, visionMode: 'off' }, {});
+  assert.equal(prepared.roles.background.connection, 'background');
+  const supportCalls = calls.filter(c => c.url.includes('support.example'));
+  assert.equal(supportCalls.length, 2);
+  assert.ok(supportCalls.every(c => c.headers.Authorization === 'Bearer support-key'));
+  const settings = config.withConfig({}, prepared);
+  const role = policy.getRole(settings, 'background');
+  calls.length = 0;
+  await wire.request(role, { ...params, model: role.model });
+  assert.equal(calls[0].url, 'https://support.example/v1/chat/completions');
+  assert.equal(calls[0].headers.Authorization, 'Bearer support-key');
+  assert.ok(!JSON.stringify(policy.publicSettings(settings)).includes('support-key'));
+});
+test('support model catalogs reuse only the saved support key', async () => {
+  const calls = mockProvider(), routes = {};
+  const settings = { model_config: { connections: {
+    primary: policy.connection({ provider: 'custom', baseUrl: 'https://chat.example/v1', apiKey: 'chat-key' }),
+    background: policy.connection({ provider: 'custom', baseUrl: 'https://support.example/v1', apiKey: 'support-key' }),
+  }, roles: {} } };
+  config.install({ get() {}, post: (path, handler) => routes[path] = handler }, {
+    authorize: async () => 'u', supabase: { from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { settings } }) }) }) }) },
+  });
+  const res = { code: 200, status(n) { this.code = n; return this; }, json(data) { this.data = data; } };
+  const body = { connection: 'background', background: { provider: 'custom', baseUrl: 'https://support.example/v1', useSavedKey: true } };
+  await routes['/api/model-config/models']({ body }, res);
+  assert.equal(res.code, 200); assert.equal(calls[0].headers.Authorization, 'Bearer support-key');
+  body.background.baseUrl = 'https://other.example/v1';
+  await routes['/api/model-config/models']({ body }, res);
+  assert.equal(res.code, 400); assert.equal(calls.length, 1);
+});

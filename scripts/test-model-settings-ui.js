@@ -27,6 +27,7 @@ async function mount(respond = () => ({ config: null, runtime: 'docker' })) {
   root.addEventListener = (event, fn) => { listeners[event] = fn; };
   const field = name => element('[data-field="' + name + '"]');
   field('visionMode').value = 'same';
+  field('backgroundMode').value = 'same';
   const context = { window: {}, document: { createElement: () => {
     const node = element('created-' + elements.size);
     node.dataset = new Proxy({}, { set(target, key, value) { target[key] = value; if (key === 'modelId') elements.set('[data-model-id="' + value + '"]', node); return true; } });
@@ -172,4 +173,26 @@ test('separate image providers load automatically and lose stale models when the
   ui.pick('visionModel', 'chat'); ui.type('visionKey', 'replacement'); assert.equal(ui.field('visionModel').value, '');
   ui.choose('visionMode', 'off'); await ui.timers();
   assert.equal(ui.calls.filter(c => c.path === '/models' && c.body.connection === 'vision').length, 1);
+});
+
+test('separate support models load automatically and incomplete choices cannot be saved', async () => {
+  const ui = await mount(call => call.path === '/models' ? catalog : call.path === '/check' ? checked() : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'chat-key'); await ui.timers();
+  ui.pick('model', 'chat'); ui.choose('visionMode', 'off');
+  ui.choose('backgroundMode', 'separate'); ui.choose('backgroundProvider', 'deepseek');
+  await ui.timers(); assert.equal(ui.calls.filter(c => c.path === '/check').length, 0);
+  ui.type('backgroundKey', 'support-key'); await ui.timers();
+  const call = ui.calls.filter(c => c.path === '/models').at(-1);
+  assert.equal(call.body.connection, 'background'); assert.equal(call.body.background.apiKey, 'support-key');
+  ui.pick('backgroundModel', 'chat'); await ui.timers();
+  assert.equal(ui.calls.filter(c => c.path === '/check').at(-1).body.backgroundMode, 'separate');
+  ui.type('backgroundKey', 'replacement');
+  assert.equal(ui.action('save').hidden, true); assert.equal(ui.field('backgroundModel').value, '');
+});
+test('changing support back to chat cancels pending provider loading', async () => {
+  const ui = await mount(() => ({ config: null }));
+  ui.choose('backgroundMode', 'separate'); ui.choose('backgroundProvider', 'openai');
+  ui.type('backgroundKey', 'support-key'); ui.choose('backgroundMode', 'same'); await ui.timers();
+  assert.equal(ui.calls.filter(c => c.path === '/models').length, 0);
+  assert.equal(ui.region('background').hidden, true);
 });
