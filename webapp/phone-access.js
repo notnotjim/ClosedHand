@@ -73,14 +73,16 @@ async function start() {
       if (proc !== child || !wanted || !assigned || !registered || publishing) return;
       publishing = true;
       try {
+        if (permanent?.verify) await require('./phone-registration').confirm(permanent);
         await save({ PHONE_ACCESS_URL: assigned });
         if (proc !== child || !wanted) return;
-        url = assigned; state = "on";
+        url = assigned; state = "on"; lastError = null;
         console.log(`[Phone] dashboard reachable at ${url}`);
       } catch (e) {
         if (proc !== child) return;
-        state = "error"; lastError = "Could not save the phone address.";
-        child.kill();
+        publishing = false;
+        state = "starting"; lastError = "Waiting to verify this computer’s address.";
+        setTimeout(() => { if (proc === child && wanted) void publish(); }, 5000);
       }
     };
     for (const stream of [child.stdout, child.stderr]) {
@@ -122,15 +124,17 @@ async function start() {
     }
   }
 }
-async function enable(nextMode = "quick") {
+async function enable(nextMode = "quick", addressName) {
   await requirePassword();
   if (!["quick", "managed"].includes(nextMode)) throw new Error("Unknown phone access option.");
+  let requestedPairing = null;
+  if (nextMode === 'managed' && addressName) requestedPairing = await require('./phone-registration').begin(addressName);
   if (nextMode === "managed" && mode === "quick" && wanted) {
     // A person may be using the temporary address right now. Keep it alive
     // while they approve the lasting one on the provider's separate page.
     const registration = require("./phone-registration");
     if (!await registration.connection()) {
-      pairingUrl = await registration.begin(); state = "pairing"; lastError = null;
+      pairingUrl = requestedPairing || await registration.begin(); state = "pairing"; lastError = null;
       const run = ++upgradeGeneration;
       clearTimeout(upgradeTimer);
       const check = async () => {
@@ -147,7 +151,7 @@ async function enable(nextMode = "quick") {
   }
   if (nextMode !== mode && wanted) await disable();
   mode = nextMode;
-  pairingUrl = null;
+  pairingUrl = requestedPairing;
   await save({ PHONE_ACCESS: "1", PHONE_ACCESS_MODE: mode });
   wanted = true;
   await start();

@@ -2625,8 +2625,12 @@
               <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
             </div>
             <div id="phone-setup" hidden>
-              <p>Personal addresses currently need to be prepared by ClosedHand. Once yours is prepared, sign in with its assigned Google account to confirm it. ClosedHand and Cloudflare connect the address to this computer.</p>
-              <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Connect a prepared address</button>
+              <p>Choose an optional personal address, then sign in with Google to confirm that it belongs to you. This is separate from connecting Google services and your dashboard password.</p>
+              <label for="phone-address-name">Address name</label>
+              <input id="phone-address-name" class="settings-input" type="text" minlength="3" maxlength="32" pattern="[a-z][a-z0-9-]{1,30}[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="your-name" aria-describedby="phone-address-preview" oninput="previewDashboardAddress()">
+              <p id="phone-address-preview" aria-live="polite">https://your-name.closedhand.ai</p>
+              <p>ClosedHand and Cloudflare connect the address to this computer. Keep it awake and online to use the link.</p>
+              <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Continue with this address</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your dashboard link</a>
             </div>
             <details id="phone-options" hidden>
@@ -4668,7 +4672,7 @@
       var pair = document.getElementById('phone-setup-link');
       pair.hidden = !p.pairingUrl;
       if (p.pairingUrl) pair.href = p.pairingUrl;
-      document.getElementById('phone-start').textContent = p.pairingUrl ? 'Get a new confirmation link' : 'Connect a prepared address';
+      document.getElementById('phone-start').textContent = p.pairingUrl ? 'Get a new confirmation link' : 'Continue with this address';
       document.getElementById('phone-start').disabled = false;
       document.getElementById('phone-save').hidden = !permanent;
       document.getElementById('phone-copy-status').textContent = '';
@@ -4694,7 +4698,7 @@
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
           : 'Set up your personal dashboard address to open ClosedHand from any device, wherever you are.';
       } else if (p.state === 'pairing') {
-        desc.textContent = 'Confirm the prepared address with its assigned account. This does not change your dashboard password.';
+        desc.textContent = 'Open the confirmation link and sign in with Google to create your address. This does not change your dashboard password.';
         setup.hidden = false;
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
       } else if (p.error && !base) {
@@ -4707,10 +4711,18 @@
         desc.textContent = 'Open this link from any device, wherever you are, and sign in with your dashboard password. Keep the computer running ClosedHand awake and online.';
       }
     }
+    function previewDashboardAddress() {
+      var name = document.getElementById('phone-address-name').value.trim().toLowerCase();
+      document.getElementById('phone-address-preview').textContent = 'https://' + (name || 'your-name') + '.closedhand.ai';
+    }
     async function startDashboardLink() {
       var btn = document.getElementById('phone-start'); btn.disabled = true;
       try {
-        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true, mode: 'managed' }) });
+        var field = document.getElementById('phone-address-name');
+        var name = field.value.trim().toLowerCase();
+        if (!name && !_phone?.pairingUrl) throw new Error('Choose an address name first.');
+        if (name && !/^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(name)) throw new Error('Use 3 to 32 letters, numbers or hyphens. Start with a letter and end with a letter or number.');
+        var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true, mode: 'managed', addressName: name || undefined }) });
         var data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Could not connect your address. Try again.');
         renderPhone(data);

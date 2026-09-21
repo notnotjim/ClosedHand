@@ -22,6 +22,8 @@ to a Mac’s files and apps; this app includes that access.
   migrations on boot as on Docker;
 - the generated secrets install.sh would put in `.env`, kept in
   `config.env` beside the data (mode 600);
+- a bundled cloudflared connection runtime for the optional personal dashboard
+  address, without requiring a separate installation;
 - ports: 3000/3001 when free, the nearest free ones otherwise (a Docker
   ClosedHand on the same Mac keeps its own), remembered for next time;
 - logs in `~/Library/Application Support/ClosedHand/logs`;
@@ -54,6 +56,7 @@ under the hardened runtime), then the app with `ClosedHand.entitlements`.
 ClosedHand.app/Contents/
   MacOS/ClosedHand                 the Swift shell
   Resources/node/bin/node          Node runtime (+ npm and npx for MCP servers run by command)
+  Resources/bin/cloudflared        optional dashboard connection runtime
   Resources/pg/{bin,lib,share}     relocatable Postgres + pgvector
   Resources/app/                   the repo: index.js, lib/, webapp/, migrations/, skills/
 ```

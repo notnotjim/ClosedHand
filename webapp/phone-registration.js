@@ -23,18 +23,23 @@ async function credentials() {
   })().catch(error => { identityPromise = null; throw error; });
   return identityPromise;
 }
-async function call(path, method = 'GET') {
-  const response = await fetch(PROVIDER + '/api/phone-links/' + path, {
-    method, headers: { Authorization: 'Bearer ' + await credentials() },
+async function call(path, method = 'GET', body, enrollment = false) {
+  const response = await fetch(PROVIDER + (enrollment ? '/api/phone-enrollment/' : '/api/phone-links/') + path, {
+    method, headers: { Authorization: 'Bearer ' + await credentials(), 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
     redirect: 'error', signal: AbortSignal.timeout(15000),
   });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || 'Could not set up a lasting phone address. Please try again.');
-  return body;
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Could not set up a lasting phone address. Please try again.');
+  return result;
 }
-async function begin() {
-  const data = await call('register', 'POST');
+async function begin(name) {
+  name = name || await getConf('PHONE_ADDRESS_NAME');
+  const enrollment = !!name;
+  if (name && !validAddress('https://' + name + '.closedhand.ai')) throw new Error('Choose a valid address name.');
+  const data = await call('register', 'POST', enrollment ? { name, port: Number(process.env.PORT || 3000) } : undefined, enrollment);
   if (typeof data.ticket !== 'string') throw new Error('Could not start phone access.');
+  if (enrollment) await setConf({ PHONE_ADDRESS_NAME: name, PHONE_ENROLLMENT: '2' });
   return PROVIDER + '/phone-access/pair#' + encodeURIComponent(data.ticket);
 }
 function validAddress(value) {
@@ -50,10 +55,22 @@ async function connection() {
   const savedUrl = await getConf('PHONE_PERMANENT_URL');
   const savedToken = decryptString(await getConf('PHONE_TUNNEL_TOKEN'));
   if (validAddress(savedUrl) && savedToken) return { url: savedUrl, token: savedToken };
-  const data = await call('connection');
-  if (data.state !== 'active') return null;
+  const enrollment = String(await getConf('PHONE_ENROLLMENT')) === '2';
+  const data = await call('connection', 'GET', undefined, enrollment);
+  if (!['active','connecting'].includes(data.state)) return null;
   if (!validAddress(data.url) || typeof data.token !== 'string' || data.token.length < 30) throw new Error('The phone address could not be verified.');
-  await setConf({ PHONE_PERMANENT_URL: data.url, PHONE_TUNNEL_TOKEN: encrypted(data.token) });
-  return { url: data.url, token: data.token };
+  // A connecting credential may start the tunnel, but is not a verified link yet.
+  if (data.state === 'active') await setConf({ PHONE_PERMANENT_URL: data.url, PHONE_TUNNEL_TOKEN: encrypted(data.token) });
+  return { url: data.url, token: data.token, verify: data.state === 'connecting' };
 }
-module.exports = { begin, connection, validAddress };
+async function confirm(permanent) {
+  if (!permanent.verify) return;
+  await call('connected','POST',{},true);
+  await setConf({ PHONE_PERMANENT_URL: permanent.url, PHONE_TUNNEL_TOKEN: encrypted(permanent.token) });
+}
+async function challenge(nonce) {
+  if (typeof nonce !== 'string' || !/^[a-f0-9]{64}$/.test(nonce)) throw new Error('Invalid challenge');
+  const secret = (await credentials()).split('.').pop();
+  return crypto.createHmac('sha256',secret).update('closedhand-address:'+nonce).digest('hex');
+}
+module.exports = { begin, connection, validAddress, confirm, challenge };

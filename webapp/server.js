@@ -412,6 +412,11 @@ app.use((req, res, next) => {
 
 // Public health check (container healthcheck hits this; must bypass the gate below).
 app.get("/health", (req, res) => res.json({ status: "ok", service: "closedhand-webapp" }));
+app.get('/.well-known/closedhand-installation', async (req, res) => {
+  res.set('Cache-Control','no-store');
+  try { res.json({ proof: await require('./phone-registration').challenge(req.query.nonce) }); }
+  catch (_) { res.status(400).json({ error: 'Invalid installation challenge' }); }
+});
 
 // First-run setup state (booleans + service names only, no secrets) — drives the
 // onboarding wizard. Kept public so it's reachable before an admin password exists.
@@ -795,7 +800,7 @@ app.get("/api/phone", async (req, res) => {
 app.post("/api/phone", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   try {
-    if ((req.body || {}).enabled) await phoneAccess.enable(req.body.mode || "quick"); else await phoneAccess.disable();
+    if ((req.body || {}).enabled) await phoneAccess.enable(req.body.mode || "quick", req.body.addressName); else await phoneAccess.disable();
     res.json(phoneAccess.status());
   } catch (e) {
     res.status(500).json({ error: e.message });

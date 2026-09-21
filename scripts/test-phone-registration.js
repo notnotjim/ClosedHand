@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm'), fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 function registration(values, request) {
-  const context = { module: { exports: {} }, URL, AbortSignal, fetch: request, require: name => ({
+  const context = { module: { exports: {} }, URL, AbortSignal, process: { env: {PORT:'3000'} }, fetch: request, require: name => ({
     'node:crypto': crypto,
     './config': { getConf: async k => values[k], setConf: async patch => Object.assign(values, patch) },
     './crypto-tokens': { encryptString: x => 'enc:v1:' + x, decryptString: x => x?.replace(/^enc:v1:/, '') },
@@ -37,4 +37,22 @@ test('unexpected registration responses never persist tokens or an attacker addr
   const client = registration(values, async () => ({ ok: true, json: async () => ({ state: 'active', url: 'https://other.example', token: 'a'.repeat(40) }) }));
   await assert.rejects(client.connection(), /verified/);
   assert.equal(values.PHONE_TUNNEL_TOKEN, undefined);
+});
+test('new address stays unpublished until the exact installation confirms it', async () => {
+  const values={}, calls=[];
+  const client=registration(values,async(url,options)=>{
+    calls.push({url,options});
+    return {ok:true,json:async()=>url.endsWith('/register') ? {ticket:'fixture'} : url.endsWith('/connected') ? {state:'active'} : {state:'connecting',url:'https://fixture.closedhand.ai',token:'private-fixture-token-1234567890'}};
+  });
+  await client.begin('fixture');
+  assert.ok(calls[0].url.includes('/phone-enrollment/register'));
+  assert.deepEqual(JSON.parse(calls[0].options.body),{name:'fixture',port:3000});
+  const connecting=await client.connection();assert.equal(connecting.verify,true);
+  assert.equal(values.PHONE_PERMANENT_URL,undefined);assert.equal(values.PHONE_TUNNEL_TOKEN,undefined);
+  const nonce='b'.repeat(64),secret=values.PHONE_INSTALL_SECRET.replace('enc:v1:','');
+  assert.equal(await client.challenge(nonce),crypto.createHmac('sha256',secret).update('closedhand-address:'+nonce).digest('hex'));
+  await assert.rejects(client.challenge('invalid'));
+  await client.confirm(connecting);
+  assert.equal(values.PHONE_PERMANENT_URL,'https://fixture.closedhand.ai');
+  assert.match(values.PHONE_TUNNEL_TOKEN,/^enc:v1:/);
 });

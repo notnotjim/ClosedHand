@@ -17,7 +17,7 @@ CACHE="$HERE/.cache"
 ARCH="${ARCH:-$(uname -m)}"            # arm64 or x86_64
 NODE_ARCH="$([ "$ARCH" = "x86_64" ] && echo x64 || echo arm64)"
 NODE_VERSION="${NODE_VERSION:-v22.23.2}"
-VERSION="${VERSION:-2.0.2}"
+VERSION="${VERSION:-2.0.3}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
 DIST="$HERE/dist"
 APP="$DIST/ClosedHand.app"
@@ -54,6 +54,22 @@ if [ ! -x "$UV_DIR/uv" ]; then
 fi
 
 # --- app source with production dependencies ---------------------------------
+CLOUDFLARED_VERSION="2026.9.1"
+CLOUDFLARED_DIR="$CACHE/cloudflared-$CLOUDFLARED_VERSION-$ARCH"
+if [ ! -x "$CLOUDFLARED_DIR/cloudflared" ]; then
+  case "$ARCH" in
+    arm64) CF_ARCH=arm64; CF_SHA=c27ab8fd0aa489449e3d201eb02f957ef460a13b613662928b1b23394bf1bcfe ;;
+    x86_64) CF_ARCH=amd64; CF_SHA=ff0d3b51d5ff70eceef89d6b32145fee985018a2174596a5dbe405e2766e2ac4 ;;
+    *) echo "Unsupported connection runtime architecture"; exit 1 ;;
+  esac
+  say "Fetching the dashboard connection runtime"
+  curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/$CLOUDFLARED_VERSION/cloudflared-darwin-$CF_ARCH.tgz" -o "$CACHE/cloudflared.tgz"
+  printf '%s  %s\n' "$CF_SHA" "$CACHE/cloudflared.tgz" | shasum -a 256 -c -
+  mkdir -p "$CLOUDFLARED_DIR"
+  tar xzf "$CACHE/cloudflared.tgz" -C "$CLOUDFLARED_DIR"
+  chmod +x "$CLOUDFLARED_DIR/cloudflared"
+fi
+
 APP_SRC="$CACHE/app"
 if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
   say "Staging the app at $SHA"
@@ -87,7 +103,7 @@ fi
 
 # --- the shell ----------------------------------------------------------------
 say "Building the app"
-(cd "$HERE" && swift build -c release --arch "$ARCH" 2>&1 | grep -v "^\[" | grep -v "^$" || true)
+(cd "$HERE" && swift build -c release --arch "$ARCH")
 BIN="$HERE/.build/$ARCH-apple-macosx/release/ClosedHand"
 [ -x "$BIN" ] || BIN="$HERE/.build/release/ClosedHand"
 [ -x "$BIN" ] || { echo "swift build produced no executable"; exit 1; }
@@ -108,6 +124,7 @@ ln -sf ../lib/node_modules/npm/bin/npx-cli.js "$APP/Contents/Resources/node/bin/
 cp -R "$PG_DIR" "$APP/Contents/Resources/pg"
 rm -rf "$APP/Contents/Resources/pg/lib/postgresql/pgxs"   # build-time files, with test binaries the notary rejects
 mkdir -p "$APP/Contents/Resources/uv" && cp "$UV_DIR/uv" "$UV_DIR/uvx" "$APP/Contents/Resources/uv/"
+mkdir -p "$APP/Contents/Resources/bin" && cp "$CLOUDFLARED_DIR/cloudflared" "$APP/Contents/Resources/bin/"
 cp -R "$APP_SRC" "$APP/Contents/Resources/app"
 rm -rf "$APP/Contents/Resources/app/node_modules/mammoth/test" "$APP/Contents/Resources/app/webapp/node_modules/mammoth/test"
 

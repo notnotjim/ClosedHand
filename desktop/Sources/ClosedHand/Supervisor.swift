@@ -240,6 +240,7 @@ final class Supervisor: ObservableObject {
         env["PATH"] = nodeBin.deletingLastPathComponent().path + ":/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin"
         env["LANG"] = "en_US.UTF-8"
         env["CLOSEDHAND_DESKTOP"] = "1"
+        env["CLOUDFLARED_BIN"] = resources.appendingPathComponent("bin/cloudflared").path
         env["DB_DRIVER"] = "pg"
         env["DATABASE_URL"] = "postgres://postgres:\(config["POSTGRES_PASSWORD"]!)@127.0.0.1:\(pgPort)/closedhand"
         env["STORAGE_DIR"] = storageDir.path
