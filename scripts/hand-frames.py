@@ -37,26 +37,32 @@ def render(path, W, H):
     scale = h / H
     tw = int(round(w / scale))
     ox = (W - tw) // 2
+    # Shade at source resolution, then average coverage instead of snapping
+    # partially covered pixels to a full outline block. This preserves the
+    # silhouette and finger gaps at the installer's fixed 48-column size.
+    tone = Image.new("L", (w, h), round(3 / LEVELS * 255))
+    coverage = Image.new("L", (w, h), 0)
+    pixels = tone.load()
+    for y in range(h):
+        for x in range(w):
+            if stroke[y][x] or not outside[y][x]:
+                coverage.putpixel((x, y), 255)
+            if stroke[y][x]:
+                pixels[x, y] = round(8 / LEVELS * 255)
+            elif not outside[y][x]:
+                light = 0.5 * x / max(1, w - 1) + 0.5 * y / max(1, h - 1)
+                pixels[x, y] = round((22 - 7 * light) / LEVELS * 255)
+    # Box filtering gives area coverage without halos around the dark outline.
+    # Level 3 is a typical dark terminal background; lower greys would create
+    # a black fringe. Empty pixels still use the terminal's own background.
+    small = tone.resize((tw, H), Image.Resampling.BOX)
+    mask = coverage.resize((tw, H), Image.Resampling.BOX)
     out = [[0] * W for _ in range(H)]
-    for ty in range(H):
-        for tx in range(tw):
-            x0, x1 = int(tx * scale), max(int(tx * scale) + 1, int((tx + 1) * scale))
-            y0, y1 = int(ty * scale), max(int(ty * scale) + 1, int((ty + 1) * scale))
-            n = s = i = 0
-            for y in range(y0, min(y1, h)):
-                for x in range(x0, min(x1, w)):
-                    n += 1
-                    if stroke[y][x]: s += 1
-                    elif not outside[y][x]: i += 1
-            if not n: continue
-            sf, inf = s / n, i / n
-            if sf >= 0.30: v = 8                                     # outline
-            elif inf + sf >= 0.5:
-                # fill, lit from the top left
-                t = 0.5 * (tx / max(1, tw - 1)) + 0.5 * (ty / max(1, H - 1))
-                v = int(round(22 - 7 * t))
-            else: continue
-            out[ty][ox + tx] = v
+    for y in range(H):
+        for x in range(tw):
+            if mask.getpixel((x, y)) >= 4:
+                out[y][ox + x] = max(3, min(LEVELS, round(small.getpixel((x, y)) / 255 * LEVELS)))
+
     return out
 
 def encode(fr):
@@ -70,15 +76,15 @@ def encode(fr):
 
 if __name__ == "__main__":
     src = sys.argv[1]
-    sizes = [(32, 28), (64, 56)]
+    sizes = [(32, 28), (48, 42), (64, 56)]
     frames = [render(src, W, H) for W, H in sizes]
     if len(sys.argv) > 2 and sys.argv[2] == "export":
         for f in frames: print(encode(f))
         sys.exit(0)
     from PIL import ImageDraw
     gap = 16
-    px = [10, 5]
-    im = Image.new("RGB", (sum(W * p for (W, H), p in zip(sizes, px)) + gap * 3, 28 * 10 + gap * 2), (30, 30, 30))
+    px = [6, 4, 3]
+    im = Image.new("RGB", (sum(W * p for (W, H), p in zip(sizes, px)) + gap * 4, 28 * 6 + gap * 2), (30, 30, 30))
     d = ImageDraw.Draw(im)
     ox = gap
     for (W, H), p, f in zip(sizes, px, frames):

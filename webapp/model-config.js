@@ -116,7 +116,7 @@ function install(app, deps) {
   app.get("/api/model-config", route(async (req, res, id) => {
     const settings = await profile(id);
     const download = (deps.local ? settings.self_host_config?.LOCAL_MODELS_STATUS : null)?.embedder;
-    res.set("Cache-Control", "no-store").json({ config: policy.publicConfig(settings.model_config || legacyConfig(settings)), legacy: !settings.model_config, allowDefault: !!deps.allowDefault,
+    res.set("Cache-Control", "no-store").json({ config: policy.publicConfig(settings.model_config || legacyConfig(settings)), legacy: !settings.model_config, allowDefault: !!deps.allowDefault, runtime: deps.local ? (process.env.CLOSEDHAND_DESKTOP ? "desktop" : "docker") : "hosted",
       activeModels: require("./model-summary").modelSummary(settings, deps.readRuntime, !!deps.local),
       localModels: download ? { embedder: { state: download.state, pct: download.pct } } : null });
   }));
