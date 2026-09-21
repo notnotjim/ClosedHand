@@ -30,7 +30,7 @@
     try { const r = await fetch('/api/keep', { cache: 'no-store' }); if (!r.ok) throw new Error('Could not load your dashboard address. Refresh this page to try again.'); render(await r.json()); }
     catch (e) { $('loading').hidden = true; message(e.message, true); }
   }
-  $('copy').onclick = async () => { try { await navigator.clipboard.writeText($('address').href); message('Dashboard link copied.'); } catch (_) { message('Select and copy the dashboard address above.'); } };
+  $('copy').onclick = async () => { try { await navigator.clipboard.writeText($('address').href); message('Personal URL copied.'); } catch (_) { message('Select and copy the dashboard address above.'); } };
   $('send').onclick = async () => {
     $('send').disabled = true;
     try { const r = await fetch('/api/phone/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); const d = await r.json(); if (!r.ok) throw new Error(d.error); message('Sending the link to your connected chat…');
