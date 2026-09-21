@@ -66,12 +66,16 @@ for (const [runtime, url] of [['docker', 'http://host.docker.internal:11434/v1']
     assert.equal(ui.field('baseUrl').value, url); assert.equal(ui.region('key').hidden, true);
   });
 }
-test('entering a key waits for Load models, including input blur', async () => {
+test('entering a key automatically loads models once, without a duplicate on blur', async () => {
   const ui = await mount(call => call.path === '/models' ? catalog : { config: null });
-  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture'); ui.choose('apiKey', 'fixture'); await ui.timers();
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture');
   assert.equal(ui.calls.length, 1);
-  await ui.action('load').onclick(); await tick();
+  await ui.timers();
   assert.equal(ui.calls[1].path, '/models'); assert.equal(ui.region('selection').hidden, false);
+  assert.equal(ui.action('load').hidden, true);
+  ui.choose('apiKey', 'fixture'); await ui.timers();
+  assert.equal(ui.calls.filter(c => c.path === '/models').length, 1);
+  assert.equal(ui.region('selection').hidden, false);
 });
 test('provider changes discard late model lists and clear old selections', async () => {
   let finish;
@@ -95,6 +99,7 @@ test('editing a checked connection immediately removes save, and late checks can
   ui.choose('visionMode', 'off'); ui.pick('model', 'chat'); await ui.timers();
   assert.equal(ui.action('save').hidden, false);
   ui.type('apiKey', 'changed'); assert.equal(ui.action('save').hidden, true);
+  await ui.timers(); ui.pick('model', 'chat');
   delayed = true; ui.action('recheck').onclick(); await tick();
   ui.choose('provider', 'ollama'); finish(checked()); await tick();
   assert.equal(ui.action('save').hidden, true); assert.equal(ui.region('check').hidden, true);
@@ -110,10 +115,61 @@ test('saved hosted connections can be changed without entering the key again', a
     if (call.path === '/save') { config = verified.config; return { success: true }; }
     return { config };
   });
-  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture'); ui.choose('visionMode', 'off'); ui.pick('model', 'chat'); await ui.timers();
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture'); await ui.timers(); ui.choose('visionMode', 'off'); ui.pick('model', 'chat'); await ui.timers();
   ui.action('save').onclick(); await tick();
   assert.equal(ui.field('apiKey').value, '');
   ui.pick('backgroundModel', 'small'); await ui.timers();
   assert.equal(ui.calls.at(-1).path, '/check'); assert.equal(ui.calls.at(-1).body.primary.useSavedKey, true);
   assert.equal(ui.action('save').hidden, false);
+});
+
+test('typing is debounced and only the chosen provider receives the latest key', async () => {
+  const ui = await mount(call => call.path === '/models' ? catalog : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'first'); ui.type('apiKey', 'latest'); await ui.timers();
+  const requests = ui.calls.filter(c => c.path === '/models');
+  assert.equal(requests.length, 1); assert.equal(requests[0].body.primary.apiKey, 'latest');
+  assert.equal(requests[0].body.primary.provider, 'openai');
+  assert.ok(ui.calls.every(c => !c.path.includes('detect')));
+});
+test('changing provider before the delay cancels the old key request', async () => {
+  const ui = await mount(call => call.path === '/models' ? catalog : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'old'); ui.choose('provider', 'anthropic'); await ui.timers();
+  assert.equal(ui.calls.length, 1);
+  ui.type('apiKey', 'new'); await ui.timers();
+  assert.equal(ui.calls[1].body.primary.provider, 'anthropic'); assert.equal(ui.calls[1].body.primary.apiKey, 'new');
+});
+test('clearing a key discards late catalogs and hides old selections', async () => {
+  let finish;
+  const ui = await mount(call => call.path === '/models' ? new Promise(resolve => { finish = resolve; }) : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture'); ui.action('load').onclick(); await tick();
+  ui.type('apiKey', ''); finish(catalog); await tick(); await ui.timers();
+  assert.equal(ui.region('selection').hidden, true); assert.equal(ui.field('model').value, '');
+  assert.equal(ui.calls.filter(c => c.path === '/models').length, 1);
+});
+test('failed automatic loading offers Retry and succeeds without re-entering the key', async () => {
+  let failed = true;
+  const ui = await mount(call => call.path === '/models' ? (failed ? { error: 'fetch failed' } : catalog) : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'fixture'); await ui.timers();
+  assert.equal(ui.action('load').hidden, false);
+  failed = false; await ui.action('load').onclick();
+  assert.equal(ui.action('load').hidden, true); assert.equal(ui.region('selection').hidden, false);
+});
+test('local models load without a key; custom URLs wait until they are valid', async () => {
+  const ui = await mount(call => call.path === '/models' ? catalog : { config: null, runtime: 'desktop' });
+  ui.choose('provider', 'ollama'); await ui.timers();
+  assert.equal(ui.calls[1].body.primary.baseUrl, 'http://localhost:11434/v1');
+  ui.choose('provider', 'custom'); ui.type('baseUrl', 'https://'); await ui.timers();
+  assert.equal(ui.calls.filter(c => c.path === '/models').length, 1);
+  ui.type('baseUrl', 'https://fixture.example/v1'); await ui.timers();
+  assert.equal(ui.calls.at(-1).body.primary.baseUrl, 'https://fixture.example/v1');
+});
+test('separate image providers load automatically and lose stale models when their key changes', async () => {
+  const ui = await mount(call => call.path === '/models' ? catalog : { config: null });
+  ui.choose('provider', 'openai'); ui.type('apiKey', 'chat-key'); await ui.timers();
+  ui.choose('visionMode', 'separate'); ui.choose('visionProvider', 'anthropic'); ui.type('visionKey', 'image-key'); await ui.timers();
+  assert.equal(ui.calls.at(-1).body.connection, 'vision'); assert.equal(ui.calls.at(-1).body.vision.apiKey, 'image-key');
+  assert.equal(ui.action('load-vision').hidden, true);
+  ui.pick('visionModel', 'chat'); ui.type('visionKey', 'replacement'); assert.equal(ui.field('visionModel').value, '');
+  ui.choose('visionMode', 'off'); await ui.timers();
+  assert.equal(ui.calls.filter(c => c.path === '/models' && c.body.connection === 'vision').length, 1);
 });

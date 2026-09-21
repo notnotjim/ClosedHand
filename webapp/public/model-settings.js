@@ -16,7 +16,7 @@
       '<label data-region="address" hidden>Service URL<input data-field="baseUrl" type="url" placeholder="https://provider.example/v1" spellcheck="false"></label>' +
       '<label data-region="key">API key<input data-field="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the API key from this provider"></label>' +
       '<p class="model-hint" data-region="connection-help"></p>' +
-      '<button type="button" data-action="load">Load models</button>' +
+      '<button type="button" data-action="load" hidden>Retry loading models</button>' +
       '</div><div data-region="selection" class="model-fields" hidden>' +
       '<label>Chat model<select data-picker="model"></select></label><label data-manual="model" hidden>Chat model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
       '<details data-region="extras"><summary>Support and image models</summary><div class="model-fields">' +
@@ -26,7 +26,7 @@
       '<div data-region="vision" class="model-fields" hidden><label>Image provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Service URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
       '<label data-region="vision-key">Image provider API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
-      '<button type="button" data-action="load-vision" hidden>Load image models</button>' +
+      '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
       '<label>Image model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Image model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</div></details>' +
       '</div>' +
@@ -39,6 +39,7 @@
     var saved = null, ticket = null, models = [], imageModels = [], busy = false, allowDefault = false;
     var loads = { primary: 0, vision: 0 }, runtime = "", initialized = false;
     var check = null, checkTimer = null, checks = 0;
+    var loadTimers = { primary: null, vision: null }, connectionValues = { primary: null, vision: null };
     var field = function (key) { return root.querySelector('[data-field="' + key + '"]'); };
     var region = function (key) { return root.querySelector('[data-region="' + key + '"]'); };
     var result = root.querySelector(".model-result");
@@ -135,13 +136,12 @@
           : runtime === "desktop" ? "This URL reaches Ollama on this Mac. Change it if Ollama runs elsewhere."
           : "Enter the URL where this ClosedHand installation can reach Ollama. A hosted installation cannot reach your computer through localhost."
         : custom ? "Enter the service URL and an API key if the service requires one."
-        : "Create an API key with this provider and paste it above. ClosedHand sends it only to that provider.";
+        : "Paste an API key from this provider to load its models. ClosedHand sends it only to that provider.";
       region("address").hidden = !["custom", "ollama"].includes(value("provider"));
       region("vision").hidden = value("visionMode") !== "separate";
       region("vision-connection").hidden = !value("visionProvider");
       region("vision-address").hidden = !["custom", "ollama"].includes(value("visionProvider"));
       region("vision-key").hidden = value("visionProvider") === "ollama";
-      root.querySelector('[data-action="load-vision"]').hidden = !value("visionProvider");
     }
     function savedKey(kind, provider, baseUrl, apiKey) {
       var prior = saved?.connections?.[kind];
@@ -192,13 +192,18 @@
       var base = vision ? value("visionBaseUrl") : value("baseUrl");
       var prior = saved?.connections?.[kind];
       if (!provider) return false;
-      if (["ollama", "custom"].includes(provider)) return !!base;
+      if (vision && value("visionMode") !== "separate") return false;
+      if (["ollama", "custom"].includes(provider)) {
+        try { var url = new URL(base); return ["http:", "https:"].includes(url.protocol) && !!url.hostname; }
+        catch (_) { return false; }
+      }
       return !!key || !!(prior?.hasKey && prior.provider === provider && (prior.baseUrl || "") === base);
     }
     async function loadModels(kind, quiet) {
+      clearTimeout(loadTimers[kind]);
       var token = ++loads[kind], vision = kind === "vision";
       var retry = root.querySelector('[data-action="' + (vision ? "load-vision" : "load") + '"]');
-      retry.hidden = false;
+      retry.hidden = true;
       if (!ready(kind)) { if (!quiet) show("Choose a provider and complete its connection details first.", true); return; }
       if (!quiet) show(vision ? "Loading image models..." : "Loading available models...");
       try {
@@ -207,6 +212,7 @@
         if (token !== loads[kind]) return;
         if (vision) imageModels = data.models.filter(function (model) { return model.capabilities.vision !== false; });
         else models = data.models;
+        retry.hidden = !!(vision ? imageModels : models).length;
         refreshPickers();
         region("selection").hidden = false;
         if (!vision) renderCheck();
@@ -304,10 +310,31 @@
       save.hidden = kind !== "passed";
       again.hidden = kind !== "failed";
     }
+    function scheduleLoad(kind) {
+      clearTimeout(loadTimers[kind]);
+      if (!ready(kind)) return;
+      loadTimers[kind] = setTimeout(function () { loadModels(kind); }, 700);
+    }
+    function connectionInput(kind) {
+      var current = JSON.stringify(input()[kind]);
+      // A paste fires input, then change on blur. Do not erase or reload the
+      // same connection twice, including while its first request is pending.
+      if (connectionValues[kind] === current) return;
+      connectionEdited(kind);
+      connectionValues[kind] = current;
+      scheduleLoad(kind);
+    }
     function connectionEdited(kind) {
+      clearTimeout(loadTimers[kind]); connectionValues[kind] = null;
+      root.querySelector('[data-action="' + (kind === "vision" ? "load-vision" : "load") + '"]').hidden = true;
       loads[kind]++; checks++; clearTimeout(checkTimer);
       ticket = null; check = null; renderCheck(); show("");
-      if (kind === "primary") models = []; else imageModels = [];
+      if (kind === "primary") {
+        models = []; field("model").value = ""; field("backgroundModel").value = "";
+        if (!value("visionProvider")) field("visionModel").value = "";
+        region("selection").hidden = true;
+      } else { imageModels = []; field("visionModel").value = ""; }
+
       refreshPickers();
     }
     function connectionField(target) {
@@ -317,12 +344,12 @@
     }
     root.addEventListener("input", function (ev) {
       var kind = connectionField(ev.target);
-      if (kind) { connectionEdited(kind); return; }
+      if (kind) { connectionInput(kind); return; }
       invalidate(); scheduleCheck();
     });
     root.addEventListener("change", function (ev) {
       var kind = connectionField(ev.target);
-      if (kind) { connectionEdited(kind); return; }
+      if (kind) { connectionInput(kind); return; }
       if (ev.target.dataset.picker) {
         var key = ev.target.dataset.picker, manual = ev.target.value === "__manual__";
         root.querySelector('[data-manual="' + key + '"]').hidden = !manual;
@@ -334,11 +361,12 @@
       }
       invalidate(); visibility(); scheduleCheck();
       if (ev.target === field("provider")) {
-        connectionEdited("primary"); loads.vision++; region("selection").hidden = true;
+        connectionEdited("primary"); connectionEdited("vision"); region("selection").hidden = true;
         models = []; field("apiKey").value = ""; field("apiKey").placeholder = "Paste the API key from this provider"; field("model").value = ""; field("backgroundModel").value = "";
         field("baseUrl").value = value("provider") === "ollama" ? (runtime === "desktop" ? "http://localhost:11434/v1" : runtime === "docker" ? "http://host.docker.internal:11434/v1" : "") : "";
         imageModels = []; field("visionModel").value = ""; field("visionProvider").value = ""; field("visionKey").value = ""; field("visionBaseUrl").value = ""; field("visionMode").value = "same"; refreshPickers();
         visibility(); show("");
+        connectionValues.primary = JSON.stringify(input().primary); scheduleLoad("primary");
       }
       if (ev.target === field("visionProvider")) {
         field("visionKey").value = ""; field("visionModel").value = "";
@@ -346,7 +374,12 @@
         imageModels = []; refreshPickers();
         connectionEdited("vision"); visibility();
         if (!value("visionProvider")) scheduleCheck();
-        root.querySelector('[data-action="load-vision"]').hidden = !value("visionProvider");
+        connectionValues.vision = JSON.stringify(input().vision); scheduleLoad("vision");
+      }
+      if (ev.target === field("visionMode")) {
+        clearTimeout(loadTimers.vision); loads.vision++;
+        root.querySelector('[data-action="load-vision"]').hidden = true;
+        if (value("visionMode") === "separate") scheduleLoad("vision");
       }
     });
     root.querySelector('[data-action="load"]').onclick = function () { loadModels("primary"); };
@@ -367,6 +400,7 @@
       if (onSaved) onSaved();
     }); };
     root.querySelector('[data-action="default"]').onclick = function () { perform(async function () {
+      clearTimeout(loadTimers.primary); clearTimeout(loadTimers.vision);
       await call("/default", {}); saved = null; invalidate(); renderCurrent(await call(""));
       root.querySelectorAll("input").forEach(function (el) { el.value = ""; });
       field("provider").value = ""; field("visionProvider").value = ""; field("visionMode").value = "same";
