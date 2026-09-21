@@ -30,8 +30,10 @@ async function start() {
       permanent = await require("./phone-registration").connection();
       if (run !== generation || !wanted) return;
       if (!permanent) {
-        state = "pairing";
-        const nextPairingUrl = pairingUrl || await require("./phone-registration").begin();
+        const registration = require("./phone-registration");
+        const confirmed = registration.status().ownershipConfirmed;
+        state = confirmed ? "provisioning" : "pairing";
+        const nextPairingUrl = confirmed ? null : pairingUrl || await registration.begin();
         if (run !== generation || !wanted) return;
         pairingUrl = nextPairingUrl;
         retryTimer = setTimeout(() => { if (wanted) void start(); }, 5000);
@@ -164,7 +166,10 @@ async function disable() {
   if (child) child.kill();
   await save({ PHONE_ACCESS: null, PHONE_ACCESS_URL: null });
 }
-function status() { return { enabled: wanted, state, url, error: lastError, mode, permanent: mode === "managed", pairingUrl }; }
+function status() {
+  return { enabled: wanted, state, url, error: lastError, mode, permanent: mode === "managed", pairingUrl,
+    ...(wanted && mode === 'managed' ? require('./phone-registration').status() : {}) };
+}
 function shutdown() {
   // Quitting the app must stop its child connection without turning off the
   // saved preference, so the same address resumes on the next launch.

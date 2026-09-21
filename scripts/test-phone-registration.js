@@ -56,3 +56,18 @@ test('new address stays unpublished until the exact installation confirms it', a
   assert.equal(values.PHONE_PERMANENT_URL,'https://fixture.closedhand.ai');
   assert.match(values.PHONE_TUNNEL_TOKEN,/^enc:v1:/);
 });
+
+test('ownership confirmation is distinct from provisioning and a verified URL', async () => {
+  const values = { PHONE_ENROLLMENT: '2' };
+  let state = 'unconfirmed';
+  const client = registration(values, async () => ({ ok: true, json: async () => ({ state }) }));
+  await client.connection(); assert.equal(client.status().ownershipConfirmed, false);
+  for (state of ['pending', 'provisioning', 'error']) {
+    assert.equal(await client.connection(), null);
+    assert.equal(client.status().ownershipConfirmed, true);
+    assert.equal(client.status().registrationState, state);
+    assert.equal(values.PHONE_PERMANENT_URL, undefined);
+  }
+  const legacy = registration({}, async () => ({ ok: true, json: async () => ({ state: 'pending' }) }));
+  await legacy.connection(); assert.equal(legacy.status().ownershipConfirmed, false);
+});

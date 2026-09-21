@@ -91,7 +91,7 @@ test('background polling cannot silently swallow an enrollment click or overwrit
   assert.equal(f.calls.filter(c => c.method === 'POST').length, 1);
   finishPoll({ state: 'off' }); await tick();
   assert.deepEqual(f.opened, ['https://closedhand.com/phone-access/pair#new-ticket']);
-  assert.equal(f.node('url-status').textContent, '');
+  assert.equal(f.node('url-status').textContent, 'Waiting for Google confirmation.');
   assert.equal(f.node('url-start').disabled, false);
 });
 test('a pending confirmation can be refreshed after reload without retyping the URL name', async () => {
@@ -120,4 +120,23 @@ test('the chosen URL remains visible after reloading setup', async () => {
   const f = fixture(() => ({ state: 'pairing', addressName: 'example' }));
   await f.update(); assert.equal(f.node('url-name').value, 'example');
   assert.equal(f.node('url-preview').textContent, 'https://example.closedhand.ai');
+});
+
+test('approved setup replaces the confirmation form while the URL connects, then offers Copy when ready', async () => {
+  let state = { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#ticket', addressName: 'example' };
+  const f = fixture(() => state); await f.update();
+  assert.equal(f.node('url-form').hidden, false);
+  assert.match(f.node('url-status').textContent, /Waiting for Google/);
+  state = { enabled: true, state: 'provisioning', ownershipConfirmed: true, registrationState: 'pending', addressName: 'example' };
+  await f.update();
+  assert.equal(f.node('url-form').hidden, true);
+  assert.match(f.node('url-status').textContent, /confirmed/);
+  assert.equal(f.node('url-value').value, 'https://example.closedhand.ai/');
+  assert.equal(f.node('url-copy').hidden, true);
+  assert.equal(f.node('url-continue').textContent, 'Continue setup');
+  state.registrationState = 'error'; await f.update();
+  assert.match(f.node('url-status').textContent, /retry automatically/);
+  state = { ...state, permanent: true, state: 'on', url: 'https://example.closedhand.ai' }; await f.update();
+  assert.equal(f.node('url-copy').hidden, false);
+  assert.match(f.node('url-status').textContent, /ready/);
 });

@@ -43,12 +43,12 @@ test('unsafe or computer-only addresses are never sent to chat', async () => {
   }
 });
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function tunnel(initial = {}, permanent = null) {
+function tunnel(initial = {}, permanent = null, registration = {}) {
   const values = { ...initial }, children = [], intervals = [], retries = [];
   let health = async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) });
   const api = load('webapp/phone-access.js', {
     './config': { getConf: async key => values[key], setConf: async patch => Object.assign(values, patch) },
-    './phone-registration': { connection: async () => permanent, begin: async () => 'https://closedhand.com/phone-access/pair#fixture' },
+    './phone-registration': { connection: async () => permanent, status: () => registration, begin: async () => 'https://closedhand.com/phone-access/pair#fixture' },
     child_process: { spawn(bin, args, options) { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; child.args = args; child.options = options; children.push(child); return child; } },
   }, { setTimeout: fn => { retries.push(fn); return retries.length; }, clearTimeout() {}, console: { log() {}, error() {} },
     AbortSignal, fetch: (...args) => health(...args),
@@ -191,6 +191,19 @@ test('pending registration does not start a tunnel or publish a link', async () 
   t.retries.at(-1)(); await flush();
   assert.equal(t.children.length, 0);
   assert.equal(t.api.status().pairingUrl, null);
+});
+
+test('confirmed ownership replaces pairing while provisioning, without advertising an unverified URL', async () => {
+  const registration = { ownershipConfirmed: false, registrationState: 'unconfirmed' };
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' }, null, registration);
+  await t.api.enable('managed');
+  assert.ok(t.api.status().pairingUrl);
+  registration.ownershipConfirmed = true; registration.registrationState = 'pending';
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.api.status().state, 'provisioning');
+  assert.equal(t.api.status().ownershipConfirmed, true);
+  assert.equal(t.api.status().pairingUrl, null);
+  assert.equal(t.api.status().url, null); assert.equal(t.children.length, 0);
 });
 
 test('upgrading a temporary phone connection keeps it reachable during approval', async () => {

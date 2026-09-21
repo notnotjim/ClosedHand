@@ -28,9 +28,12 @@
       $('url-controls').hidden = !password;
       var saved = personalUrl(state.permanent && state.url || state.savedUrl);
       var confirm = pairingUrl(state.pairingUrl);
-      $('url-form').hidden = !!saved;
-      $('url-saved').hidden = !saved;
-      $('url-value').value = saved || '';
+      var confirmed = state.enabled && state.ownershipConfirmed;
+      var reserved = confirmed && personalUrl('https://' + state.addressName + '.closedhand.ai');
+      $('url-form').hidden = !!(saved || confirmed);
+      $('url-saved').hidden = !(saved || reserved);
+      $('url-value').value = saved || reserved || '';
+      $('url-copy').hidden = !saved;
       if (!$('url-name').value && /^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(state.addressName || '')) {
         $('url-name').value = state.addressName;
         $('url-preview').textContent = 'https://' + state.addressName + '.closedhand.ai';
@@ -40,9 +43,12 @@
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (saved
         ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')
-        : confirm ? ''
+        : confirmed ? (state.registrationState === 'error'
+          ? 'Your personal URL is confirmed, but its connection is delayed. ClosedHand will retry automatically.'
+          : 'Your personal URL is confirmed. Connecting it now. You can continue setup.')
+        : confirm ? 'Waiting for Google confirmation.'
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
-      $('url-continue').textContent = saved ? 'Continue setup' : state.enabled ? 'Continue setup while this finishes' : 'Continue without a personal URL';
+      $('url-continue').textContent = saved || confirmed ? 'Continue setup' : state.enabled ? 'Continue setup while this finishes' : 'Continue without a personal URL';
     }
     async function request(method, body) {
       var response = await fetch('/api/phone', { method: method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(20000) });

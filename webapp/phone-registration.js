@@ -9,6 +9,7 @@ function encrypted(value) {
   return result;
 }
 let identityPromise;
+let registrationState = null;
 async function credentials() {
   if (identityPromise) return identityPromise;
   identityPromise = (async () => {
@@ -54,9 +55,14 @@ function validAddress(value) {
 async function connection() {
   const savedUrl = await getConf('PHONE_PERMANENT_URL');
   const savedToken = decryptString(await getConf('PHONE_TUNNEL_TOKEN'));
-  if (validAddress(savedUrl) && savedToken) return { url: savedUrl, token: savedToken };
+  if (validAddress(savedUrl) && savedToken) {
+    registrationState = 'active';
+    return { url: savedUrl, token: savedToken };
+  }
   const enrollment = String(await getConf('PHONE_ENROLLMENT')) === '2';
   const data = await call('connection', 'GET', undefined, enrollment);
+  registrationState = !enrollment && data.state === 'pending' ? 'unconfirmed'
+    : ['unconfirmed', 'pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state) ? data.state : null;
   if (!['active','connecting'].includes(data.state)) return null;
   if (!validAddress(data.url) || typeof data.token !== 'string' || data.token.length < 30) throw new Error('The phone address could not be verified.');
   // A connecting credential may start the tunnel, but is not a verified link yet.
@@ -73,4 +79,7 @@ async function challenge(nonce) {
   const secret = (await credentials()).split('.').pop();
   return crypto.createHmac('sha256',secret).update('closedhand-address:'+nonce).digest('hex');
 }
-module.exports = { begin, connection, validAddress, confirm, challenge };
+function status() {
+  return { registrationState, ownershipConfirmed: ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(registrationState) };
+}
+module.exports = { begin, connection, validAddress, confirm, challenge, status };
