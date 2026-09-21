@@ -115,12 +115,12 @@ test("failed requests stay visible and do not silently change the connection", a
   await state.loadPhoneAccess();
   assert.match(el("phone-desc").innerHTML, /Try again/);
 });
-test("the dashboard status route authenticates before reading only the saved public URL", async () => {
+test("the dashboard status route authenticates before reading only public address details", async () => {
   let handler, allowed = false, reads = 0, output;
   const state = vm.createContext({
     app: { get: (_, fn) => { handler = fn; } },
     requireSetupAccess: async () => allowed,
-    getRuntimeConf: async key => { reads++; assert.equal(key, "PHONE_PERMANENT_URL"); return address; },
+    getRuntimeConf: async key => { reads++; assert.ok(["PHONE_PERMANENT_URL", "PHONE_ADDRESS_NAME"].includes(key)); return key === "PHONE_ADDRESS_NAME" ? "example" : address; },
     require: name => { assert.equal(name, "./phone-registration"); return { validAddress: url => url === address }; },
     phoneAccess: { status: () => ({ enabled: false, state: "off", url: null }) },
   });
@@ -132,6 +132,8 @@ test("the dashboard status route authenticates before reading only the saved pub
   allowed = true;
   await handler({}, response);
   assert.equal(output.savedUrl, address);
+  assert.equal(output.addressName, "example");
+  assert.equal(reads, 2);
   assert.equal(output.enabled, false);
   state.getRuntimeConf = async () => "https://untrusted.example";
   await handler({}, response);
