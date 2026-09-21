@@ -2624,7 +2624,7 @@
   <div class="feat-row reveal">
     <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
       <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
-      <div class="feat-card-title">A support team you can speak to on WhatsApp</div>
+      <div class="feat-card-title">A support team you speak to on WhatsApp</div>
       <div class="feat-card-desc">Ask questions and get work done from your connected chat apps, wherever you happen to be.</div>
       <div class="feat-card-icons">
         <img src="/logos/whatsapp.svg" alt="WhatsApp"><img src="/logos/telegram.svg" alt="Telegram"><img src="/logos/discord.svg" alt="Discord"><img src="/logos/slack.svg" alt="Slack"><img src="/logos/line.svg" alt="LINE">
@@ -2633,7 +2633,7 @@
     <a href="#" id="bridgeFeatureCard" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
       <canvas class="feat-3d" id="feat3dMac" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
       <div class="feat-card-title">Work with your Mac’s files and apps</div>
-      <div class="feat-card-desc">The optional Bridge app lets ClosedHand work with your Mac’s files, apps and screen. Choose what to allow from Bridge in your Mac’s menu bar.</div>
+      <div class="feat-card-desc">ClosedHand works with files and apps locally on your Mac, through permissions you control. Choose which access to allow, with a separate switch for broader computer control. You can revoke permissions at any time.</div>
       <div class="feat-card-action" id="bridgeCardAction">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         <span id="bridgeCardActionLabel">Download Bridge for Mac</span>
@@ -2645,12 +2645,12 @@
     <div class="feat-mini">
       <span class="feat-mini-icon">🧠</span>
       <div class="feat-mini-title">Context Brain</div>
-      <div class="feat-mini-desc">Persistent memory that builds over time and recalls by meaning, not just keywords. What it remembers is yours to see, edit and delete.</div>
+      <div class="feat-mini-desc">Persistent unlimited memory that improves over time and recalls by meaning, not just keywords. What it remembers is yours to see, edit and delete.</div>
     </div>
     <div class="feat-mini">
       <span class="feat-mini-icon">🛡</span>
       <div class="feat-mini-title">Your data stays yours</div>
-      <div class="feat-mini-desc">Choose which services to connect and disconnect them when you want. Your selected AI provider processes the content needed for your requests.</div>
+      <div class="feat-mini-desc">ClosedHand is open source and runs on your own computer or server. Your data belongs to you, without a company locking you in. You can use open local models and keep your AI on your own hardware.</div>
     </div>
     <div class="feat-mini">
       <span class="feat-mini-icon">📡</span>
@@ -5239,13 +5239,12 @@ function checkBridgeStatus() {
     var cardAction = document.getElementById('bridgeCardAction');
     // On the Mac app there is no Bridge to download: the app is the Mac
     // access, connected from the first launch, with its permissions in the
-    // menu bar. The card says that instead, once.
+    // menu bar. Keep installation details in the requirements and action.
     if (data.desktop && !window._desktopCardDone) {
       window._desktopCardDone = true;
       var card = document.getElementById('bridgeFeatureCard');
       if (card) {
         card.querySelector('.feat-card-title').textContent = 'Work with your Mac’s files and apps';
-        card.querySelector('.feat-card-desc').textContent = 'Mac access is built into the ClosedHand app running on your Mac. Choose what to allow from the fist in that Mac’s menu bar.';
         card.dataset.desktop = 'true';
       }
       var req = document.querySelector('.feat-table th[data-row="bridge"]');
