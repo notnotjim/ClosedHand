@@ -53,7 +53,6 @@
 .model-role label { font-size: 14px; font-weight: 500; }
 .model-role input, .model-role select { font-size: 16px; }
 
-.model-fields .model-role > summary { padding: 0; min-height: 44px; }
-.model-role > summary h3 { display: inline; }
-.model-fields .model-role > summary .model-hint { margin-top: 8px; }
-.model-fields .model-role > .model-fields { padding-top: 24px; }
+.model-secondary { margin-top: 12px; padding-top: 16px; border-top: 1px solid rgba(239,230,214,0.16); }
+.model-fields .model-secondary > summary { font-weight: 600; min-height: 44px; box-sizing: border-box; }
+.model-fields .model-secondary > .model-fields { padding-top: 24px; }

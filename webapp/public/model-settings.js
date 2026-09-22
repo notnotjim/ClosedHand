@@ -20,21 +20,21 @@
       '<button type="button" data-action="load" hidden>Retry loading models</button>' +
       '</div><div data-region="selection" class="model-fields" hidden>' +
       '<label>Model<select data-picker="model"></select></label><label data-manual="model" hidden>Model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
-      '</div></section><details class="model-role" data-region="support-role"><summary><h3>Support model</h3><p class="model-hint">Does routine work, like naming conversations and writing summaries.</p></summary><div class="model-fields">' +
+      '</div></section><details class="model-secondary" data-region="extras"><summary>Support and image models</summary><div class="model-fields"><section class="model-role model-fields"><header><h3>Support model</h3><p class="model-hint">Does routine work, like naming conversations and writing summaries.</p></header>' +
       '<label>Model choice<select data-field="backgroundMode"><option value="same">Use the primary model</option><option value="separate">Choose another support model</option></select></label>' +
       '<div data-region="background" class="model-fields" hidden><label>Provider<select data-field="backgroundProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="background-connection" class="model-fields" hidden><label data-region="background-address" hidden>Service URL<input type="url" data-field="backgroundBaseUrl" spellcheck="false"></label>' +
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
       '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
-      '</div></details><details class="model-role" data-region="image-role"><summary><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></summary><div class="model-fields">' +
+      '</section><section class="model-role model-fields"><header><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></header>' +
       '<label>Model choice<select data-field="visionMode"><option value="same">Use the primary model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
       '<div data-region="vision" class="model-fields" hidden><label>Provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Service URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
       '<label data-region="vision-key">API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
       '<label>Model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
-      '</div></details>' +
+      '</section></div></details>' +
       '<p class="model-hint">You can change these models later in Settings.</p>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl><p class="model-hint" data-region="memory" hidden></p>' +
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
@@ -271,7 +271,7 @@
       } catch (e) {
         if (token !== checks) return;
         check = { kind: "failed", error: e.message || "Could not reach ClosedHand. Try again.", visionNeeded: !!e.visionNeeded };
-        if (e.visionNeeded) region("image-role").open = true;
+        if (e.visionNeeded) region("extras").open = true;
       }
       renderCheck();
     }
