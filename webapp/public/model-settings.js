@@ -84,9 +84,9 @@
         var about = document.createElement("details");
         var heading = document.createElement("summary"); heading.textContent = "About recall";
         var detail = document.createElement("p"); detail.className = "model-hint";
-        detail.textContent = "ClosedHand recalls by meaning, not just keywords. Relevant details from supported connected apps and past conversations are brought into your chat automatically. Your memory stays when you change your primary model.";
+        detail.textContent = "ClosedHand recalls by meaning, not just keywords, using synced information from supported apps and past conversations. Your memory stays when you change your primary model.";
         var coverage = document.createElement("p"); coverage.className = "model-hint";
-        coverage.textContent = "Recall covers what each source has synced, which may be only part of its history. Recent changes may not be available yet. Files are searched separately through File Search or a live Google Drive search.";
+        coverage.textContent = "Coverage and freshness depend on each source’s sync. Some history or recent changes may be missing. Files are searched separately through File Search or Google Drive.";
         about.append(heading, detail, coverage);
         if (rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
           var local = document.createElement("p"); local.className = "model-hint";
