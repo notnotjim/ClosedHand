@@ -809,6 +809,7 @@
   window.ClosedHandModels.mount(document.getElementById("model-configuration"));
 
   var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("step-admin_password"), function () {
+    document.getElementById("step-admin_password").classList.remove("is-open");
     if (lastState) render(lastState);
   });
 

@@ -4,7 +4,7 @@
   function mount(container, changed) {
     var $ = function (id) { return container.querySelector('#' + id); };
     var key = null, password = false, settled = false, state = {}, busy = false, checking = false;
-    var lastCheck = 0, generation = 0, actionError = null;
+    var lastCheck = 0, generation = 0, actionError = null, completedReady = false;
     function remember() {
       settled = true;
       try { if (key) localStorage.setItem(key, 'done'); } catch (_) {}
@@ -71,7 +71,10 @@
         checking = false;
         if (run === generation) {
           display();
-          if (password && !settled && state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl)) remember();
+          if (password && !completedReady && state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl)) {
+            completedReady = true;
+            remember();
+          }
         }
       }
     }
@@ -127,7 +130,7 @@
       update: function (installId, hasPassword) {
         var nextKey = installId ? 'ch-setup-personal-url:' + installId : null;
         if (nextKey !== key) {
-          key = nextKey; generation++; state = {}; actionError = null; busy = false; lastCheck = 0;
+          key = nextKey; generation++; state = {}; actionError = null; busy = false; lastCheck = 0; completedReady = false;
           try { settled = !!key && localStorage.getItem(key) === 'done'; } catch (_) { settled = false; }
         }
         password = hasPassword;

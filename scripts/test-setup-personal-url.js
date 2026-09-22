@@ -151,3 +151,10 @@ test('a verified URL completes setup once; pending, offline and unsafe URLs do n
   await f.event('url-copy','click');assert.deepEqual(f.copied,['https://example.closedhand.ai/']);
   assert.equal(f.node('url-copy-status').textContent,'Copied.');assert.equal(f.node('url-copy-status').hidden,false);
 });
+
+test('reloading a completed setup still announces readiness once so an old step anchor can collapse', async () => {
+  const f=fixture(()=>({savedUrl:'https://example.closedhand.ai',state:'on'}));
+  f.storage.set('ch-setup-personal-url:first','done');
+  await f.update();assert.equal(f.api.settled(),true);assert.equal(f.changes(),1);
+  await f.update();assert.equal(f.changes(),1,'background polling must not close a manually reopened step');
+});
