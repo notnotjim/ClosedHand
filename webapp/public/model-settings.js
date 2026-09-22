@@ -80,12 +80,20 @@
         list.append(term, definition);
       });
       current.append(list);
-      if (root.id !== "model-configuration" && rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
+      if (root.id !== "model-configuration") {
         var about = document.createElement("details");
         var heading = document.createElement("summary"); heading.textContent = "About recall";
         var detail = document.createElement("p"); detail.className = "model-hint";
-        detail.textContent = "ClosedHand recalls by meaning, not just keywords. A separate small model runs on your computer and downloads once, about 300 MB, when syncing first starts. It stays the same when you change your primary model.";
-        about.append(heading, detail); current.append(about);
+        detail.textContent = "ClosedHand recalls by meaning, not just keywords. Relevant details from supported connected apps and past conversations are brought into your chat automatically. Your memory stays when you change your primary model.";
+        var coverage = document.createElement("p"); coverage.className = "model-hint";
+        coverage.textContent = "Recall covers what each source has synced, which may be only part of its history. Recent changes may not be available yet. Files are searched separately through File Search or a live Google Drive search.";
+        about.append(heading, detail, coverage);
+        if (rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
+          var local = document.createElement("p"); local.className = "model-hint";
+          local.textContent = "The recall model runs on your computer and downloads once, about 300 MB, when syncing first starts.";
+          about.append(local);
+        }
+        current.append(about);
       }
       var download = data.localModels?.embedder;
       if (root.id !== "model-configuration" && download && ["downloading", "error"].includes(download.state)) {
