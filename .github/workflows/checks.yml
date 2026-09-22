@@ -39,6 +39,9 @@ jobs:
       - name: Chat presentation and generated media
         run: node --test scripts/test-chat-presentation.js
 
+      - name: Requests preserved through onboarding
+        run: node --test scripts/test-onboarding-handoff.js
+
       - name: Task continuity, verification and budgets
         run: node --test scripts/test-agent-execution.js scripts/test-agent-runners.js scripts/test-pg-task-queries.js
 
