@@ -140,3 +140,14 @@ test('approved setup replaces the confirmation form while the URL connects, then
   assert.equal(f.node('url-copy').hidden, false);
   assert.match(f.node('url-status').textContent, /ready/);
 });
+
+test('a verified URL completes setup once; pending, offline and unsafe URLs do not', async () => {
+  let state = {enabled:true,ownershipConfirmed:true,registrationState:'pending',state:'provisioning',addressName:'example'};
+  const f=fixture(()=>state); await f.update(); assert.equal(f.api.settled(),false);
+  state={savedUrl:'https://example.closedhand.ai',state:'off'};await f.update();assert.equal(f.api.settled(),false);
+  state={savedUrl:'https://evil.example',state:'on'};await f.update();assert.equal(f.api.settled(),false);
+  state={savedUrl:'https://example.closedhand.ai',state:'on'};await f.update();assert.equal(f.api.settled(),true);assert.equal(f.changes(),1);
+  await f.update();assert.equal(f.changes(),1);
+  await f.event('url-copy','click');assert.deepEqual(f.copied,['https://example.closedhand.ai/']);
+  assert.equal(f.node('url-copy-status').textContent,'Copied.');assert.equal(f.node('url-copy-status').hidden,false);
+});

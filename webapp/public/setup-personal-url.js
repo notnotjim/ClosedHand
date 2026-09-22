@@ -31,7 +31,7 @@
       var confirmed = state.enabled && state.ownershipConfirmed;
       var reserved = confirmed && personalUrl('https://' + state.addressName + '.closedhand.ai');
       $('url-form').hidden = !!(saved || confirmed);
-      $('url-saved').hidden = !(saved || reserved);
+      $('url-saved').hidden = !password || !(saved || reserved);
       $('url-value').value = saved || reserved || '';
       $('url-copy').hidden = !saved;
       if (!$('url-name').value && /^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(state.addressName || '')) {
@@ -67,7 +67,13 @@
         if (run !== generation) return;
         state = result;
       } catch (e) { if (run === generation) state.error = e.message; }
-      finally { checking = false; if (run === generation) display(); }
+      finally {
+        checking = false;
+        if (run === generation) {
+          display();
+          if (password && !settled && state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl)) remember();
+        }
+      }
     }
     $('url-name').addEventListener('input', function () {
       actionError = null;
@@ -109,10 +115,12 @@
       try {
         if (!navigator.clipboard) throw new Error('clipboard unavailable');
         await navigator.clipboard.writeText(value);
-        $('url-status').textContent = 'Personal URL copied.';
+        $('url-copy-status').hidden = false;
+        $('url-copy-status').textContent = 'Copied.';
       } catch (_) {
         $('url-value').focus(); $('url-value').select();
-        $('url-status').textContent = document.execCommand('copy') ? 'Personal URL copied.' : 'Select and copy your personal URL above.';
+        $('url-copy-status').hidden = false;
+        $('url-copy-status').textContent = document.execCommand('copy') ? 'Copied.' : 'Select and copy your personal URL above.';
       }
     });
     return {

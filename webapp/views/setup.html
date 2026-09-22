@@ -212,6 +212,13 @@
     #setup-personal-url h3 { margin-bottom: 12px; }
     #setup-personal-url .field label { color: var(--text-primary); }
     #setup-personal-url .save-btn { min-height: 44px; white-space: normal; }
+    #url-saved { padding: 0 20px 18px; }
+    .personal-url-row { display: flex; align-items: center; border: 1px solid var(--border-default); border-radius: 10px; overflow: hidden; }
+    #url-value { flex: 1; min-width: 0; width: 0; border: 0; background: transparent; padding: 12px 14px; color: var(--text-primary); font: inherit; font-size: 14px; }
+    #url-copy { flex: 0 0 44px; min-height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; }
+    #url-copy:hover { color: var(--text-primary); background: var(--accent-faint); }
+    #url-copy:focus-visible, #url-value:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+    #url-copy-status { margin: 8px 0 0; font-size: 13px; color: var(--text-secondary); }
     #url-continue { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
     #url-password-note { color: var(--text-primary); font-weight: 500; }
     #url-preview { color: var(--text-primary); }
@@ -435,6 +442,15 @@
           </span>
           <span class="state-chip">Required</span>
         </button>
+        <div id="url-saved" hidden>
+          <div class="personal-url-row">
+            <input id="url-value" aria-label="Your personal URL" readonly>
+            <button id="url-copy" type="button" aria-label="Copy personal URL" title="Copy personal URL">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+          </div>
+          <p id="url-copy-status" role="status" aria-live="polite" hidden></p>
+        </div>
         <div class="card-body">
           <p>Your password protects your dashboard, both on this computer and through your personal URL.</p>
           <p id="password-saved" hidden>Your dashboard password is set.</p>
@@ -462,10 +478,6 @@
                 <button class="save-btn" id="url-start" type="submit">Confirm with Google</button>
               </form>
               <p id="url-status" role="status" aria-live="polite"></p>
-              <div id="url-saved" hidden>
-                <div class="field"><label for="url-value">Your personal URL</label><input id="url-value" readonly></div>
-                <button class="save-btn" id="url-copy" type="button">Copy personal URL</button>
-              </div>
               <p><button class="save-btn" id="url-continue" type="button">Continue without a personal URL</button></p>
               <p>You can manage your personal URL later in <a href="/dashboard#dashboard-link">Settings → Personal URL</a>.</p>
             </div>
@@ -796,7 +808,7 @@
   // --- Model provider form -------------------------------------------------
   window.ClosedHandModels.mount(document.getElementById("model-configuration"));
 
-  var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("setup-personal-url"), function () {
+  var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("step-admin_password"), function () {
     if (lastState) render(lastState);
   });
 
