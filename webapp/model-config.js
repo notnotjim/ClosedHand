@@ -31,7 +31,7 @@ async function checkModel(conn, model, purpose, catalog) {
   const cap = policy.capabilities(conn, model, meta);
   const base = { model, max_tokens: 1024, effort: "fast" };
   if (purpose === "chat") {
-    if (cap.tools === false) throw new Error("This provider lists the chosen model without tool calling. Choose a tool-capable chat model.");
+    if (cap.tools === false) throw new Error("This provider lists the chosen model without tool calling. Choose a primary model that can use tools.");
     const response = await wire.request({ ...conn, capabilities: cap }, { ...base,
       messages: [{ role: "user", content: "Call capability_check with value 4. Do not answer in text." }],
       tools: [{ name: "capability_check", description: "Return a number. This is a synthetic connection test.",

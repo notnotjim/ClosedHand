@@ -10,7 +10,8 @@
     root.dataset.mounted = "true";
     var options = '<option value="">Choose a provider</option>' + Object.keys(providers).map(function (key) { return '<option value="' + key + '">' + providers[key] + '</option>'; }).join('');
     root.innerHTML = '<div class="model-current" data-region="current" hidden></div><details class="model-editor" data-region="editor" open><summary hidden>Change models</summary><div class="model-fields">' +
-      '<label>Model provider<select data-field="provider">' + options + '</select></label>' +
+      '<section class="model-role model-fields"><header><h3>Primary model</h3><p class="model-hint">Handles your conversations, reasoning and tasks.</p></header>' +
+      '<label>Provider<select data-field="provider">' + options + '</select></label>' +
       '<p class="model-hint" data-region="provider-help">Choose the service that runs your models. For models on your own hardware, choose Ollama or Other compatible service.</p>' +
       '<div data-region="connection" class="model-fields" hidden>' +
       '<label data-region="address" hidden>Service URL<input data-field="baseUrl" type="url" placeholder="https://provider.example/v1" spellcheck="false"></label>' +
@@ -18,23 +19,23 @@
       '<p class="model-hint" data-region="connection-help"></p>' +
       '<button type="button" data-action="load" hidden>Retry loading models</button>' +
       '</div><div data-region="selection" class="model-fields" hidden>' +
-      '<label>Chat model<select data-picker="model"></select></label><label data-manual="model" hidden>Chat model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
-      '<details data-region="extras"><summary>Support and image models</summary><div class="model-fields">' +
-      '<p class="model-hint">The support model does routine work, like naming conversations and writing summaries.</p>' +
-      '<label>Support model<select data-field="backgroundMode"><option value="same">Use the chat model</option><option value="separate">Choose another support model</option></select></label>' +
-      '<div data-region="background" class="model-fields" hidden><label>Support provider<select data-field="backgroundProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
+      '<label>Model<select data-picker="model"></select></label><label data-manual="model" hidden>Model ID<input data-field="model" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label>' +
+      '</div></section><details class="model-role" data-region="support-role"><summary><h3>Support model</h3><p class="model-hint">Does routine work, like naming conversations and writing summaries.</p></summary><div class="model-fields">' +
+      '<label>Model choice<select data-field="backgroundMode"><option value="same">Use the primary model</option><option value="separate">Choose another support model</option></select></label>' +
+      '<div data-region="background" class="model-fields" hidden><label>Provider<select data-field="backgroundProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="background-connection" class="model-fields" hidden><label data-region="background-address" hidden>Service URL<input type="url" data-field="backgroundBaseUrl" spellcheck="false"></label>' +
-      '<label data-region="background-key">Support provider API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
+      '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
-      '<label>Support model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Support model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
-      '<label>Images<select data-field="visionMode"><option value="same">Use the chat model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
-      '<div data-region="vision" class="model-fields" hidden><label>Image provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
+      '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
+      '</div></details><details class="model-role" data-region="image-role"><summary><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></summary><div class="model-fields">' +
+      '<label>Model choice<select data-field="visionMode"><option value="same">Use the primary model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
+      '<div data-region="vision" class="model-fields" hidden><label>Provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Service URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
-      '<label data-region="vision-key">Image provider API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
+      '<label data-region="vision-key">API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
-      '<label>Image model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Image model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
+      '<label>Model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</div></details>' +
-      '<p class="model-hint">You can change these models later in Settings.</p></div>' +
+      '<p class="model-hint">You can change these models later in Settings.</p>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl><p class="model-hint" data-region="memory" hidden></p>' +
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
       '<div class="model-result" role="status" aria-live="polite" tabindex="-1"></div><button type="button" data-action="reload" hidden>Retry loading settings</button>' +
@@ -57,17 +58,18 @@
       var list = document.createElement("dl"); list.className = "model-role-list";
       // What each role does, shown on hover over its name.
       var tips = {
-        "Chat model": "Talks with you. Every message you send goes through this model.",
+        "Primary model": "Handles your conversations, reasoning and tasks.",
         "Support model": "Does routine work like naming conversations and writing summaries.",
-        "Images": "Looks at photos and screenshots you send.",
+        "Image model": "Understands photos and screenshots you send.",
         "Document summaries": "Summarises mail and documents as they are indexed.",
-        "Recall": "Finds the memories, mail and files that relate to what you ask. Stays the same when you change your chat model.",
-        "Search ranking": "Puts the closest matches first. Stays the same when you change your chat model."
+        "Recall": "Finds the memories, mail and files that relate to what you ask. Stays the same when you change your primary model.",
+        "Search ranking": "Puts the closest matches first. Stays the same when you change your primary model."
       };
       rows.forEach(function (row) {
-        var term = document.createElement("dt"); term.textContent = row.label;
-        if (tips[row.label]) {
-          term.dataset.tip = tips[row.label]; term.tabIndex = 0;
+        var label = row.label === "Chat model" ? "Primary model" : row.label === "Images" ? "Image model" : row.label;
+        var term = document.createElement("dt"); term.textContent = label;
+        if (tips[label]) {
+          term.dataset.tip = tips[label]; term.tabIndex = 0;
           var mark = document.createElement("span"); mark.className = "tip-mark"; mark.textContent = "i"; mark.setAttribute("aria-hidden", "true");
           term.append(mark);
         }
@@ -226,7 +228,7 @@
         region("selection").hidden = false;
         if (kind === "primary") renderCheck();
         if (!quiet) {
-          show((vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a chat model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
+          show((vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
             : "The service returned no models. Check that a model is available, or enter its model ID below.");
           scheduleCheck();
         }
@@ -269,7 +271,7 @@
       } catch (e) {
         if (token !== checks) return;
         check = { kind: "failed", error: e.message || "Could not reach ClosedHand. Try again.", visionNeeded: !!e.visionNeeded };
-        if (e.visionNeeded) region("extras").open = true;
+        if (e.visionNeeded) region("image-role").open = true;
       }
       renderCheck();
     }
@@ -300,7 +302,7 @@
       }
       title.textContent = kind === "checking" ? "Checking " + chatName + "..." : kind === "passed" ? "Checked and working"
         : kind === "failed" ? "The check did not pass" : kind === "saved" ? "These models are in use" : complete() ? "Preparing model check..." : "Complete the connection details to check these models";
-      row("Chat model", chatName + (provName ? " via " + provName : ""));
+      row("Primary model", chatName + (provName ? " via " + provName : ""));
       var settled = kind === "passed" || kind === "saved" || (kind === "failed" && check.visionNeeded);
       if (kind === "failed" && !check.visionNeeded) row("Problem", check.error, "fail");
       row("Tool calls", settled ? "Works" : kind === "checking" ? "Checking" : cap.tools === false ? "Not offered by this model" : "Not checked yet",
@@ -319,7 +321,7 @@
       var supportProvider = cfg && support ? cfg.connections[support.connection].provider : value("backgroundProvider") || chatProvider;
       var sameConnection = support ? support.connection === chat.connection : !value("backgroundProvider");
       var sameSupport = support ? sameConnection && supportId === chat.model : value("backgroundMode") !== "separate";
-      row("Support model", sameSupport ? "Same as the chat model" : !supportId ? "Choose a support model" : modelName({ id: supportId }, supportProvider) + " via " + (providers[supportProvider] || supportProvider),
+      row("Support model", sameSupport ? "Same as the primary model" : !supportId ? "Choose a support model" : modelName({ id: supportId }, supportProvider) + " via " + (providers[supportProvider] || supportProvider),
         sameSupport ? "" : settled ? "ok" : kind === "checking" ? "wait" : "");
       if (kind === "passed" && check.memory) { memory.textContent = check.memory; memory.hidden = false; }
       save.hidden = kind !== "passed";

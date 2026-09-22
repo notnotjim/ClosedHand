@@ -5219,7 +5219,7 @@ require("./model-config").install(app, {
     const endpoint = process.env.EMBED_API_URL || await getRuntimeConf("EMBED_API_URL");
     const key = process.env.DEEPINFRA_API_KEY || await getRuntimeConf("DEEPINFRA_API_KEY");
     return !embed && !key ? "Recall will use a small model on this computer. It downloads at first sync."
-      : "Context Brain and File Search keep their existing recall model" + (endpoint ? " at " + new URL(endpoint).hostname : key ? " on DeepInfra" : " on this computer") + ". Switching chat models does not rebuild stored information.";
+      : "Context Brain and File Search keep their existing recall model" + (endpoint ? " at " + new URL(endpoint).hostname : key ? " on DeepInfra" : " on this computer") + ". Switching primary models does not rebuild stored information.";
   },
 });
 

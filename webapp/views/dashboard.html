@@ -2463,7 +2463,7 @@
           <div class="settings-group" style="border-color:rgba(239,230,214,0.1);">
             <div class="settings-group-header">
               <h2>Models</h2>
-              <p class="section-desc">Choose your chat model, support model and image model.</p>
+              <p class="section-desc">Choose your primary model, support model and image model.</p>
             </div>
             <div style="padding:12px 16px;">
 
@@ -4108,7 +4108,7 @@
 
     function selectLLM() {
       document.getElementById("byok-panel").style.display = "";
-      document.getElementById("llm-desc").textContent = "Choose your chat model, support model and image model.";
+      document.getElementById("llm-desc").textContent = "Choose your primary model, support model and image model.";
       window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); });
     }
     selectLLM();
