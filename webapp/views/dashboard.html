@@ -2534,7 +2534,7 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. Card numbers are stored encrypted on this computer, unlocked only by a key unique to your copy of ClosedHand, and used at checkout on your behalf. The model never sees any card numbers. You are asked to confirm every purchase unless you say otherwise here.</p>
+              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. Card numbers are stored encrypted on the computer running ClosedHand, unlocked only by a key unique to your copy of ClosedHand, and used at checkout on your behalf. The model never sees any card numbers. You are asked to confirm every purchase unless you say otherwise here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
@@ -2629,7 +2629,7 @@
               <label for="phone-address-name">Choose your personal URL</label>
               <input id="phone-address-name" class="settings-input" type="text" minlength="3" maxlength="32" pattern="[a-z][a-z0-9-]{1,30}[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="your-name" aria-describedby="phone-address-preview" oninput="previewDashboardAddress()">
               <p id="phone-address-preview" aria-live="polite">https://your-name.closedhand.ai</p>
-              <p>ClosedHand and Cloudflare connect the address to this computer. Keep it awake and online to use the link.</p>
+              <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Continue with this personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your personal URL</a>
             </div>
@@ -3636,7 +3636,7 @@
           if (toolCount) bits.push(toolCount + (toolCount === 1 ? ' tool' : ' tools'));
           if (caps.resources) bits.push(caps.resources + (caps.resources === 1 ? ' resource' : ' resources'));
           if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
-          if (m.transport === 'stdio') bits.push('runs on this machine');
+          if (m.transport === 'stdio') bits.push('runs alongside ClosedHand');
           var subtitle = bits.length ? bits.join(' · ') : escHtml(m.transport === 'stdio' ? (m.command || '') : m.server_url);
           var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
