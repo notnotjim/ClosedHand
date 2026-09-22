@@ -73,7 +73,7 @@ function _overlap(a, b) {
   return inter / Math.min(a.size, b.size);
 }
 
-async function rerank(query, documents, topK = 10) {
+async function rerank(query, documents, topK = 10, { scoreSingleton = false } = {}) {
   if (!query || !documents || documents.length === 0) return documents;
   const mode = rerankMode();
   if (mode === "off") {
@@ -86,7 +86,8 @@ async function rerank(query, documents, topK = 10) {
   // Reranking REORDERS, it does not only trim. Skipping when the caller wants
   // as many results as it passed in silently left them in raw vector order,
   // which is how paged File Search lost its ranking entirely.
-  if (documents.length <= 1) return documents;
+  // Passive recall also uses the score to reject an unrelated lone file.
+  if (documents.length <= 1 && !scoreSingleton) return documents;
 
   try {
     let scores;

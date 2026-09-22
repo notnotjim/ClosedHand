@@ -86,7 +86,7 @@
         var detail = document.createElement("p"); detail.className = "model-hint";
         detail.textContent = "ClosedHand recalls by meaning, not just keywords, using synced information from supported apps and past conversations. Your memory stays when you change your primary model.";
         var coverage = document.createElement("p"); coverage.className = "model-hint";
-        coverage.textContent = "Coverage and freshness depend on each source’s sync. Some history or recent changes may be missing. Files are searched separately through File Search or Google Drive.";
+        coverage.textContent = "Coverage and freshness depend on each source’s sync. Some history or recent changes may be missing. Files you have indexed can also provide context automatically. Other files remain available through File Search or their connected service.";
         about.append(heading, detail, coverage);
         if (rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
           var local = document.createElement("p"); local.className = "model-hint";

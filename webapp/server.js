@@ -2480,14 +2480,8 @@ async function handleServiceOAuthComplete(req, res, stateData, serviceKey, token
 
   await saveConnection(userId, serviceKey, tokens, svc, metadata);
 
-  // USI: classify and start syncing the newly connected service
-  try {
-    const { onServiceConnected } = require("../lib/services/usi-connector");
-    const methods = svc.scopes || [];
-    onServiceConnected(userId, serviceKey, methods).catch(e =>
-      console.log(`[USI-Connector] Post-connect error for ${serviceKey}: ${e.message}`)
-    );
-  } catch (e) { /* USI connector optional */ }
+  // The bot discovers this saved connection on its next sync cycle. The
+  // webapp cannot import bot modules in Docker or the separate Railway service.
 
   // Check for multi-connect queue
   const raw = req.headers.cookie || "";
@@ -2700,6 +2694,7 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
   };
   if (metadata) row.metadata = metadata;
   await mustWrite("could not save the connection", supabase.from("connections").upsert(row, { onConflict: "user_id,service" }));
+  await mustWrite("could not resume source sync", supabase.from("index_progress").delete().eq("user_id", userId).eq("service", `retained:connected:${serviceKey}`));
 }
 
 // Fetch account metadata after OAuth for display on settings page
@@ -3617,7 +3612,7 @@ app.post("/api/connect-multiple", (req, res) => {
 // the difference that here it sits in the person's own database. Now the
 // dashboard offers to delete it all, on by default, and this does the work.
 async function purgeSyncedFor(userId, serviceKeys) {
-  const keys = [...new Set((serviceKeys || []).filter(Boolean))];
+  const keys = [...new Set((serviceKeys || []).filter(Boolean).flatMap(key => [key, `connected:${key}`]))];
   for (const key of keys) {
     const { error: e1 } = await supabase.from("data_cache").delete().eq("user_id", userId).eq("source", key);
     if (e1) console.error(`[disconnect] purge data_cache ${key}:`, e1.message);
@@ -3695,11 +3690,15 @@ app.post("/api/disconnect", async (req, res) => {
   }
 
   try {
-    await supabase
-      .from("connections")
-      .delete()
-      .eq("user_id", userId)
-      .eq("service", service);
+    // Keep the existing disconnect choice: retained copies remain searchable,
+    // but their source no longer syncs. The worker honours this durable marker.
+    const retentionKey = `retained:connected:${service}`;
+    if (purge) {
+      await mustWrite("could not record the disconnect choice", supabase.from("index_progress").delete().eq("user_id", userId).eq("service", retentionKey));
+    } else {
+      await mustWrite("could not retain source information", supabase.from("index_progress").upsert({ user_id: userId, service: retentionKey, status: "retained" }, { onConflict: "user_id,service" }));
+    }
+    await mustWrite("could not disconnect that service", supabase.from("connections").delete().eq("user_id", userId).eq("service", service));
     const purged = purge ? await purgeSyncedFor(userId, [service]) : [];
 
     res.json({ success: true, purged });
@@ -4867,6 +4866,7 @@ app.delete("/api/mcps/:id", async (req, res) => {
       .eq("id", req.params.id)
       .eq("user_id", userId);
     if (error) throw error;
+    await purgeSyncedFor(userId, [`mcp:${req.params.id}`]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Failed to delete MCP connection" });

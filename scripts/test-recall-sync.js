@@ -1,0 +1,209 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const { createConnector } = require("../lib/services/usi-connector");
+const { oauthItems } = require("../lib/services/recall-adapters");
+
+// A behavioural DB double, with user/source filters enforced on every query.
+function memoryDb(seed = {}) {
+  const tables = { connections: [], user_mcps: [], index_progress: [], data_cache: [], data_vectors: [], ...structuredClone(seed) };
+  const writes = [];
+  let seq = 0;
+  return { tables, writes, from(table) {
+    let action = "select", payload, keys = [], filters = [], from = 0, to = Infinity;
+    const q = {
+      select() { return q; }, order() { return q; },
+      eq(k, v) { filters.push(row => row[k] === v); return q; },
+      in(k, vs) { filters.push(row => vs.includes(row[k])); return q; },
+      range(a, b) { from = a; to = b; return q; },
+      upsert(value, opts) { action = "upsert"; payload = value; keys = opts.onConflict.split(","); return q; },
+      update(value) { action = "update"; payload = value; return q; },
+      delete() { action = "delete"; return q; },
+      then(resolve, reject) {
+        try {
+          const matching = row => filters.every(fn => fn(row));
+          if (action !== "select") writes.push({ table, action, payload });
+          if (action === "delete") tables[table] = tables[table].filter(row => !matching(row));
+          if (action === "update") for (const row of tables[table].filter(matching)) Object.assign(row, structuredClone(payload));
+          if (action === "upsert") {
+            const row = tables[table].find(row => keys.every(k => row[k] === payload[k]));
+            if (row) Object.assign(row, structuredClone(payload));
+            else tables[table].push({ id: `row-${++seq}`, ...structuredClone(payload) });
+          }
+          return Promise.resolve({ data: structuredClone(tables[table].filter(matching).slice(from, to + 1)), error: null }).then(resolve, reject);
+        } catch (e) { return Promise.reject(e).then(resolve, reject); }
+      },
+    };
+    return q;
+  } };
+}
+const conn = { id: "conn-a", user_id: "user-a", service: "github", tokens: { access_token: "fixture" }, updated_at: "v1" };
+const server = { id: "mcp-a", user_id: "user-a", name: "Travel", server_url: "https://fixture.invalid/mcp", status: "connected" };
+function harness(seed = {}, overrides = {}) {
+  let clock = 2000000000000, closed = 0;
+  const db = memoryDb(seed), indexed = [];
+  const client = {
+    getServerCapabilities: () => ({ resources: {} }),
+    listResources: async () => ({ resources: [{ uri: "travel://trip", name: "Trip" }] }),
+    readResource: async () => ({ contents: [{ text: "Train leaves at 8 tomorrow morning." }] }),
+    callTool() { throw new Error("A background reader must never call a tool"); },
+  };
+  const api = createConnector({ db, now: () => clock, decryptTokens: x => x, encryptTokens: x => x,
+    request: async () => [{ id: 1, title: "Flight", body: "Flight changed to 10pm", state: "open" }],
+    indexItems: async (...args) => { indexed.push(args); },
+    mcp: { openClient: async () => ({ client }), closeQuietly: async () => { closed++; } },
+    ...overrides,
+  });
+  return { db, client, indexed, api, closed: () => closed, advance: () => { clock += 16 * 60000; } };
+}
+
+test("a saved GitHub connection is enrolled without the webapp hook or an LLM call", async () => {
+  const h = harness({ connections: [conn] });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 1);
+  assert.match(h.db.tables.data_cache[0].data.body, /10pm/);
+  assert.equal(h.indexed[0][1], "connected:github");
+  assert.equal(h.indexed[0][3][0]._skipEnrich, true);
+  assert.equal(h.indexed[0][4].scoped, true);
+  assert.equal(h.db.tables.index_progress[0].status, "synced");
+  const writes = h.db.writes.length;
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.writes.length, writes, "respects persisted sync interval");
+});
+
+test("unchanged content avoids cache rewrites but still retries missing vectors", async () => {
+  const h = harness({ connections: [conn] });
+  await h.api.syncConnectedServices("user-a");
+  const count = h.db.writes.filter(w => w.table === "data_cache").length;
+  h.advance(); await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.writes.filter(w => w.table === "data_cache").length, count);
+  assert.equal(h.indexed.length, 2, "scoped indexer can repair a previous embedding failure");
+});
+
+test("MCP resources paginate, update, delete and never invoke tools", async () => {
+  const h = harness({ user_mcps: [server] });
+  h.client.listResources = async params => params.cursor ? { resources: [{ uri: "travel://ticket", name: "Ticket" }] } : { resources: [{ uri: "travel://trip", name: "Trip" }], nextCursor: "two" };
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 2);
+  h.advance();
+  h.client.listResources = async () => ({ resources: [{ uri: "travel://trip", name: "Trip" }] });
+  h.client.readResource = async () => ({ contents: [{ text: "Train now leaves at 9." }] });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 1, "missing ticket removed only after complete listing");
+  assert.match(h.db.tables.data_cache[0].data.body, /9/);
+  assert.equal(h.closed(), 2);
+});
+
+test("a failed or repeated MCP page cannot delete the unread part of a collection", async () => {
+  const h = harness({ user_mcps: [server] });
+  await h.api.syncConnectedServices("user-a");
+  h.advance();
+  h.client.listResources = async () => ({ resources: [], nextCursor: "again" });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 1);
+  assert.equal(h.db.tables.index_progress[0].status, "error");
+});
+
+test("tools-only MCPs remain on demand and do not call listResources or tools", async () => {
+  const h = harness({ user_mcps: [server] });
+  h.client.getServerCapabilities = () => ({ tools: {} });
+  h.client.listResources = async () => { throw new Error("No resources capability"); };
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.index_progress[0].status, "on_demand");
+  assert.equal(h.indexed.length, 0);
+});
+
+test("resource passages cover the end of a long document with stable IDs", async () => {
+  const h = harness({ user_mcps: [server] });
+  h.client.readResource = async () => ({ contents: [{ text: "x".repeat(5000) + "The boarding pass code is EXAMPLE." }] });
+  await h.api.syncConnectedServices("user-a");
+  assert.ok(h.db.tables.data_cache.length > 1);
+  assert.ok(h.db.tables.data_cache.some(r => r.data.body.includes("boarding pass code")));
+  const ids = h.db.tables.data_cache.map(r => r.external_id);
+  h.advance(); await h.api.syncConnectedServices("user-a");
+  assert.deepEqual(h.db.tables.data_cache.map(r => r.external_id), ids);
+});
+
+test("disconnect during indexing removes in-flight writes and hides the source", async () => {
+  let h;
+  h = harness({ user_mcps: [server] }, { indexItems: async () => { h.db.tables.user_mcps = []; } });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 0);
+  assert.equal((await h.api.activeSources("user-a")).size, 0);
+});
+
+test("one user's sync and cleanup cannot read or remove another user's content", async () => {
+  const foreign = { id: "foreign", user_id: "user-b", source: "mcp:mcp-a", external_id: "secret", data: { body: "private" } };
+  const h = harness({ user_mcps: [server], data_cache: [foreign] });
+  await h.api.syncConnectedServices("user-a");
+  assert.ok(h.db.tables.data_cache.some(r => r.id === "foreign"));
+  assert.equal((await h.api.activeSources("user-b")).size, 0);
+});
+
+test("revoked access purges content; an ordinary source failure preserves it for retry", async () => {
+  for (const status of [401, 500]) {
+    let fail = false;
+    const h = harness({ connections: [conn] }, { request: async () => {
+      if (fail) throw Object.assign(new Error("failure"), { status });
+      return [{ id: 1, title: "Trip", body: "Keep the train booking" }];
+    } });
+    await h.api.syncConnectedServices("user-a"); h.advance(); fail = true;
+    await h.api.syncConnectedServices("user-a");
+    assert.equal(h.db.tables.data_cache.length, status === 401 ? 0 : 1);
+  }
+});
+
+test("unsupported OAuth services are recorded as on demand instead of guessing an API", async () => {
+  const h = harness({ connections: [{ ...conn, service: "unknown-service" }] }, { request: async () => { throw new Error("Should not request"); } });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.index_progress[0].status, "on_demand");
+});
+
+test("OAuth collection pagination reads beyond the first 100 results and stays on the provider host", async () => {
+  const urls = [], all = [];
+  for await (const batch of oauthItems("github", "fixture", async url => {
+    urls.push(new URL(url));
+    const page = Number(new URL(url).searchParams.get("page"));
+    return Array.from({ length: page === 1 ? 100 : 1 }, (_, i) => ({ id: (page - 1) * 100 + i, title: "Issue", body: "Details" }));
+  })) all.push(...batch);
+  assert.equal(all.length, 101);
+  assert.ok(urls.every(url => url.origin === "https://api.github.com"));
+});
+
+module.exports = { memoryDb };
+
+test("the scheduler includes MCP-only and non-mail users past the first database page", async () => {
+  const fs = require("node:fs"), vm = require("node:vm"), path = require("node:path");
+  const source = fs.readFileSync(path.join(__dirname, "../lib/services/data-sync.js"), "utf8");
+  const start = source.indexOf("async function syncAllUsers(mode)");
+  const end = source.indexOf("\n}\n", start) + 2;
+  const people = Array.from({ length: 501 }, (_, i) => ({ id: String(i), user_id: `service-user-${i}` }));
+  const db = memoryDb({ connections: people, user_mcps: [{ id: "mcp-only", user_id: "mcp-user" }], profiles: [] });
+  const originalFrom = db.from;
+  db.from = table => { const q = originalFrom(table); q.not = () => q; return q; };
+  const called = [];
+  const box = { supabase: db, process: { env: {} }, console: { log() {}, error() {} },
+    pLimit: () => fn => fn(), syncUserData: async id => called.push(id), setTimeout() {},
+  };
+  vm.runInNewContext(source.slice(start, end) + "\nthis.run = syncAllUsers;", box);
+  await box.run("cloud");
+  assert.equal(called.length, 502);
+  assert.ok(called.includes("mcp-user"));
+  assert.ok(called.includes("service-user-500"));
+});
+
+test("PostgreSQL Date timestamps do not invalidate an unchanged connection", async () => {
+  const h = harness({ connections: [{ ...conn, updated_at: new Date("2026-01-01") }] });
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 1);
+});
+
+test("choosing to retain data on disconnect is honoured without resuming sync", async () => {
+  const h = harness({ connections: [conn] });
+  await h.api.syncConnectedServices("user-a");
+  h.db.tables.connections = [];
+  h.db.tables.index_progress.push({ id: "keep", user_id: "user-a", service: "retained:connected:github", status: "retained" });
+  h.advance(); await h.api.syncConnectedServices("user-a");
+  assert.equal(h.db.tables.data_cache.length, 1);
+  assert.ok((await h.api.activeSources("user-a")).has("connected:github"));
+  assert.equal(h.indexed.length, 1);
+});

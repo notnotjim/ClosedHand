@@ -39,6 +39,9 @@ jobs:
       - name: Chat presentation and generated media
         run: node --test scripts/test-chat-presentation.js
 
+      - name: Connected sources and files in automatic recall
+        run: node --test scripts/test-recall-context.js scripts/test-recall-sync.js
+
       - name: Requests preserved through onboarding
         run: node --test scripts/test-onboarding-handoff.js
 
