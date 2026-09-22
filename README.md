@@ -125,7 +125,9 @@ Issues and PRs welcome. Open an issue before starting anything sizeable so the a
 
 ## License
 
-[MIT](LICENSE).
+[Apache License 2.0](LICENSE). Third-party components retain their own licences.
+
+Earlier versions released under MIT remain available under that licence.
 
 
 ### Open your dashboard from anywhere
