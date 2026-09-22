@@ -17,7 +17,7 @@ CACHE="$HERE/.cache"
 ARCH="${ARCH:-$(uname -m)}"            # arm64 or x86_64
 NODE_ARCH="$([ "$ARCH" = "x86_64" ] && echo x64 || echo arm64)"
 NODE_VERSION="${NODE_VERSION:-v22.23.2}"
-VERSION="${VERSION:-2.0.10}"
+VERSION="${VERSION:-2.0.11}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
 DIST="$HERE/dist"
 APP="$DIST/ClosedHand.app"

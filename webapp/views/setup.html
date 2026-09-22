@@ -252,6 +252,9 @@
       background: rgba(208,166,82,0.05);
     }
     .memory-note.is-on { display: block; }
+    .google-why { margin-bottom: 24px; }
+    .google-why summary { cursor: pointer; padding: 12px 0; }
+    .google-why p { margin-top: 12px; }
     .memory-note p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 10px; }
     .dl-bar { height: 6px; border-radius: 3px; background: rgba(239,230,214,0.08); overflow: hidden; margin: 2px 0 10px; }
     .dl-fill { height: 100%; width: 0; background: var(--done); transition: width 0.6s ease; }
@@ -428,6 +431,18 @@
         <div class="card-body">
           <p>Use a hosted provider or models you run yourself.</p>
           <div id="model-configuration"></div>
+            <div class="memory-note" id="memory-note">
+              <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
+              <div class="dl-bar" id="dl-bar" hidden><div class="dl-fill" id="dl-fill"></div></div>
+              <form id="memory-form">
+                <div class="field">
+                  <label for="memory-key">DeepInfra API key</label><input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="DeepInfra API key for recall">
+                </div>
+                <button class="save-btn" type="submit" id="memory-btn">Enable recall</button>
+                <p class="form-msg" id="memory-msg"></p>
+              </form>
+            </div>
+
         </div>
       </article>
     </li>
@@ -496,9 +511,9 @@
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
-          <p id="g-intro">ClosedHand needs to read your Gmail, Calendar and Drive. Because it runs on
-             your machine and not through a company, you grant that access yourself by creating
-             a Google dev project (don't worry, it's not as complicated as it sounds).</p>
+          <details id="g-intro" class="google-why"><summary>Why the extra Google setup?</summary>
+            <p>ClosedHand uses Google’s usual sign-in, through a free project you own. This one-time setup keeps the connection to your mail, calendar and Drive under your control, with no company account in between.</p>
+          </details>
           <button class="cta" type="button" id="g-start">Connect to Google</button>
 
           <div id="g-connected" style="display:none;">
@@ -506,12 +521,12 @@
                and Drive so it can recall them, and changes nothing unless you ask. Other Google
                accounts can be added later from the dashboard.</p>
             <a class="deep" href="/dashboard#connections">Manage in the dashboard</a>
-            <a class="deep" href="/auth/google?return=setup">Connect a different account</a>
+            <a class="deep" href="/auth/google?return=setup" target="_blank" rel="noopener">Connect a different account</a>
           </div>
 
           <div id="g-flow" style="display:none;">
             <div class="g-head"><span id="g-count">Step 1 of 5</span><span class="g-dots" id="g-dots"></span></div>
-            <p class="note g-tabs" id="g-tabs">Each step opens Google in a new tab. Do the step, close that tab, come back here.</p>
+            <p class="note g-tabs" id="g-tabs">Google opens in a new tab. Return here after each step; the final sign-in brings you back automatically.</p>
 
             <div class="g-step" data-g="1">
               <h3>Create your project</h3>
@@ -519,7 +534,7 @@
                  can delete later. Click the button below and name the project anything you like.
                  Leave the second field as 'No Organization'.</p>
               <p class="note warn"><strong>Important:</strong> before you click Create on the project
-                 screen, copy the Project ID shown under the name you chose (often the name itself,
+                 screen, copy the Project ID shown under the name you chose (often it's the same as the name you chose,
                  sometimes with numbers added). This is what goes into the box below.</p>
               <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
               <a class="peek" href="/setup-google-project-id.png" id="g-peek"><img src="/setup-google-project-id.png" alt="The New Project screen, with the Project ID line marked"><span>Where the ID is</span></a>
@@ -528,7 +543,7 @@
 
             <div class="g-step" data-g="2">
               <h3>Switch on the services</h3>
-              <p class="note">One screen enables Gmail, Calendar and Drive together. Click the button
+              <p class="note">Enable Gmail, Calendar and Drive together. Click the button
                  below and on the screen that appears, click Next, then Enable. Once the permissions
                  are enabled, come back here and move to the next step.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/flows/enableapi?apiid=gmail.googleapis.com,calendar-json.googleapis.com,drive.googleapis.com" target="_blank" rel="noopener">Switch on the three services</a>
@@ -541,7 +556,7 @@
               <ol class="mini">
                 <li><strong>App name:</strong> ClosedHand</li>
                 <li><strong>User support email:</strong> choose your email address from the dropdown</li>
-                <li><strong>Audience:</strong> External. Nothing is shared with anyone by this: it is
+                <li><strong>Audience:</strong> External. This won't share anything with anyone: it is
                     Google's word for an app that ordinary Google accounts like yours can sign in to,
                     rather than one locked to a company's workspace.</li>
                 <li><strong>Contact information:</strong> your email address</li>
@@ -587,15 +602,13 @@
               </ol>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener">Open the Branding page</a>
               <p class="note">Then open the Audience page below, click <strong>Publish app</strong> and
-                 <strong>Confirm</strong>. The "Push to production?" box is Google's standard wording
-                 for any published app; no verification is needed.</p>
+                 <strong>Confirm</strong>. Google’s wording means others can authorise their own data, not access yours or your dashboard. Personal use needs no verification.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
-              <p class="note">Last thing: sign in. Google will warn that the app is unverified, because it
+              <p class="note">Sign in with the Google account whose mail, calendar and Drive you want to connect. It can differ from the account that owns your project. Google will warn that the app is unverified, because it
                  is your private one. Choose <strong>Advanced</strong>, then <strong>Go to
-                 ClosedHand</strong>, then <strong>Continue</strong>. On the permissions screen, tick
-                 every box (there is a <strong>Select all</strong>), then <strong>Continue</strong>.
+                 ClosedHand</strong>, then <strong>Continue</strong>. On the permissions screen, tick <strong>Select all</strong>, then <strong>Continue</strong>.
                  ClosedHand needs all of them.</p>
-              <a class="cta" id="g-connect" href="/auth/google?return=setup" style="display:none;">Sign in with Google</a>
+              <a class="cta" id="g-connect" href="/auth/google?return=setup" target="_blank" rel="noopener" style="display:none;">Sign in with Google</a>
               <p class="note" id="g-nocreds">The sign-in button appears once the file from step four is saved.</p>
             </div>
 
@@ -614,7 +627,7 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Chat apps</h2>
-            <p class="whisper">Where you talk to ClosedHand. WhatsApp on your own number, or Telegram.</p>
+            <p class="whisper">Recommended for talking to ClosedHand on the go. You can also chat on your dashboard.</p>
             <p class="done-note" id="tg-done-note"></p>
           </span>
           <span class="state-chip">Recommended</span>
@@ -711,17 +724,6 @@
     </div>
   </dialog>
 
-  <div class="memory-note" id="memory-note">
-    <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
-    <div class="dl-bar" id="dl-bar" hidden><div class="dl-fill" id="dl-fill"></div></div>
-    <form id="memory-form">
-      <div class="field">
-        <input type="password" id="memory-key" autocomplete="off" spellcheck="false" placeholder="API key for recall">
-      </div>
-      <button class="save-btn" type="submit" id="memory-btn">Enable recall</button>
-      <p class="form-msg" id="memory-msg"></p>
-    </form>
-  </div>
 
   <footer>
     <span><em>ClosedHand</em> · self-host edition</span>
@@ -914,50 +916,20 @@
       $("#tg-link").setAttribute("href", "https://t.me/" + state.botUsername + "?start=hello");
     }
 
-    // The memory panel adapts to the mode. Local: show the honest download
-    // state (progress, errors that will retry) plus the optional hosted
-    // upgrade. Off (rare): the named-provider nudge. Hosted: hidden.
+    // Setup only shows recall when something is happening or needs attention.
     var modelDone = state.steps.some(function (s) { return s.key === "model" && s.done; });
-    var showMemoryPanel = false;
-    var lead = "";
-    var title = "About recall.";
-    var showForm = true;
-    // "Recall" is the feature (finding your mail and files by meaning);
-    // "RAM" is the hardware. The old copy called both "memory".
-    var what = "ClosedHand recalls by meaning, not just keywords. That uses a separate small model which runs locally inside ClosedHand.";
-    if (modelDone && state.memoryMode === "local") {
-      showMemoryPanel = true;
-      title = "Recall runs on this machine.";
-      var emb = (state.localModels || {}).embedder;
-      var size = emb && emb.totalMb ? "~" + emb.totalMb + "MB" : "~300MB";
-      if (emb && emb.state === "downloading") {
-        lead = what + " It is downloading now (" + size + ", " + (emb.pct || 0) + "% done, once only). Chat works already; recall switches on when the download finishes.";
-      } else if (emb && emb.state === "error") {
-        lead = what + " The download hit an error (" + (emb.error || "unknown") + "). It retries on the next sync; nothing is lost.";
-      } else if (emb && (emb.state === "ready" || emb.state === "loading")) {
-        lead = what;
-      } else {
-        lead = what + " It downloads (" + size + ", once only) when the first sync starts.";
-      }
-      // The download size is the number people see, but the working set is what
-      // decides whether a small machine can actually run this: roughly a
-      // gigabyte while indexing, which is more than a 2GB box has spare once
-      // the database and the browser are up.
-      lead += " You can switch recall to a provider's model later in Settings.";
-      showForm = false; // onboarding states the fact; Settings owns the choice
-    } else if (modelDone && !state.memory) {
-      $("#memory-btn").textContent = "Enable recall";
-      showMemoryPanel = true;
-      lead = "Recall lets ClosedHand find your mail and files by meaning, not just keywords. It needs a model your provider does not offer. Add a key from one that does, or skip it and chat still works.";
-    }
-    var dl = $("#dl-bar"), embNow = (state.localModels || {}).embedder;
-    var downloading = modelDone && state.memoryMode === "local" && embNow && embNow.state === "downloading";
-    dl.hidden = !downloading;
-    if (downloading) $("#dl-fill").style.width = Math.max(2, Math.min(100, embNow.pct || 0)) + "%";
-    $("#memory-note-title").textContent = title;
-    $("#memory-note-lead").textContent = lead;
-    $("#memory-form").style.display = showForm ? "" : "none";
-    $("#memory-note").classList.toggle("is-on", showMemoryPanel);
+    var emb = (state.localModels || {}).embedder;
+    var downloading = modelDone && state.memoryMode === "local" && emb && emb.state === "downloading";
+    var failed = modelDone && state.memoryMode === "local" && emb && emb.state === "error";
+    var missing = modelDone && state.memoryMode !== "local" && !state.memory;
+    $("#memory-note-title").textContent = "Recall";
+    $("#memory-note-lead").textContent = downloading ? "Downloading the recall model: " + (emb.pct || 0) + "%. You can continue setup."
+      : failed ? "The recall model could not finish downloading. ClosedHand will retry when syncing."
+      : missing ? "Recall needs a model for finding your mail and files by meaning. Add a DeepInfra key to enable it; chat works without it." : "";
+    $("#dl-bar").hidden = !downloading;
+    if (downloading) $("#dl-fill").style.width = Math.max(2, Math.min(100, emb.pct || 0)) + "%";
+    $("#memory-form").hidden = !missing;
+    $("#memory-note").classList.toggle("is-on", !!(downloading || failed || missing));
 
     $("#done-count").textContent = String(doneCount);
     $("#total-count").textContent = String(state.steps.length);

@@ -35,7 +35,7 @@
       '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
       '<label>Model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
       '</section></div></details>' +
-      '<p class="model-hint">You can change these models later in Settings.</p>' +
+      '<p class="model-hint">You can change any of these models later in Settings.</p>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl><p class="model-hint" data-region="memory" hidden></p>' +
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
       '<div class="model-result" role="status" aria-live="polite" tabindex="-1"></div><button type="button" data-action="reload" hidden>Retry loading settings</button>' +
@@ -80,8 +80,15 @@
         list.append(term, definition);
       });
       current.append(list);
+      if (root.id !== "model-configuration" && rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
+        var about = document.createElement("details");
+        var heading = document.createElement("summary"); heading.textContent = "About recall";
+        var detail = document.createElement("p"); detail.className = "model-hint";
+        detail.textContent = "ClosedHand recalls by meaning, not just keywords. A separate small model runs on your computer and downloads once, about 300 MB, when syncing first starts. It stays the same when you change your primary model.";
+        about.append(heading, detail); current.append(about);
+      }
       var download = data.localModels?.embedder;
-      if (download && ["downloading", "error"].includes(download.state)) {
+      if (root.id !== "model-configuration" && download && ["downloading", "error"].includes(download.state)) {
         var status = document.createElement("p"); status.className = "model-hint";
         status.textContent = download.state === "downloading" ? "Downloading the recall model: " + (download.pct || 0) + "%." : "The recall model could not finish downloading. ClosedHand will retry when syncing.";
         current.append(status);
