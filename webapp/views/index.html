@@ -195,6 +195,12 @@
     opacity: 0;
     animation: heroHeadIn 0.8s ease forwards 0.3s;
   }
+  #chatGreeting {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+    margin: 0 0 32px;
+  }
   @keyframes heroHeadIn {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -2283,8 +2289,7 @@
          heading is kept smaller than the room below to centre the block
          on the screen rather than in the hero. -->
     <div style="flex:0.35"></div>
-    <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
-    <div class="hero-heading-sub">ClosedHand is your own proactive personal assistant with every source you connect at its fingertips.</div>
+    <h1 class="hero-heading" id="chatGreeting">How can I help?</h1>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -4858,6 +4863,11 @@
     }).then(function(status) {
       if (status.authenticated) {
         isAuthenticated = true;
+        var greetingName = typeof status.name === 'string' ? status.name.trim().split(/\s+/)[0] : '';
+        if (status.isAnonymous || /^(user|web visitor|anonymous)$/i.test((status.name || '').trim())) greetingName = '';
+        document.getElementById('chatGreeting').textContent = greetingName
+          ? 'Hi ' + greetingName + ', how can I help?'
+          : 'How can I help?';
         dashboardLink.style.display = 'inline';
         dashboardLink.href = '#';
         dashboardLink.onclick = function(e) { e.preventDefault(); openDashSlide(); };
