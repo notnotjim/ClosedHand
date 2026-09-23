@@ -5,7 +5,7 @@ const { Readable, Writable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const crypto = require('node:crypto');
 const { Workspace, guestJSON, redactLogs } = require('../desktop/workspace/host');
-const { validateManifest, verifier } = require('../desktop/workspace/runtime');
+const { validateManifest, verifier, downloadFile } = require('../desktop/workspace/runtime');
 const token = 'a'.repeat(48);
 const file = { file: 'kernel', bytes: 3, sha256: crypto.createHash('sha256').update('abc').digest('hex'), url: 'https://example.com/kernel' };
 const manifest = () => ({ arch: process.arch, version: 'a'.repeat(16), files: ['kernel', 'initrd', 'root.ext4.gz'].map(name => ({ ...file, file: name })), root: { ...file, file: 'root.ext4' } });
@@ -41,6 +41,51 @@ test('runtime installation requires a pinned, correctly sized HTTPS payload', as
   await assert.rejects(pipeline(Readable.from(['abd']), verifier(file), sink()), /integrity/);
   await assert.rejects(pipeline(Readable.from(['ab']), verifier(file), sink()), /integrity/);
   await assert.rejects(pipeline(Readable.from(['abcd']), verifier(file), sink()), /size/);
+});
+
+test('an interrupted runtime download retries from a clean file and verifies the entire result', async t => {
+  const fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'ch-download-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const original = crypto.randomBytes(8192), compressed = require('node:zlib').gzipSync(original);
+  const root = { file: 'root.ext4', bytes: original.length, sha256: crypto.createHash('sha256').update(original).digest('hex') };
+  const payload = { ...file, file: 'root.ext4.gz', bytes: compressed.length, sha256: crypto.createHash('sha256').update(compressed).digest('hex') };
+  let attempts = 0;
+  const progress = [], delays = [];
+  await downloadFile(payload, root, directory, value => progress.push(value), {
+    open: async () => {
+      if (++attempts === 1) return Readable.from((async function* () {
+        yield compressed.subarray(0, 4096);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        throw Object.assign(new Error('aborted'), { code: 'ECONNRESET' });
+      })());
+      return Readable.from([compressed]);
+    },
+    wait: async ms => { delays.push(ms); },
+  });
+  assert.equal(attempts, 2);
+  assert.deepEqual(delays, [1000]);
+  assert.ok(progress.includes(0));
+  assert.equal(progress.at(-1), compressed.length);
+  assert.deepEqual(await fs.readFile(path.join(directory, 'root.ext4')), original);
+});
+
+test('runtime retries are bounded and integrity failures are never accepted', async t => {
+  const fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'ch-download-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  for (const failure of [{ code: 'ETIMEDOUT' }, { retryable: true }]) {
+    let attempts = 0;
+    await assert.rejects(downloadFile(file, file, directory, () => {}, {
+      open: async () => { attempts++; throw Object.assign(new Error('connection failed'), failure); }, wait: async () => {},
+    }), /Check your internet connection/);
+    assert.equal(attempts, 3);
+  }
+  let attempts = 0;
+  await assert.rejects(downloadFile(file, file, directory, () => {}, {
+    open: async () => { attempts++; return Readable.from(['abd']); }, wait: async () => {},
+  }), /integrity/);
+  assert.equal(attempts, 1);
 });
 
 async function listen(server) {

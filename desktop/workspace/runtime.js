@@ -29,10 +29,13 @@ function openDownload(url, redirects = 0) {
         response.resume();
         resolve(openDownload(new URL(response.headers.location, url).href, redirects + 1));
       } else if (response.statusCode !== 200) {
-        response.resume(); reject(new Error(`Workspace download failed (${response.statusCode}). Please try again.`));
+        response.resume();
+        const error = new Error(`Workspace download failed (${response.statusCode}). Please try again.`);
+        error.retryable = response.statusCode === 429 || response.statusCode >= 500;
+        reject(error);
       } else resolve(response);
     });
-    request.on('timeout', () => request.destroy(new Error('Workspace download timed out. Please try again.')));
+    request.on('timeout', () => request.destroy(Object.assign(new Error('Workspace download timed out. Please try again.'), { code: 'ETIMEDOUT' })));
     request.on('error', reject);
   });
 }
@@ -49,6 +52,27 @@ function verifier(file, progress = () => {}) {
       callback(bytes === file.bytes && hash.digest('hex') === file.sha256 ? null : new Error('Workspace download did not pass its integrity check. Please try again.'));
     },
   });
+}
+async function downloadFile(file, root, directory, progress, { open = openDownload, wait = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+  const compressed = file.file === 'root.ext4.gz';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let received = 0;
+    try {
+      const source = await open(file.url);
+      // Every attempt starts clean. Only a fully verified file can be installed.
+      const output = fs.createWriteStream(path.join(directory, compressed ? 'root.ext4' : file.file), { flags: 'w', mode: 0o600 });
+      const checked = verifier(file, amount => { received += amount; progress(received); });
+      if (compressed) await pipeline(source, checked, zlib.createGunzip(), verifier(root), output);
+      else await pipeline(source, checked, output);
+      return;
+    } catch (error) {
+      const retryable = error.retryable || ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH', 'ERR_STREAM_PREMATURE_CLOSE'].includes(error.code);
+      if (!retryable) throw error;
+      progress(0);
+      if (attempt === 2) throw new Error('Workspace download was interrupted. Check your internet connection and try again.', { cause: error });
+      await wait(1000 * (attempt + 1));
+    }
+  }
 }
 async function installRuntime(manifest, directory, progress = () => {}) {
   validateManifest(manifest);
@@ -71,12 +95,8 @@ async function installRuntime(manifest, directory, progress = () => {}) {
     const space = await fsp.statfs(directory);
     if (space.bavail * space.bsize < manifest.root.bytes + 512 * 1024 * 1024) throw new Error('Free at least 4 GB of disk space to prepare the Workspace.');
     for (const file of manifest.files) {
-      const source = await openDownload(file.url);
-      const compressed = file.file === 'root.ext4.gz';
-      const output = fs.createWriteStream(path.join(temp, compressed ? 'root.ext4' : file.file), { flags: 'wx', mode: 0o600 });
-      const checked = verifier(file, amount => { done += amount; progress(Math.min(99, Math.floor(done * 100 / total))); });
-      if (compressed) await pipeline(source, checked, zlib.createGunzip(), verifier(manifest.root), output);
-      else await pipeline(source, checked, output);
+      await downloadFile(file, manifest.root, temp, received => progress(Math.min(99, Math.floor((done + received) * 100 / total))));
+      done += file.bytes;
     }
     await fsp.writeFile(path.join(temp, 'installed.json'), JSON.stringify({ root: manifest.root.sha256 }), { mode: 0o600 });
     // A previous incomplete version is host-owned cache, never the user's disk.
@@ -86,4 +106,4 @@ async function installRuntime(manifest, directory, progress = () => {}) {
     return destination;
   } finally { await fsp.rm(temp, { recursive: true, force: true }); }
 }
-module.exports = { validateManifest, verifier, installRuntime };
+module.exports = { validateManifest, verifier, downloadFile, installRuntime };
