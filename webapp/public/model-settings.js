@@ -5,9 +5,11 @@
     groq: "Groq", moonshot: "Moonshot", openai: "OpenAI", openrouter: "OpenRouter", xai: "xAI",
     ollama: "Ollama (local models)", custom: "Other compatible service"
   };
+  var helpCount = 0;
   function mount(root, onSaved) {
     if (!root || root.dataset.mounted) return;
     root.dataset.mounted = "true";
+    var jevHelpId = "model-jev-help-" + (++helpCount);
     var options = '<option value="">Choose a provider</option>' + Object.keys(providers).map(function (key) { return '<option value="' + key + '">' + providers[key] + '</option>'; }).join('');
     root.innerHTML = '<div class="model-current" data-region="current" hidden></div><details class="model-editor" data-region="editor" open><summary hidden>Change models</summary><div class="model-fields">' +
       '<section class="model-role model-fields"><header><h3>Primary model</h3><p class="model-hint">Handles your conversations, reasoning and tasks.</p></header>' +
@@ -27,7 +29,9 @@
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
       '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
-      '<div class="model-decisions model-fields"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Tokenmax with Jev</label>' +
+      '<div class="model-decisions model-fields"><div class="model-jev-option"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Tokenmax with Jev</label>' +
+      '<button type="button" class="model-jev-info" data-action="jev-info" aria-label="About Jev" aria-expanded="false" aria-controls="' + jevHelpId + '"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v6M10 5v1"/></svg></button></div>' +
+      '<p class="model-hint" data-region="jev-help" id="' + jevHelpId + '" hidden>Jev can reduce support-LLM usage for Pulse checks. Your support LLM takes over when needed. Only the items being checked are sent to Jev.</p>' +
       '<div class="model-fields" data-region="jev-details" hidden>' +
       '<label data-region="jev-key">Jev API key<input data-field="jevKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Jev API key"></label>' +
       '<button type="button" data-action="jev-connect">Connect Jev</button></div>' +
@@ -471,6 +475,10 @@
         if (value("backgroundMode") === "separate") scheduleLoad("background");
       }
     });
+    root.querySelector('[data-action="jev-info"]').onclick = function () {
+      var help = region("jev-help"); help.hidden = !help.hidden;
+      this.setAttribute("aria-expanded", String(!help.hidden));
+    };
     root.querySelector('[data-action="jev-connect"]').onclick = function () { return saveJev(true); };
     root.querySelector('[data-action="load"]').onclick = function () { loadModels("primary"); };
     root.querySelector('[data-action="load-vision"]').onclick = function () { loadModels("vision"); };

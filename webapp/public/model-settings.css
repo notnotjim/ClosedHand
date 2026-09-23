@@ -61,3 +61,7 @@
 .model-fields .model-toggle { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 16px; cursor: pointer; }
 .model-fields .model-toggle input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: #D0563F; }
 .model-decisions [data-region="jev-status"]:empty { display: none; }
+
+.model-jev-option { display: flex; align-items: center; gap: 8px; }
+.model-fields .model-jev-info { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 12px; margin-left: auto; border: 0; background: none; color: #B6AFA4; }
+.model-fields .model-jev-info:hover { color: #EFE6D6; }
