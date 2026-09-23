@@ -393,3 +393,31 @@ test("hosted source updates preserve precise revisions without putting schemas i
   await configure(h.db, "user-a", "mcp", server.id, { enabled: true });
   assert.notEqual(h.db.tables.user_mcps[0].updated_at, timestamp);
 });
+
+test("temporary API discovery failure keeps existing records and reports the latest error", async () => {
+  let offline = false;
+  const template = readableTool();
+  const spec = { openapi: "3.1.0", servers: [{ url: "https://diary.example" }], paths: { "/notes": { get: { operationId: "list_notes", responses: { "200": { content: { "application/json": { schema: template.outputSchema } } } } } } } };
+  const h = harness({ connections: [{ ...conn, service: "diary", config: { recall_api: { origins: ["https://diary.example"] } } }] }, { request: async url => {
+    if (offline) throw Object.assign(new Error("Description unavailable"), { status: offline === 404 ? 404 : undefined });
+    return url.endsWith("openapi.json") ? spec : { records: [{ id: "one", body: "Keep this record during an outage" }], next_cursor: null };
+  } });
+  await h.api.syncConnectedServices("user-a");
+  for (offline of [true, 404]) {
+    h.advance(); await h.api.syncConnectedServices("user-a");
+    assert.equal(h.db.tables.data_cache.length, 1);
+    assert.equal((await require("../lib/services/recall-settings").list(h.db, "user-a"))[0].status, "error");
+  }
+});
+
+test("resource reads share the source budget and incomplete reads preserve unseen content", async () => {
+  const h = harness({ user_mcps: [server] });
+  await h.api.syncConnectedServices("user-a");
+  h.advance(); let reads = 0;
+  h.client.listResources = async () => ({ resources: Array.from({ length: 301 }, (_, i) => ({ uri: "notes://" + i, name: "Note" })) });
+  h.client.readResource = async () => { reads++; return { contents: [{ text: "A useful note for recall." }] }; };
+  await h.api.syncConnectedServices("user-a");
+  assert.equal(reads, 299);
+  assert.ok(h.db.tables.data_cache.some(r => r.data.body.includes("Train leaves")));
+  assert.equal(h.db.tables.index_progress[0].status, "error");
+});
