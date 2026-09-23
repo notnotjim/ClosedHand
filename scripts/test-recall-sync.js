@@ -374,3 +374,11 @@ test("an explicit partial collection stays partial even when it supports paginat
   assert.equal(h.db.tables.data_cache.length, 2);
   assert.equal(h.db.tables.index_progress[0].status, "partial");
 });
+
+test("built-in source readers are not falsely reported as waiting for discovery", async () => {
+  const { list } = require("../lib/services/recall-settings");
+  const h = harness({ connections: [{ ...conn, service: "google" }, { ...conn, id: "other", service: "diary" }] });
+  const sources = await list(h.db, "user-a");
+  assert.equal(sources.find(s => s.name === "google").status, "existing_reader");
+  assert.equal(sources.find(s => s.name === "diary").status, "pending");
+});

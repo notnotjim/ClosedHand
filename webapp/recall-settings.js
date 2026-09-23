@@ -5,6 +5,10 @@ function unchanged(query, field, value) {
   // by node-postgres. This also catches edits that do not touch updated_at.
   return value == null ? query.is(field, null) : query.eq(field, JSON.stringify(value));
 }
+function usesExistingReader(row) {
+  return !Object.keys(row.config?.recall || {}).length && (/^(google|microsoft)(_|$)/.test(row.service) ||
+    ["slack", "notion", "imap", "ics_calendar", "whatsapp", "whatsapp_linked", "telegram"].includes(row.service));
+}
 function location(kind) {
   if (kind === "connection") return { table: "connections", field: "config", source: row => `connected:${row.service}` };
   if (kind === "mcp") return { table: "user_mcps", field: "caps", source: row => `mcp:${row.id}` };
@@ -53,8 +57,9 @@ async function list(db, userId) {
       if (error) throw new Error("Could not read source status");
       for (const row of data || []) {
         const state = row[where.field]?.recall_state, enabled = row[where.field]?.recall?.enabled !== false && row.sync_should_cache !== false;
-        sources.push({ kind, id: row.id, name: row.name || row.service, enabled, status: enabled ? state?.status || "pending" : "disabled",
-          checked_at: state?.checked_at, reason: state?.reason, collections: state?.collections || [], omitted: state?.plan?.skipped || [],
+        const existing = kind === "connection" && usesExistingReader(row);
+        sources.push({ kind, id: row.id, name: row.name || row.service, enabled, status: enabled ? existing ? "existing_reader" : state?.status || "pending" : "disabled",
+          checked_at: state?.checked_at, reason: existing ? "This connection uses its existing recall sync. Check its source controls for progress." : state?.reason, collections: state?.collections || [], omitted: state?.plan?.skipped || [],
           apiOrigins: row.config?.recall_api?.origins || [] });
       }
       if (!data || data.length < 500) break;
@@ -84,4 +89,4 @@ async function backfill(db, services) {
     if (!data || data.length < 500) return;
   }
 }
-module.exports = { configure, list, validateDescription, apiDescription, backfill, unchanged };
+module.exports = { configure, list, validateDescription, apiDescription, backfill, unchanged, usesExistingReader };
