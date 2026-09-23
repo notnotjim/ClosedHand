@@ -1,8 +1,10 @@
 // Shared between bot and webapp. Descriptions contain no credentials or code.
 // The bot validates and executes them; the webapp only persists user choices.
-function unchanged(query, field, value) {
-  // Compare the JSON we are replacing, not a timestamp rounded to milliseconds
-  // by node-postgres. This also catches edits that do not touch updated_at.
+function unchanged(query, field, value, timestamp) {
+  // PostgREST preserves timestamp precision. Its URL filter must not contain a
+  // potentially large OpenAPI document. Native pg returns a rounded Date, so
+  // compare the JSON through a bound SQL parameter on that path instead.
+  if (typeof timestamp === "string" && Number.isFinite(Date.parse(timestamp))) return query.eq("updated_at", timestamp);
   return value == null ? query.is(field, null) : query.eq(field, JSON.stringify(value));
 }
 function usesExistingReader(row) {
@@ -42,7 +44,7 @@ async function configure(db, userId, kind, id, description) {
   const value = { ...(row[where.field] || {}), recall: validateDescription(description, row, kind) };
   delete value.recall_state;
   const query = db.from(where.table).update({ [where.field]: value, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("id", id);
-  const { data, error } = await unchanged(query, where.field, row[where.field]).select("id");
+  const { data, error } = await unchanged(query, where.field, row[where.field], row.updated_at).select("id");
   if (error || !data?.length) throw new Error("The connection changed; reload it and try again");
   const { error: progressError } = await db.from("index_progress").delete().eq("user_id", userId).eq("service", `recall:${where.source(row)}`);
   if (progressError) throw new Error("Description saved, but the next sync could not be scheduled");
@@ -82,8 +84,8 @@ async function backfill(db, services) {
       if (row.config?.recall_api || !services[row.service]) continue;
       const api = apiDescription(row.service, services[row.service]);
       if (!api) continue;
-      const query = db.from("connections").update({ config: { ...(row.config || {}), recall_api: api } }).eq("user_id", row.user_id).eq("id", row.id);
-      const { error: writeError } = await unchanged(query, "config", row.config);
+      const query = db.from("connections").update({ config: { ...(row.config || {}), recall_api: api }, updated_at: new Date().toISOString() }).eq("user_id", row.user_id).eq("id", row.id);
+      const { error: writeError } = await unchanged(query, "config", row.config, row.updated_at);
       if (writeError) throw new Error("Could not save the connection description");
     }
     if (!data || data.length < 500) return;

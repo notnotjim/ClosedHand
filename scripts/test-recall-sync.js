@@ -382,3 +382,14 @@ test("built-in source readers are not falsely reported as waiting for discovery"
   assert.equal(sources.find(s => s.name === "google").status, "existing_reader");
   assert.equal(sources.find(s => s.name === "diary").status, "pending");
 });
+
+test("hosted source updates preserve precise revisions without putting schemas in URLs", async () => {
+  const { unchanged, configure } = require("../lib/services/recall-settings");
+  const timestamp = "2026-01-01T00:00:00.123456Z", filters = [];
+  const query = { eq: (key, value) => { filters.push([key, value]); return query; } };
+  unchanged(query, "config", { schema: "x".repeat(100000) }, timestamp);
+  assert.deepEqual(filters, [["updated_at", timestamp]]);
+  const h = harness({ user_mcps: [{ ...server, updated_at: timestamp }] });
+  await configure(h.db, "user-a", "mcp", server.id, { enabled: true });
+  assert.notEqual(h.db.tables.user_mcps[0].updated_at, timestamp);
+});
