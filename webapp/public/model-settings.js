@@ -90,7 +90,7 @@
         about.append(heading, detail, coverage);
         if (rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
           var local = document.createElement("p"); local.className = "model-hint";
-          local.textContent = "The recall model runs on your computer and downloads once, about 300 MB, when syncing first starts.";
+          local.textContent = "The recall model runs alongside ClosedHand on the same computer and downloads once, about 300 MB, when syncing first starts.";
           about.append(local);
         }
         current.append(about);

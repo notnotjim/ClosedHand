@@ -2643,7 +2643,7 @@
                   <img id="phone-qr" alt="Scan to open your dashboard" width="132" height="132" loading="lazy">
                 </div>
                 <div class="dashboard-link-control">
-                  <p id="phone-pause-help">Pausing stops this link from opening your dashboard. Resume it from Settings on your computer.</p>
+                  <p id="phone-pause-help">Pausing stops this link from opening your dashboard. Resume it from Settings on the computer running ClosedHand.</p>
                   <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Pause link</button>
                 </div>
               </div>
@@ -4679,7 +4679,7 @@
       document.getElementById('phone-copy').textContent = 'Copy';
       document.getElementById('phone-qr-details').hidden = !p.enabled || !p.url;
       document.getElementById('phone-pause-help').textContent = p.enabled
-        ? 'Pausing stops this link from opening your dashboard. Resume it from Settings on your computer.'
+        ? 'Pausing stops this link from opening your dashboard. Resume it from Settings on the computer running ClosedHand.'
         : 'Resume this link to open your dashboard from other devices.';
       if (base) {
         var url = new URL('/', base).href;
@@ -4756,7 +4756,7 @@
     }
     async function togglePhoneAccess() {
       var on = !!(_phone && _phone.enabled);
-      if (on && !confirm('Pause this personal URL? You will need to open Settings on your computer to resume it.')) return;
+      if (on && !confirm('Pause this personal URL? You will need to open Settings on the computer running ClosedHand to resume it.')) return;
       var btn = document.getElementById('phone-btn'); btn.disabled = true;
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });

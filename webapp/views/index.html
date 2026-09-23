@@ -6263,7 +6263,7 @@ function escapeHtml(s) {
       e.ondragover=function(ev){ev.preventDefault();this.classList.add('dragover');};
       e.ondragleave=function(){this.classList.remove('dragover');};
       e.ondrop=function(ev){ev.preventDefault();this.classList.remove('dragover');if(ev.dataTransfer.files&&ev.dataTransfer.files.length>0)monHandleUpload(ev.dataTransfer.files);};
-      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg><div class="mon-empty-text">Your online workspace</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them from your local computer. They stay available even when your Mac is off.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
+      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg><div class="mon-empty-text">Your online workspace</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
     }
     var sorted=monSort(visible);
     if(_monCloudView==='grid')monRenderGrid(sorted,el,'cloud');

@@ -42,7 +42,7 @@ To give a Docker installation access to a Mac’s files and apps, download the o
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
-The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Google through six short steps inside the setup page that open the exact console pages you need, then connect Telegram with a token from BotFather. The Google part is yours to do because ClosedHand runs on your machine rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
+The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Google through six short steps inside the setup page that open the exact console pages you need, then connect Telegram with a token from BotFather. The Google part is yours to do because ClosedHand runs on a machine you control rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
 
 Bring whichever model provider you prefer. A single DeepInfra key is the golden path because one key covers chat plus the embedding model, but OpenAI, Anthropic, Gemini, Groq, xAI and any OpenAI-compatible endpoint (including a local Ollama) are all first-class.
 
@@ -52,7 +52,7 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Context Brain.** ClosedHand continuously indexes your mail, calendar and files into a knowledge base that recalls by meaning, not just keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email"; ask for an invoice number and it matches the number itself.
 
-**A real computer, sandboxed.** ClosedHand browses and runs code on its own sandboxed computer, with its own Chrome and a workspace that survives restarts. It cannot see your files or the rest of your machine unless you connect them yourself. Watch it work live at `localhost:6080`.
+**A real computer, sandboxed.** ClosedHand browses and runs code on its own sandboxed computer, with its own Chrome and a workspace that survives restarts. It cannot see your files or the rest of the machine it runs on unless you connect them yourself. Watch it work live at `localhost:6080`.
 
 **Chat apps, honestly ranked.** Telegram is the easy one: a token from BotFather, no public address needed, works behind your router on a laptop. Discord is nearly as simple. WhatsApp is possible but heavy: Meta requires a Business account, a dedicated number and a public HTTPS address, so it belongs on an always-on server rather than a laptop.
 
