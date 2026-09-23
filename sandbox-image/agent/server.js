@@ -52,9 +52,25 @@ app.use("/packages", auth);
 
 // --- Path safety ---
 function safePath(userPath) {
+  const root = fs.realpathSync(WORKSPACE);
   const resolved = path.resolve(WORKSPACE, userPath || ".");
-  if (!resolved.startsWith(WORKSPACE)) {
-    throw new Error("Path traversal blocked");
+  const within = value => value === root || value.startsWith(root + path.sep);
+  if (resolved !== WORKSPACE && !resolved.startsWith(WORKSPACE + path.sep)) throw new Error("Path traversal blocked");
+  let ancestor = resolved;
+  for (;;) {
+    try {
+      fs.lstatSync(ancestor);
+      if (!within(fs.realpathSync(ancestor))) throw new Error("Path traversal blocked");
+      break;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      // A dangling symlink is not a safe parent for a future write.
+      try { if (fs.lstatSync(ancestor).isSymbolicLink()) throw new Error("Path traversal blocked"); }
+      catch (statError) { if (statError.code !== 'ENOENT') throw statError; }
+      const parent = path.dirname(ancestor);
+      if (parent === ancestor) throw new Error("Path traversal blocked");
+      ancestor = parent;
+    }
   }
   return resolved;
 }

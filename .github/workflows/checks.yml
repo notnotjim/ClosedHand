@@ -69,6 +69,9 @@ jobs:
       - name: Mac access setup and recovery
         run: node --test scripts/test-mac-access.js
 
+      - name: Workspace file boundaries
+        run: node --test scripts/test-workspace-paths.js
+
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
 
