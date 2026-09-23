@@ -5758,7 +5758,7 @@ app.get("/api/sandbox", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
-    if (staticSandbox()) return res.json({ exists: true, status: "active", static: true, desktop: !!process.env.CLOSEDHAND_DESKTOP });
+    if (staticSandbox()) return res.json({ exists: true, status: "active", static: true, desktop: !!process.env.CLOSEDHAND_DESKTOP && !process.env.WORKSPACE_VM, workspace_vm: !!process.env.WORKSPACE_VM });
     const { data } = await supabase
       .from("sandboxes")
       .select("status, created_at, last_used_at, total_exec_count, volume_size_mb")
@@ -6256,14 +6256,12 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
 // table, which a static box never writes to, so on every self-host install
 // the Workspace panel said "No active sandbox" and its browser never showed.
 function staticSandbox() {
-  // The desktop app has no compose sandbox; it says so by leaving SANDBOX_URL
-  // empty, and the Computers tab shows its "not yet" state instead of a box
-  // that cannot be reached.
+  // Docker reaches its container; the Mac app reaches its local VM controller.
   const url = process.env.SANDBOX_URL || (mcpClient.isSelfHost() && !process.env.CLOSEDHAND_DESKTOP ? "http://sandbox:8080" : "");
   if (!url) return null;
   let u;
   try { u = new URL(url.includes("://") ? url : `http://${url}`); } catch (_) { return null; }
-  return { hostname: u.hostname, port: Number(u.port) || 8080, token: process.env.SANDBOX_TOKEN || "change-me-sandbox-token", volume_size_mb: 0, static: true };
+  return { hostname: u.hostname, port: Number(u.port) || 8080, token: process.env.SANDBOX_TOKEN || "change-me-sandbox-token", volume_size_mb: process.env.WORKSPACE_VM ? 16384 : 0, static: true };
 }
 
 async function getSandboxInfo(userId) {
@@ -7589,9 +7587,8 @@ app.post("/api/bridge/request", async (req, res) => {
 // ============================================================
 
 // Token endpoint for VNC connections
-// The desktop app's Workspace browser is a Chrome window on the Mac, not a
-// VNC desktop. The Computers tab watches it through screenshots from the
-// agent and can bring the window forward.
+// Screenshots remain available to tools and older native clients. The Mac VM
+// uses the same interactive VNC dashboard as the Docker Workspace.
 app.get("/api/sandbox/screenshot", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -7614,6 +7611,18 @@ app.get("/api/sandbox/desktop-status", async (req, res) => {
   try { res.json(await sandboxFetch(info, "GET", "/desktop/status", null, 8000)); }
   catch (e) { res.status(503).json({ error: e.message }); }
 });
+app.all("/api/sandbox/runtime", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!process.env.WORKSPACE_VM) return res.json({ status: "running" });
+  if (!["GET", "POST"].includes(req.method)) return res.sendStatus(405);
+  try {
+    const info = await getSandboxInfo(userId);
+    const starting = req.method === "POST";
+    const result = await sandboxFetch(info, starting ? "POST" : "GET", starting ? "/runtime/start" : "/desktop/status", starting ? {} : null, 5000);
+    res.json(result);
+  } catch (error) { res.status(503).json({ error: error.message }); }
+});
 app.post("/api/sandbox/browser", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -7628,9 +7637,16 @@ app.get("/api/sandbox/vnc-token", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const sandbox = await getSandboxInfo(userId);
   if (!sandbox?.hostname) return res.status(404).json({ error: "No active sandbox" });
+  if (process.env.WORKSPACE_VM) {
+    try {
+      const runtime = await sandboxFetch(sandbox, "POST", "/runtime/start", {}, 5000);
+      if (runtime.status !== "running") return res.status(202).json({ preparing: true, ...runtime });
+    } catch (error) { return res.status(503).json({ error: error.message }); }
+  }
   const token = crypto.randomBytes(16).toString("hex");
   if (!global._vncTokens) global._vncTokens = {};
-  global._vncTokens[token] = { userId, hostname: sandbox.hostname, sandboxToken: sandbox.token, expires: Date.now() + 300000 };
+  global._vncTokens[token] = { userId, hostname: sandbox.hostname, sandboxToken: sandbox.token,
+    port: process.env.WORKSPACE_VM ? sandbox.port : 6080, vm: !!process.env.WORKSPACE_VM, expires: Date.now() + 300000 };
   res.json({ token });
 });
 
@@ -8051,7 +8067,7 @@ server.on("upgrade", (req, socket, head) => {
       return;
     }
 
-    const { hostname, expires } = global._vncTokens[token];
+    const { hostname, port, vm, sandboxToken, expires } = global._vncTokens[token];
     if (Date.now() > expires) {
       delete global._vncTokens[token];
       socket.write("HTTP/1.1 401 Token expired\r\n\r\n");
@@ -8062,7 +8078,9 @@ server.on("upgrade", (req, socket, head) => {
     vncWss.handleUpgrade(req, socket, head, (clientWs) => {
       console.log(`[VNC] Client connected, proxying to ${hostname}:6080`);
       const WS = require("ws");
-      const targetWs = new WS(`ws://${hostname}:6080`, { perMessageDeflate: false });
+      const targetWs = new WS(`ws://${hostname}:${port || 6080}${vm ? "/desktop/vnc" : ""}`, {
+        perMessageDeflate: false, headers: vm ? { "X-Sandbox-Token": sandboxToken } : {},
+      });
 
       targetWs.on("open", () => {
         console.log(`[VNC] Connected to sandbox websockify`);

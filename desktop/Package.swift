@@ -16,6 +16,11 @@ let package = Package(
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
+        ),
+        .executableTarget(
+            name: "WorkspaceVM",
+            path: "Sources/WorkspaceVM",
+            swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
 )

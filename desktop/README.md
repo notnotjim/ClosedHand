@@ -1,6 +1,6 @@
 # ClosedHand for Mac (desktop app)
 
-The single-download version of ClosedHand: one app that runs the whole stack
+The native Mac version of ClosedHand: one app that runs the whole stack
 on this Mac. It grew out of the Bridge app and keeps Bridge's bundle identity
 (`ai.closedhand.bridge`, signed by the same team), so a Mac that already
 granted Bridge its permissions keeps them.
@@ -63,24 +63,52 @@ ClosedHand.app/Contents/
 
 ## The Workspace
 
-The container's agent (`sandbox-image/agent`) runs on the Mac with
-`SANDBOX_MODE=desktop`: a workspace folder in the app's data, a Python that uv
-(bundled) sets up on first start with the image's package set, and the user's
-own Chrome launched with ClosedHand's profile on a debugging port. Code the
-model runs is confined with `sandbox-exec` and a profile the app writes
-(`workspace.sb`): it can read the system, the bundle and the workspace, write
-only the workspace, and use the network. The Computers tab watches the
-Workspace browser through screenshots.
+The browser, code and package installers run as an unprivileged user inside a
+Linux VM managed by Apple's Virtualization framework. No Mac folders, browser
+profiles, clipboard or application credentials are mounted in it. The root disk
+is read-only; files, installed user packages and browser sign-ins live on a
+separate persistent disk. Chromium also retains its Linux namespace/seccomp
+sandbox. The optional real-Mac controls still use Bridge outside the VM, with
+exactly the same permissions as before.
+
+The signed app includes a manifest pinning the kernel, initial RAM disk and
+compressed Linux disk by SHA-256. Its small host controller downloads and checks
+these on first use, without blocking chat, recall, setup or connected services.
+The Computers panel shows download/startup progress and opens the same interactive
+browser used by Docker installations. No Docker installation is required.
+
+`WorkspaceVM` exposes only private Unix sockets backed by virtio sockets. The
+guest can reach public internet addresses; its firewall blocks private networks.
+The only guest-to-host service is the authenticated `/gateway/api` and
+`/gateway/fetch` proxy. Provider credentials remain on the host, provider URLs
+are restricted, and generic fetches pin validated public DNS addresses.
+
+The VM has two CPUs and a 2 GiB memory capacity. It starts on demand and stops
+after 15 minutes without requests, a browser viewer, running user programs or
+unfinished downloads. Its persistent disk survives shutdown and app updates.
+Health polling alone never starts it. A failed VM never falls back to executing
+Workspace code on the Mac. Native file access remains a separate Bridge choice.
+
+Upgrades import regular files from the old native Workspace without deleting or
+overwriting the originals. Mac Python environments, native dependencies and
+Mac-encrypted browser profiles remain in the old folder. Existing native
+Workspace browser sign-ins need renewing once in the new Linux browser. New
+sign-ins persist across VM restarts. This does not affect the user's own browser
+or Docker's existing Workspace profile.
+
+Build a runtime with `bash desktop/workspace/build-runtime.sh OUTPUT_DIRECTORY`.
+Docker is needed by this maintainer build only. Publish the generated kernel,
+initrd and compressed root disk to the manifest's versioned GitHub release; copy
+the generated manifest into `desktop/workspace/manifest.json` for the app build.
+The VM runtime currently targets Apple Silicon, matching the public Mac download.
 
 ## Release
 
 `desktop/dmg.sh` wraps the built app in a signed DMG; `desktop/notarize.sh`
 submits it to Apple with the `closedhand` keychain profile and staples the
-ticket. `.github/workflows/build-desktop.yml` does both for arm64 and x86_64
+ticket. `.github/workflows/build-desktop.yml` does both for Apple Silicon
 on a `v*` tag, given the signing and notary secrets.
 
 ## Not yet
 
 - Auto-update (Sparkle), an Intel test, bundle trimming.
-- The sandbox image in a Linux VM (Virtualization.framework), the fuller
-  isolation story for the Workspace.

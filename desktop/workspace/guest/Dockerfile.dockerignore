@@ -1,0 +1,9 @@
+**
+!desktop/
+!desktop/workspace/
+!desktop/workspace/guest/
+!desktop/workspace/guest/**
+!sandbox-image/
+!sandbox-image/agent/
+!sandbox-image/agent/*.js
+!sandbox-image/agent/*.py

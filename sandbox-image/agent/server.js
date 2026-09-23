@@ -18,6 +18,7 @@ const SANDBOX_TOKEN = process.env.SANDBOX_TOKEN;
 // a workspace folder in its data directory, a Python it sets up with uv, a
 // Chrome of the user's own launched with ClosedHand's profile.
 const DESKTOP = process.env.SANDBOX_MODE === "desktop";
+const VM = process.env.SANDBOX_MODE === "vm";
 const WORKSPACE = process.env.WORKSPACE || "/workspace";
 const EXEC_HOME = process.env.EXEC_HOME || "/home/sandbox";
 const PYTHON = process.env.PYTHON || "python3";
@@ -177,7 +178,49 @@ app.get("/health", (_req, res) => {
     uptime: process.uptime(),
     workspace: WORKSPACE,
     user: os.userInfo().username,
-    confined: !!SANDBOX_PROFILE || !DESKTOP,
+    confined: !DESKTOP,
+    isolation: VM ? "virtual-machine" : DESKTOP ? "process-policy" : "container",
+  });
+});
+
+// The Mac controller may stop an unused VM, but never a running command,
+// package install, background program or unfinished browser download.
+app.get("/runtime/activity", auth, (_req, res) => {
+  if (!VM) return res.json({ busy: true });
+  try {
+    const services = new Set(["chromium", "chrome_crashpad", "Xvfb", "openbox", "x11vnc", "websockify", "socat"]);
+    const busy = fs.readdirSync("/proc").some(pid => {
+      if (!/^\d+$/.test(pid) || Number(pid) === process.pid) return false;
+      try {
+        if (fs.statSync("/proc/" + pid).uid !== process.getuid()) return false;
+        return !services.has(fs.readFileSync("/proc/" + pid + "/comm", "utf8").trim());
+      } catch (error) { return error.code !== "ENOENT" && error.code !== "ESRCH"; }
+    }) || fs.readdirSync(WORKSPACE).some(name => name.endsWith(".crdownload"));
+    res.json({ busy });
+  } catch { res.json({ busy: true }); }
+});
+
+// Stream an upgrade's existing Workspace files into Linux. Never overwrite a
+// file already present after an interrupted import, and never execute it.
+app.put("/runtime/import-file", auth, (req, res) => {
+  if (!VM) return res.sendStatus(404);
+  let destination, temporary;
+  try {
+    destination = safePath(String(req.query.path || ""));
+    if (destination === WORKSPACE) throw new Error("A file path is required");
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    destination = safePath(String(req.query.path));
+    temporary = path.join(path.dirname(destination), ".import-" + crypto.randomBytes(12).toString("hex"));
+  } catch (error) { req.resume(); return res.status(400).json({ error: error.message }); }
+  const output = fs.createWriteStream(temporary, { flags: "wx", mode: 0o600 });
+  require("stream").pipeline(req, output, error => {
+    if (error) { try { fs.unlinkSync(temporary); } catch {} return res.destroy(); }
+    try {
+      try { fs.linkSync(temporary, destination); }
+      catch (error) { if (error.code !== "EEXIST") throw error; }
+      res.json({ imported: true });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+    finally { try { fs.unlinkSync(temporary); } catch {} }
   });
 });
 
@@ -231,9 +274,8 @@ app.post("/desktop/browser", auth, async (req, res) => {
     res.json({ status: "already_running" });
     return;
   } catch { /* not running, launch */ }
-  spawn("bash", ["-c",
-    `DISPLAY=:99 /usr/local/bin/chromium-launcher --start-maximized "${url || "about:blank"}" &`
-  ], { detached: true, stdio: "ignore", env: { ...process.env, DISPLAY: ":99" } }).unref();
+  spawn("/usr/local/bin/chromium-launcher", ["--start-maximized", url || "about:blank"],
+    { detached: true, stdio: "ignore", env: { ...process.env, DISPLAY: ":99" } }).unref();
   res.json({ status: "launched", url: url || "about:blank" });
 });
 

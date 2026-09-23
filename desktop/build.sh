@@ -17,7 +17,7 @@ CACHE="$HERE/.cache"
 ARCH="${ARCH:-$(uname -m)}"            # arm64 or x86_64
 NODE_ARCH="$([ "$ARCH" = "x86_64" ] && echo x64 || echo arm64)"
 NODE_VERSION="${NODE_VERSION:-v22.23.2}"
-VERSION="${VERSION:-2.0.15}"
+VERSION="${VERSION:-2.0.16}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
 DIST="$HERE/dist"
 APP="$DIST/ClosedHand.app"
@@ -43,15 +43,11 @@ if [ ! -x "$PG_DIR/bin/postgres" ]; then
   PREFIX="$PG_DIR" sh "$HERE/pg.sh"
 fi
 
-# --- uv: Python for the Workspace, fetched on first run by the agent ------------
-UV_DIR="$CACHE/uv-$ARCH"
-if [ ! -x "$UV_DIR/uv" ]; then
-  say "Fetching uv ($ARCH)"
-  UV_ASSET="$([ "$ARCH" = "x86_64" ] && echo uv-x86_64-apple-darwin || echo uv-aarch64-apple-darwin)"
-  curl -sfL "https://github.com/astral-sh/uv/releases/latest/download/$UV_ASSET.tar.gz" -o "$CACHE/uv.tgz"
-  rm -rf "$CACHE/uv-tmp" && mkdir -p "$CACHE/uv-tmp" && tar xzf "$CACHE/uv.tgz" -C "$CACHE/uv-tmp"
-  rm -rf "$UV_DIR" && mv "$CACHE/uv-tmp"/* "$UV_DIR" && rm -rf "$CACHE/uv-tmp" "$CACHE/uv.tgz"
-fi
+# --- Workspace runtime -------------------------------------------------------
+# The signed app pins the Linux image hashes. Its controller downloads that
+# image on first use; Docker is never a runtime dependency of the Mac app.
+[ "$ARCH" = arm64 ] || { echo "The Workspace VM currently requires Apple Silicon."; exit 1; }
+[ -f "$HERE/workspace/manifest.json" ] || { echo "Missing pinned Workspace manifest"; exit 1; }
 
 # --- app source with production dependencies ---------------------------------
 CLOUDFLARED_VERSION="2026.9.1"
@@ -81,13 +77,12 @@ if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
     git -C "$ROOT" archive HEAD | tar -x -C "$APP_SRC"
   fi
   rm -rf "$APP_SRC/desktop" "$APP_SRC/bridge-app" "$APP_SRC/.github" "$APP_SRC/install.sh" "$APP_SRC/Dockerfile" "$APP_SRC/docker-compose"*.yml
-  # Of the sandbox image only its agent comes along: it runs on the Mac as the Workspace.
-  find "$APP_SRC/sandbox-image" -mindepth 1 -maxdepth 1 ! -name agent -exec rm -rf {} +
+  # Workspace execution is in the downloaded Linux VM, never on the host.
+  rm -rf "$APP_SRC/sandbox-image"
   say "Installing dependencies"
   export PATH="$NODE_DIR/bin:$PATH" npm_config_cache="$CACHE/npm"
   (cd "$APP_SRC" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
   (cd "$APP_SRC/webapp" && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
-  (cd "$APP_SRC/sandbox-image/agent" && npm install --omit=dev --no-audit --no-fund --loglevel=error --no-package-lock)
   # Only this platform's native binaries ship; the others are dead weight.
   ONNX="$APP_SRC/node_modules/onnxruntime-node/bin/napi-v6"
   if [ -d "$ONNX" ]; then
@@ -123,7 +118,9 @@ ln -sf ../lib/node_modules/npm/bin/npm-cli.js "$APP/Contents/Resources/node/bin/
 ln -sf ../lib/node_modules/npm/bin/npx-cli.js "$APP/Contents/Resources/node/bin/npx"
 cp -R "$PG_DIR" "$APP/Contents/Resources/pg"
 rm -rf "$APP/Contents/Resources/pg/lib/postgresql/pgxs"   # build-time files, with test binaries the notary rejects
-mkdir -p "$APP/Contents/Resources/uv" && cp "$UV_DIR/uv" "$UV_DIR/uvx" "$APP/Contents/Resources/uv/"
+mkdir -p "$APP/Contents/Resources/workspace" "$APP/Contents/Resources/bin"
+cp "$HERE/workspace/host.js" "$HERE/workspace/runtime.js" "$HERE/workspace/migrate.js" "$HERE/workspace/manifest.json" "$APP/Contents/Resources/workspace/"
+cp "$(dirname "$BIN")/WorkspaceVM" "$APP/Contents/Resources/bin/WorkspaceVM"
 mkdir -p "$APP/Contents/Resources/bin" && cp "$CLOUDFLARED_DIR/cloudflared" "$APP/Contents/Resources/bin/"
 cp -R "$APP_SRC" "$APP/Contents/Resources/app"
 rm -rf "$APP/Contents/Resources/app/node_modules/mammoth/test" "$APP/Contents/Resources/app/webapp/node_modules/mammoth/test"
@@ -154,6 +151,7 @@ find "$APP/Contents/Resources" -type f -perm +111 ! -name "*.dylib" ! -name "*.n
   | while IFS= read -r -d '' exe; do
       if file -b "$exe" | grep -q "Mach-O"; then sign_code --entitlements "$HERE/Runtime.entitlements" "$exe"; fi
     done
+sign_code --entitlements "$HERE/WorkspaceVM.entitlements" "$APP/Contents/Resources/bin/WorkspaceVM"
 sign_code --entitlements "$HERE/ClosedHand.entitlements" "$APP"
 codesign --verify --deep --strict "$APP" && say "Signed OK"
 du -sh "$APP"

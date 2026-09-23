@@ -1,6 +1,6 @@
 name: Build desktop app
 
-# Builds ClosedHand.app for Apple Silicon and Intel. Signs and notarises when
+# Builds ClosedHand.app for Apple Silicon. Signs and notarises when
 # the secrets are present (a Developer ID certificate as base64 .p12, its
 # password, and notary credentials); otherwise the build is ad hoc signed and
 # only useful for checking that it still builds. On a tag (v*) the DMGs are
@@ -17,8 +17,6 @@ jobs:
         include:
           - runner: macos-14
             arch: arm64
-          - runner: macos-13
-            arch: x86_64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4

@@ -1858,7 +1858,7 @@
   .page-view { display:none; }
   .page-view.active { display:block; }
   /* Computers view wrapper */
-  body.computers-active .page { min-height:0; height:auto; }
+  body.computers-active .page { min-height:0 !important; height:auto; }
   .computers-view { padding:8px 0 0; }
   .computers-view.active { display:block !important; }
   .computers-view.active .mon-area { opacity:1 !important; animation:none !important; }
@@ -2174,7 +2174,9 @@
     .mon-wrap:first-child .mon { border-top:none; border-bottom:none; }
     .mon-wrap:last-child .mon { border-top:none; border-bottom:none; }
     .mon-stand { display:none; }
-    .mon-bar { padding:6px 10px; min-height:28px; }
+    .mon-bar { padding:8px 10px; min-height:28px; flex-wrap:wrap; gap:8px; }
+    .mon-dots { display:none; }
+    .mon-bar-right { margin-left:auto; }
     .mon-dots span { width:6px; height:6px; }
     .mon-bar-title { font-size:11px; }
     .mon-grid { gap:4px; padding:8px; }
@@ -2442,7 +2444,7 @@
               Workspace
               <span class="mon-status on pulse"></span>
               <span style="font-size:10px;color:rgba(239,230,214,0.5);">ClosedHand's own computer</span>
-              <span class="mon-info" data-tip="Sign in once to the sites you want ClosedHand to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
+              <span class="mon-info" data-tip="ClosedHand's sandboxed workspace keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
             </div>
             <div class="mon-bar-right">
               <input type="file" id="monUploadInput" multiple style="display:none" onchange="monHandleUpload(this.files)">
@@ -2469,7 +2471,7 @@
           <!-- Desktop VNC view (hidden by default, shown when Desktop toggle is clicked) -->
           <div id="monDesktop" style="display:none;flex:1;position:relative;background:#100E0D;">
             <iframe id="monVncFrame" style="width:100%;height:100%;border:none;" allow="clipboard-read; clipboard-write"></iframe>
-            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(239,230,214,0.5);font-size:13px;">Starting browser...</div>
+            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;line-height:1.5;color:rgba(239,230,214,0.7);font-size:14px;">Starting browser...</div>
             <div id="monSyncTip" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);border-radius:10px;padding:8px 14px;font-size:12px;color:#B6AFA4;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(16,14,13,0.4);z-index:5;">
               <span>Tip: bring your bookmarks and passwords here. In Chrome, click the profile icon (top right) then "Turn on sync".</span>
               <button onclick="this.parentElement.style.display='none';try{localStorage.setItem('ch_sync_tip_seen','1')}catch(e){}" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:14px;padding:0 2px;">&#10005;</button>
@@ -5407,6 +5409,7 @@ function switchPageTab(tab) {
       window._activityPoll = setInterval(function(){ if (typeof monLoadActivity === 'function') monLoadActivity(); }, 10000);
     }
   } else {
+    if (window._monDesktopActive && typeof window.monToggleDesktop === 'function') window.monToggleDesktop();
     if (window._activityPoll) {
       clearInterval(window._activityPoll);
       window._activityPoll = null;
@@ -6360,8 +6363,29 @@ function escapeHtml(s) {
     }
   }
 
+  // Workspace startup stays inside the existing panel. It never blocks chat.
+  window.monPrepareWorkspace = async function (showProgress) {
+    if (window._monWorkspaceVM === undefined) {
+      var info = await fetch('/api/sandbox').then(function(r){return r.json();});
+      window._monWorkspaceVM = !!info.workspace_vm;
+    }
+    if (!window._monWorkspaceVM) return true;
+    var response = await fetch('/api/sandbox/runtime', {method:'POST'});
+    var state = await response.json();
+    while (state.status !== 'running') {
+      if (!response.ok || state.error || state.status === 'error') throw new Error(state.error || 'Workspace could not start. Please try again.');
+      if (!document.body.classList.contains('computers-active')) return false;
+      showProgress(state.message || 'Starting Workspace…');
+      await new Promise(function(resolve){setTimeout(resolve,1500);});
+      response = await fetch('/api/sandbox/runtime');
+      state = await response.json();
+    }
+    return true;
+  };
+
   // Data loading
   async function monLoadCloud() {
+    if (!document.body.classList.contains('computers-active')) return;
     var el=document.getElementById('monCloudFiles');
     var reset = !!window._monResetCloudState; window._monResetCloudState = false;
     var snap = reset ? null : _monSnapshotState('cloud');
@@ -6370,11 +6394,24 @@ function escapeHtml(s) {
     var spinnerTimer = setTimeout(function(){ if(el) el.innerHTML='<div style="padding:40px;text-align:center;"><span class="mon-spin"></span></div>'; }, 160);
     if (typeof monHideSearchPill === 'function') monHideSearchPill('cloud');
     monCrumb(_monCloudPath);
-    try{var r=await fetch('/api/sandbox/files?path='+encodeURIComponent(_monCloudPath));
+    try{
+      var ready = await window.monPrepareWorkspace(function(message){
+        clearTimeout(spinnerTimer);
+        el.replaceChildren();
+        var status=document.createElement('div');status.className='mon-offline';status.setAttribute('role','status');status.textContent=message;el.appendChild(status);
+      });
+      if(!ready){clearTimeout(spinnerTimer);return;}
+      var r=await fetch('/api/sandbox/files?path='+encodeURIComponent(_monCloudPath));
       clearTimeout(spinnerTimer);
       if(!r.ok){monRenderCloud([]);return;}
       var d=await r.json();monRenderCloud(d.files||[]);_monRestoreState('cloud',snap);_monAnimateIn('monCloudFiles');}
-    catch(e){clearTimeout(spinnerTimer);monRenderCloud([]);}
+    catch(e){
+      clearTimeout(spinnerTimer);el.replaceChildren();
+      var notice=document.createElement('div');notice.className='mon-offline';
+      var message=document.createElement('p');message.textContent=e.message || 'Could not open Workspace.';
+      var retry=document.createElement('button');retry.className='mon-btn';retry.textContent='Try again';retry.onclick=monLoadCloud;
+      notice.append(message,retry);el.appendChild(notice);
+    }
   }
   async function monLoadLocal() {
     var el=document.getElementById('monLocalFiles'),dot=document.getElementById('monLocalStatus'),stxt=document.getElementById('monLocalStatusText');
@@ -7447,6 +7484,8 @@ function escapeHtml(s) {
     var filesTabBtn = document.getElementById('monFilesTabBtn');
 
     if (window._monDesktopActive) {
+      var oldFrame = document.getElementById('monVncFrame');
+      if(oldFrame)oldFrame.src='about:blank';
       // Switch back to file view
       screen.style.display = '';
       if (crumb) crumb.style.display = '';
@@ -7467,8 +7506,7 @@ function escapeHtml(s) {
     monShowFileControls(false);
     window._monDesktopActive = true;
 
-    // The desktop app's Workspace is a Chrome window on this Mac: it is
-    // watched through screenshots, and a click brings the window forward.
+    // Older native clients use screenshots; VM and Docker use interactive VNC.
     if (window._monDesktopMode === undefined) {
       try { var sr = await fetch('/api/sandbox'); var sd = await sr.json(); window._monDesktopMode = !!sd.desktop; } catch (e) { window._monDesktopMode = false; }
     }
@@ -7477,6 +7515,10 @@ function escapeHtml(s) {
     // Always fetch a fresh token (old tokens expire on redeploy)
     var frame = document.getElementById('monVncFrame');
     try {
+      var loading=document.getElementById('monDesktopLoading');
+      loading.style.display='flex';loading.setAttribute('role','status');
+      var ready=await window.monPrepareWorkspace(function(message){loading.textContent=message;});
+      if(!ready || !window._monDesktopActive)return;
       var resp = await fetch('/api/sandbox/vnc-token');
       var data = await resp.json();
       if (data.token) {
@@ -7484,7 +7526,7 @@ function escapeHtml(s) {
         frame.src = '/novnc/vnc_lite.html?autoconnect=true&scale=true&host=' + location.hostname + '&port=' + port + '&path=vnc%3Ftoken%3D' + data.token + '&encrypt=' + (location.protocol === 'https:' ? '1' : '0');
         document.getElementById('monDesktopLoading').style.display = 'none';
         try {
-          if (!localStorage.getItem('ch_sync_tip_seen')) {
+          if (!window._monWorkspaceVM && !localStorage.getItem('ch_sync_tip_seen')) {
             var tip = document.getElementById('monSyncTip');
             tip.style.display = 'flex';
             // Shown once ever: mark seen immediately and auto-hide
@@ -7497,7 +7539,7 @@ function escapeHtml(s) {
         document.getElementById('monDesktopLoading').style.display = '';
       }
     } catch (e) {
-      document.getElementById('monDesktopLoading').textContent = 'Failed to connect to browser.';
+      document.getElementById('monDesktopLoading').textContent = (e.message || 'Could not open the browser.') + ' Close and reopen this tab to try again.';
       document.getElementById('monDesktopLoading').style.display = '';
     }
   }

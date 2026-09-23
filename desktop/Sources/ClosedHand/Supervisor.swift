@@ -50,7 +50,6 @@ final class Supervisor: ObservableObject {
     private var botPort = 3001
     private var webPort = 3000
     private var agentPort = 8080
-    private var cdpPort = 9333
     private var procs: [String: Process] = [:]
     private var stopping = false
     private var started = false
@@ -81,8 +80,7 @@ final class Supervisor: ObservableObject {
     private var storageDir: URL { supportDir.appendingPathComponent("storage", isDirectory: true) }
     /// ClosedHand's own working folder and browser profile: the Workspace.
     private var workspaceDir: URL { supportDir.appendingPathComponent("workspace", isDirectory: true) }
-    private var agentDir: URL { appDir.appendingPathComponent("sandbox-image/agent", isDirectory: true) }
-    private var uvBin: URL { resources.appendingPathComponent("uv/uv") }
+    private var agentDir: URL { resources.appendingPathComponent("workspace", isDirectory: true) }
     private var configFile: URL { supportDir.appendingPathComponent("config.env") }
     // Unix socket paths are limited to about a hundred characters, and a long
     // account name would push Application Support past that, so the socket
@@ -156,7 +154,6 @@ final class Supervisor: ObservableObject {
         if conf["BOT_PORT"] == nil { conf["BOT_PORT"] = "3001"; changed = true }
         if conf["PG_PORT"] == nil { conf["PG_PORT"] = "54329"; changed = true }
         if conf["AGENT_PORT"] == nil { conf["AGENT_PORT"] = "8080"; changed = true }
-        if conf["CDP_PORT"] == nil { conf["CDP_PORT"] = "9333"; changed = true }
         config = conf
         if changed { try saveConfig() }
     }
@@ -175,22 +172,18 @@ final class Supervisor: ObservableObject {
         botPort = Int(config["BOT_PORT"] ?? "") ?? 3001
         webPort = Int(config["WEB_PORT"] ?? "") ?? 3000
         agentPort = Int(config["AGENT_PORT"] ?? "") ?? 8080
-        cdpPort = Int(config["CDP_PORT"] ?? "") ?? 9333
         // Postgres may still be running from the last session (the app was
         // force-quit, say); then its port is taken by us and stays.
         if !postgresRunning() { pgPort = freePort(from: pgPort) }
         webPort = freePort(from: webPort)
         botPort = freePort(from: botPort == webPort ? botPort + 1 : botPort, avoiding: webPort)
         agentPort = freePort(from: agentPort)
-        // Chrome may still be up from the last session on its debugging port; the
-        // agent adopts a running one, so a taken port here is kept, not moved.
-        if portFree(cdpPort) == false && !chromeAnswering(cdpPort) { cdpPort = freePort(from: cdpPort) }
         // The ports that worked are the ones to try first next time, so the
         // address stays the same from one launch to the next.
         config["PG_PORT"] = "\(pgPort)"; config["BOT_PORT"] = "\(botPort)"; config["WEB_PORT"] = "\(webPort)"
-        config["AGENT_PORT"] = "\(agentPort)"; config["CDP_PORT"] = "\(cdpPort)"
+        config["AGENT_PORT"] = "\(agentPort)"
         try? saveConfig()
-        log("supervisor", "ports: dashboard \(webPort), bot \(botPort), database \(pgPort), workspace \(agentPort), browser \(cdpPort)")
+        log("supervisor", "ports: dashboard \(webPort), bot \(botPort), database \(pgPort), workspace \(agentPort)")
         publish { self.address = "localhost:\(self.webPort)" }
     }
 
@@ -240,6 +233,7 @@ final class Supervisor: ObservableObject {
         env["PATH"] = nodeBin.deletingLastPathComponent().path + ":/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin"
         env["LANG"] = "en_US.UTF-8"
         env["CLOSEDHAND_DESKTOP"] = "1"
+        env["WORKSPACE_VM"] = "1"
         env["CLOUDFLARED_BIN"] = resources.appendingPathComponent("bin/cloudflared").path
         env["DB_DRIVER"] = "pg"
         env["DATABASE_URL"] = "postgres://postgres:\(config["POSTGRES_PASSWORD"]!)@127.0.0.1:\(pgPort)/closedhand"
@@ -265,28 +259,19 @@ final class Supervisor: ObservableObject {
             proc.arguments = ["index.js"]
             env["PORT"] = "\(botPort)"
         case "agent":
-            // The container's agent, run here: the same code, told where the
-            // workspace, Python, uv and the browser are on this Mac.
+            // This host process only starts and proxies the Linux VM. Browser,
+            // code and packages never run directly on the Mac.
             proc.currentDirectoryURL = agentDir
-            proc.arguments = ["server.js"]
-            env["PORT"] = "\(agentPort)"
-            env["SANDBOX_MODE"] = "desktop"
-            env["WORKSPACE"] = workspaceDir.path
-            env["EXEC_HOME"] = workspaceDir.path
-            env["PYTHON"] = workspaceDir.appendingPathComponent(".venv/bin/python").path
-            env["UV"] = uvBin.path
-            env["UV_CACHE_DIR"] = storageDir.appendingPathComponent("cache/uv").path
-            env["UV_PYTHON_INSTALL_DIR"] = storageDir.appendingPathComponent("cache/uv-python").path
-            env["CDP_PORT"] = "\(cdpPort)"
-            env["BROWSER_CMD"] = browserCommand() ?? ""
-            // sandbox_gateway: code in the Workspace calling the user's connected
-            // services goes through the bot, as it does from the container.
-            env["GATEWAY_URL"] = "http://127.0.0.1:\(botPort)"
-            env["USER_ID"] = "admin"
-            // uv must fetch its own Python rather than borrow whatever this Mac
-            // has, so every install runs the same interpreter.
-            env["UV_PYTHON_PREFERENCE"] = "only-managed"
-            if let profile = try? writeSandboxProfile() { env["SANDBOX_PROFILE"] = profile.path }
+            proc.arguments = ["host.js"]
+            env = [
+                "PATH": nodeBin.deletingLastPathComponent().path + ":/usr/bin:/bin:/usr/sbin:/sbin",
+                "PORT": "\(agentPort)",
+                "SANDBOX_TOKEN": config["SANDBOX_TOKEN"]!,
+                "WORKSPACE_VM_HELPER": resources.appendingPathComponent("bin/WorkspaceVM").path,
+                "WORKSPACE_VM_DIRECTORY": supportDir.appendingPathComponent("workspace-vm").path,
+                "WORKSPACE_GATEWAY_PORT": "\(botPort)",
+                "WORKSPACE_LEGACY_DIRECTORY": workspaceDir.path,
+            ]
         default:
             proc.currentDirectoryURL = appDir.appendingPathComponent("webapp", isDirectory: true)
             proc.arguments = ["server.js"]
@@ -323,67 +308,10 @@ final class Supervisor: ObservableObject {
         }
     }
 
-    /// The fence around code the model runs in the Workspace, for sandbox-exec.
-    /// Reads: the system, the app bundle, the workspace and uv's caches (where
-    /// its Python lives). Writes: the workspace and the temporary folder. The
-    /// network is open, since fetching pages and calling APIs is the point.
-    /// Everything else on the Mac, the user's home above all, is out of reach.
-    private func writeSandboxProfile() throws -> URL {
-        let q = { (u: URL) in "\"" + u.standardizedFileURL.path.replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
-        let tmp = URL(fileURLWithPath: NSTemporaryDirectory()).resolvingSymlinksInPath()
-        let cache = storageDir.appendingPathComponent("cache", isDirectory: true)
-        let bundle = Bundle.main.bundleURL
-        let profile = """
-        (version 1)
-        (deny default)
-        (allow process-exec process-fork signal)
-        (allow sysctl-read)
-        (allow mach-lookup)
-        (allow network*)
-        (allow file-read-metadata)
-        (allow file-read* (literal "/") (subpath "/usr") (subpath "/bin") (subpath "/sbin") (subpath "/System") (subpath "/Library") (subpath "/private/etc") (subpath "/private/var/db") (subpath "/dev") (subpath "/Applications"))
-        (allow file-read* (subpath \(q(bundle))) (subpath \(q(resources))) (subpath \(q(cache))))
-        (allow file-read* (subpath \(q(workspaceDir))) (subpath \(q(tmp))) (subpath "/private/var/folders"))
-        (allow file-write* (subpath \(q(workspaceDir))) (subpath \(q(tmp))) (subpath "/private/var/folders"))
-        (allow file-write* (subpath \(q(cache.appendingPathComponent("uv")))) (subpath \(q(cache.appendingPathComponent("uv-python")))))
-
-        """
-        let url = supportDir.appendingPathComponent("workspace.sb")
-        try profile.write(to: url, atomically: true, encoding: .utf8)
-        return url
-    }
-
-    /// A Chrome-family browser on this Mac, for the Workspace's own window.
-    /// Launched with its own profile, so it never touches the user's tabs.
-    private func browserCommand() -> String? {
-        let candidates = [
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/Applications/Chromium.app/Contents/MacOS/Chromium",
-            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-            "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
-            "/Applications/Arc.app/Contents/MacOS/Arc",
-        ]
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        for c in candidates + candidates.map({ home + $0 }) where FileManager.default.isExecutableFile(atPath: c) { return c }
-        return nil
-    }
-
-    private func chromeAnswering(_ port: Int) -> Bool {
-        // Only used at boot, before any child exists: a plain blocking fetch.
-        var answered = false
-        let sem = DispatchSemaphore(value: 0)
-        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/json/version")!)
-        req.timeoutInterval = 2
-        URLSession.shared.dataTask(with: req) { data, _, _ in answered = (data?.count ?? 0) > 0; sem.signal() }.resume()
-        _ = sem.wait(timeout: .now() + 3)
-        return answered
-    }
-
     private func terminate(_ proc: Process?) {
         guard let proc = proc, proc.isRunning else { return }
         proc.terminate()
-        let deadline = Date().addingTimeInterval(6)
+        let deadline = Date().addingTimeInterval(22)
         while proc.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
         if proc.isRunning { kill(proc.processIdentifier, SIGKILL) }
     }
