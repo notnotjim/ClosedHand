@@ -29,7 +29,7 @@
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
       '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
-      '<div class="model-decisions model-fields"><div class="model-jev-option"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Tokenmax with Jev</label>' +
+      '<div class="model-decisions model-fields"><div class="model-jev-option"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Tokenmaxx with Jev</label>' +
       '<button type="button" class="model-jev-info" data-action="jev-info" aria-label="About Jev" aria-expanded="false" aria-controls="' + jevHelpId + '"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v6M10 5v1"/></svg></button></div>' +
       '<p class="model-hint" data-region="jev-help" id="' + jevHelpId + '" hidden>Jev can reduce support-LLM usage for Pulse checks. Your support LLM takes over when needed. Only the items being checked are sent to Jev.</p>' +
       '<div class="model-fields" data-region="jev-details" hidden>' +
