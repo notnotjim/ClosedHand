@@ -2592,7 +2592,7 @@
   </div>
 
   <!-- Add Source Modal -->
-  <div id="ragModal" style="display:none;position:fixed;inset:0;background:rgba(16,14,13,0.6);z-index:100;display:none;align-items:center;justify-content:center;">
+  <div id="ragModal" onclick="if(event.target === this) ragCloseModal()" style="display:none;position:fixed;inset:0;background:rgba(16,14,13,0.6);z-index:100;align-items:center;justify-content:center;">
     <div style="background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:14px;width:400px;max-height:500px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="padding:16px 18px;border-bottom:1px solid rgba(239,230,214,0.06);display:flex;justify-content:space-between;align-items:center;">
         <span id="ragModalTitle" style="font-size:14px;color:#B6AFA4;font-weight:500;">Add source</span>
@@ -5494,7 +5494,7 @@ async function ragAddSource() {
   html += '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">ClosedHand</p>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'cloud\',\'/workspace\')">'
-    + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>'
+    + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
     + 'Workspace</div>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'bridge\',\'~\')">'
