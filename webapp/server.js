@@ -1924,11 +1924,12 @@ async function mcpDiscoverAndScan(client, row, acceptWarnings) {
   return { found, verdict: null };
 }
 
-function mcpRowPatchFrom(found) {
+function mcpRowPatchFrom(found, previousCaps = {}) {
   return {
     tools_discovered: found.tools.map((t) => t.name),
     prompts_discovered: found.prompts.map((p) => ({ name: p.name, description: p.description || "" })),
     caps: {
+      ...previousCaps,
       tools: found.tools.length,
       resources: found.resources.length + found.resourceTemplates.length,
       prompts: found.prompts.length,
@@ -1960,7 +1961,7 @@ async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
     status: "connected",
     installed_via: row.auth_type === "oauth" ? "oauth" : "manual",
     updated_at: new Date().toISOString(),
-    ...mcpRowPatchFrom(found),
+    ...mcpRowPatchFrom(found, row.caps),
   };
   const { data, error } = await supabase
     .from("user_mcps")
@@ -2677,6 +2678,9 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
 // Save connection tokens to Supabase
 async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) {
   const { encryptTokens } = require("./crypto-tokens");
+  const { data: previous, error: previousError } = await supabase.from("connections").select("config").eq("user_id", userId).eq("service", serviceKey);
+  if (previousError) throw previousError;
+  const recallApi = require("./recall-settings").apiDescription(serviceKey, svc);
   const row = {
     user_id: userId,
     service: serviceKey,
@@ -2686,7 +2690,9 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
       expiry: tokens.expiry,
     }),
     config: {
+      ...(previous?.[0]?.config || {}),
       scopes: svc.scopes,
+      ...(recallApi ? { recall_api: recallApi } : {}),
       ...(tokens.raw?.team ? { team: tokens.raw.team } : {}),
       ...(tokens.raw?.authed_user ? { authed_user: tokens.raw.authed_user } : {}),
     },
@@ -3497,6 +3503,18 @@ app.get("/api/status", async (req, res) => {
 });
 
 // Connected accounts (for settings page)
+app.get("/api/recall-sources", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try { res.json({ sources: await require("./recall-settings").list(supabase, userId) }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put("/api/recall-sources/:kind/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try { res.json(await require("./recall-settings").configure(supabase, userId, req.params.kind, req.params.id, req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
 app.get("/api/connections", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   console.log("GET /api/connections — userId:", userId);
@@ -4900,7 +4918,7 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
   }
   try {
     const found = await mcpClient.discover(opened.client);
-    const patch = { ...mcpRowPatchFrom(found), status: "connected" };
+    const patch = { ...mcpRowPatchFrom(found, mcp.caps), status: "connected" };
     if (opened.transportKind !== "stdio" && opened.transportKind !== mcp.transport) patch.transport = opened.transportKind;
     const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id);
     if (e3) console.error("[mcp] check update failed:", e3.message);
@@ -7701,6 +7719,7 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
 // ============================================================
 
 const server = app.listen(PORT, async () => {
+  require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
   const configured = Object.entries(SERVICES).filter(([, s]) => s.clientId && s.clientSecret).map(([k]) => k);
   console.log(`\n🚀 ClosedHand web app running on port ${PORT}`);
