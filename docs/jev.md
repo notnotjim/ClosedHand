@@ -1,7 +1,7 @@
 # Optional Jev screening
 
 In setup or Settings, open **Models → Support and image models** and select
-**Use Jev for selected checks**. Enter a TypeSafe API key and connect. A funded
+**Tokenmax with Jev**. Enter a TypeSafe API key and connect. A funded
 account and a successful synthetic decision check are required before enabling it.
 Unchecking disconnects Jev and removes its saved key.
 

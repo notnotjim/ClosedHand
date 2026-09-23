@@ -27,10 +27,9 @@
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
       '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
-      '<div class="model-decisions model-fields"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Use Jev for selected checks</label>' +
-      '<div class="model-fields" data-region="jev-details" hidden><p class="model-hint">Jev screens new mail and upcoming events for Pulse. These checks go to TypeSafe. Your support model handles writing and takes over if Jev cannot decide.</p>' +
-      '<label data-region="jev-key">TypeSafe API key<input data-field="jevKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your TypeSafe API key"></label>' +
-      '<p class="model-hint" data-region="jev-account"><a class="model-link" href="https://typesafe.ai" target="_blank" rel="noopener noreferrer">Get a TypeSafe key</a>. Your account needs credit.</p>' +
+      '<div class="model-decisions model-fields"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Tokenmax with Jev</label>' +
+      '<div class="model-fields" data-region="jev-details" hidden>' +
+      '<label data-region="jev-key">Jev API key<input data-field="jevKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Jev API key"></label>' +
       '<button type="button" data-action="jev-connect">Connect Jev</button></div>' +
       '<p class="model-hint" role="status" aria-live="polite" data-region="jev-status"></p></div>' +
       '</section><section class="model-role model-fields"><header><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></header>' +
@@ -64,12 +63,10 @@
     }
     function showJev() {
       var selected = field("jevEnabled").checked;
-      region("jev-details").hidden = !selected;
+      region("jev-details").hidden = !selected || jevEnabled;
       region("jev-key").hidden = jevEnabled;
-      region("jev-account").hidden = jevEnabled;
       root.querySelector('[data-action="jev-connect"]').hidden = jevEnabled;
-      region("jev-status").textContent = jevEnabled ? "Jev is connected. Uncheck to disconnect."
-        : selected ? "Connect Jev to enable it. Your support model is still handling these checks." : "";
+      region("jev-status").textContent = jevEnabled ? "Connected" : "";
     }
     async function saveJev(enabled) {
       await perform(async function () {
@@ -77,7 +74,7 @@
         try {
           var data = await call("/decisions", { enabled: enabled, ...(enabled ? { apiKey: value("jevKey") } : {}) });
           renderJev(data.decisions);
-          if (!enabled) region("jev-status").textContent = "Disconnected. Your support model handles all checks.";
+          if (!enabled) region("jev-status").textContent = "";
         } catch (e) {
           field("jevEnabled").checked = enabled || jevEnabled;
           showJev();

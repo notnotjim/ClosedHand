@@ -61,7 +61,7 @@ test('Jev can connect independently of primary model selection', async () => {
   assert.equal(ui.field('jevKey').value, '');
   assert.equal(ui.region('jev-key').hidden, true);
   assert.equal(ui.action('jev-connect').hidden, true);
-  assert.match(ui.region('jev-status').textContent, /connected/);
+  assert.equal(ui.region('jev-status').textContent, 'Connected');
   assert.equal(ui.calls.some(c => ['/check', '/models', '/save'].includes(c.path)), false);
 });
 test('a credit error keeps Jev unconnected with a usable retry', async () => {
@@ -79,7 +79,7 @@ test('unchecking a saved Jev connection disconnects without any model recheck', 
   assert.deepEqual(ui.calls[1], { path: '/decisions', body: { enabled: false } });
   assert.equal(ui.field('jevEnabled').checked, false);
   assert.equal(ui.region('jev-details').hidden, true);
-  assert.match(ui.region('jev-status').textContent, /Disconnected/);
+  assert.equal(ui.region('jev-status').textContent, '');
 });
 test('a failed disconnect restores the true connected state', async () => {
   const ui = await mount(call => call.path === '/decisions' ? { error: 'Could not save.' } : { config: null, decisions: { enabled: true } });
