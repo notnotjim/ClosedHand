@@ -2,6 +2,7 @@
 const { randomUUID } = require("crypto");
 const policy = require("./model-policy");
 const wire = require("./model-wire");
+const decisions = require("./decision-provider");
 const receipts = new Map();
 function legacyConfig(settings) {
   const provider = settings.llm_provider;
@@ -127,7 +128,29 @@ function install(app, deps) {
     const download = (deps.local ? settings.self_host_config?.LOCAL_MODELS_STATUS : null)?.embedder;
     res.set("Cache-Control", "no-store").json({ config: policy.publicConfig(settings.model_config || legacyConfig(settings)), legacy: !settings.model_config, allowDefault: !!deps.allowDefault, runtime: deps.local ? (process.env.CLOSEDHAND_DESKTOP ? "desktop" : "docker") : "hosted",
       activeModels: require("./model-summary").modelSummary(settings, deps.readRuntime, !!deps.local),
+      decisions: decisions.publicStatus(settings),
       localModels: download ? { embedder: { state: download.state, pct: download.pct } } : null });
+  }));
+  app.post("/api/model-config/decisions", route(async (req, res, id) => {
+    if (typeof req.body.enabled !== "boolean") throw new Error("Choose whether to use Jev.");
+    const before = await profile(id);
+    const key = req.body.enabled ? decisions.apiKey(req.body.apiKey) : null;
+    if (key) await decisions.validate(key);
+    // Validation can take time. Preserve edits to other settings and refuse a
+    // stale connection change, including a disconnect from another session.
+    const { data: current, error: readError } = await supabase.from("profiles").select("settings,updated_at").eq("id", id).single();
+    if (readError || !current) throw new Error("Could not load model settings.");
+    const settings = current.settings || {};
+    if (before.typesafe_enabled !== settings.typesafe_enabled || before.typesafe_api_key !== settings.typesafe_api_key)
+      throw new Error("The Jev connection changed in another session. Reload and try again.");
+    const next = { ...settings };
+    delete next.typesafe_api_key;
+    delete next.typesafe_enabled;
+    if (key) Object.assign(next, { typesafe_api_key: key, typesafe_enabled: true });
+    const query = supabase.from("profiles").update({ settings: next, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data: written, error } = await require("./recall-settings").unchanged(query, "settings", current.settings, current.updated_at).select("id");
+    if (error || !written?.length) throw new Error("Settings changed or could not be saved. Reload and try again.");
+    res.set("Cache-Control", "no-store").json({ decisions: decisions.publicStatus(next) });
   }));
   app.post("/api/model-config/default", route(async (req, res, id) => {
     if (!deps.allowDefault) return res.status(400).json({ error: "This installation needs its own model connection." });

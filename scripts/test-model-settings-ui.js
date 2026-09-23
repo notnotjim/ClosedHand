@@ -50,6 +50,45 @@ async function mount(respond = () => ({ config: null, runtime: 'docker' })) {
   };
 }
 const catalog = { models: [{ id: 'chat', capabilities: { tools: true, vision: true } }] };
+
+test('Jev can connect independently of primary model selection', async () => {
+  const ui = await mount(call => call.path === '/decisions' ? { decisions: { enabled: true } } : { config: null, allowDefault: true });
+  ui.field('jevEnabled').checked = true; ui.choose('jevEnabled', 'on');
+  ui.type('jevKey', 'synthetic-key'); await ui.timers();
+  assert.equal(ui.calls.length, 1);
+  await ui.action('jev-connect').onclick();
+  assert.deepEqual(ui.calls[1], { path: '/decisions', body: { enabled: true, apiKey: 'synthetic-key' } });
+  assert.equal(ui.field('jevKey').value, '');
+  assert.equal(ui.region('jev-key').hidden, true);
+  assert.equal(ui.action('jev-connect').hidden, true);
+  assert.match(ui.region('jev-status').textContent, /connected/);
+  assert.equal(ui.calls.some(c => ['/check', '/models', '/save'].includes(c.path)), false);
+});
+test('a credit error keeps Jev unconnected with a usable retry', async () => {
+  const ui = await mount(call => call.path === '/decisions' ? { error: 'Your TypeSafe account needs credit.' } : { config: null });
+  ui.field('jevEnabled').checked = true; ui.choose('jevEnabled', 'on'); ui.type('jevKey', 'no-credit');
+  await ui.action('jev-connect').onclick();
+  assert.match(ui.region('jev-status').textContent, /Jev is not connected.*needs credit/);
+  assert.equal(ui.action('jev-connect').hidden, false);
+  assert.equal(ui.action('jev-connect').disabled, false);
+  assert.equal(ui.field('jevKey').value, 'no-credit');
+});
+test('unchecking a saved Jev connection disconnects without any model recheck', async () => {
+  const ui = await mount(call => call.path === '/decisions' ? { decisions: { enabled: false } } : { config: null, decisions: { enabled: true } });
+  ui.field('jevEnabled').checked = false; ui.choose('jevEnabled', 'on'); await tick();
+  assert.deepEqual(ui.calls[1], { path: '/decisions', body: { enabled: false } });
+  assert.equal(ui.field('jevEnabled').checked, false);
+  assert.equal(ui.region('jev-details').hidden, true);
+  assert.match(ui.region('jev-status').textContent, /Disconnected/);
+});
+test('a failed disconnect restores the true connected state', async () => {
+  const ui = await mount(call => call.path === '/decisions' ? { error: 'Could not save.' } : { config: null, decisions: { enabled: true } });
+  ui.field('jevEnabled').checked = false; ui.choose('jevEnabled', 'on'); await tick();
+  assert.equal(ui.field('jevEnabled').checked, true);
+  assert.equal(ui.region('jev-key').hidden, true);
+  assert.match(ui.region('jev-status').textContent, /still connected/);
+});
+
 function checked() { return { ticket: 'checked-ticket', config: { connections: { primary: { provider: 'openai' } }, roles: { chat: { model: 'chat', connection: 'primary' }, background: { model: 'chat', connection: 'primary' }, vision: null } } }; }
 test('a failed initial load can be retried without leaving a stale error', async () => {
   const ui = await mount((_, calls) => calls.length === 1 ? { error: 'fetch failed' } : { config: null });

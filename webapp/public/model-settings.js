@@ -27,6 +27,12 @@
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
       '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
+      '<div class="model-decisions model-fields"><label class="model-toggle"><input type="checkbox" data-field="jevEnabled">Use Jev for selected checks</label>' +
+      '<div class="model-fields" data-region="jev-details" hidden><p class="model-hint">Jev screens new mail and upcoming events for Pulse. These checks go to TypeSafe. Your support model handles writing and takes over if Jev cannot decide.</p>' +
+      '<label data-region="jev-key">TypeSafe API key<input data-field="jevKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your TypeSafe API key"></label>' +
+      '<p class="model-hint" data-region="jev-account"><a class="model-link" href="https://typesafe.ai" target="_blank" rel="noopener noreferrer">Get a TypeSafe key</a>. Your account needs credit.</p>' +
+      '<button type="button" data-action="jev-connect">Connect Jev</button></div>' +
+      '<p class="model-hint" role="status" aria-live="polite" data-region="jev-status"></p></div>' +
       '</section><section class="model-role model-fields"><header><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></header>' +
       '<label>Model choice<select data-field="visionMode"><option value="same">Use the primary model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
       '<div data-region="vision" class="model-fields" hidden><label>Provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
@@ -42,6 +48,7 @@
       '<details data-region="default" hidden><summary>Return to the hosted models</summary><div class="model-fields">' +
       '<p>This removes your own model connections from ClosedHand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
       '<button type="button" data-action="default">Use the hosted models</button></div></details></div></details>';
+    var jevEnabled = false;
     var saved = null, ticket = null, models = [], imageModels = [], supportModels = [], busy = false, allowDefault = false;
     var loads = { primary: 0, vision: 0, background: 0 }, runtime = "", initialized = false;
     var check = null, checkTimer = null, checks = 0;
@@ -49,6 +56,35 @@
     var field = function (key) { return root.querySelector('[data-field="' + key + '"]'); };
     var region = function (key) { return root.querySelector('[data-region="' + key + '"]'); };
     var result = root.querySelector(".model-result");
+    function renderJev(data) {
+      jevEnabled = !!data?.enabled;
+      field("jevEnabled").checked = jevEnabled;
+      field("jevKey").value = "";
+      showJev();
+    }
+    function showJev() {
+      var selected = field("jevEnabled").checked;
+      region("jev-details").hidden = !selected;
+      region("jev-key").hidden = jevEnabled;
+      region("jev-account").hidden = jevEnabled;
+      root.querySelector('[data-action="jev-connect"]').hidden = jevEnabled;
+      region("jev-status").textContent = jevEnabled ? "Jev is connected. Uncheck to disconnect."
+        : selected ? "Connect Jev to enable it. Your support model is still handling these checks." : "";
+    }
+    async function saveJev(enabled) {
+      await perform(async function () {
+        region("jev-status").textContent = enabled ? "Checking Jev..." : "Disconnecting Jev...";
+        try {
+          var data = await call("/decisions", { enabled: enabled, ...(enabled ? { apiKey: value("jevKey") } : {}) });
+          renderJev(data.decisions);
+          if (!enabled) region("jev-status").textContent = "Disconnected. Your support model handles all checks.";
+        } catch (e) {
+          field("jevEnabled").checked = enabled || jevEnabled;
+          showJev();
+          region("jev-status").textContent = (jevEnabled ? "Jev is still connected. " : "Jev is not connected. ") + e.message;
+        }
+      });
+    }
     function renderCurrent(data) {
       var current = region("current");
       current.replaceChildren();
@@ -378,11 +414,18 @@
       return null;
     }
     root.addEventListener("input", function (ev) {
+      if (ev.target === field("jevKey") || ev.target === field("jevEnabled")) return;
       var kind = connectionField(ev.target);
       if (kind) { connectionInput(kind); return; }
       invalidate(); scheduleCheck();
     });
     root.addEventListener("change", function (ev) {
+      if (ev.target === field("jevKey")) return;
+      if (ev.target === field("jevEnabled")) {
+        if (!field("jevEnabled").checked && jevEnabled) { saveJev(false); return; }
+        if (!field("jevEnabled").checked) field("jevKey").value = "";
+        showJev(); return;
+      }
       var kind = connectionField(ev.target);
       if (kind) { connectionInput(kind); return; }
       if (ev.target.dataset.picker) {
@@ -431,6 +474,7 @@
         if (value("backgroundMode") === "separate") scheduleLoad("background");
       }
     });
+    root.querySelector('[data-action="jev-connect"]').onclick = function () { return saveJev(true); };
     root.querySelector('[data-action="load"]').onclick = function () { loadModels("primary"); };
     root.querySelector('[data-action="load-vision"]').onclick = function () { loadModels("vision"); };
     root.querySelector('[data-action="load-background"]').onclick = function () { loadModels("background"); };
@@ -467,7 +511,7 @@
       region("connection").hidden = true;
       root.querySelector('[data-action="reload"]').hidden = true;
       try { await perform(async function () {
-      var data = await call(""); show(""); initialized = true; runtime = data.runtime || ""; saved = data.config; renderCurrent(data);
+      var data = await call(""); show(""); initialized = true; runtime = data.runtime || ""; saved = data.config; renderCurrent(data); renderJev(data.decisions);
       region("editor").open = !saved && !data.allowDefault;
       // "Change models" only makes sense once there are models to change.
       region("editor").querySelector("summary").hidden = !saved && !data.allowDefault;
@@ -508,6 +552,7 @@
       }); } finally {
         root.querySelector('[data-action="reload"]').hidden = initialized;
         field("provider").disabled = !initialized;
+        field("jevEnabled").disabled = !initialized;
       }
     }
     root.querySelector('[data-action="reload"]').onclick = initialize;
