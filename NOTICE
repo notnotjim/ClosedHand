@@ -2,3 +2,14 @@ ClosedHand
 Copyright 2026 James Chatt-Ramsey
 
 Third-party components retain their own licences and notices.
+
+The built-in voice uses Kokoro v1.0 by hexgrad and the ONNX conversion by
+onnx-community, both distributed under Apache License 2.0 (see LICENSE).
+Model source: https://huggingface.co/hexgrad/Kokoro-82M
+Pinned distribution: lib/speech/assets.json
+The English phoneme normalisation in lib/speech/phonemize.js is adapted from
+hexgrad/kokoro, kokoro.js/src/phonemize.js, also Apache License 2.0.
+Changes: CommonJS loading and escaping punctuation for this application.
+Phonemizer (xenova/phonemizer.js) is Apache License 2.0.
+OpusScript is MIT licensed; its libopus component is BSD licensed.
+Dependency licence texts ship alongside their packages.

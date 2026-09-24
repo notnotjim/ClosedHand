@@ -11,6 +11,17 @@ on:
   workflow_dispatch:
 
 jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install voice encoder for protocol tests
+        run: npm install --prefix "$RUNNER_TEMP/voice-test" --ignore-scripts --no-audit --no-fund opusscript@0.1.1
+      - name: Voice queue, cancellation, isolation and audio format
+        run: NODE_PATH="$RUNNER_TEMP/voice-test/node_modules" node --test scripts/test-speech.js
   checks:
     runs-on: ubuntu-latest
     steps:

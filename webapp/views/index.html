@@ -972,6 +972,14 @@
   .msg-tool { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border: 0; background: none; color: rgba(239,230,214,0.45); cursor: pointer; border-radius: 5px; padding: 0; }
   .msg-tool:hover { color: #EFE6D6; background: rgba(239,230,214,0.08); }
   .msg-tool.done { color: #8DBD79; }
+  .message:focus-within .msg-tools { opacity: 1; pointer-events: auto; }
+  .message.bot .msg-tools { position: static; height: auto; min-height: 32px; margin-top: 6px; gap: 4px; opacity: 1; pointer-events: auto; flex-wrap: wrap; }
+  .message.bot .msg-tool { width: 32px; height: 32px; color: #B6AFA4; }
+  .message.bot .msg-tool.done { color: #8DBD79; }
+  .msg-tool:focus-visible { outline: 2px solid #D8624B; outline-offset: 2px; }
+  .voice-status { font-size: 14px; color: #B6AFA4; }
+  .voice-status:empty { display: none; }
+  @media (pointer: coarse), (max-width: 600px) { .message.bot .msg-tool { width: 44px; height: 44px; } }
   .msg-time { font-size: 11px; color: rgba(239,230,214,0.4); white-space: nowrap; }
   /* Back to the latest message, when the reader has scrolled up. */
   .scroll-latest { position: fixed; right: 28px; z-index: 12; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(239,230,214,0.14); background: rgba(26,24,23,0.92); color: rgba(239,230,214,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
@@ -2667,6 +2675,7 @@
 </div>
 
 <!-- Three.js: Oil-slick blob + starfield -->
+<script src="/speech-playback.js?v=2.0.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -3700,6 +3709,7 @@
       chatWs.onmessage = function(event) {
         try {
           var msg = JSON.parse(event.data);
+          if (window.ClosedHandSpeech && window.ClosedHandSpeech.receive(msg)) return;
           // Final responses disarm the stall watchdog; progress events re-arm it
           if (msg.type === 'message' || msg.type === 'canvas' || msg.type === 'stream_end' || msg.type === 'file') disarmResponseWatchdog();
           else armResponseWatchdog();
@@ -3751,7 +3761,11 @@
           }
         } catch (e) {}
       };
-      chatWs.onclose = function() { chatWs = null; setTimeout(connectChat, 2000); };
+      chatWs.onclose = function() {
+        if (window.ClosedHandSpeech) window.ClosedHandSpeech.stop('Connection lost. Tap to try again.');
+        chatWs = null;
+        setTimeout(connectChat, 2000);
+      };
       chatWs.onerror = function() { if (chatWs) chatWs.close(); };
     }).catch(function() {});
   }
@@ -3916,6 +3930,7 @@
     tools.className = 'msg-tools';
     var copy = document.createElement('button');
     copy.type = 'button'; copy.className = 'msg-tool'; copy.title = 'Copy';
+    copy.setAttribute('aria-label', 'Copy message');
     copy.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
     copy.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -3923,6 +3938,13 @@
       write.then(function() { copy.classList.add('done'); setTimeout(function() { copy.classList.remove('done'); }, 1200); }).catch(function() {});
     });
     tools.appendChild(copy);
+    if (div.classList.contains('bot') && text.trim() && window.ClosedHandSpeech) {
+      window.ClosedHandSpeech.addControl(tools, text, function(payload) {
+        if (!chatWs || chatWs.readyState !== 1) { connectChat(); return false; }
+        chatWs.send(JSON.stringify(payload));
+        return true;
+      });
+    }
     var when = document.createElement('span');
     when.className = 'msg-time';
     var label = msgTime(ts);

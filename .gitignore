@@ -54,3 +54,6 @@ OSS-NOTES.md
 desktop/.build/
 desktop/.cache/
 desktop/dist/
+
+# Verified at build time, bundled in app/image rather than stored in Git.
+assets/voice/kokoro-v1/

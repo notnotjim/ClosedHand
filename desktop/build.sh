@@ -17,7 +17,7 @@ CACHE="$HERE/.cache"
 ARCH="${ARCH:-$(uname -m)}"            # arm64 or x86_64
 NODE_ARCH="$([ "$ARCH" = "x86_64" ] && echo x64 || echo arm64)"
 NODE_VERSION="${NODE_VERSION:-v22.23.2}"
-VERSION="${VERSION:-2.0.16}"
+VERSION="${VERSION:-2.0.17}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
 DIST="$HERE/dist"
 APP="$DIST/ClosedHand.app"
@@ -97,6 +97,11 @@ if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
 fi
 
 # --- the shell ----------------------------------------------------------------
+# Keep the verified voice cache across builds, then include it in the signed app.
+"$NODE_DIR/bin/node" "$ROOT/scripts/prepare-voice.js" "$CACHE/voice/kokoro-v1"
+mkdir -p "$APP_SRC/assets/voice"
+cp -R "$CACHE/voice/kokoro-v1" "$APP_SRC/assets/voice/"
+
 say "Building the app"
 (cd "$HERE" && swift build -c release --arch "$ARCH")
 BIN="$HERE/.build/$ARCH-apple-macosx/release/ClosedHand"

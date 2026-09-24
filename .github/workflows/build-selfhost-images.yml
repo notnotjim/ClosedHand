@@ -22,6 +22,7 @@ on:
       - 'webapp/package-lock.json'
       - 'index.js'
       - 'lib/**'
+      - 'scripts/prepare-voice.js'
       - 'webapp/**'
       - 'migrations/**'
       - '.github/workflows/build-selfhost-images.yml'
