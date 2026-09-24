@@ -1912,14 +1912,21 @@
   .mon { border:2px solid rgba(239,230,214,0.18); border-radius:12px 12px 4px 4px; overflow:hidden; height:calc(100dvh - 190px); min-height:500px; display:flex; flex-direction:column; background:rgba(26,24,23,0.92); box-shadow:0 8px 32px rgba(16,14,13,0.5); width:100%; }
 
   /* Monitor top bar (macOS style) */
-  .mon-bar { display:flex; align-items:center; padding:10px 14px; background:rgba(26,24,23,0.95); flex-shrink:0; gap:8px; border-bottom:1px solid rgba(239,230,214,0.06); min-height:40px; }
-  .mon-dots { display:flex; gap:6px; flex-shrink:0; }
+  .mon { container-type:inline-size; }
+  .mon-bar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; padding:10px 14px; background:rgba(26,24,23,0.95); flex-shrink:0; gap:8px; border-bottom:1px solid rgba(239,230,214,0.06); min-height:40px; }
+  .mon-dots { display:flex; gap:6px; flex-shrink:0; grid-column:1; grid-row:1; }
   .mon-dots span { width:8px; height:8px; border-radius:50%; }
   .mon-dots .d-r { background:#D0563F; } .mon-dots .d-y { background:#D0A652; } .mon-dots .d-g { background:#D0563F; }
-  .mon-bar-title { flex:1; min-width:0; text-align:left; color:#B6AFA4; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .mon-bar-title { grid-column:2; grid-row:1; min-width:0; text-align:center; color:#B6AFA4; display:flex; flex-direction:column; align-items:center; gap:4px; }
   .mon-title-line { display:flex; align-items:center; gap:8px; font-size:14px; color:#EFE6D6; }
   .mon-subtitle { display:flex; align-items:center; gap:6px; font-size:12px; line-height:1.4; color:#B6AFA4; }
-  .mon-bar-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .mon-bar-right { grid-column:3; grid-row:1; justify-self:end; display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  @container (max-width:620px) {
+    #monCloud .mon-bar-right { grid-column:1 / -1; grid-row:2; }
+  }
+  @container (max-width:400px) {
+    #monLocal .mon-bar-right { grid-column:1 / -1; grid-row:2; }
+  }
   .mon-storage { font-size:10px; color:rgba(239,230,214,0.5); display:flex; align-items:center; gap:6px; }
   .mon-storage-bar { width:60px; height:2px; background:rgba(239,230,214,0.08); border-radius:2px; overflow:hidden; }
   .mon-storage-fill { height:100%; background:#D0563F; border-radius:2px; transition:width 0.3s; }
@@ -2141,7 +2148,7 @@
   .mon-term-prompt { font-family:'SF Mono',Menlo,monospace; font-size:12px; color:rgba(208,86,63,0.6); flex-shrink:0; }
   .mon-term-cmd { flex:1; background:none; border:none; outline:none; font-family:'SF Mono',Menlo,monospace; font-size:12px; color:#EFE6D6; padding:4px 6px; }
   .mon-activity-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
-  .mon-activity-dot.on { background:#D0563F; }
+  .mon-activity-dot.on { background:#8DBD79; }
   .mon-activity-dot.off { background:rgba(239,230,214,0.4); }
 
   /* Spinner */
@@ -2456,8 +2463,8 @@
                 <span class="mon-info" data-tip="ClosedHand's sandboxed workspace keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
               </span>
               <span class="mon-subtitle">
-              <span class="mon-status on pulse"></span>
-              <span>ClosedHand's own sandboxed computer</span>
+              <span class="mon-status off" id="monWorkspaceStatus" role="img" aria-label="Checking status" title="Checking status"></span>
+              <span>ClosedHand's sandbox computer</span>
               </span>
             </div>
             <div class="mon-bar-right">
@@ -7016,17 +7023,34 @@ function escapeHtml(s) {
     return '<div class="mon-log-entry"><span class="mon-log-time">[' + time + ']</span><span class="mon-log-text ' + (cls || '') + '">' + text + '</span></div>';
   }
 
+  function monSetWorkspaceStatus(data) {
+    var online = data && typeof data.online === 'boolean' ? data.online : null;
+    var label = online === null ? 'Status unavailable' : online ? 'online' : 'offline';
+    var state = online === true ? 'on' : 'off';
+    var header = document.getElementById('monWorkspaceStatus');
+    if (header) {
+      header.className = 'mon-status ' + state;
+      header.title = label;
+      header.setAttribute('aria-label', label);
+    }
+    var status = document.getElementById('monTermStatus');
+    if (status) {
+      status.textContent = label + (online === null ? '' : ' | ' + (data.storage || '0') + '/' + ((data.volume_size_mb || 5120) / 1024).toFixed(0) + 'GB');
+      var dot = document.createElement('span');
+      dot.className = 'mon-activity-dot ' + state;
+      dot.setAttribute('aria-hidden', 'true');
+      status.prepend(dot);
+    }
+  }
+
   window._activityPoll = window._activityPoll || null;
   async function monLoadActivity() {
     try {
       var resp = await fetch('/api/sandbox/activity');
+      if (!resp.ok) throw new Error('Workspace status unavailable');
       var data = await resp.json();
       var logEl = document.getElementById('monTermLog');
-      var statusEl = document.getElementById('monTermStatus');
-
-      // Inline status in the bar
-      var dot = '<span class="mon-activity-dot ' + (data.online ? 'on' : 'off') + '"></span>';
-      statusEl.innerHTML = dot + (data.online ? 'online' : 'offline') + ' | ' + (data.storage || '0') + '/' + ((data.volume_size_mb || 5120)/1024).toFixed(0) + 'GB';
+      monSetWorkspaceStatus(data);
 
       // Build log entries
       var entries = [];
@@ -7057,7 +7081,7 @@ function escapeHtml(s) {
         logEl.innerHTML = entries.map(function(e) { return e.html; }).join('') + cmdHtml;
       }
       logEl.scrollTop = logEl.scrollHeight;
-    } catch (e) {}
+    } catch (e) { monSetWorkspaceStatus(null); }
   }
 
   async function monExecCmd() {
