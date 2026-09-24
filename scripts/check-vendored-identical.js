@@ -27,6 +27,7 @@ const ROOT = path.join(__dirname, "..");
 const MANIFEST = path.join(__dirname, "vendored-manifest.json");
 
 const PAIRS = [
+  { name: "assistant-email-protocol", copies: ["lib/assistant-email-protocol.js", "webapp/assistant-email-protocol.js"] },
   { name: "decision-provider", copies: ["lib/decision-provider.js", "webapp/decision-provider.js"] },
   { name: "recall-settings", copies: ["lib/services/recall-settings.js", "webapp/recall-settings.js"] },
   { name: "model-policy", copies: ["lib/model-policy.js", "webapp/model-policy.js"] },

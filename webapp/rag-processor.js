@@ -108,8 +108,8 @@ async function refreshMicrosoftToken(userId, serviceKey = "microsoft") {
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: tokens.refresh_token,
-      client_id: process.env.MICROSOFT_CLIENT_ID,
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET,
+      client_id: tokens.client_id || process.env.MICROSOFT_CLIENT_ID,
+      client_secret: tokens.client_secret || process.env.MICROSOFT_CLIENT_SECRET,
     }),
   });
   const data = await resp.json();

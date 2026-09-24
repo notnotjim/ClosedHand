@@ -38,6 +38,9 @@ jobs:
           find . -name '*.js' -not -path './node_modules/*' -not -path './.git/*' \
             -print0 | xargs -0 -n1 node -c
 
+      - name: Assistant email and connection catalogue
+        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js
+
       - name: Shopify connection and renewal
         run: node --test scripts/test-shopify-connection.js
 

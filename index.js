@@ -135,6 +135,7 @@ slackHandler.setup();
 discordHandler.setup();
 lineHandler.setup();
 webHandler.setup();
+require("./lib/assistant-email").setup();
 if (!ctx.discordClient) {
   const discordWatcher = setInterval(async () => {
     try {

@@ -1918,6 +1918,10 @@
   <meta name="theme-color" content="#1A1817">
   <link rel="stylesheet" href="/model-settings.css">
   <script src="/model-settings.js"></script>
+  <link rel="stylesheet" href="/connection-catalogue.css">
+  <script defer src="/connection-catalogue.js"></script>
+  <link rel="stylesheet" href="/assistant-email.css">
+  <script src="/assistant-email.js" defer></script>
 </head>
 <body class="dashboard-page">
 <script src="/flight-time.js"></script>
@@ -2146,30 +2150,19 @@
             <h2 style="font-size:14px;font-weight:600;color:#B6AFA4;letter-spacing:0.02em;">Your MCPs</h2>
           </div>
           <div id="mcp-list" style="margin-bottom:12px;"></div>
-          <div class="mcp-hero" style="position:relative;border-radius:20px;background:linear-gradient(160deg,rgba(26,24,23,0.6) 0%,rgba(16,14,13,0.55) 50%,rgba(16,14,13,0.6) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;border:1px solid rgba(239,230,214,0.08);box-shadow:0 4px 30px rgba(16,14,13,0.2),inset 0 1px 0 rgba(239,230,214,0.04);">
-
-            <!-- Ambient glow blobs -->
-            <div style="position:absolute;top:-60px;left:30%;width:180px;height:180px;background:radial-gradient(circle,rgba(208,86,63,0.06) 0%,transparent 70%);pointer-events:none;animation:mcp-float-1 6s ease-in-out infinite;"></div>
-            <div style="position:absolute;bottom:-40px;right:20%;width:140px;height:140px;background:radial-gradient(circle,rgba(216,98,75,0.04) 0%,transparent 70%);pointer-events:none;animation:mcp-float-2 8s ease-in-out infinite;"></div>
-
-            <!-- Keep the twelve examples in balanced rows at every width. -->
-            <div class="mcp-logos">
-              <img src="/logos/notion.svg" width="24" height="24" alt="Notion" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/stripe.svg" width="24" height="24" alt="Stripe" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/github.svg" width="24" height="24" alt="GitHub" class="mcp-logo-item" style="border-radius:5px;filter:invert(0.8);">
-              <img src="/logos/atlassian.svg" width="24" height="24" alt="Atlassian" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/shopify.svg" width="24" height="24" alt="Shopify" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/dropbox.svg" width="24" height="24" alt="Dropbox" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/zoom.svg" width="24" height="24" alt="Zoom" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/salesforce.svg" width="24" height="24" alt="Salesforce" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/asana.svg" width="24" height="24" alt="Asana" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/gitlab.svg" width="24" height="24" alt="GitLab" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/paypal.svg" width="24" height="24" alt="PayPal" class="mcp-logo-item" style="border-radius:5px;">
-              <img src="/logos/spotify.svg" width="24" height="24" alt="Spotify" class="mcp-logo-item" style="border-radius:5px;">
+          <details id="connection-catalogue" class="connection-catalogue">
+            <summary>Connect more</summary>
+            <div id="catalogue-browse">
+              <label for="catalogue-search" class="catalogue-search-label">Find an app</label>
+              <input id="catalogue-search" type="search" placeholder="Search apps and services" autocomplete="off">
+              <p id="catalogue-status" role="status"></p>
+              <button id="catalogue-retry" class="catalogue-action" type="button" hidden>Retry</button>
+              <div id="connection-catalogue-list"></div>
             </div>
-
+            <div id="catalogue-setup" hidden></div>
+          <div class="mcp-hero">
             <div class="mcp-copy">
-              <div class="mcp-title">Add a connection or skill</div>
+              <div class="mcp-title">Add another connection or skill</div>
               <p class="mcp-description">Paste a connection or skill link, a command, or a JSON block.</p>
               <p class="mcp-security">Checked for security risks before activation.</p>
             </div>
@@ -2211,6 +2204,7 @@
               </div>
             </div>
           </div>
+          </details>
         </div>
 
         <!-- Skills Library (on Home tab) -->
@@ -2457,6 +2451,10 @@
 
       <!-- Settings Tab Content -->
       <div class="tab-content" id="tab-settings">
+        <section class="settings-group">
+          <div class="settings-group-header"><h2 id="assistant-email-heading">ClosedHand’s email address</h2></div>
+          <div class="settings-group-body" id="assistant-email"></div>
+        </section>
         <div style="padding-top:16px;">
 
           <!-- AI Model Selection -->
@@ -3050,40 +3048,7 @@
                 <div class="int-unfurl-inner" id="unfurl-${key}"></div>
               </div>
             </div>`;
-        } else if (svc.configured || svc.needsStoreDomain) {
-          // Track disconnected services for the unfurl section
-          if (!window._disconnectedServices) window._disconnectedServices = [];
-          window._disconnectedServices.push({ key, svc, logoImg: logoImg(svc.logoUrl) });
         }
-      }
-      // Build disconnected services unfurl if any
-      var disconnectedContainer = document.getElementById('disconnected-unfurl');
-      if (!disconnectedContainer) {
-        disconnectedContainer = document.createElement('div');
-        disconnectedContainer.id = 'disconnected-unfurl';
-        connectedGrid.parentNode.insertBefore(disconnectedContainer, connectedGrid.nextSibling);
-      }
-      disconnectedContainer.innerHTML = '';
-      if (window._disconnectedServices && window._disconnectedServices.length > 0) {
-        var count = window._disconnectedServices.length;
-        disconnectedContainer.innerHTML = '<div style="margin-top:10px;">' +
-          '<a href="#" onclick="event.preventDefault();var g=document.getElementById(\'disconnected-grid\');var a=this.querySelector(\'span\');if(g.style.display===\'none\'){g.style.display=\'grid\';a.style.transform=\'rotate(-135deg)\';}else{g.style.display=\'none\';a.style.transform=\'\';}" style="font-size:14px;color:#B6AFA4;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">' +
-            count + ' more available <span class="chevron-down" style="transition:transform 0.15s;"></span>' +
-          '</a>' +
-          '<div class="integrations-grid" id="disconnected-grid" style="display:none;margin-top:8px;">' +
-            window._disconnectedServices.map(function(d) {
-              return '<div class="int-wrap" data-key="' + d.key + '">' +
-                // Must go through intCardClick, not straight to /auth/<key>:
-                // Shopify needs a store domain first, so it has a modal rather
-                // than an OAuth endpoint. Linking directly produced "Service not available".
-                '<div class="int-card" data-key="' + d.key + '" style="cursor:pointer;" onclick="intCardClick(this)">' +
-                  d.logoImg +
-                  '<span class="int-name">' + escHtml(d.svc.name) + '</span>' +
-                  '<span style="font-size:14px;color:#8DBD79;">Connect</span>' +
-                '</div></div>';
-            }).join('') +
-          '</div></div>';
-        window._disconnectedServices = [];
       }
 
       // The row always ends with the way to add more, and the section always
@@ -3091,7 +3056,7 @@
       connectedGrid.insertAdjacentHTML('beforeend',
         '<div class="int-card int-more" role="button" tabindex="0" onclick="beckonAddBox()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();beckonAddBox();}">' +
           '<span class="int-more-plus" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>' +
-          '<span class="int-more-text"><span class="int-name">Connect more</span><span class="int-more-sub">Any app with a link, plus skills</span></span>' +
+          '<span class="int-more-text"><span class="int-name">Connect more</span><span class="int-more-sub">Browse apps and add connections</span></span>' +
           '<span class="int-more-arrow" aria-hidden="true">&#8595;</span>' +
         '</div>');
       connectedSection.style.display = '';
@@ -4008,7 +3973,9 @@
       var mcpSection = document.getElementById('mcp-section');
       if (mcpSection) {
         var anyMcpVisible = !q || !!document.querySelector('#mcp-list > div:not([style*="display: none"])');
-        mcpSection.style.display = anyMcpVisible ? '' : 'none';
+        mcpSection.style.display = '';
+        if (q) window.openConnectionCatalogue(query);
+        else if (window.filterConnectionCatalogue) window.filterConnectionCatalogue('');
       }
     }
 
@@ -7674,18 +7641,7 @@
     // Bring the add box into view and make it answer: border spins up, the
     // logos wake, the box takes focus. Used by the Connect more card, and by
     // the chat's Connect a service and Install a skill.
-    window.beckonAddBox = function() {
-      var pill = document.querySelector('#mcp-section .mcp-pill');
-      var hero = document.querySelector('#mcp-section .mcp-hero');
-      var input = document.getElementById('mcp-url-input');
-      if (!pill) return;
-      pill.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      pill.classList.add('beckon');
-      if (hero) hero.classList.add('beckon');
-      setTimeout(function() { if (input) input.focus({ preventScroll: true }); }, 450);
-      clearTimeout(window._beckonTimer);
-      window._beckonTimer = setTimeout(function() { pill.classList.remove('beckon'); if (hero) hero.classList.remove('beckon'); }, 2600);
-    };
+    window.beckonAddBox = function() { window.openConnectionCatalogue(); };
     window.beckonBridge = function() {
       var card = document.querySelector('#bridge-connected-card .int-card, #bridge-standalone-card > *');
       if (!card) return;

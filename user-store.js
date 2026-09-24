@@ -532,7 +532,7 @@ class UserStore {
 
   // Save an attachment (metadata)
   async saveAttachment(att) {
-    await supabase.from("attachments").upsert(
+    const { error } = await supabase.from("attachments").upsert(
       {
         user_id: this.userId,
         attachment_id: att.id,
@@ -545,6 +545,7 @@ class UserStore {
       },
       { onConflict: "user_id,attachment_id" }
     );
+    if (error) throw new Error("Could not save the attachment.");
     // Update local copy
     const idx = this.attachments.findIndex((a) => a.id === att.id);
     if (idx >= 0) this.attachments[idx] = att;

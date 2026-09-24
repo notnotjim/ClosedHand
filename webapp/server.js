@@ -122,6 +122,7 @@ const SERVICES = {
       "profile",
       "email",
       "offline_access",
+      "User.Read",
       "Mail.ReadWrite",
       "Mail.Send",
       "Calendars.ReadWrite",
@@ -140,7 +141,7 @@ const SERVICES = {
     authUrl: "https://api.notion.com/v1/oauth/authorize",
     tokenUrl: "https://api.notion.com/v1/oauth/token",
     scopes: [],
-    authParams: { owner: "user" },
+    extraAuthParams: { owner: "user" },
     tokenAuthMethod: "basic",
     provides: ["Notion"],
   },
@@ -1723,6 +1724,10 @@ function generatePKCE() {
   return { codeVerifier, codeChallenge };
 }
 
+const connectionCatalogue = require("./connection-catalogue").createCatalogue({ db: supabase, services: SERVICES, userId: getUserIdFromRequest, baseUrl: BASE_URL });
+connectionCatalogue.register(app);
+require("./assistant-email-settings").register(app, supabase, getUserIdFromRequest);
+
 // OAuth state tokens (in-memory, short-lived)
 const oauthStates = new Map();
 
@@ -1747,7 +1752,9 @@ function consumeOAuthState(state) {
 // Start OAuth for any service
 app.get("/auth/:service", async (req, res) => {
   const serviceKey = req.params.service;
-  const svc = SERVICES[serviceKey];
+  let svc;
+  try { svc = await connectionCatalogue.resolve(serviceKey, getUserIdFromRequest(req)); }
+  catch (_) { return res.status(503).send("Could not read connection settings. Return to Connections and try again."); }
 
   if (!svc || !svc.clientId || !svc.clientSecret) {
     return res.status(400).send("Service not available");
@@ -1784,6 +1791,7 @@ app.get("/auth/:service", async (req, res) => {
   // Build state
   const stateData = {
     service: serviceKey,
+    personalClient: svc.personalClient ? { clientId: svc.clientId, clientSecret: svc.clientSecret } : null,
     flow,
     userId: flow === "website" ? getUserIdFromRequest(req) : null,
     tgId: tgUser?.id?.toString() || null,
@@ -2112,10 +2120,12 @@ app.get("/auth/mcp-oauth/callback", async (req, res) => {
 // OAuth callback for any service
 app.get("/auth/:service/callback", async (req, res) => {
   const serviceKey = req.params.service;
-  const svc = SERVICES[serviceKey];
+  let svc = SERVICES[serviceKey];
   const { code, error, state } = req.query;
 
   const stateData = consumeOAuthState(state);
+  if (stateData && stateData.service !== serviceKey) return res.redirect("/dashboard?error=invalid_state");
+  if (svc && stateData?.personalClient) svc = { ...svc, ...stateData.personalClient, personalClient: true };
 
   if (error || !code) {
     if (stateData?.flow === "telegram") {
@@ -2140,6 +2150,7 @@ app.get("/auth/:service/callback", async (req, res) => {
   try {
     const redirectUri = `${BASE_URL}/auth/${serviceKey}/callback`;
     const tokens = await exchangeOAuthCode(svc, code, redirectUri, stateData.storeDomain, stateData.codeVerifier);
+    if (svc.personalClient) { tokens.client_id = svc.clientId; tokens.client_secret = svc.clientSecret; }
 
     if (stateData.extraAccount && serviceKey === "google") {
       return await handleExtraGoogleAccount(res, stateData, svc, tokens);
@@ -2442,7 +2453,7 @@ async function handleExtraMicrosoftAccount(res, stateData, svc, tokens) {
   }
 
   const slug = email.split("@")[0].replace(/[^a-z0-9]/g, "").substring(0, 24) || "acct" + Date.now().toString(36);
-  await saveConnection(userId, "microsoft_extra_" + slug, tokens, svc, metadata);
+  await saveConnection(userId, (existing || []).length ? "microsoft_extra_" + slug : "microsoft", tokens, svc, metadata);
   console.log(`[Auth] Extra Microsoft account connected for ${userId}: ${email} (microsoft_extra_${slug})`);
   res.redirect("/dashboard?connected=microsoft_extra");
 }
@@ -2688,6 +2699,7 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expiry: tokens.expiry,
+      ...(tokens.client_id ? { client_id: tokens.client_id, client_secret: tokens.client_secret } : {}),
     }),
     config: {
       ...(previous?.[0]?.config || {}),
@@ -7184,6 +7196,7 @@ app.post("/api/account/clear-conversations", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
+    await require("./assistant-email-settings").clear(supabase, userId, false, true);
     // The same wipe chat's /clear performs. This used to empty only the legacy
     // conversations table, which the bot does not read once threads exist, so
     // the button reported success and deleted almost nothing: the next message
@@ -7196,7 +7209,8 @@ app.post("/api/account/clear-conversations", async (req, res) => {
       supabase.from("conversation_threads").delete().eq("user_id", userId),
       supabase.from("conversations").update({ messages: [], summary: null }).eq("user_id", userId),
       supabase.from("web_messages").delete().eq("user_id", userId),
-      supabase.from("data_cache").delete().eq("user_id", userId).eq("source", "conversation"),
+      supabase.from("data_cache").delete().eq("user_id", userId).in("source", ["conversation", "assistant_email"]),
+      supabase.from("data_vectors").delete().eq("user_id", userId).eq("source_metadata->>source", "assistant_email"),
       supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory")
         .in("item_type", ["conversation_summary", "thread_summary"]),
     ]);
@@ -7215,6 +7229,7 @@ app.post("/api/account/clear-data", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
+    await require("./assistant-email-settings").clear(supabase, userId, false);
     // Fetch attachment paths for storage cleanup
     const { data: attachments } = await supabase
       .from("attachments")
@@ -7253,7 +7268,8 @@ app.post("/api/account/clear-data", async (req, res) => {
       // The synced cache stays (it re-syncs from the connections that stay),
       // but conversation raw is not resyncable from anywhere and belongs to
       // the conversations this action promises to delete.
-      supabase.from("data_cache").delete().eq("user_id", userId).eq("source", "conversation"),
+      supabase.from("data_cache").delete().eq("user_id", userId).in("source", ["conversation", "assistant_email"]),
+      supabase.from("data_vectors").delete().eq("user_id", userId).eq("source_metadata->>source", "assistant_email"),
       supabase.from("facts").delete().eq("user_id", userId),
       supabase.from("user_rules").delete().eq("user_id", userId),
       supabase.from("schedules").delete().eq("user_id", userId),
@@ -7290,6 +7306,7 @@ app.delete("/api/account", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
+    await require("./assistant-email-settings").clear(supabase, userId, true);
     // Fetch attachment paths for storage cleanup
     const { data: attachments } = await supabase
       .from("attachments")
