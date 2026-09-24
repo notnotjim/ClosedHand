@@ -15,9 +15,9 @@ function fixture(overrides = {}) {
   const workers = [];
   class FakeWorker extends EventEmitter {
     constructor() { super(); this.calls = []; workers.push(this); }
-    postMessage(msg) { this.calls.push(msg); }
+    send(msg) { if (msg.type !== 'init') this.calls.push(msg); }
     ref() {} unref() {}
-    terminate() { this.terminated = true; return Promise.resolve(); }
+    kill() { this.terminated = true; return true; }
     ready() { this.emit('message', { type: 'ready' }); }
     done() { this.emit('message', { type: 'done', id: this.calls.at(-1).id, audio: Buffer.from('voice') }); }
   }
@@ -26,7 +26,7 @@ function fixture(overrides = {}) {
     const target = path.join(dir, file.path);
     fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, 'fixture');
   }
-  const service = createSpeechService({ directory: dir, Worker: FakeWorker, idleMs: 5, ...overrides });
+  const service = createSpeechService({ directory: dir, spawn: () => new FakeWorker(), idleMs: 5, ...overrides });
   return { service, workers, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
 }
 

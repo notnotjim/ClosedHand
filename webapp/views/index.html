@@ -1916,7 +1916,9 @@
   .mon-dots { display:flex; gap:6px; flex-shrink:0; }
   .mon-dots span { width:8px; height:8px; border-radius:50%; }
   .mon-dots .d-r { background:#D0563F; } .mon-dots .d-y { background:#D0A652; } .mon-dots .d-g { background:#D0563F; }
-  .mon-bar-title { flex:1; text-align:center; font-size:13px; color:#B6AFA4; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .mon-bar-title { flex:1; min-width:0; text-align:left; color:#B6AFA4; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .mon-title-line { display:flex; align-items:center; gap:8px; font-size:14px; color:#EFE6D6; }
+  .mon-subtitle { display:flex; align-items:center; gap:6px; font-size:12px; line-height:1.4; color:#B6AFA4; }
   .mon-bar-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .mon-storage { font-size:10px; color:rgba(239,230,214,0.5); display:flex; align-items:center; gap:6px; }
   .mon-storage-bar { width:60px; height:2px; background:rgba(239,230,214,0.08); border-radius:2px; overflow:hidden; }
@@ -2360,7 +2362,7 @@
     </button>
     <div class="hero-recent-pop" id="heroRecentPop" hidden></div>
     <div class="hero-footer">
-      <span>You don’t have to keep it all in your head.</span>
+      <span>Let’s get things in order.</span>
     </div>
 
     <div style="flex:1"></div>
@@ -2448,11 +2450,15 @@
           <div class="mon-bar">
             <div class="mon-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
             <div class="mon-bar-title">
+              <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
               Workspace
+                <span class="mon-info" data-tip="ClosedHand's sandboxed workspace keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
+              </span>
+              <span class="mon-subtitle">
               <span class="mon-status on pulse"></span>
-              <span style="font-size:10px;color:rgba(239,230,214,0.5);">ClosedHand's own computer</span>
-              <span class="mon-info" data-tip="ClosedHand's sandboxed workspace keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
+              <span>ClosedHand's own sandboxed computer</span>
+              </span>
             </div>
             <div class="mon-bar-right">
               <input type="file" id="monUploadInput" multiple style="display:none" onchange="monHandleUpload(this.files)">
@@ -2512,11 +2518,15 @@
           <div class="mon-bar">
             <div class="mon-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
             <div class="mon-bar-title">
+              <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
               Local Computer
+                <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; Docker installations use the separate Bridge app.&#10;&#10;Drag a file across to the Workspace to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
+              </span>
+              <span class="mon-subtitle">
               <span class="mon-status off" id="monLocalStatus"></span>
-              <span id="monLocalStatusText" style="font-size:10px;color:rgba(239,230,214,0.5);">Offline</span>
-              <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; Docker installations use the separate Bridge app.&#10;&#10;Drag a file across to the Workspace to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
+              <span id="monLocalStatusText">Offline</span>
+              </span>
             </div>
             <div class="mon-bar-right">
               <div class="mon-view-toggle" id="monLocalViewToggle">

@@ -18,8 +18,9 @@ with the release. Source installations need to run that command once after
 `npm ci`. The model and voice files total about 93 MB before packaging; runtime
 speech never downloads files. See NOTICE for attribution and licences.
 
-The existing ONNX runtime is reused. A single worker loads on demand, serialises
-requests with a bounded queue, and unloads after a minute of inactivity. Browser
+The existing ONNX runtime is reused. A single helper process loads on demand, serialises
+requests with a bounded queue, and exits after a minute of inactivity so the
+operating system can reclaim its native model memory. Browser
 audio streams sentence by sentence; chat apps receive an Ogg Opus voice note.
 The first reply takes longer while the model loads. Speed and memory use depend
 on the host and other running tasks. Stopping web playback or closing its socket
