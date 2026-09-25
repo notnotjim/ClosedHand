@@ -32,9 +32,25 @@
       return;
     }
     heading.append(document.createTextNode(' '), el('span', 'Beta', 'badge badge-soon'));
-    const allowance = el('details'); allowance.append(el('summary', 'Email allowance'));
-    allowance.append(el('p', 'Includes 1,000 sent and 2,000 received emails each month, with 250 MB of combined email data. Daily limits are 100 sent and 200 received. Allowances are shared across your installations and reset in UTC.', 'section-desc'));
-    if (state.usage) allowance.append(el('p', `${state.usage.sent} sent · ${state.usage.received} received · ${(state.usage.bytes / 1048576).toFixed(1)} MB this month.`, 'section-desc'));
+    const allowance = el('details'); allowance.append(el('summary', 'Beta allowance'));
+    const table = el('table', '', 'assistant-email-usage');
+    const labels = el('tr');
+    for (const label of ['', 'Sent', 'Received']) { const cell = el('th', label); cell.scope = 'col'; labels.append(cell); }
+    const head = el('thead'); head.append(labels); table.append(head);
+    const body = el('tbody');
+    const count = (used, limit) => {
+      const cell = el('td');
+      cell.append(el('strong', Number.isFinite(used) ? used.toLocaleString() : '…'), document.createTextNode(' / ' + limit.toLocaleString()));
+      return cell;
+    };
+    for (const [label, sent, received, sentLimit, receivedLimit] of [
+      ['This month', state.usage?.sent, state.usage?.received, 1000, 2000],
+      ['Today', state.usage?.dailySent, state.usage?.dailyReceived, 100, 200]
+    ]) {
+      const row = el('tr'); const title = el('th', label); title.scope = 'row';
+      row.append(title, count(state.address ? sent : 0, sentLimit), count(state.address ? received : 0, receivedLimit)); body.append(row);
+    }
+    table.append(body); allowance.append(table);
     content.append(allowance);
     if (state.servicePaused) content.append(el('p', 'Email delivery is temporarily paused. Your address is kept.', 'section-desc'));
     if (!state.address) {

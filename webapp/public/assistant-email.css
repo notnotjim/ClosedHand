@@ -22,3 +22,10 @@
 #assistant-email button:disabled { opacity:.55; cursor:wait; }
 
 #assistant-email button.assistant-email-unavailable { cursor: default; opacity: 1; color: var(--ui-muted); background: transparent; }
+
+#assistant-email .assistant-email-usage { width:100%; border-collapse:collapse; margin:4px 0 16px; font-variant-numeric:tabular-nums; }
+#assistant-email .assistant-email-usage th, #assistant-email .assistant-email-usage td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--ui-border); font-size:var(--ui-body,15px); }
+#assistant-email .assistant-email-usage th { font-weight:400; color:var(--ui-muted); }
+#assistant-email .assistant-email-usage td { white-space:nowrap; color:var(--ui-muted); }
+#assistant-email .assistant-email-usage strong { color:var(--ui-text); }
+#assistant-email .assistant-email-usage th:first-child { padding-left:0; }
