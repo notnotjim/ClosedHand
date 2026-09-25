@@ -22,21 +22,33 @@ function register(app, db, userId) {
     res.set('Cache-Control', 'no-store');
     const key = owner + ':' + req.params.id;
     try {
-      const { data: row, error } = await db.from('user_mcps').select('*').eq('id', req.params.id).eq('user_id', owner).single();
+      const { data: stored, error } = await db.from('user_mcps').select('*').eq('id', req.params.id).eq('user_id', owner).single();
+      let row = stored;
       if (error || !row) return res.status(404).json({ error: 'Connection not found.' });
       if (!mcp.isSelfHost() || !mcp.isMicrosoft365(row)) return res.status(400).json({ error: 'This connection does not support Microsoft device sign-in.' });
       if (!['login', 'status'].includes(req.params.action)) return res.status(400).json({ error: 'Unknown sign-in action.' });
+      let forceLogin = false;
+      if (req.params.action === 'login' && ['personal', 'work'].includes(req.body?.accountType)) {
+        const tenant = req.body.accountType === 'personal' ? 'consumers' : 'organizations';
+        if (row.env?.MS365_MCP_TENANT_ID !== tenant) {
+          await close(key);
+          row = { ...row, env: { ...row.env, MS365_MCP_TENANT_ID: tenant } };
+          const updated = await db.from('user_mcps').update({ env: row.env, caps: { ...row.caps, account_auth: null } }).eq('id', row.id).eq('user_id', owner);
+          if (updated.error) throw new Error('Could not save the Microsoft account type.');
+          forceLogin = true;
+        }
+      }
       let session = sessions.get(key);
       if (!session) {
         const open = await mcp.openClient(row, { connectTimeoutMs: 180000 });
         session = { open, timer: setTimeout(() => { close(key).catch(() => {}); }, 15 * 60000) };
         session.timer.unref(); sessions.set(key, session);
       }
-      const call = async name => resultData(await session.open.client.callTool({ name, arguments: {} }, undefined, { timeout: 30000 }));
+      const call = async (name, args = {}) => resultData(await session.open.client.callTool({ name, arguments: args }, undefined, { timeout: 30000 }));
       let data;
       if (req.params.action === 'login') {
         if (session.pending) return res.json({ pending: true, ...session.pending });
-        data = await call('login');
+        data = await call('login', forceLogin ? { force: true } : {});
         const device = deviceCode(data);
         if (device) { session.pending = device; return res.json({ pending: true, ...device }); }
         if (data.success !== true) throw new Error('Microsoft did not start sign-in.');
@@ -55,7 +67,7 @@ function register(app, db, userId) {
       const listed = await call('list-accounts');
       const accounts = (listed.accounts || []).map(a => ({ email: String(a.email || '').slice(0, 254), selected: !!a.isDefault })).filter(a => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email));
       if (!accounts.length) throw new Error('Microsoft returned no account identity.');
-      const saved = await db.from('user_mcps').update({ caps: { ...row.caps, account_auth: { provider: 'microsoft', accounts, checked_at: new Date().toISOString() } } }).eq('id', row.id).eq('user_id', owner);
+      const saved = await db.from('user_mcps').update({ caps: { ...row.caps, account_auth: { provider: 'microsoft', tenant: row.env?.MS365_MCP_TENANT_ID || 'common', accounts, checked_at: new Date().toISOString() } } }).eq('id', row.id).eq('user_id', owner);
       if (saved.error) throw new Error('Could not save the sign-in result. Check again.');
       await close(key);
       res.json({ connected: true, accounts });

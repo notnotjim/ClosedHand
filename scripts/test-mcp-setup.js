@@ -33,16 +33,17 @@ test('security review covers every tool, validates structured verdicts and keeps
 test('Microsoft sign-in stays owner-scoped and preserves the pending process',async()=>{
  const original={openClient:mcp.openClient,closeQuietly:mcp.closeQuietly,isSelfHost:mcp.isSelfHost};
  const row={id:'connection',user_id:'owner',transport:'stdio',command:'npx',args:['@softeria/ms-365-mcp-server'],caps:{tools:188}};
- let handler,closed=0,opened=0,ready=false,saved;const calls=[],filters=[];
+ let handler,closed=0,opened=0,ready=false,saved;const calls=[],filters=[];let openedRow,loginArgs;
  const db={from:()=>{const q={select:()=>q,eq:(k,v)=>{filters.push([k,v]);return q;},single:async()=>({data:row}),update:value=>{saved=value;return q;},then:resolve=>resolve({error:null})};return q;}};
  const result=data=>({content:[{type:'text',text:JSON.stringify(data)}]});
  mcp.isSelfHost=()=>true;mcp.closeQuietly=async()=>{closed++;};
- mcp.openClient=async()=>{opened++;return {client:{callTool:async({name})=>{calls.push(name);if(name==='login')return result({error:'device_code_required',message:'Enter code ABC123XYZ'});if(name==='list-accounts')return result({accounts:ready?[{email:'owner@example.com',isDefault:true}]:[]});return result({success:true});}}};};
- const run=async(action,owner='owner')=>{const res={code:200,set(){return this;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};await handler({params:{id:'connection',action},owner},res);return res;};
+ mcp.openClient=async(row)=>{opened++;openedRow=row;return {client:{callTool:async({name,arguments:args})=>{calls.push(name);if(name==='login')loginArgs=args;if(name==='login')return result({error:'device_code_required',message:'Enter code ABC123XYZ'});if(name==='list-accounts')return result({accounts:ready?[{email:'owner@example.com',isDefault:true}]:[]});return result({success:true});}}};};
+ const run=async(action,owner='owner',body={})=>{const res={code:200,set(){return this;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};await handler({params:{id:'connection',action},owner,body},res);return res;};
  try{
   auth.register({post:(path,fn)=>{handler=fn;}},db,req=>req.owner);
   assert.equal((await run('login',null)).code,401);assert.equal(opened,0);
-  assert.equal((await run('login')).body.code,'ABC123XYZ');
+  assert.equal((await run('login','owner',{accountType:'personal'})).body.code,'ABC123XYZ');
+  assert.equal(openedRow.env.MS365_MCP_TENANT_ID,'consumers');assert.equal(loginArgs.force,true);
   assert.equal((await run('status')).body.pending,true);assert(!calls.includes('verify-login'));assert.equal(closed,0);
   ready=true;assert.equal((await run('status')).body.connected,true);
   assert.equal(opened,1);assert.equal(closed,1);assert.equal(saved.caps.account_auth.accounts[0].email,'owner@example.com');

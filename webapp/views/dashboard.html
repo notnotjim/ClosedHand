@@ -3614,6 +3614,8 @@
           }
 
           if (microsoftAccount) {
+            var tenant = caps.account_auth?.tenant;
+            if (!accounts.length || !tenant || tenant === 'common') detailHtml += '<label>Microsoft account type <select id="mcp-account-type-' + m.id + '"><option value="personal">Personal (Outlook or Hotmail)</option><option value="work">Work or school</option></select></label>';
             detailHtml += '<p class="section-desc">Choose your Microsoft account to give this connection access to its mail, calendar and files.</p><button class="conn-btn conn-btn-manage" onclick="mcpAccountLogin(\'' + m.id + '\',this)">' + (accounts.length ? 'Check Microsoft sign-in' : 'Sign in to Microsoft') + '</button><div id="mcp-account-' + m.id + '" role="status"></div>';
           }
 
@@ -3665,7 +3667,8 @@
       var panel = document.getElementById('mcp-account-' + id);
       button.disabled = true; panel.textContent = 'Opening Microsoft sign-in…';
       try {
-        var response = await fetch('/api/mcps/' + id + '/account/login', { method: 'POST' });
+        var accountType = document.getElementById('mcp-account-type-' + id)?.value;
+        var response = await fetch('/api/mcps/' + id + '/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountType: accountType }) });
         var data = await response.json();
         if (!response.ok) throw new Error(data.error);
         if (data.connected) { showToast('Microsoft sign-in confirmed'); loadMcps(); return; }
