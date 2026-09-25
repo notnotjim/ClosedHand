@@ -2,8 +2,12 @@ const crypto = require('node:crypto');
 const p = require('./assistant-email-protocol');
 const { encryptString, decryptString } = require('./crypto-tokens');
 const ORIGIN = 'https://closedhand.com';
-// Enable only after the service launch checks, independently of AWS approval.
-const RELEASED = false;
+// Availability is controlled by the private service, never by a client flag.
+async function available() {
+  const response = await fetch(ORIGIN + '/api/assistant-mail-relay/availability', { redirect: 'error', signal: AbortSignal.timeout(10000) });
+  if (!response.ok) throw new Error('Email service status is unavailable. Please try again.');
+  return (await response.json()).available === true;
+}
 function mustWrite(result) { if (result.error) throw new Error('Could not save email settings. Please try again.'); return result.data; }
 function encrypted(value) { const out = encryptString(value); if (!out?.startsWith('enc:v1:')) throw new Error('Encrypted storage is unavailable.'); return out; }
 async function call(account, path, method = 'GET', body) {
@@ -20,15 +24,16 @@ function register(app, db, userId) {
   };
   const record = async owner => mustWrite(await db.from('assistant_email_accounts').select('*').eq('user_id', owner).maybeSingle());
   app.get('/api/assistant-email', wrap(async (req, res, owner) => {
-    if (!RELEASED) return res.json({ available: false });
+    if (!await available()) return res.json({ available: false });
     const account = await record(owner);
     const profile = mustWrite(await db.from('profiles').select('settings,display_name').eq('id', owner).single());
     const threads = mustWrite(await db.from('assistant_email_threads').select('id,subject,purpose,shared_brief,participants,expires_at,stopped').eq('user_id', owner).order('updated_at', { ascending: false }).limit(15));
     const attention = mustWrite(await db.from('assistant_email_messages').select('id,thread_id,direction,state,error,created_at').eq('user_id', owner).in('state', ['needs_review','awaiting_scope','failed','uncertain','bounced','complained','suppressed']).order('created_at', { ascending: false }).limit(15));
-    res.json({ name: profile.settings?.bot_name || 'ClosedHand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
+    const remote = account?.address ? await call(account, 'status') : null;
+    res.json({ available: true, usage: remote?.usage || null, servicePaused: !!remote?.paused, name: profile.settings?.bot_name || 'ClosedHand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
   }));
   app.post('/api/assistant-email/enable', wrap(async (req, res, owner) => {
-    if (!RELEASED) return res.status(503).json({ error: 'Assistant email is coming soon.' });
+    if (!await available()) return res.status(503).json({ error: 'Assistant email is coming soon.' });
     let account = await record(owner);
     if (!account) {
       const keys = p.keyPair();

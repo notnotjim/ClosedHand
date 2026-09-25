@@ -31,6 +31,12 @@
       content.append(unavailable);
       return;
     }
+    heading.append(document.createTextNode(' '), el('span', 'Beta', 'badge badge-soon'));
+    const allowance = el('details'); allowance.append(el('summary', 'Email allowance'));
+    allowance.append(el('p', 'Includes 1,000 sent and 2,000 received emails each month, with 250 MB of combined email data. Daily limits are 100 sent and 200 received. Allowances are shared across your installations and reset in UTC.', 'section-desc'));
+    if (state.usage) allowance.append(el('p', `${state.usage.sent} sent · ${state.usage.received} received · ${(state.usage.bytes / 1048576).toFixed(1)} MB this month.`, 'section-desc'));
+    content.append(allowance);
+    if (state.servicePaused) content.append(el('p', 'Email delivery is temporarily paused. Your address is kept.', 'section-desc'));
     if (!state.address) {
       content.append(button(state.pending ? 'Confirm email address' : 'Enable email address', async () => {
         // Open synchronously, preserving the user gesture through the request.
