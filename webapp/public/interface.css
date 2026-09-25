@@ -242,5 +242,7 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 #rules-section .settings-group-body > div:has(> #allowed-hosts) { padding-bottom: 20px !important; margin-bottom: 0 !important; }
 .approved-sites-title { font-size: var(--ui-body); color: var(--ui-text); }
 .approved-sites-desc { font-size: var(--ui-body); color: var(--ui-muted); line-height: 1.65; margin: 8px 0 12px; max-width: 65ch; }
+#allowed-hosts { padding: 14px 16px; background: var(--ui-hover, #24211e); border-radius: 8px; }
+.saved-preferences-title { margin: 24px 0 12px; font-size: var(--ui-body); font-weight: 600; }
 #allowed-hosts > span { color: var(--ui-muted) !important; font-size: var(--ui-label) !important; }
 #new-rule-input { min-width: 0; min-height: 44px; font-size: var(--ui-body) !important; }

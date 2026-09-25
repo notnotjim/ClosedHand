@@ -99,14 +99,16 @@
         "Support model": "Does routine work like naming conversations and writing summaries.",
         "Image model": "Understands photos and screenshots you send.",
         "Document summaries": "Summarises mail and documents as they are indexed.",
-        "Recall": "Finds the memories, mail and files that relate to what you ask. Stays the same when you change your primary model.",
+        "Recall": "Recalls by meaning, not just keywords, using synced apps, indexed files and past conversations. Your context stays when you change your primary model. Coverage depends on each source: recent changes or older history may be missing. Other files are available through File Search or their connected service.",
         "Search ranking": "Puts the closest matches first. Stays the same when you change your primary model."
       };
       rows.forEach(function (row) {
         var label = row.label === "Chat model" ? "Primary model" : row.label === "Images" ? "Image model" : row.label;
         var term = document.createElement("dt"); term.textContent = label;
         if (tips[label]) {
-          term.dataset.tip = tips[label]; term.tabIndex = 0;
+          term.dataset.tip = tips[label];
+          if (label === "Recall" && /^local:/.test(row.model)) term.dataset.tip += " Runs on the computer hosting ClosedHand, with a one-time download of about 300 MB when syncing starts.";
+          term.setAttribute("aria-label", label + ". " + term.dataset.tip); term.tabIndex = 0;
           var mark = document.createElement("span"); mark.className = "tip-mark"; mark.textContent = "i"; mark.setAttribute("aria-hidden", "true");
           term.append(mark);
         }
@@ -123,21 +125,6 @@
         list.append(term, definition);
       });
       current.append(list);
-      if (root.id !== "model-configuration") {
-        var about = document.createElement("details");
-        var heading = document.createElement("summary"); heading.textContent = "About recall";
-        var detail = document.createElement("p"); detail.className = "model-hint";
-        detail.textContent = "ClosedHand recalls by meaning, not just keywords, using synced information from supported apps and past conversations. Your memory stays when you change your primary model.";
-        var coverage = document.createElement("p"); coverage.className = "model-hint";
-        coverage.textContent = "Coverage and freshness depend on each source’s sync. Some history or recent changes may be missing. Files you have indexed can also provide context automatically. Other files remain available through File Search or their connected service.";
-        about.append(heading, detail, coverage);
-        if (rows.some(function (row) { return row.label === "Recall" && /^local:/.test(row.model); })) {
-          var local = document.createElement("p"); local.className = "model-hint";
-          local.textContent = "The recall model runs alongside ClosedHand on the same computer and downloads once, about 300 MB, when syncing first starts.";
-          about.append(local);
-        }
-        current.append(about);
-      }
       var download = data.localModels?.embedder;
       if (root.id !== "model-configuration" && download && ["downloading", "error"].includes(download.state)) {
         var status = document.createElement("p"); status.className = "model-hint";

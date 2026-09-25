@@ -20,3 +20,5 @@
 #assistant-email .assistant-email-copy { flex:0 0 44px; }
 #assistant-email .conn-btn { color:var(--ui-text,#EFE6D6); border-color:var(--ui-border,#45413C); font-size:inherit; padding:10px 16px; }
 #assistant-email button:disabled { opacity:.55; cursor:wait; }
+
+#assistant-email button.assistant-email-unavailable { cursor: default; opacity: 1; color: var(--ui-muted); background: transparent; }

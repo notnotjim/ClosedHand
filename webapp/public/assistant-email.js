@@ -23,8 +23,15 @@
   function render() {
     content.replaceChildren();
     const heading = document.getElementById('assistant-email-heading'); heading.textContent = "Your assistant's email address";
+    content.append(el('p', "Send and forward emails to your ClosedHand assistant's own secure email address, or CC them in a conversation.", 'section-desc'));
+    if (state.available === false) {
+      const unavailable = el('button', 'Coming soon', 'conn-btn conn-btn-manage');
+      unavailable.type = 'button'; unavailable.disabled = true;
+      unavailable.classList.add('assistant-email-unavailable');
+      content.append(unavailable);
+      return;
+    }
     if (!state.address) {
-      content.append(el('p', 'Email ' + state.name + ' directly, forward a message, or CC ' + state.name + ' in a conversation.', 'section-desc'));
       content.append(button(state.pending ? 'Confirm email address' : 'Enable email address', async () => {
         // Open synchronously, preserving the user gesture through the request.
         const tab = window.open('about:blank', '_blank'); if (tab) tab.opener = null;

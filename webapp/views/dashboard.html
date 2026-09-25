@@ -2497,7 +2497,7 @@
             <div class="settings-group-header">
               <h2>Pulse</h2>
             </div>
-            <div style="padding:4px 16px 0;"><p style="font-size: 13px;color:rgba(239,230,214,0.6);margin:0 0 8px;line-height:1.5;">ClosedHand monitors your email, calendar, and connections in the background. When something needs your attention, it reaches out proactively.</p></div>
+            <div style="padding:4px 16px 0;"><p style="font-size: 13px;color:rgba(239,230,214,0.6);margin:0 0 8px;line-height:1.5;">ClosedHand monitors your email, calendar, and other connections in the background. When something needs your attention, it reaches out proactively.</p></div>
             <div style="padding:8px 16px 14px 16px;">
               <div class="segmented-control" id="pulse-level" style="margin-bottom:10px;">
                 <button class="seg-btn" data-level="off">Off<span class="seg-desc">Only when messaged</span></button>
@@ -2541,9 +2541,10 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Cards ClosedHand may pay with, and your rules for using them. Card numbers are stored encrypted on the computer running ClosedHand, unlocked only by a key unique to your copy of ClosedHand, and used at checkout on your behalf. The model never sees any card numbers. You are asked to confirm every purchase unless you say otherwise here.</p>
+              <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask. Purchases need your approval unless you change the rules here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
+              <p class="section-desc">Card numbers stay encrypted on the computer running ClosedHand, unlocked by a key unique to this installation. ClosedHand uses them at checkout; the model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
                 <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:8px;">Spending rules</div>
@@ -2607,9 +2608,10 @@
               </label>
               <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(239,230,214,0.06);">
                 <div class="approved-sites-title">Approved websites</div>
-                <p class="approved-sites-desc">ClosedHand asks before sending your content to a new website. Choose &ldquo;always&rdquo; in chat to save your approval here. Remove a website to make ClosedHand ask again. Services you have connected are managed in Connections.</p>
+                <p class="approved-sites-desc">ClosedHand asks before sharing your content with a new website. Choose &ldquo;always&rdquo; in chat to approve future sharing; remove a site here to be asked again. Manage connected services in Connections.</p>
                 <div id="allowed-hosts" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
+              <h3 class="saved-preferences-title">Saved preferences</h3>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading...</div>
               </div>
@@ -4530,7 +4532,7 @@
       var el = document.getElementById('allowed-hosts'); if (!el) return;
       el.innerHTML = _allowedHosts.length ? _allowedHosts.map(function(h) {
         return '<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;font-size:12.5px;color:#EFE6D6;">' + escHtml(h) + '<button onclick="removeAllowedHost(\'' + escHtml(h) + '\')" title="Remove" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:14px;padding:0;line-height:1;">&times;</button></span>';
-      }).join('') : '<span style="font-size:12.5px;color:rgba(239,230,214,0.6);">None yet.</span>';
+      }).join('') : '<span style="font-size:12.5px;color:rgba(239,230,214,0.6);">No websites approved.</span>';
     }
     async function removeAllowedHost(h) {
       var hosts = _allowedHosts.filter(function(x) { return x !== h; });
@@ -5455,7 +5457,7 @@
         if (!res.ok) throw new Error('Could not load preferences');
         const rules = await res.json();
         if (!rules.length) {
-          list.innerHTML = '<p>No saved preferences yet. Ask ClosedHand to remember how you like things done, or add a preference below.</p>';
+          list.innerHTML = '<p>Ask ClosedHand to remember a preference in chat, or add one below.</p>';
           return;
         }
         list.innerHTML = rules.map(function(r) {
