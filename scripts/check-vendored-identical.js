@@ -54,6 +54,10 @@ const PAIRS = [
     name: "mcp-client",
     copies: ["lib/mcp-client.js", "webapp/mcp-client.js"],
   },
+  {
+    name: "microsoft-app",
+    copies: ["lib/microsoft-app.js", "webapp/microsoft-app.js"],
+  },
 ];
 
 function normalise(src, name) {

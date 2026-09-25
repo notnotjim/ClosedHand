@@ -15,6 +15,7 @@ async function getSetupState() {
   let settings = {};
   let connections = [];
   let googleAccount = null;
+  let microsoftAccount = null;
   let profileCreatedAt = null;
   if (db) {
     try {
@@ -27,6 +28,8 @@ async function getSetupState() {
       connections = (data || []).map((r) => r.service).filter(Boolean);
       const g = (data || []).find((r) => r.service === "google");
       if (g) googleAccount = { name: g.metadata?.name || null, email: g.metadata?.email || null };
+      const m = (data || []).find((r) => r.service === "microsoft");
+      if (m) microsoftAccount = { name: m.metadata?.name || null, email: m.metadata?.email || null };
     } catch (_) { /* treat as none */ }
   }
   const conf = settings.self_host_config || {};
@@ -72,6 +75,10 @@ async function getSetupState() {
   const telegram = !!envOr("TELEGRAM_BOT_TOKEN");
   const google = connections.some((s) => s === "google" || s.startsWith("google"));
   const googleCreds = !!(envOr("GOOGLE_CLIENT_ID") && envOr("GOOGLE_CLIENT_SECRET"));
+  const microsoft = connections.some((s) => s === "microsoft" || s.startsWith("microsoft_extra_"));
+  // Signing in by code through ClosedHand's app needs no setup of its own;
+  // an app of the person's own in .env is used by the dashboard instead.
+  const microsoftCode = !!require("./microsoft-app").appId() && !(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
 
   const waLinked = await (async () => {
     try {
@@ -90,18 +97,18 @@ async function getSetupState() {
     { key: "database", label: "Database", done: db, required: true },
     { key: "model", label: "Model provider", done: model, required: true },
     { key: "admin_password", label: "Admin password", done: adminPassword, required: true },
-    { key: "google", label: "Google", done: google, required: true },
+    { key: "accounts", label: "Email and calendar", done: google || microsoft, required: true },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
   ];
   const nextUnlock = steps.find((s) => !s.done) || null;
 
   return {
-    // Ready = a database, a model provider, a password and Google. Without
-    // mail and calendar ClosedHand is a chat window round a model, so Google
-    // is part of the floor, not an extra. Without a password the dashboard is
-    // open to anyone on the same network, so it is part of the floor too.
-    // Chat apps can follow.
-    ready: db && model && adminPassword && google,
+    // Ready = a database, a model provider, a password and a Google or
+    // Microsoft account (or both). Without mail and calendar ClosedHand is a
+    // chat window round a model, so one of them is part of the floor, not an
+    // extra. Without a password the dashboard is open to anyone on the same
+    // network, so it is part of the floor too. Chat apps can follow.
+    ready: db && model && adminPassword && (google || microsoft),
     steps,
     connections,
     nextUnlock: nextUnlock ? nextUnlock.key : null,
@@ -142,7 +149,11 @@ async function getSetupState() {
     installId: profileCreatedAt,
     googleCreds,
     // Who is connected (name and address only), so the card can say so.
+    googleConnected: google,
     googleAccount,
+    microsoftConnected: microsoft,
+    microsoftAccount,
+    microsoftCode,
     waLinked,
     // Chat apps beyond Telegram and WhatsApp need the operator's own app
     // credentials in .env; the dashboard says so rather than offering a

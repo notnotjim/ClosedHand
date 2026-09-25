@@ -31,15 +31,15 @@ test('discovery is bounded to public GitHub hosts and reports missing instructio
  const f=async url=>{assert.equal(url,'https://api.github.com/repos/x/y/contents/config.json?ref=main');return new Response('{"url":"https://example.com/mcp"}');};
  assert.equal((await resolveInput('https://github.com/x/y/blob/main/config.json',f)).choices.length,1);
 });
-test('prepared Microsoft route is owner-scoped and distinguishes unfinished sign-in',async()=>{
- process.env.DB_DRIVER='pg';
+test('Microsoft is offered through ClosedHand\'s own app, not a prepared server',async()=>{
+ process.env.DB_DRIVER='pg';process.env.CLOSEDHAND_MICROSOFT_APP_ID='00000000-0000-0000-0000-000000000001';
  const {createCatalogue}=require('../webapp/connection-catalogue');
  const rows={connection_clients:[],connections:[],user_mcps:[{user_id:'a',id:'ms',args:['-y','@softeria/ms-365-mcp-server'],status:'connected',caps:{}}]};
  const db={from(t){let owner;const q={select(){return q;},eq(k,v){owner=v;return q;},then(resolve){return Promise.resolve({data:rows[t].filter(r=>r.user_id===owner)}).then(resolve);}};return q;}};
  let route;createCatalogue({db,services:{microsoft:{name:'Microsoft'}},userId:r=>r.owner,baseUrl:'https://local'}).register({get(p,fn){route=fn;},put(){}});
  let result;const res={set(){},json(v){result=v;}};
- await route({owner:'a'},res);assert.equal(result.services[0].mode,'mcp');assert.equal(result.services[0].mcpId,'ms');assert.equal(result.services[0].connected,false);
- await route({owner:'b'},res);assert.equal(result.services[0].mcpId,null);
+ await route({owner:'a'},res);assert.equal(result.services[0].mode,'microsoft');assert.equal(result.services[0].url,null);assert.equal(result.services[0].manualMode,'setup');assert.equal(result.services[0].connected,false);
+ delete process.env.CLOSEDHAND_MICROSOFT_APP_ID;
  delete process.env.DB_DRIVER;
 });
 

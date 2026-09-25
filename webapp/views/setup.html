@@ -296,6 +296,8 @@
     .code pre { padding: 11px 84px 11px 14px; overflow-x: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--text-secondary); margin: 0; }
     .copy { position: absolute; top: 7px; right: 7px; padding: 3px 10px; font-family: inherit; font-size: 11.5px; color: var(--text-tertiary); background: rgba(239,230,214,0.04); border: 1px solid rgba(239,230,214,0.06); border-radius: 7px; cursor: pointer; }
     .copy.did { color: var(--done); border-color: var(--done-dim); }
+    /* A sign-in code is read and typed by eye, so it is big and spaced. */
+    #m-code { font-size: 20px; letter-spacing: 0.14em; color: var(--text-primary); }
     .g-step textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; background: #1A1817; border: 1px solid rgba(239,230,214,0.12); border-radius: 10px; color: var(--text-primary); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
     .g-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
     /* The end of the spine, where the eye is when the last step lands. */
@@ -500,17 +502,21 @@
         </div>
       </article>
     </li>
-    <li class="step" data-step="google" id="step-google">
+    <li class="step" data-step="accounts" id="step-accounts">
       <div class="rail"><span class="node"></span><span class="num">04</span></div>
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
-            <h2>Google</h2>
-            <p class="whisper">Your mail, calendar and Drive.</p>
+            <h2>Email and calendar</h2>
+            <p class="whisper">Google, Microsoft, or both.</p>
           </span>
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
+          <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later.</p>
+          <div class="fb-block chooser" id="g-block">
+          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
+          <div class="choice-body">
           <p class="note" id="g-ownership">Don’t trade your digital sovereignty for an easier setup. Five extra minutes now gives you ownership of the connection, rather than handing it to a tech conglomerate.</p>
           <details id="g-intro" class="google-why"><summary>Why the extra Google setup?</summary>
             <p>ClosedHand uses Google’s usual sign-in, through a free project you own. This one-time setup keeps the connection to your mail, calendar and Drive under your control, with no company account in between.</p>
@@ -617,6 +623,32 @@
               <button class="skip" type="button" id="g-back">Back</button>
               <button class="cta" type="button" id="g-next">Next</button>
             </div>
+          </div>
+          </div>
+          </div>
+
+          <div class="fb-block chooser" id="m-block">
+          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
+          <div class="choice-body">
+            <div id="m-connected" style="display:none;">
+              <p><span id="m-account">Connected.</span> ClosedHand reads this account's mail, calendar
+                 and OneDrive so it can recall them, and changes nothing unless you ask.</p>
+              <a class="deep" href="/dashboard#connections">Manage in the dashboard</a>
+            </div>
+            <div id="m-intro">
+              <p class="note">Microsoft sends your mail, calendar and OneDrive straight to your copy of ClosedHand.
+                 Its sign-in page shows ClosedHand's name, but nothing passes through ClosedHand or any other company on the way.</p>
+              <button class="cta" type="button" id="m-start">Sign in with Microsoft</button>
+            </div>
+            <div id="m-code-wrap" style="display:none;">
+              <p>Enter this code on Microsoft's page, then choose the account whose mail, calendar and OneDrive you want ClosedHand to recall.</p>
+              <div class="code"><button class="copy" type="button">Copy</button><pre id="m-code"></pre></div>
+              <a class="cta" id="m-open" href="https://microsoft.com/devicelogin" target="_blank" rel="noopener">Copy the code and open Microsoft</a>
+              <p class="note is-busy" id="m-status" role="status">Waiting for you to finish on Microsoft's page.</p>
+            </div>
+            <p class="form-msg err" id="m-msg" role="alert"></p>
+            <p class="note">Rather use a Microsoft app of your own? Set it up in the <a href="/dashboard#connections">dashboard</a>.</p>
+          </div>
           </div>
         </div>
       </article>
@@ -876,7 +908,7 @@
       }
 
       if (s.done) {
-        chip.textContent = s.key === "google" ? "Connected" : "Done";
+        chip.textContent = s.key === "accounts" ? "Connected" : "Done";
       } else if (skips[s.key]) {
         chip.textContent = "Skipped, show it";
         chip.style.cursor = "pointer";
@@ -1013,6 +1045,13 @@
       var which = /^(tg|telegram)$/.test(m[2]) ? "tg" : /^(wa|whatsapp)$/.test(m[2]) ? "wa" : null;
       if (which) { _chooserAuto = true; openChooser(which); }
     }
+    // The dashboard's Connect sends Microsoft here: the person already asked
+    // to sign in, so the code comes up straight away.
+    if (m[1] === "accounts" && /^(google|microsoft)$/.test(m[2] || "")) {
+      _accountsAuto = true;
+      openChooser(m[2]);
+      if (m[2] === "microsoft") msStart();
+    }
     setTimeout(function () { li.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
   }
 
@@ -1027,8 +1066,10 @@
         loadSkipsFor(state.installId);
         if (_gKey === null) gLoad(state.installId);
         _celebKey = "ch-celebrated:" + (state.installId || "x");
+        reflectMicrosoft(state);
         render(state);
         reflectGoogle(state);
+        autoOpenAccounts(state);
         // Nothing live yet: WhatsApp starts unfolded, so the card opens on
         // the thing most people came for rather than two closed headings.
         if (typeof reflectWa === "function") reflectWa(state);
@@ -1039,7 +1080,7 @@
       });
   }
 
-  ["database", "model", "admin_password", "google", "chat"].forEach(function (k) { lastDone[k] = false; });
+  ["database", "model", "admin_password", "accounts", "chat"].forEach(function (k) { lastDone[k] = false; });
 
   $all(".card-head").forEach(function (head) {
     head.addEventListener("click", function () {
@@ -1151,6 +1192,91 @@
   $("#done-close").addEventListener("click", function () { $("#done-screen").close(); });
   $("#done-screen").addEventListener("close", function () { ++_welcomeRequest; clearTimeout(_welcomeTimer); });
 
+  // Microsoft signs in by code: this page shows the code, the person enters
+  // it on Microsoft's page, and the server hears back from Microsoft. The
+  // checks stop once the sign-in lands, fails, or the code runs out.
+  var _msTimer = null, _msBusy = false;
+  function msShow(which) {
+    $("#m-intro").style.display = which === "intro" ? "" : "none";
+    $("#m-code-wrap").style.display = which === "code" ? "" : "none";
+  }
+  function msError(text) {
+    clearInterval(_msTimer); _msTimer = null;
+    var msg = $("#m-msg");
+    msg.textContent = text || ""; msg.style.display = text ? "block" : "none";
+    if (text) msShow("intro");
+  }
+  function msCheck() {
+    if (_msBusy) return;
+    _msBusy = true;
+    fetch("/api/setup/microsoft/check", { method: "POST" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (out) {
+        _msBusy = false;
+        if (!out.ok) return msError(out.j.error || "Microsoft sign-in could not finish. Try again.");
+        if (out.j.connected) {
+          clearInterval(_msTimer); _msTimer = null;
+          _msAnother = false;
+          msShow("none");
+          poll();
+        } else if (out.j.idle) {
+          msError("That sign-in is no longer waiting. Start again.");
+        }
+      })
+      .catch(function () { _msBusy = false; });
+  }
+  var _msAnother = false;
+  function msStart() {
+    if (!_msCode) { window.open("/auth/microsoft?return=setup", "_blank", "noopener"); return; }
+    msError("");
+    _msAnother = true;
+    $("#m-start").disabled = true;
+    fetch("/api/setup/microsoft/start", { method: "POST" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (out) {
+        $("#m-start").disabled = false;
+        if (!out.ok) return msError(out.j.error || "Microsoft did not answer. Try again in a moment.");
+        $("#m-code").textContent = out.j.code;
+        $("#m-open").href = out.j.url || "https://microsoft.com/devicelogin";
+        $("#m-status").textContent = "Waiting for you to finish on Microsoft's page.";
+        $("#m-connected").style.display = "none";
+        msShow("code");
+        clearInterval(_msTimer);
+        _msTimer = setInterval(msCheck, 3000);
+      })
+      .catch(function () { $("#m-start").disabled = false; msError("Could not reach the server."); });
+  }
+  function msCopy() {
+    var code = $("#m-code").textContent;
+    if (!code || !navigator.clipboard || !navigator.clipboard.writeText) return Promise.resolve(false);
+    return navigator.clipboard.writeText(code).then(function () { return true; }, function () { return false; });
+  }
+  $("#m-start").addEventListener("click", msStart);
+  $("#m-open").addEventListener("click", function () { msCopy(); });
+  $("#m-block .copy").addEventListener("click", function () {
+    var btn = this;
+    msCopy().then(function (ok) {
+      if (!ok) return;
+      btn.classList.add("did"); btn.textContent = "Copied";
+      setTimeout(function () { btn.classList.remove("did"); btn.textContent = "Copy"; }, 1600);
+    });
+  });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && _msTimer) msCheck(); });
+  var _msCode = true;
+  function reflectMicrosoft(st) {
+    _msCode = !!st.microsoftCode;
+    var done = !!st.microsoftConnected;
+    $("#m-done").style.display = done ? "" : "none";
+    var acct = st.microsoftAccount || {};
+    $("#m-account").textContent = acct.email ? "Connected as " + acct.email + "." : "Connected.";
+    // Connected: say who, and keep a way to add another account. A sign-in
+    // in progress keeps the code on screen until it lands.
+    if (_msTimer) return;
+    $("#m-connected").style.display = done ? "" : "none";
+    $("#m-start").textContent = done ? "Connect another Microsoft account" : "Sign in with Microsoft";
+    msShow("intro");
+  }
+
   // --- Connect to Google, six steps inside the card ---
   // One step on screen at a time; progress and the project id survive a
   // reload, which matters because step six leaves for Google and comes back.
@@ -1197,7 +1323,7 @@
     var dots = "";
     for (var i = 1; i <= G_TOTAL; i++) dots += '<span class="' + (i < gStep ? "done" : i === gStep ? "on" : "") + '"></span>';
     $("#g-dots").innerHTML = dots;
-    // Google is required, so the first step has nowhere to go back to.
+    // The first step has nowhere to go back to.
     $("#g-back").style.display = gStep === 1 ? "none" : "";
     $("#g-tabs").style.display = gStep === 1 ? "" : "none";
     var next = $("#g-next");
@@ -1273,11 +1399,11 @@
     if (st.googleRedirectUri) $("#g-redirect").textContent = st.googleRedirectUri;
     $("#g-connect").style.display = st.googleCreds ? "inline-block" : "none";
     $("#g-nocreds").style.display = st.googleCreds ? "none" : "";
-    var g = (st.steps || []).find(function (x) { return x.key === "google"; });
-    if (g && g.done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
+    var done = !!st.googleConnected;
+    if (done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
     // Connected: the pitch and the steps give way to who is connected and
     // what can be done about it.
-    var done = !!(g && g.done);
+    $("#g-done").style.display = done ? "" : "none";
     $("#g-connected").style.display = done ? "" : "none";
     if (done) {
       var acct = st.googleAccount || {};
@@ -1289,21 +1415,30 @@
     }
   }
 
-  // The chooser: one chat app unfolded at a time. Opening one folds the other,
-  // so a phone camera only ever sees one QR code. The live one (pairing,
-  // linked, or connected) opens itself once per page load.
-  var _chooserAuto = false;
+  // The chooser: one option unfolded at a time within a step. In the chat
+  // step that means a phone camera only ever sees one QR code. The live one
+  // (pairing, linked, or connected) opens itself once per page load.
+  var _chooserAuto = false, _accountsAuto = false;
   function openChooser(which) {
-    $all("#step-chat .chooser").forEach(function (el) {
+    var target = $('.choose[data-choose="' + which + '"]');
+    if (!target) return;
+    $all(".chooser", target.closest(".card-body")).forEach(function (el) {
       el.classList.toggle("is-open", el.querySelector(".choose").getAttribute("data-choose") === which);
     });
+  }
+  // Email and calendar: unfold the account already connected, if there is one.
+  function autoOpenAccounts(st) {
+    if (_accountsAuto) return;
+    _accountsAuto = true;
+    if (st.googleConnected) openChooser("google");
+    else if (st.microsoftConnected) openChooser("microsoft");
   }
   function autoOpenChooser(which) {
     if (_chooserAuto) return;
     _chooserAuto = true;
     openChooser(which);
   }
-  $all("#step-chat .choose").forEach(function (h) {
+  $all(".choose").forEach(function (h) {
     h.addEventListener("click", function () {
       var el = h.closest(".chooser");
       if (el.classList.contains("is-open")) el.classList.remove("is-open");

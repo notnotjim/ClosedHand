@@ -479,7 +479,7 @@ app.get("/setup", async (req, res) => {
 });
 
 // The Google steps live inside the setup page's Google card now.
-app.get("/setup/google", (req, res) => res.redirect("/setup#step-google"));
+app.get("/setup/google", (req, res) => res.redirect("/setup#step-accounts=google"));
 
 // --- Dashboard access: a password chosen in the wizard, a session cookie, ---
 // --- and a login page with no username (there is only one person here). ----
@@ -1756,6 +1756,12 @@ app.get("/auth/:service", async (req, res) => {
   try { svc = await connectionCatalogue.resolve(serviceKey, getUserIdFromRequest(req)); }
   catch (_) { return res.status(503).send("Could not read connection settings. Return to Connections and try again."); }
 
+  // Microsoft without an app of the person's own signs in by code through
+  // ClosedHand's app, on the setup page.
+  if (serviceKey === "microsoft" && !(svc?.clientId && svc?.clientSecret) && require("./microsoft-app").appId()) {
+    return res.redirect("/setup#step-accounts=microsoft");
+  }
+
   if (!svc || !svc.clientId || !svc.clientSecret) {
     return res.status(400).send("Service not available");
   }
@@ -2077,6 +2083,10 @@ async function connectMcpHandler(req, res) {
 }
 
 require("./mcp-account-auth").register(app, supabase, getUserIdFromRequest);
+require("./microsoft-device").register(app, {
+  requireAccess: requireSetupAccess,
+  connect: (tokens) => saveMicrosoftAccount(getAdminUserId(), SERVICES.microsoft, tokens),
+});
 
 app.post("/api/mcps/probe", connectMcpHandler);
 app.post("/api/mcps", connectMcpHandler);
@@ -2447,25 +2457,40 @@ async function handleExtraGoogleAccount(res, stateData, svc, tokens) {
 async function handleExtraMicrosoftAccount(res, stateData, svc, tokens) {
   const userId = stateData.userId;
   if (!userId) return res.redirect("/?error=no_session");
+  try {
+    await saveMicrosoftAccount(userId, svc, tokens);
+  } catch (e) {
+    if (!e.userMessage) throw e;
+    return res.redirect("/dashboard?error=" + encodeURIComponent(e.userMessage));
+  }
+  res.redirect("/dashboard?connected=microsoft_extra");
+}
 
+// The first Microsoft account is the primary; later ones are extras. Signing
+// in again as an account already here renews that account's sign-in rather
+// than adding it twice.
+async function saveMicrosoftAccount(userId, svc, tokens) {
+  const userError = (message) => Object.assign(new Error(message), { userMessage: message });
   const metadata = await fetchAccountMetadata("microsoft", svc, tokens);
   const email = (metadata?.email || "").toLowerCase().trim();
-  if (!email) return res.redirect("/dashboard?error=" + encodeURIComponent("Could not read the Microsoft account's email. Try again."));
+  if (!email) throw userError("Could not read the Microsoft account's email. Try again.");
 
-  // Reject accounts that are already connected (primary or extra)
-  const { data: existing } = await supabase
+  const { data: existing, error } = await supabase
     .from("connections").select("service, metadata")
     .eq("user_id", userId).like("service", "microsoft%");
-  const knownEmails = new Set();
-  for (const c of existing || []) knownEmails.add((c.metadata?.email || "").toLowerCase().trim());
-  if (knownEmails.has(email)) {
-    return res.redirect("/dashboard?error=" + encodeURIComponent(`${email} is already connected.`));
-  }
-
+  if (error) throw error;
+  const same = (existing || []).find(c => (c.metadata?.email || "").toLowerCase().trim() === email);
   const slug = email.split("@")[0].replace(/[^a-z0-9]/g, "").substring(0, 24) || "acct" + Date.now().toString(36);
-  await saveConnection(userId, (existing || []).length ? "microsoft_extra_" + slug : "microsoft", tokens, svc, metadata);
-  console.log(`[Auth] Extra Microsoft account connected for ${userId}: ${email} (microsoft_extra_${slug})`);
-  res.redirect("/dashboard?connected=microsoft_extra");
+  const serviceKey = same ? same.service : (existing || []).length ? "microsoft_extra_" + slug : "microsoft";
+  await saveConnection(userId, serviceKey, tokens, svc, metadata);
+  // A Microsoft-only install has no name or address on its profile until now.
+  if (serviceKey === "microsoft") {
+    const { error: profileError } = await supabase.from("profiles").update({ display_name: metadata?.name || email, email, updated_at: new Date().toISOString() })
+      .eq("id", userId).is("email", null);
+    if (profileError) console.error(`[Auth] Microsoft account saved, profile name not updated: ${profileError.message}`);
+  }
+  console.log(`[Auth] Microsoft account connected for ${userId}: ${email} (${serviceKey})`);
+  return { email, serviceKey };
 }
 
 async function handleServiceOAuthComplete(req, res, stateData, serviceKey, tokens) {
@@ -2710,6 +2735,7 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
       refresh_token: tokens.refresh_token,
       expiry: tokens.expiry,
       ...(tokens.client_id ? { client_id: tokens.client_id, client_secret: tokens.client_secret } : {}),
+      ...(tokens.public_client ? { public_client: true, authority: tokens.authority } : {}),
     }),
     config: {
       ...(previous?.[0]?.config || {}),

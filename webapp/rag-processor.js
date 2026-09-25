@@ -102,25 +102,25 @@ async function refreshMicrosoftToken(userId, serviceKey = "microsoft") {
   const { data: conn } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", serviceKey).single();
   const tokens = decryptTokens(conn?.tokens);
   if (!tokens?.refresh_token) throw new Error("No Microsoft refresh token");
-  const resp = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+  const request = require("./microsoft-app").refreshRequest(tokens);
+  if (!request) throw new Error("Microsoft OAuth not configured (missing client ID/secret)");
+  const resp = await fetch(`https://login.microsoftonline.com/${request.authority}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: tokens.refresh_token,
-      client_id: tokens.client_id || process.env.MICROSOFT_CLIENT_ID,
-      client_secret: tokens.client_secret || process.env.MICROSOFT_CLIENT_SECRET,
-    }),
+    body: new URLSearchParams(request.body),
   });
   const data = await resp.json();
   if (!data.access_token) throw new Error("Microsoft token refresh failed");
-  const newTokens = { ...tokens, access_token: data.access_token };
+  // Microsoft may rotate the refresh token; keeping the old one would let the
+  // sign-in lapse once the old one expires.
+  const newTokens = { ...tokens, access_token: data.access_token, expiry: Date.now() + (data.expires_in || 3600) * 1000,
+    ...(data.refresh_token ? { refresh_token: data.refresh_token } : {}) };
   // Checked, not fire-and-forget: the refreshed token is returned either way,
   // so a failed write leaves the caller working and the NEXT call using a
   // stale token. That surfaces later as an auth error with no connection to
   // its cause.
   const { error: tokenWriteError } = await supabase.from("connections")
-    .update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", "microsoft");
+    .update({ tokens: encryptTokens(newTokens) }).eq("user_id", userId).eq("service", serviceKey);
   if (tokenWriteError) console.error(`[rag] Microsoft token refreshed but NOT saved: ${tokenWriteError.message}. The next call will use a stale token.`);
   return data.access_token;
 }

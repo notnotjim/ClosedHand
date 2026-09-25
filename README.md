@@ -42,7 +42,7 @@ To give a Docker installation access to a Mac’s files and apps, download the o
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
-The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Google through six short steps inside the setup page that open the exact console pages you need, then connect Telegram with a token from BotFather. The Google part is yours to do because ClosedHand runs on a machine you control rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
+The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Google, Microsoft or both, then connect Telegram with a token from BotFather. Microsoft is a code you type on Microsoft's own page. Google takes six short steps inside the setup page that open the exact console pages you need: that part is yours to do because ClosedHand runs on a machine you control rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
 
 Bring whichever model provider you prefer. A single DeepInfra key is the golden path because one key covers chat plus the embedding model, but OpenAI, Anthropic, Gemini, Groq, xAI and any OpenAI-compatible endpoint (including a local Ollama) are all first-class.
 
@@ -88,7 +88,7 @@ graph LR
   Webapp <--> DB
   Bot <--> Sandbox[Sandbox: code + Chrome]
   Bot --> Providers[Your model provider]
-  Bot <--> Google[Gmail / Calendar / Drive or CalDAV]
+  Bot <--> Mail[Gmail / Outlook / CalDAV]
 ```
 
 Two Node services (bot and dashboard) that share a Postgres with pgvector and never import each other's code, plus the sandbox container. `docker compose up` starts all four and applies the schema on first boot. The same codebase runs against Supabase for a managed-Postgres deployment; a driver layer keeps both paths honest.

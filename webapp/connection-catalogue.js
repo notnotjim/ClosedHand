@@ -1,6 +1,7 @@
 // Connection discovery and per-account OAuth application settings.
 // This module never returns a saved secret to the browser.
 const { encryptString, decryptString } = require('./crypto-tokens');
+const microsoftApp = require('./microsoft-app');
 const guides = {
   microsoft: ['https://entra.microsoft.com/', 'Register a web application in Microsoft Entra.'],
   notion: ['https://www.notion.so/profile/integrations', 'Create a public connection in Notion.'],
@@ -49,15 +50,14 @@ function createCatalogue({db, services, userId, baseUrl}) {
         const linked=new Set((connections.data||[]).map(x=>x.service.replace(/^(google|microsoft)_extra_.+$/, '$1')));
         const rows=Object.entries(services).filter(([key,s])=>!s.isChatPlatform).map(([key,s])=>{
           const ready=own.has(key)||!!(s.clientId&&s.clientSecret);
-          const selfHost = process.env.DB_DRIVER === 'pg' || (!!process.env.DATABASE_URL && !process.env.SUPABASE_URL);
-          const microsoftMcp = key === 'microsoft' && selfHost;
-          const url=microsoftMcp ? 'https://github.com/softeria/ms-365-mcp-server' : remote[key];
-          const microsoftRow = microsoftMcp && (mcps.data||[]).find(m=>(m.args||[]).some(a=>/^@softeria\/ms-365-mcp-server(?:@|$)/.test(a)));
-          const microsoftSigned = microsoftRow?.status === 'connected' && !!microsoftRow.caps?.account_auth?.accounts?.length;
+          // Microsoft without an app of the person's own signs in by code
+          // through ClosedHand's app, on the setup page.
+          const microsoftCode=key==='microsoft'&&!ready&&!!microsoftApp.appId();
+          const url=remote[key];
           const mcpLinked=url&&(mcps.data||[]).some(m=>m.status==='connected'&&m.server_url?.replace(/\/$/,'')===url.replace(/\/$/,''));
-          return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||(microsoftMcp?microsoftSigned:!!mcpLinked),mcpId:microsoftRow?.id||null,
-            mode:s.needsStoreDomain?'shopify':microsoftMcp?'mcp':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
-            url:(microsoftMcp||!ready)&&url?url:null,manualMode:url&&guides[key]?(ready?'oauth':'setup'):null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
+          return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||!!mcpLinked,
+            mode:s.needsStoreDomain?'shopify':microsoftCode?'microsoft':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
+            url:!ready&&url?url:null,manualMode:(url||microsoftCode)&&guides[key]?(ready?'oauth':'setup'):null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
             redirectUri:baseUrl+'/auth/'+key+'/callback',scopes:s.scopes||[],personalClient:own.has(key)};
         });
         res.json({services:rows});
