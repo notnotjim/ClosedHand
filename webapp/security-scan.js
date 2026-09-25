@@ -58,6 +58,7 @@ const BUILTIN_TOOLS = [
   "gmail_search","gmail_read","gmail_send","gmail_reply","gmail_send_attachment",
   "gcal_list_events","gcal_search_events","gcal_create_event","gcal_list_calendars",
   "gmail_attachment_to_drive","drive_search","drive_list_recent","drive_read","drive_send_file",
+  "onedrive_search","onedrive_list_recent","onedrive_read","onedrive_send_file",
   "maps_search_places","maps_directions","maps_geocode","air_quality","send_location",
   "save_location","tfl_line_status","tfl_journey","tfl_departures","gcal_delete_event",
   "pulse_toggle","pulse_check","list_connections","connect_service","disconnect_service",

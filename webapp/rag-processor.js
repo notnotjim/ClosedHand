@@ -516,6 +516,16 @@ async function embedSingle(text) {
 
 // --- Folder scanning ---
 
+// Listing is cheap, indexing is not. Scan wide, then order by recency so the
+// indexing budget is spent on the files most likely to be searched for;
+// anything cut is the oldest, which is a defensible thing to lose.
+function byRecency(files, origin, max) {
+  files.sort((a, b) => new Date(b.modified || 0) - new Date(a.modified || 0));
+  if (files.length >= max) {
+    console.log(`[RAG] ${origin} scan hit the ${max}-file listing cap. Raise RAG_MAX_FILES to scan more.`);
+  }
+}
+
 async function scanFolder(userId, origin, folderPath, opts = {}) {
   // origin says WHICH kind of store (gdrive/onedrive); account (a connection
   // service key) says WHICH account of it. Null account -> primary.
@@ -601,31 +611,53 @@ async function scanFolder(userId, origin, folderPath, opts = {}) {
       if (!opts.recursive) break; // browser: this folder only
       if (out.length >= MAX_FILES) break;
     }
-    if (opts.recursive) {
-      // Listing is cheap, indexing is not. Scan wide, then order by recency so
-      // the indexing budget is spent on the files most likely to be searched
-      // for; anything cut is the oldest, which is a defensible thing to lose.
-      out.sort((a, b) => new Date(b.modified || 0) - new Date(a.modified || 0));
-      if (out.length >= MAX_FILES) {
-        console.log(`[RAG] gdrive scan hit the ${MAX_FILES}-file listing cap. Raise RAG_MAX_FILES to scan more.`);
-      }
-    }
+    if (opts.recursive) byRecency(out, origin, MAX_FILES);
     return out;
   } else if (origin === "onedrive") {
+    // The same two modes as Google Drive, following Microsoft's pages. The
+    // browser navigates by path; indexing walks subfolders by their ids.
+    const MAX_FILES = parseInt(process.env.RAG_MAX_FILES || "2000", 10);
+    const MAX_DEPTH = 8;
+    const GRAPH = "https://graph.microsoft.com/v1.0/me/drive";
+    const select = "?$select=id,name,size,lastModifiedDateTime,file,folder&$top=200";
     const folderP = folderPath || "/";
-    const url = folderP === "/"
-      ? "https://graph.microsoft.com/v1.0/me/drive/root/children?$top=200"
-      : "https://graph.microsoft.com/v1.0/me/drive/root:" + folderP + ":/children?$top=200";
-    const resp = await fetchWithRefresh(userId, msKey, url);
-    if (!resp.ok) throw new Error("OneDrive API error: " + resp.status);
-    const data = await resp.json();
-    return (data.value || []).map(f => ({
+    const first = folderP === "/"
+      ? GRAPH + "/root/children" + select
+      : GRAPH + "/root:" + folderP.split("/").map(encodeURIComponent).join("/") + ":/children" + select;
+    const toEntry = (f) => ({
       name: f.name,
       type: f.folder ? "directory" : "file",
       size: f.size || 0,
       modified: f.lastModifiedDateTime,
       id: f.id,
-    }));
+    });
+
+    const out = [];
+    const queue = [{ url: first, depth: 0 }];
+    while (queue.length > 0) {
+      const { url, depth } = queue.shift();
+      let next = url;
+      do {
+        const resp = await fetchWithRefresh(userId, msKey, next);
+        if (!resp.ok) throw new Error("OneDrive API error: " + resp.status);
+        const data = await resp.json();
+        for (const f of (data.value || [])) {
+          const entry = toEntry(f);
+          if (entry.type === "directory") {
+            if (!opts.recursive) { out.push(entry); continue; }
+            if (depth < MAX_DEPTH) queue.push({ url: GRAPH + "/items/" + encodeURIComponent(f.id) + "/children" + select, depth: depth + 1 });
+            continue;
+          }
+          out.push(entry);
+        }
+        next = data["@odata.nextLink"];
+        if (out.length >= MAX_FILES) break;
+      } while (next);
+      if (!opts.recursive) break;
+      if (out.length >= MAX_FILES) break;
+    }
+    if (opts.recursive) byRecency(out, origin, MAX_FILES);
+    return out;
   } else if (origin === "dropbox") {
     const dropboxPath = folderPath || "";
     const token = await getServiceToken(userId, "dropbox");

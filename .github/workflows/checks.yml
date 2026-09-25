@@ -39,7 +39,7 @@ jobs:
             -print0 | xargs -0 -n1 node -c
 
       - name: Assistant email and connection catalogue
-        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-setup-feedback.js
+        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-setup-feedback.js scripts/test-onedrive.js
 
       - name: Shopify connection and renewal
         run: node --test scripts/test-shopify-connection.js
