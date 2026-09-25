@@ -18,6 +18,7 @@ const remote = {
   notion: 'https://mcp.notion.com/mcp',
   atlassian: 'https://mcp.atlassian.com/v2/mcp?tools=all',
   stripe: 'https://mcp.stripe.com',
+  github: 'https://api.githubcopilot.com/mcp/',
 };
 function validClient(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 4096 && !/[\r\n\0]/.test(value);
@@ -41,18 +42,22 @@ function createCatalogue({db, services, userId, baseUrl}) {
         const [clients,connections,mcps]=await Promise.all([
           db.from('connection_clients').select('service').eq('user_id',owner),
           db.from('connections').select('service').eq('user_id',owner),
-          db.from('user_mcps').select('server_url,status').eq('user_id',owner),
+          db.from('user_mcps').select('id,server_url,status,args,caps').eq('user_id',owner),
         ]);
         if(clients.error||connections.error||mcps.error)throw new Error('Could not load connections. Try again.');
         const own=new Set((clients.data||[]).map(x=>x.service));
         const linked=new Set((connections.data||[]).map(x=>x.service.replace(/^(google|microsoft)_extra_.+$/, '$1')));
         const rows=Object.entries(services).filter(([key,s])=>!s.isChatPlatform).map(([key,s])=>{
           const ready=own.has(key)||!!(s.clientId&&s.clientSecret);
-          const url=remote[key];
+          const selfHost = process.env.DB_DRIVER === 'pg' || (!!process.env.DATABASE_URL && !process.env.SUPABASE_URL);
+          const microsoftMcp = key === 'microsoft' && selfHost;
+          const url=microsoftMcp ? 'https://github.com/softeria/ms-365-mcp-server' : remote[key];
+          const microsoftRow = microsoftMcp && (mcps.data||[]).find(m=>(m.args||[]).some(a=>/^@softeria\/ms-365-mcp-server(?:@|$)/.test(a)));
+          const microsoftSigned = microsoftRow?.status === 'connected' && !!microsoftRow.caps?.account_auth?.accounts?.length;
           const mcpLinked=url&&(mcps.data||[]).some(m=>m.status==='connected'&&m.server_url?.replace(/\/$/,'')===url.replace(/\/$/,''));
-          return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||!!mcpLinked,
-            mode:s.needsStoreDomain?'shopify':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
-            url:!ready&&url?url:null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
+          return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||(microsoftMcp?microsoftSigned:!!mcpLinked),mcpId:microsoftRow?.id||null,
+            mode:s.needsStoreDomain?'shopify':microsoftMcp?'mcp':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
+            url:(microsoftMcp||!ready)&&url?url:null,manualMode:url&&guides[key]?(ready?'oauth':'setup'):null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
             redirectUri:baseUrl+'/auth/'+key+'/callback',scopes:s.scopes||[],personalClient:own.has(key)};
         });
         res.json({services:rows});

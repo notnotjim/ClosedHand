@@ -2164,14 +2164,14 @@
           <div class="mcp-hero">
             <div class="mcp-copy">
               <div class="mcp-title">Add an MCP server</div>
-              <p class="mcp-description">Paste its URL, command or JSON configuration. Add a key when prompted.</p>
+              <p class="mcp-description">Paste a server or GitHub link, package link, command or JSON configuration. Add a key when prompted.</p>
               <p class="mcp-security">Checked for security risks before activation.</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="2" placeholder="MCP URL, command or JSON" aria-label="MCP server" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="2" placeholder="Server or GitHub link, command or JSON" aria-label="MCP server" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -3726,10 +3726,10 @@
     async function addMcpConnection() {
       var box = document.getElementById('mcp-url-input');
       var input = box.value.trim();
-      if (!input) return;
+      if (!input || document.getElementById('mcp-connect-btn').disabled) return;
 
       // A skill link goes to the skill installer, which has its own flow.
-      if (/github\.com\/.*\/(skill|SKILL|claude-skill|awesome-claude)/i.test(input) || /\.md$/i.test(input) || /raw\.githubusercontent/i.test(input)) {
+      if (/\/SKILL\.md(?:[?#].*)?$/i.test(input)) {
         installSkill(false, input);
         return;
       }
@@ -3749,7 +3749,7 @@
       btn.textContent = 'Connecting and checking…';
       var box = document.getElementById('mcp-url-input');
       box.setAttribute('aria-busy', 'true');
-      mcpStatus('Connecting and checking the available tools. This can take a minute.');
+      mcpStatus(/github\.com|raw\.githubusercontent\.com/i.test(_mcpPending.input) ? 'Reading the project’s connection instructions…' : 'Connecting and checking the available tools. This can take a minute.');
       var body = Object.assign({ input: _mcpPending.input }, _mcpPending.extra || {}, extra || {});
       _mcpPending.extra = body;
       try {
@@ -3760,6 +3760,7 @@
         });
         var data = await res.json();
 
+        if (data.setup_choices) { renderMcpChoices(data); return; }
         if (data.skill) { installSkill(false, data.url); return; }
 
         if (data.auth_required && data.redirect_url) {
@@ -3807,7 +3808,9 @@
         if (probs.length) {
           mcpStatus(probs.map(function(p) { return p.error; }).join(' '));
         }
-        loadMcps();
+        await loadMcps();
+        var added = (data.connected || []).find(function(c) { return (c.args || []).some(function(a) { return /^@softeria\/ms-365-mcp-server(?:@|$)/.test(a); }); });
+        if (added) revealMcpAccount(added.id);
       } catch (e) {
         mcpStatus('Error: ' + e.message);
       } finally {
@@ -3815,6 +3818,60 @@
         btn.textContent = 'Connect';
         box.removeAttribute('aria-busy');
       }
+    }
+
+    function revealMcpAccount(id) {
+      var panel = document.getElementById('mcp-account-' + id);
+      if (!panel) return;
+      var wrap = panel.closest('.int-wrap');
+      var card = wrap && wrap.querySelector('.int-card');
+      if (card && !card.classList.contains('expanded')) toggleMcpUnfurl(card);
+      panel.parentElement.scrollIntoView({block:'center',behavior:'smooth'});
+      var button = panel.previousElementSibling;
+      if (button && button.tagName === 'BUTTON') button.focus({preventScroll:true});
+    }
+
+    function renderMcpChoices(data) {
+      var panel = document.getElementById('mcp-auth-status');
+      panel.style.display = 'block'; panel.replaceChildren();
+      var intro = document.createElement('p'); intro.textContent = 'Choose the connection to add. Commands run on the computer running ClosedHand.';
+      var source = document.createElement('a'); source.href = data.source; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = 'View project instructions';
+      panel.append(intro); if (data.source) panel.append(source);
+      data.setup_choices.forEach(function(choice) {
+        var section = document.createElement('div'); section.className = 'mcp-setup-choice';
+        var title = document.createElement('strong'); title.textContent = choice.name;
+        var details = document.createElement('details'), summary = document.createElement('summary'), code = document.createElement('pre');
+        summary.textContent = 'Connection details'; code.textContent = choice.input; details.append(summary,code);
+        var config = JSON.parse(choice.input), fields=[];
+        function placeholders(obj) {
+          if (!obj || typeof obj !== 'object') return;
+          Object.keys(obj).forEach(function(key) {
+            var value = obj[key];
+            if (typeof value === 'object') { placeholders(value); return; }
+            if (typeof value !== 'string' || !/(?:YOUR[_ -]|<[^>]+>|\$\{[^}]+\}|REPLACE[_ -]|API_KEY_HERE|\/path\/to\/)/i.test(value)) return;
+            var label=document.createElement('label'),input=document.createElement('input');
+            label.textContent=/^\d+$/.test(key)?'Required value':key.replace(/_/g,' ');
+            input.type=/SECRET|TOKEN|KEY|PASSWORD/i.test(key+' '+value)?'password':'text'; input.autocomplete='off'; input.placeholder=value;
+            label.append(input);section.append(label);fields.push({obj:obj,key:key,input:input,template:value});
+          });
+        }
+        section.append(title,details);placeholders(config);
+        var button=document.createElement('button');button.className='conn-btn conn-btn-manage';button.textContent='Use this connection';
+        button.onclick=async function(){
+          if(document.getElementById('mcp-connect-btn').disabled)return;
+          if(fields.some(function(f){return !f.input.value.trim();})){fields.find(function(f){return !f.input.value.trim();}).input.focus();return;}
+          fields.forEach(function(f){
+            var answer=f.input.value.trim();
+            // Preserve schemes and argument prefixes around one template value.
+            var marker=/\$\{[^}]+\}|<[^>]+>|(?:YOUR|REPLACE)[_ -][A-Z0-9_ -]+|API_KEY_HERE|\/path\/to\/[^,\s"\x27]+/gi;
+            var matches=f.template.match(marker)||[];
+            f.obj[f.key]=matches.length===1 ? f.template.replace(marker,function(){return answer;}) : answer;
+          });
+          _mcpPending={input:JSON.stringify(config)};
+          await connectMcp({});
+        };
+        section.append(button);panel.append(section);
+      });
     }
 
     function renderMcpScan(scan, canProceed) {

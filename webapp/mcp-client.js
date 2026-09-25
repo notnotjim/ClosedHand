@@ -91,14 +91,16 @@ function entryFromConfig(name, cfg) {
     };
   }
   if (cfg.command) {
-    const args = Array.isArray(cfg.args) ? cfg.args.map(String) : [];
+    const parts = Array.isArray(cfg.command) ? cfg.command.map(String) : [String(cfg.command)];
+    const command = parts.shift();
+    const args = [...parts, ...(Array.isArray(cfg.args) ? cfg.args.map(String) : [])];
     return {
       name: name || null,
       transport: "stdio",
-      command: String(cfg.command),
+      command,
       args,
       env: cfg.env && typeof cfg.env === "object" ? cfg.env : {},
-      server_url: stdioAddress(String(cfg.command), args),
+      server_url: stdioAddress(command, args),
     };
   }
   return null;
@@ -108,10 +110,24 @@ function entryFromConfig(name, cfg) {
 // block in any of the shapes READMEs publish ({"mcpServers": {...}}, a single
 // {"command": ...} or {"url": ...}, or {"name": {...}}), or a skill link.
 function parseServerInput(text) {
-  const raw = String(text || "").trim();
+  let raw = String(text || "").trim();
+  if (raw.length > 65536) return { kind: "invalid", entries: [], error: "Paste just the connection details, not the whole document." };
+  raw = raw.replace(/^```[^\n]*\n([\s\S]*?)\n```$/, '$1').trim().replace(/^\$\s+/, '').replace(/\\\r?\n\s*/g, ' ');
+  if (/^github\.com\//i.test(raw)) raw = 'https://' + raw;
+  if (/^npm:[@a-z0-9._\/-]+$/i.test(raw)) raw = 'npx -y ' + raw.slice(4);
+  if (/^pypi:[a-z0-9._-]+$/i.test(raw)) raw = 'uvx ' + raw.slice(5);
+  const cli = raw.match(/^(?:claude|codex)\s+mcp\s+add\s+[^\s]+\s+--\s+([\s\S]+)$/);
+  if (cli) raw = cli[1];
+  const markdownLink = raw.match(/^\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/);
+  if (markdownLink) raw = markdownLink[1];
+  const packageLink = raw.match(/^https:\/\/(?:www\.)?npmjs\.com\/package\/(@?[^?#]+?)(?:[?#].*)?$/i);
+  if (packageLink) raw = 'npx -y ' + packageLink[1].replace(/\/$/, '');
+  const pythonLink = raw.match(/^https:\/\/pypi\.org\/project\/([a-z0-9._-]+)\/?(?:[?#].*)?$/i);
+  if (pythonLink) raw = 'uvx ' + pythonLink[1];
+  if (/^@[a-z0-9._-]+\/[a-z0-9._-]+(?:@[a-z0-9.^~_-]+)?$/i.test(raw)) raw = 'npx -y ' + raw;
   if (!raw) return { kind: "empty", entries: [] };
 
-  if (/github\.com\/.*\/(skill|SKILL|claude-skill|awesome-claude)/i.test(raw) || /\.md$/i.test(raw) || /raw\.githubusercontent/i.test(raw)) {
+  if (/\/SKILL\.md(?:[?#].*)?$/i.test(raw)) {
     return { kind: "skill", entries: [], url: raw };
   }
 
@@ -123,7 +139,7 @@ function parseServerInput(text) {
       try { obj = JSON.parse("{" + raw.replace(/,\s*}$/, "}") + "}"); } catch { return { kind: "invalid", entries: [], error: "That JSON did not parse." }; }
     }
     const entries = [];
-    const servers = obj.mcpServers || obj.servers || obj;
+    const servers = obj.mcpServers || obj.mcp?.servers || obj.servers || obj;
     if (servers.command || servers.url || servers.serverUrl) {
       const e = entryFromConfig(null, servers);
       if (e) entries.push(e);

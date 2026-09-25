@@ -24,9 +24,16 @@
       const row=el('div','catalogue-row');
       const logo=el('img');logo.src=s.logoUrl;logo.alt='';logo.width=28;logo.height=28;
       const copy=el('div','catalogue-copy');copy.append(el('strong','',s.name),el('span','',s.description));
-      const button=el('button','catalogue-action',s.connected?'Connected':s.mode==='setup'?'Set up':'Connect');
+      const button=el('button','catalogue-action',s.connected?'Connected':s.mcpId?'Finish sign-in':s.mode==='setup'?'Set up':'Connect');
       button.type='button';button.disabled=s.connected;button.setAttribute('aria-label',button.textContent+' '+s.name);
-      button.addEventListener('click',()=>select(s,button));row.append(logo,copy,button);list.append(row);
+      button.addEventListener('click',()=>select(s,button));
+      if(s.mode==='mcp'&&s.manualMode&&!s.connected){
+        const advanced=el('details','catalogue-advanced'),summary=el('summary','','Other setup options');
+        const manual=el('button','catalogue-back','Use your own application');manual.type='button';
+        manual.onclick=()=>select({...s,mode:s.manualMode,mcpId:null},manual);
+        advanced.append(summary,manual);copy.append(advanced);
+      }
+      row.append(logo,copy,button);list.append(row);
     });
     if(!visible.length)list.append(el('p','catalogue-empty','No matching service. You can add another connection below.'));
   }
@@ -35,6 +42,7 @@
     if(s.mode==='google'){(window.top||window).location.href='/setup#step-google';return;}
     if(s.mode==='oauth'){(window.top||window).location.href='/auth/'+s.key+(['google','microsoft'].includes(s.key)?'?extra=1':'');return;}
     if(s.mode==='mcp'){
+      if(s.mcpId){await window.loadMcps();window.revealMcpAccount(s.mcpId);return;}
       byId('mcp-url-input').value=s.url;
       byId('mcp-url-input').scrollIntoView({block:'center',behavior:'smooth'});
       button.disabled=true;

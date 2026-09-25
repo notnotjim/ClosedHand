@@ -1987,11 +1987,20 @@ async function connectMcpHandler(req, res) {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const body = req.body || {};
-    const parsed = mcpClient.parseServerInput(body.input || body.server_url || "");
+    const input = body.input || body.server_url || "";
+    if (typeof input !== 'string' || input.length > 65536) return res.status(400).json({error:'Paste just the connection details.'});
+    let resolved;
+    try { resolved = await require('./mcp-input-resolver').resolveInput(input); }
+    catch (e) { return res.status(400).json({error:e.message}); }
+    if (resolved) return res.json({ setup_choices: resolved.choices, source: resolved.source });
+    const parsed = mcpClient.parseServerInput(input);
     if (parsed.kind === "skill") return res.json({ skill: true, url: parsed.url });
     if (parsed.kind === "empty") return res.status(400).json({ error: "Paste something first" });
     if (parsed.kind === "invalid" || !parsed.entries.length) return res.status(400).json({ error: parsed.error || "Nothing to connect in that" });
 
+    if (parsed.entries.some(entry => /(?:YOUR[_ -]|<[^>]+>|\$\{[^}]+\}|REPLACE[_ -]|API_KEY_HERE|\/path\/to\/)/i.test(JSON.stringify(entry)))) {
+      return res.json({setup_choices:parsed.entries.map(entry=>({name:entry.name||'Connection details',input:JSON.stringify(entry.transport==='stdio'?{command:entry.command,args:entry.args,env:entry.env}:{url:entry.server_url,headers:entry.headers,type:entry.transport})}))});
+    }
     const selfHost = mcpClient.isSelfHost();
     const connected = [];
     const problems = [];

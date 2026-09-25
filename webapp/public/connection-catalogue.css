@@ -31,3 +31,14 @@
 .connection-catalogue [hidden] {display:none!important;}
 @media(max-width:480px){.connection-catalogue{padding:16px}.catalogue-row{gap:12px;flex-wrap:wrap}.catalogue-copy{flex-basis:calc(100% - 44px)}.catalogue-row>.catalogue-action{margin-left:40px}.catalogue-callback{grid-template-columns:1fr}.catalogue-callback .catalogue-action{justify-self:start}}
 
+
+.catalogue-advanced {margin-top:8px;}
+.connection-catalogue .catalogue-advanced summary {font-size:14px;font-weight:400;margin-bottom:8px;}
+.mcp-setup-choice {text-align:left;padding:20px 0;border-top:1px solid rgba(239,230,214,.16);margin-top:20px;overflow-wrap:anywhere;}
+.mcp-setup-choice strong {display:block;margin-bottom:12px;}
+.mcp-setup-choice pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;}
+.mcp-setup-choice label {display:grid;gap:8px;margin:16px 0;}
+.mcp-setup-choice input {min-width:0;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:12px;border-radius:8px;border:1px solid rgba(239,230,214,.25);background:#100E0D;color:#EFE6D6;}
+.mcp-setup-choice button {margin-top:16px;min-height:44px;}
+
+#mcp-auth-status > a {color:#E59B89;text-underline-offset:3px;}
