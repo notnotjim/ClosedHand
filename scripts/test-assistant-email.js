@@ -28,7 +28,7 @@ test('sender verification uses aligned SES verdicts, never a MIME claim', () => 
   assert.equal(p.authenticated(receipt), true);
   assert.equal(p.authenticated({ ...receipt, dmarcVerdict: { status: 'FAIL' } }), false);
   assert.equal(p.authenticated({ headers: { 'authentication-results': 'dmarc=pass' } }), false);
-  assert.equal(p.authenticated({ ...receipt, dmarcVerdict: { status: 'GRAY' }, dkimVerdict: { status: 'PASS' } }), true);
+  assert.equal(p.authenticated({ ...receipt, dmarcVerdict: { status: 'GRAY' }, dkimVerdict: { status: 'PASS' } }), false);
   assert.equal(p.authenticated({ ...receipt, virusVerdict: { status: 'FAIL' } }), false);
 });
 test('CC, expired scope and spoofed From do not grant guest or owner authority', () => {
@@ -99,4 +99,40 @@ test('scoped replies use the configured Anthropic and OpenAI-compatible HTTP tra
     assert.equal(seen[0].key,'anthropic-fixture-key');assert.equal(seen[1].auth,'Bearer custom-fixture-key');
     assert.equal(seen[0].body.model,'fixture-model');assert.equal(seen[1].body.model,'fixture-model');
   } finally {server.close();}
+});
+
+test('connected mailbox identities and private replies follow the authenticated sender', () => {
+  const { privateRecipient } = require('../lib/assistant-email');
+  const connections = [
+    { service: 'google_extra_work', tokens: { refresh_token: 'encrypted-token' }, metadata: { email: 'Work@Example.com' } },
+    { service: 'microsoft', tokens: { access_token: 'encrypted-token' }, metadata: { email: 'outlook@example.com' } },
+    { service: 'microsoft_extra_expired', tokens: { refresh_token: 'token' }, metadata: { email: 'expired@example.com', reconnect_required: true } },
+    { service: 'google_extra_empty', tokens: {}, metadata: { email: 'empty@example.com' } },
+    { service: 'mcp', tokens: { access_token: 'token' }, metadata: { email: 'guest@example.com' } },
+  ];
+  const account = { owner_email: 'owner@example.com' };
+  account.ownerAddresses = p.ownerAddresses(account, connections);
+  assert.deepEqual(account.ownerAddresses, ['owner@example.com', 'work@example.com', 'outlook@example.com']);
+  for (const from of account.ownerAddresses) {
+    const envelope = { from, authenticated: true, replyTo: 'attacker@example.com', cc: ['guest@example.com'] };
+    assert.equal(actor(envelope, account, null), 'owner');
+    assert.equal(privateRecipient(account, { envelope }), from);
+    assert.throws(() => privateRecipient(account, { envelope: { ...envelope, authenticated: false } }));
+  }
+  assert.equal(actor({ from: 'guest@example.com', authenticated: true }, account, null), 'unscoped');
+  account.ownerAddresses = p.ownerAddresses(account, []);
+  assert.equal(actor({ from: 'work@example.com', authenticated: true }, account, null), 'unscoped');
+  assert.throws(() => privateRecipient(account, { envelope: { from: 'work@example.com', authenticated: true } }));
+});
+
+test('owner lookup is tenant-bound, refreshed and fails closed on storage failure', async () => {
+  const { withOwnerAddresses } = require('../lib/assistant-email');
+  let rows = [{service:'google_extra_work',tokens:{refresh_token:'token'},metadata:{email:'work@example.com'}}];
+  const database = { from(table) { assert.equal(table, 'connections'); return { select() { return { async eq(key, id) { assert.equal(key,'user_id'); assert.equal(id,'tenant-a'); return {data: rows}; } }; } }; } };
+  const account={user_id:'tenant-a',owner_email:'owner@example.com'};
+  assert.equal((await withOwnerAddresses(account,database)).ownerAddresses.includes('work@example.com'),true);
+  rows=[];
+  assert.equal((await withOwnerAddresses(account,database)).ownerAddresses.includes('work@example.com'),false);
+  const broken={from(){return {select(){return {async eq(){return {error:{message:'offline'}};}};}};}};
+  await assert.rejects(withOwnerAddresses(account,broken));
 });

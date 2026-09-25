@@ -30,7 +30,9 @@ function register(app, db, userId) {
     const threads = mustWrite(await db.from('assistant_email_threads').select('id,subject,purpose,shared_brief,participants,expires_at,stopped').eq('user_id', owner).order('updated_at', { ascending: false }).limit(15));
     const attention = mustWrite(await db.from('assistant_email_messages').select('id,thread_id,direction,state,error,created_at').eq('user_id', owner).in('state', ['needs_review','awaiting_scope','failed','uncertain','bounced','complained','suppressed']).order('created_at', { ascending: false }).limit(15));
     const remote = account?.address ? await call(account, 'status') : null;
-    res.json({ available: true, usage: remote?.usage || null, servicePaused: !!remote?.paused, name: profile.settings?.bot_name || 'ClosedHand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
+    const connections = account ? mustWrite(await db.from('connections').select('service,tokens,metadata').eq('user_id', owner)) : [];
+    const ownerAddresses = account ? p.ownerAddresses(account, connections) : [];
+    res.json({ available: true, ownerAddresses, usage: remote?.usage || null, servicePaused: !!remote?.paused, name: profile.settings?.bot_name || 'ClosedHand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
   }));
   app.post('/api/assistant-email/enable', wrap(async (req, res, owner) => {
     if (!await available()) return res.status(503).json({ error: 'Assistant email is coming soon.' });

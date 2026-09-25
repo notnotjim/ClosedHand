@@ -72,7 +72,10 @@
     const copy = button('', async () => { await navigator.clipboard.writeText(state.address); status.textContent = 'Email address copied.'; }, 'assistant-email-copy');
     copy.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>';
     copy.setAttribute('aria-label', 'Copy email address'); line.append(copy); content.append(line);
-    content.append(el('p', (state.enabled ? 'On' : 'Paused') + ' · Private replies go to ' + state.ownerEmail + '.', 'section-desc'));
+    content.append(el('p', (state.enabled ? 'On' : 'Paused') + ' · Private replies return to the address you email from.', 'section-desc'));
+    const senders = el('details'); senders.append(el('summary', 'Your email addresses'));
+    for (const address of state.ownerAddresses || [state.ownerEmail]) senders.append(el('p', address, 'section-desc'));
+    content.append(senders);
     content.append(button(state.enabled ? 'Pause email' : 'Resume email', async () => { await request('/state', { enabled: !state.enabled }); await load(); }));
     if (state.threads.length || state.attention.length) {
       const details = el('details'); details.append(el('summary', 'Email conversations' + (state.attention.length ? ' · ' + state.attention.length + ' need attention' : '')));

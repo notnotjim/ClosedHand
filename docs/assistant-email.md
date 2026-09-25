@@ -23,3 +23,14 @@ The relay webapp requires `ASSISTANT_EMAIL_ENABLED=1`, `AWS_REGION`, scoped AWS 
 ## Verification
 
 `node --test scripts/test-assistant-email.js` covers envelope tampering, pairing expiry, sender authority, scope expiry, private-context exclusion, recipient limits and both Anthropic and OpenAI-compatible HTTP transports. Transport release checks also exercise real PostgreSQL claims and concurrent limits, MIME attachments, duplicate ingress, isolated inboxes, feedback ordering and actual SES simulator delivery. A simulator does not replace checking real multi-party email threads before production activation.
+
+Connected Google and Microsoft mailbox identities (including extra accounts) may
+send owner requests. Private replies go to the authenticated From address, never
+an arbitrary Reply-To or a CC recipient. Disconnected accounts and accounts marked
+for reconnection no longer supply additional owner identities. The separately
+verified account used to enable assistant email remains an owner address.
+
+For delegated correspondence, ClosedHand drafts the purpose and permitted details
+from the owner's request and returns the existing confirmation privately. The
+owner need not manually fill in the Settings form. Shared replies currently go
+to each approved sender individually; group reply-all is not yet supported.

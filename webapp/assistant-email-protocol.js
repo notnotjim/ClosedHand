@@ -25,7 +25,8 @@ function isAutomated(headers) {
 // Only SES receipt verdicts are trusted. Authentication-Results inside MIME is
 // attacker-controlled and must never determine owner/participant authority.
 function authenticated(receipt) {
-  const aligned = receipt?.dmarcVerdict?.status === 'PASS' || (receipt?.dkimVerdict?.status === 'PASS' && receipt?.dmarcVerdict?.status !== 'FAIL');
+  // A DKIM pass alone may belong to a different domain than the From address.
+  const aligned = receipt?.dmarcVerdict?.status === 'PASS';
   return aligned && receipt?.spamVerdict?.status === 'PASS' && receipt?.virusVerdict?.status === 'PASS';
 }
 function identity(req) {
@@ -84,4 +85,16 @@ function outgoing(input) {
   if (!to.length) throw new Error('Choose an email recipient.');
   return { id: input.id, replyToDelivery: input.replyToDelivery, to, subject: header(input.subject), text: input.text, attachments: attachments(input.attachments), inReplyTo: messageId(input.inReplyTo), references: references(input.references), displayName: header(input.displayName || 'ClosedHand', 100) };
 }
-module.exports = { DOMAIN, LIMITS, uuid, digest, address, addresses, header, messageId, references, isAutomated, authenticated, identity, equal, signTicket, readTicket, validPublicKey, keyPair, seal, open, attachments, outgoing };
+// Only provider-authenticated mailbox identities count, never arbitrary contact
+// addresses, MCP metadata or aliases supplied in an incoming message.
+function ownerAddresses(account, connections = []) {
+  const result = new Set([address(account.owner_email)].filter(Boolean));
+  for (const connection of connections) {
+    if (!/^(google|microsoft)(?:_extra_.+)?$/.test(connection.service || '')) continue;
+    if (connection.metadata?.reconnect_required || !(connection.tokens?.access_token || connection.tokens?.refresh_token)) continue;
+    const email = address(connection.metadata?.email);
+    if (email) result.add(email);
+  }
+  return [...result];
+}
+module.exports = { ownerAddresses, DOMAIN, LIMITS, uuid, digest, address, addresses, header, messageId, references, isAutomated, authenticated, identity, equal, signTicket, readTicket, validPublicKey, keyPair, seal, open, attachments, outgoing };
