@@ -97,3 +97,6 @@ jobs:
 
       - name: No count-gated reranking
         run: node scripts/check-rerank-callers.js
+
+      - name: Payment lookup and checkout boundaries
+        run: node --test scripts/test-spend-page-context.js
