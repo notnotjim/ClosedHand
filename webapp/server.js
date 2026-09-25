@@ -2038,8 +2038,7 @@ async function connectMcpHandler(req, res) {
               : "This server wants a key.",
           });
         }
-        const tail = opened && opened.stderr ? opened.stderr() : "";
-        problems.push({ server_url: row.server_url, error: String(e.message || e) + (tail ? " " + tail : "") });
+        problems.push({ server_url: row.server_url, error: mcpClient.publicConnectionError(e) });
         continue;
       }
 
@@ -2053,7 +2052,7 @@ async function connectMcpHandler(req, res) {
         connected.push(saved);
       } catch (e) {
         console.error("[mcp] connect failed:", e);
-        problems.push({ server_url: row.server_url, error: e.message });
+        problems.push({ server_url: row.server_url, error: mcpClient.publicConnectionError(e) });
       } finally {
         await mcpClient.closeQuietly(opened.client, opened.transport);
       }
@@ -2067,6 +2066,8 @@ async function connectMcpHandler(req, res) {
     res.status(500).json({ error: "Failed to add MCP connection" });
   }
 }
+
+require("./mcp-account-auth").register(app, supabase, getUserIdFromRequest);
 
 app.post("/api/mcps/probe", connectMcpHandler);
 app.post("/api/mcps", connectMcpHandler);

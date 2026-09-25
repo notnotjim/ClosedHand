@@ -74,20 +74,22 @@ const BUILTIN_TOOLS = [
 
 const FALLBACK_RESULT = {
   risk_level: "warning",
-  findings: [{ severity: "warning", description: "Security scan could not complete. Proceed with caution." }],
-  summary: "Scan inconclusive",
+  findings: [{ severity: "warning", description: "The selected model did not return a complete review. Retry the check, or connect without a completed review." }],
+  summary: "Review incomplete",
 };
 
 async function callScanModel(systemPrompt, userContent, selected) {
   if (selected !== undefined) {
     if (!selected) return null;
     try {
-      const response = await require("./model-wire").request(selected, { model: selected.model, effort: "default",
-        system: systemPrompt, messages: [{ role: "user", content: userContent }], max_tokens: 2048 },
+      const response = await require("./model-wire").request(selected, { model: selected.model, effort: "fast",
+        system: systemPrompt, messages: [{ role: "user", content: userContent }], max_tokens: 4096,
+        tools: [{ name: "report_security_review", description: "Report the security review of the supplied definitions.", input_schema: { type: "object", properties: { risk_level: { type: "string", enum: ["safe", "warning", "blocked"] }, findings: { type: "array", items: { type: "object", properties: { severity: { type: "string", enum: ["critical", "warning", "info"] }, description: { type: "string" } }, required: ["severity", "description"] } }, summary: { type: "string" } }, required: ["risk_level", "findings", "summary"] } }],
+        tool_choice: { type: "tool", name: "report_security_review" } },
         { signal: AbortSignal.timeout(45000) });
       const text = response.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
-      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "null");
-      return parsed?.risk_level && Array.isArray(parsed.findings) ? parsed : null;
+      const parsed = response.content?.find(b => b.type === "tool_use" && b.name === "report_security_review")?.input || JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || "null");
+      return ["safe", "warning", "blocked"].includes(parsed?.risk_level) && Array.isArray(parsed.findings) && typeof parsed.summary === "string" && parsed.findings.every(f => f && ["critical", "warning", "info"].includes(f.severity) && typeof f.description === "string") ? parsed : null;
     } catch (error) { console.log("[security-scan] Selected model unavailable: " + error.message); return null; }
   }
   if (!XAI_API_KEY) {
@@ -145,8 +147,18 @@ async function scanMcpTools(tools, selected) {
     return { risk_level: "safe", findings: [], summary: "No tools exposed" };
   }
 
-  // Cap at 100 tools
-  const toolsToScan = tools.slice(0, 100);
+  // Review every definition in bounded batches; never silently omit later tools.
+  if (tools.length > 20) {
+    const results = [];
+    for (let start = 0; start < tools.length; start += 60) {
+      const batches = [];
+      for (let offset = start; offset < Math.min(start + 60, tools.length); offset += 20) batches.push(scanMcpTools(tools.slice(offset, offset + 20), selected));
+      results.push(...await Promise.all(batches));
+    }
+    const risk = results.some(r => r.risk_level === "blocked") ? "blocked" : results.some(r => r.risk_level === "warning") ? "warning" : "safe";
+    return { risk_level: risk, findings: results.flatMap(r => r.findings), summary: results.some(r => r.summary === FALLBACK_RESULT.summary) ? "Some tools could not be checked" : "Reviewed " + tools.length + " tool definitions" };
+  }
+  const toolsToScan = tools;
 
   const systemPrompt = `You are a security reviewer for an AI assistant platform called ClosedHand. Analyze MCP tool definitions for security risks. Respond ONLY with valid JSON, no other text.`;
 
