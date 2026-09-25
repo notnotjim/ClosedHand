@@ -170,7 +170,7 @@
     padding: 0 20px 20px;
     gap: 0;
     /* Header and tabs above take about 157px; the hero fills the rest of the
-       first screen and no more, so the cards below start just under the fold. */
+       first screen while leaving space around the chat controls. */
     min-height: calc(100dvh - 157px);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -2218,6 +2218,12 @@
 
 
 
+  /* A quiet aside below the chat controls, with room to breathe. */
+  #heroSection .hero-footer {
+    margin-top: clamp(48px, 7vh, 88px);
+    padding: 0 16px 24px;
+  }
+  #chatAside { max-width: 46ch; font-size: clamp(14px, 1.5vw, 16px); line-height: 1.5; }
 </style>
   <link rel="stylesheet" href="/welcome.css">
   <link rel="stylesheet" href="/interface.css">
@@ -2369,7 +2375,7 @@
     </button>
     <div class="hero-recent-pop" id="heroRecentPop" hidden></div>
     <div class="hero-footer">
-      <span>Let’s get things in order.</span>
+      <span id="chatAside">Let’s get things in order.</span>
     </div>
 
     <div style="flex:1"></div>
@@ -2630,66 +2636,28 @@
   </div>
 </div>
 
-<!-- ===== FEATURES SECTION ===== -->
-<div class="features-page" id="featuresPage">
-<div class="features-inner">
-
-  <div class="feat-row reveal">
-    <a href="#" onclick="openDashSlide('#connections');return false;" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
-      <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
-      <div class="feat-card-title">A proactive support team you speak with on WhatsApp</div>
-      <div class="feat-card-desc">Ask questions and get work done from your connected chat apps, wherever you happen to be.</div>
-      <div class="feat-card-icons">
-        <img src="/logos/whatsapp.svg" alt="WhatsApp"><img src="/logos/telegram.svg" alt="Telegram"><img src="/logos/discord.svg" alt="Discord"><img src="/logos/slack.svg" alt="Slack"><img src="/logos/line.svg" alt="LINE">
-      </div>
-    </a>
-    <a href="#" id="bridgeFeatureCard" class="feat-card" style="text-decoration:none;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(208,86,63,0.25)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.08)'">
-      <canvas class="feat-3d" id="feat3dMac" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
-      <div class="feat-card-title">Work with your Mac’s files and apps</div>
-      <div class="feat-card-desc">ClosedHand works with files and apps locally on your Mac, through permissions you control. Choose which access to allow, with a separate switch for broader computer control. You can revoke permissions at any time.</div>
-      <div class="feat-card-action" id="bridgeCardAction">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        <span id="bridgeCardActionLabel">Download Bridge for Mac</span>
-      </div>
-    </a>
-  </div>
-
-  <div class="feat-grid reveal">
-    <div class="feat-mini">
-      <span class="feat-mini-icon">🧠</span>
-      <div class="feat-mini-title">Context Brain</div>
-      <div class="feat-mini-desc">Unlimited memory that improves over time and recalls by meaning, not just keywords. What it remembers is yours to see, edit and delete.</div>
-    </div>
-    <div class="feat-mini">
-      <span class="feat-mini-icon">🛡</span>
-      <div class="feat-mini-title">Your data stays yours</div>
-      <div class="feat-mini-desc">ClosedHand is fully open source under the Apache 2.0 licence. Choose where it runs, what it can access and which models it uses, including open local models.</div>
-    </div>
-    <div class="feat-mini">
-      <span class="feat-mini-icon">📡</span>
-      <div class="feat-mini-title">Proactive Pulse</div>
-      <div class="feat-mini-desc">When enabled, Pulse checks your connected services and sends useful updates while ClosedHand is running.</div>
-    </div>
-  </div>
-
-  <div class="reveal" style="margin-bottom:64px;">
-    <div class="feat-heading">What you need to run ClosedHand</div>
-    <div class="feat-sub">Install ClosedHand, choose your AI model and connect the services you want to use.</div>
-    <div class="feat-table-wrap">
-      <table class="feat-table">
-        <tbody>
-          <tr><th scope="row">A home for it</th><td>Keep the computer running ClosedHand awake and online for it to keep working. The Mac app and Docker are two ways to run the same ClosedHand.</td></tr>
-          <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
-          <tr><th scope="row">Your dashboard</th><td>Set up your personal dashboard address in Settings to open ClosedHand from any device, wherever you are. Your dashboard stays on the computer running ClosedHand, protected by your password.</td></tr>
-          <tr><th scope="row" data-row="bridge">Optional Mac Bridge</th><td>With Docker, install Bridge on the Mac whose files and apps you want to use, even if Docker runs on that same Mac. Choose what to allow from Bridge in the menu bar.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-
-</div>
-</div>
+<script>
+(function() {
+  var line = document.getElementById('chatAside');
+  if (!line) return;
+  var lines = [
+    'Let’s get things in order.',
+    'Many hands make light work. I’ll start with one.',
+    'Consider this an extra pair of hands.',
+    'Your to-do list called. We should talk.',
+    'One thing at a time still counts.',
+    'A little less life admin, a little more life.',
+    'I can’t make the tea, but I can lend a hand.'
+  ];
+  // One quiet change per visit, with no immediate repeats when storage is available.
+  var previous = '';
+  try { previous = sessionStorage.getItem('closedhand-chat-aside') || ''; } catch (_) {}
+  var choices = lines.filter(function(text) { return text !== previous; });
+  var chosen = choices[Math.floor(Math.random() * choices.length)];
+  line.textContent = chosen;
+  try { sessionStorage.setItem('closedhand-chat-aside', chosen); } catch (_) {}
+})();
+</script>
 
 <!-- Three.js: Oil-slick blob + starfield -->
 <script src="/speech-playback.js?v=2.0.17"></script>
@@ -4880,13 +4848,9 @@
         dashboardLink.style.display = 'inline';
         dashboardLink.href = '#';
         dashboardLink.onclick = function(e) { e.preventDefault(); openDashSlide(); };
-        // Swap header to show connected state
+        // The greeting identifies the user; account controls live in Dashboard.
         var hc = document.getElementById('headerCenter');
-        if (hc && status.name) {
-          var firstName = (status.name || '').split(' ')[0].replace(/</g,'&lt;');
-          hc.style.position = 'relative';
-          hc.innerHTML = '<span style="color:rgba(239,230,214,0.5);font-size:14px;">Connected as <strong style="color:rgba(141,189,121,0.7);">' + firstName + '</strong></span>';
-        }
+        if (hc) hc.remove();
         connectChat();
         if (typeof loadRAGModeState === 'function') loadRAGModeState();
         if (typeof window.monLoadCloud === 'function') window.monLoadCloud();
@@ -5085,338 +5049,7 @@ setTimeout(function() {
 })();
 </script>
 
-<!-- 3D models for feature cards -->
-<script>
-(function() {
-  if (typeof THREE === 'undefined') return;
 
-  function waitForLoader(cb) {
-    if (typeof THREE.GLTFLoader !== 'undefined') return cb();
-    if (!document.querySelector('script[src*="GLTFLoader"]')) {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
-      s.onload = function() { cb(); };
-      document.head.appendChild(s);
-    } else {
-      var check = setInterval(function() {
-        if (typeof THREE.GLTFLoader !== 'undefined') { clearInterval(check); cb(); }
-      }, 100);
-    }
-  }
-
-  function render3D(canvasId, modelPath, initRotY, initRotX, fitSize, yOffset) {
-    var canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    var r;
-    try {
-      r = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-    } catch(e) { console.warn('WebGL context failed for ' + canvasId); return; }
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    r.setSize(canvas.clientWidth, canvas.clientHeight);
-
-    var scene = new THREE.Scene();
-    var cam = new THREE.PerspectiveCamera(28, canvas.clientWidth / canvas.clientHeight, 0.01, 100);
-    cam.position.set(0, 0.15, 3.2);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-    var d = new THREE.DirectionalLight(0xffffff, 1);
-    d.position.set(3, 4, 5);
-    scene.add(d);
-    scene.add(new THREE.DirectionalLight(0xB8AC9A, 0.3).position.set(-3, 1, -2) && scene.children[scene.children.length-1] || new THREE.Object3D());
-
-    waitForLoader(function() {
-      new THREE.GLTFLoader().load(modelPath, function(gltf) {
-        var m = gltf.scene;
-        var box = new THREE.Box3().setFromObject(m);
-        var sz = box.getSize(new THREE.Vector3());
-        var ctr = box.getCenter(new THREE.Vector3());
-        var fit = (fitSize || 0.9) / Math.max(sz.x, sz.y, sz.z);
-        m.scale.multiplyScalar(fit);
-        m.position.sub(ctr.multiplyScalar(fit));
-        m.position.y += (yOffset || 0.05);
-        if (initRotY) m.rotation.y = initRotY;
-        scene.add(m);
-
-        var t = 0;
-        (function loop() {
-          requestAnimationFrame(loop);
-          t += 0.012;
-          m.rotation.y = (initRotY || 0) + Math.sin(t) * 0.3;
-          m.rotation.x = (initRotX || 0) + Math.sin(t * 0.7 + 0.5) * 0.2;
-          m.rotation.z = Math.cos(t * 0.5) * 0.08;
-          r.render(scene, cam);
-        })();
-      });
-    });
-
-    window.addEventListener('resize', function() {
-      cam.aspect = canvas.clientWidth / canvas.clientHeight;
-      cam.updateProjectionMatrix();
-      r.setSize(canvas.clientWidth, canvas.clientHeight);
-    });
-  }
-
-  // Lazy-load 3D models when they scroll into view (skip on mobile)
-  if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    var models = [
-      { id: 'feat3dPhone', url: '/models/iphone_3gs_low_poly.glb', rotX: -Math.PI / 2, rotY: 0.5, camZ: 0.7, camY: 0.2 },
-      { id: 'feat3dMac', url: '/models/vintage_computer.glb', rotX: 0 },
-    ];
-    var loaded3d = {};
-    var obs3d = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting && !loaded3d[entry.target.id]) {
-          loaded3d[entry.target.id] = true;
-          var m = models.find(function(x) { return x.id === entry.target.id; });
-          if (m) render3D(m.id, m.url, m.rotX, m.rotY, m.camZ, m.camY);
-        }
-      });
-    }, { rootMargin: '200px' });
-    models.forEach(function(m) {
-      var el = document.getElementById(m.id);
-      if (el) obs3d.observe(el);
-    });
-  }
-})();
-
-function toggleMobileActivity() {
-  var sidebar = document.getElementById('activitySidebar');
-  if (!sidebar) return;
-  if (sidebar.classList.contains('mobile-open')) {
-    sidebar.classList.remove('mobile-open');
-  } else {
-    sidebar.classList.add('active');
-    sidebar.classList.add('mobile-open');
-  }
-}
-
-// Check bridge status and update pill
-// Poll for active worker projects and show status bar
-function pollWorkerStatus() {
-  fetch('/api/teams').then(function(r) { return r.json(); }).then(function(teams) {
-    var bar = document.getElementById('workerStatusBar');
-    var text = document.getElementById('workerStatusText');
-    if (!bar || !text) return;
-    var running = (teams || []).filter(function(t) { return t.status === 'running' || t.status === 'planning'; });
-    if (running.length > 0) {
-      var t = running[0];
-      var name = t.name || 'Project';
-      text.textContent = name + ' - workers active';
-      bar.style.display = 'block';
-    } else {
-      bar.style.display = 'none';
-    }
-  }).catch(function() {});
-}
-if (document.body.classList.contains('chat-active') || window._chatModeActive) pollWorkerStatus();
-setInterval(pollWorkerStatus, 8000);
-
-function winBridgeSoon(e) {
-  if (e) e.preventDefault();
-  var t = document.createElement('div');
-  t.textContent = 'Bridge is available for Mac only.';
-  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);color:#EFE6D6;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;';
-  document.body.appendChild(t);
-  setTimeout(function(){ t.remove(); }, 2200);
-}
-window.winBridgeSoon = winBridgeSoon;
-
-// Installation identity comes from ClosedHand, not the viewing device.
-async function readMacAccessStatus() {
-  try {
-    var response = await fetch('/api/bridge/status');
-    var data = await response.json();
-    if (typeof data.desktop === 'boolean') window._macDesktop = data.desktop;
-    if (!response.ok) return { status: 'unavailable', desktop: window._macDesktop === true };
-    return data;
-  } catch (e) { return { status: 'unavailable', desktop: window._macDesktop === true }; }
-}
-
-function macAccessHelp(data) {
-  if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when ClosedHand is reachable.' };
-  if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'ClosedHand’s' : 'ClosedHand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
-  if (data.desktop) return { title: 'Mac access is not connected', text: 'The ClosedHand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running ClosedHand.' };
-  if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep ClosedHand Bridge open on the connected Mac. It will reconnect automatically.' };
-  return { title: 'Connect a Mac', text: 'Install Bridge on the Mac whose files and apps you want ClosedHand to use. With Docker, this can be the same Mac or a different one.', setup: true };
-}
-
-function macAccessNotice(data) {
-  var help = macAccessHelp(data);
-  return '<div style="padding:24px 16px;text-align:center;color:#B6AFA4;font-size:14px;line-height:1.6;">'
-    + '<p style="color:#EFE6D6;margin:0 0 8px;">' + help.title + '</p><p style="margin:0;">' + help.text + '</p>'
-    + '<button class="bridge-cta-pair" onclick="ragCloseModal();openDashSlide(\'#bridge\')">Mac access settings</button></div>';
-}
-
-function checkBridgeStatus() {
-  readMacAccessStatus().then(function(data) {
-    var pill = document.getElementById('bridgeConnectPill');
-    var label = document.getElementById('bridgeConnectLabel');
-    // Update monitor local status
-    var monDot = document.getElementById('monLocalStatus');
-    var monStatusText = document.getElementById('monLocalStatusText');
-    var cardLabel = document.getElementById('bridgeCardActionLabel');
-    var cardAction = document.getElementById('bridgeCardAction');
-    // On the Mac app there is no Bridge to download: the app is the Mac
-    // access, connected from the first launch, with its permissions in the
-    // menu bar. Keep installation details in the requirements and action.
-    if (data.desktop && !window._desktopCardDone) {
-      window._desktopCardDone = true;
-      var card = document.getElementById('bridgeFeatureCard');
-      if (card) {
-        card.querySelector('.feat-card-title').textContent = 'Work with your Mac’s files and apps';
-        card.dataset.desktop = 'true';
-      }
-      var req = document.querySelector('.feat-table th[data-row="bridge"]');
-      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Included in the ClosedHand app. Choose what to allow from the fist in the menu bar on the Mac running ClosedHand.'; }
-    }
-    if (cardAction) {
-      var on = data.status === 'connected';
-      cardAction.dataset.connected = on ? 'true' : '';
-      if (cardLabel) cardLabel.textContent = on ? (data.desktop ? 'Connected' : 'Bridge is connected') : data.desktop ? 'Check Mac access' : data.status === 'reconnecting' ? 'Reconnecting' : data.status === 'unavailable' ? 'Check Mac access' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download Bridge for Mac');
-    }
-    if (data.status === 'connected') {
-      if (pill) pill.dataset.connected = 'true';
-      if (label) label.textContent = data.desktop ? 'Mac connected' : 'Bridge connected';
-      if (label) label.style.color = '#8DBD79';
-      var icon = document.getElementById('bridgeConnectIcon');
-      if (icon) icon.style.stroke = '#8DBD79';
-      var wasOff = monDot && monDot.classList.contains('off');
-      if (monDot) monDot.className = 'mon-status on';
-      if (monStatusText) { monStatusText.textContent = 'Connected'; monStatusText.style.color = 'rgba(141,189,121,0.6)'; }
-      // Only load files on first connect, not every poll
-      if (wasOff && typeof monLoadLocal === 'function') monLoadLocal();
-    } else {
-      if (pill) delete pill.dataset.connected;
-      if (label) label.textContent = data.desktop ? 'Mac access' : 'Mac access settings';
-      if (label) label.style.color = '';
-      if (monDot) monDot.className = 'mon-status off';
-      if (monStatusText) { monStatusText.textContent = data.status === 'reconnecting' ? 'Reconnecting' : 'Unavailable'; monStatusText.style.color = 'rgba(239,230,214,0.25)'; }
-    }
-  }).catch(function() {});
-}
-checkBridgeStatus();
-setInterval(function(){ checkBridgeStatus(); }, 15000);
-
-function submitBridgePair() {
-  var code = document.getElementById('bridgePairInput').value.trim().toUpperCase();
-  var errEl = document.getElementById('bridgePairError');
-  if (code.length < 4) {
-    errEl.textContent = 'Enter the full code from Bridge';
-    errEl.style.display = 'block';
-    return;
-  }
-  errEl.style.display = 'none';
-  fetch('/api/bridge/pair', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: code }),
-  }).then(function(r) { return r.json(); }).then(function(data) {
-    if (data.error) {
-      errEl.textContent = data.error;
-      errEl.style.display = 'block';
-    } else {
-      document.getElementById('bridgePairModal').style.display = 'none';
-      document.getElementById('bridgePairInput').value = '';
-      // Confetti celebration
-      if (typeof window.confetti === 'function') {
-        var d = new Date(), m = d.getMonth(), dy = d.getDate();
-        var cols = ["#D8624B","#D8624B","#D0A652","#D8624B","#6D6A71"];
-        if (m===2&&dy===17) cols=["#D8624B","#D8624B","#D8624B","#EFE6D6"];
-        else if (m===11&&dy>=20) cols=["rgba(239,230,214,0.1)","rgba(216,98,75,0.16)","#D8624B","#D8624B","#D0A652"];
-        else if (m===9&&dy===31) cols=["#D8624B","#1A1817","rgba(109,106,113,0.2)"];
-        window.confetti({particleCount:80,spread:70,origin:{y:0.6},colors:cols});
-        setTimeout(function(){window.confetti({particleCount:50,spread:60,angle:120,origin:{x:0.8,y:0.6},colors:cols});},200);
-      }
-      // Rapid poll to update status, load local files once when connected
-      var pollCount = 0;
-      var localLoaded = false;
-      var rapidPoll = setInterval(function() {
-        checkBridgeStatus();
-        if (!localLoaded && typeof window.monLoadLocal === 'function') {
-          window.monLoadLocal();
-          localLoaded = true;
-        }
-        pollCount++;
-        if (pollCount >= 10) clearInterval(rapidPoll);
-      }, 2000);
-    }
-  }).catch(function() {
-    errEl.textContent = 'Connection failed. Try again.';
-    errEl.style.display = 'block';
-  });
-}
-
-// Mobile swipe gestures for navigation
-(function() {
-  var startX = 0, startY = 0, startEl = null;
-
-  document.addEventListener('touchstart', function(e) {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    startEl = e.target;
-  }, { passive: true });
-
-  function handleSwipeEnd(endX, endY) {
-    if (window.innerWidth >= 900) return;
-    var dx = endX - startX;
-    var dy = Math.abs(endY - startY);
-
-    if (Math.abs(dx) < 60 || dy > 50) return;
-
-    // Exempt scrollable elements (tables, horizontal scroll containers)
-    if (startEl && (startEl.closest('table') || startEl.closest('.comp-table-wrap') || startEl.closest('[class*="scroll"]'))) return;
-
-    var sidebar = document.getElementById('activitySidebar');
-    var dashOverlay = document.getElementById('dashOverlay');
-    var sidebarOpen = sidebar && sidebar.classList.contains('mobile-open');
-    var dashOpen = dashOverlay && dashOverlay.classList.contains('active');
-
-    if (dx > 0) {
-      // === SWIPE RIGHT ===
-      if (dashOpen) {
-        if (window.closeDashSlide) window.closeDashSlide();
-        return;
-      }
-      if (sidebarOpen) return;
-      if (document.body.classList.contains('chat-active')) {
-        if (sidebar) {
-          sidebar.classList.add('active');
-          sidebar.classList.add('mobile-open');
-        }
-      }
-    } else {
-      // === SWIPE LEFT ===
-      if (sidebarOpen) {
-        if (sidebar) sidebar.classList.remove('mobile-open');
-        return;
-      }
-      if (dashOpen) return;
-      if (window.openDashSlide) window.openDashSlide();
-    }
-  }
-
-  document.addEventListener('touchend', function(e) {
-    handleSwipeEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-  }, { passive: true });
-
-  // Also listen on dashboard overlay for swipe-to-close (iframe eats touch events)
-  var dashOverlay = document.getElementById('dashOverlay');
-  if (dashOverlay) {
-    // Dashboard swipe: use the same document-level approach as activity
-    // The dashOverlay background (visible area around iframe) catches touches
-    // For the iframe area, we detect swipe starting from the right edge of screen
-    dashOverlay.querySelector('.dash-overlay-bg').addEventListener('touchstart', function(e) {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    dashOverlay.querySelector('.dash-overlay-bg').addEventListener('touchend', function(e) {
-      var dx = e.changedTouches[0].clientX - startX;
-      var dy = Math.abs(e.changedTouches[0].clientY - startY);
-      if (dx > 60 && dy < 50 && window.closeDashSlide) window.closeDashSlide();
-    }, { passive: true });
-  }
-})();
-</script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 
