@@ -1,7 +1,7 @@
 ---
 name: Intelligence Loop
 description: Cross-reference Shopify sales and Meta Ads data for smart business recommendations
-requires_service: shopify,meta
+requires_service: shopify,meta_ads
 triggers: [intelligence, cross-reference, ad roi, which ads, what's working, performance review, business review, marketing roi]
 ---
 

@@ -235,3 +235,18 @@ test('changing support back to chat cancels pending provider loading', async () 
   assert.equal(ui.calls.filter(c => c.path === '/models').length, 0);
   assert.equal(ui.region('background').hidden, true);
 });
+
+// A localhost provider is not necessarily one of ClosedHand's bundled models.
+test('only bundled recall and ranking models receive the built-in badge', async () => {
+  const ui = await mount(() => ({ config: { connections: { primary: { provider: 'custom' } } }, activeModels: [
+    { label: 'Chat model', model: 'local:primary', provider: 'On your computer' },
+    { label: 'Recall', model: 'local:embedder', provider: 'On your computer' },
+    { label: 'Search ranking', model: 'local:reranker', provider: 'On your computer' },
+    { label: 'Recall', model: 'remote-embedder', provider: 'Hosted provider' },
+  ] }));
+  const rows = ui.region('current').children[0].children;
+  const providers = [rows[1], rows[3], rows[5], rows[7]].map(row => row.children[1]);
+  assert.deepEqual(providers.map(p => p.textContent), ['On your computer', 'Built in · Local', 'Built in · Local', 'Hosted provider']);
+  assert.equal(providers[0].className, undefined);
+  assert.equal(providers[3].className, undefined);
+});

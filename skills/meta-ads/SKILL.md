@@ -1,7 +1,7 @@
 ---
 name: Meta Ads
 description: View and manage Facebook/Instagram ad campaigns, ad sets, and performance insights
-requires_service: meta
+requires_service: meta_ads
 triggers: [ads, campaigns, ad spend, meta, facebook ads, instagram ads, roas, ad performance, adsets, ad budget]
 ---
 

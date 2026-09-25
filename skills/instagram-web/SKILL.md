@@ -1,6 +1,6 @@
 ---
-name: Instagram (cloud browser)
-description: Read and comment on Instagram posts through the cloud computer's logged-in browser
+name: Instagram (Workspace browser)
+description: Read and comment on Instagram posts through the logged-in Workspace browser
 triggers: [instagram, insta, my posts, my photos, my last post, my latest post, comment on my, caption my, ig post, ig profile]
 ---
 
@@ -8,7 +8,7 @@ Instagram is NOT reachable through the Meta connection. That token holds
 ads_management, ads_read and business_management only, so `/me` has no
 `instagram_accounts` field and `instagram_business_account` needs page
 permissions it was never granted. Do not spend calls proving this again.
-Everything below happens on the cloud computer's browser with `sandbox_browse`,
+Everything below happens in the Workspace browser with `sandbox_browse`,
 using the session the user is already signed into.
 
 ## The mistake to avoid

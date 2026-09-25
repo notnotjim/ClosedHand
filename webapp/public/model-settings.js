@@ -113,7 +113,13 @@
         var definition = document.createElement("dd");
         var name = document.createElement("span"); name.textContent = row.model.replace(/^local:/, "");
         definition.append(name);
-        if (row.provider) { var provider = document.createElement("small"); provider.textContent = row.provider; definition.append(provider); }
+        if (row.provider) {
+          var provider = document.createElement("small"); provider.textContent = row.provider;
+          if ((label === "Recall" || label === "Search ranking") && /^local:/.test(row.model)) {
+            provider.textContent = "Built in · Local"; provider.className = "model-local-badge";
+          }
+          definition.append(provider);
+        }
         list.append(term, definition);
       });
       current.append(list);

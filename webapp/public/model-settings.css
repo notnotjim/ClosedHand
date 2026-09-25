@@ -17,6 +17,7 @@
 .model-current[hidden] { display: none; }
 .model-current .model-role-list { grid-template-columns: minmax(130px, 180px) minmax(0,1fr); row-gap: 22px; }
 .model-current dd small { display: block; margin-top: 4px; color: #EFE6D6; font-size: 14px; }
+.model-current dd .model-local-badge { display: inline-block; width: fit-content; padding: 3px 9px; border-radius: 5px; background: rgba(141,189,121,.12); color: #ACCF9C; font-size: 13px; line-height: 1.5; }
 .model-current .model-hint { color: #EFE6D6; font-size: 15px; line-height: 1.6; margin: 20px 0 0; max-width: 65ch; }
 .model-editor > summary { cursor: pointer; padding: 14px 0; font-size: 16px; color: #EFE6D6; }
 .model-editor > .model-fields { margin-top: 20px; }

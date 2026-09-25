@@ -22,9 +22,9 @@
   }
   function render() {
     content.replaceChildren();
-    const heading = document.getElementById('assistant-email-heading'); heading.textContent = state.name + '’s email address';
+    const heading = document.getElementById('assistant-email-heading'); heading.textContent = "Your assistant's email address";
     if (!state.address) {
-      content.append(el('p', 'Email ' + state.name + ' directly, forward a message, or copy it into a conversation.', 'section-desc'));
+      content.append(el('p', 'Email ' + state.name + ' directly, forward a message, or CC ' + state.name + ' in a conversation.', 'section-desc'));
       content.append(button(state.pending ? 'Confirm email address' : 'Enable email address', async () => {
         // Open synchronously, preserving the user gesture through the request.
         const tab = window.open('about:blank', '_blank'); if (tab) tab.opener = null;

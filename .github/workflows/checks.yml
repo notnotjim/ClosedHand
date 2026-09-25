@@ -77,6 +77,9 @@ jobs:
       - name: Model routing and setup
         run: node --test scripts/test-decisions.js scripts/test-model-routing.js scripts/test-model-settings-ui.js scripts/test-settings.js scripts/test-static-assets.js
 
+      - name: Built-in skill catalogue matches runtime
+        run: node scripts/check-builtin-skills.js && node --test scripts/test-builtin-skills.js
+
       - name: Dashboard inline scripts parse
         run: node scripts/check-inline-scripts.js
 

@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/delight.css">
+  <link rel="stylesheet" href="/skills-library.css">
   <style>
     /* Slide-over mode: trim padding, hide header row and chat FAB */
     .in-slideover .header-row { display: none; }
@@ -2162,22 +2163,22 @@
             <div id="catalogue-setup" hidden></div>
           <div class="mcp-hero">
             <div class="mcp-copy">
-              <div class="mcp-title">Add another connection or skill</div>
-              <p class="mcp-description">Paste a connection or skill link, a command, or a JSON block.</p>
+              <div class="mcp-title">Add an MCP server</div>
+              <p class="mcp-description">Paste its URL, command or JSON configuration. Add a key when prompted.</p>
               <p class="mcp-security">Checked for security risks before activation.</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="2" placeholder="Link, command or JSON" aria-label="Connection or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="2" placeholder="MCP URL, command or JSON" aria-label="MCP server" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
 
             <div class="mcp-browse">
               <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
-              <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse skills &rarr;</a>
+              <a href="#automations" onclick="openSkillsLibrary();return false;" style="font-size: 13px;color:rgba(239,230,214,0.6);">Install a skill in Agents &rarr;</a>
             </div>
 
             <!-- Status messages -->
@@ -2207,23 +2208,6 @@
           </details>
         </div>
 
-        <!-- Skills Library (on Home tab) -->
-        <div class="section">
-          <div onclick="toggleSkillsLibrary()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
-            <span id="skills-disclosure-home" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
-            <div class="mc-section-label" style="margin:0;">Skills Library</div>
-            <span style="font-size: 13px;color:rgba(239,230,214,0.6);" id="skills-count-badge-home"></span>
-          </div>
-          <div id="skills-library-home" style="display:none;margin-top:10px;">
-            <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:10px;">Instructions for a specific job, used when relevant.</p>
-            <div id="skills-builtin-home"></div>
-            <div id="skills-installed-home" style="margin-top:8px;display:none;">
-              <div style="font-size: 13px;color:#B6AFA4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Installed</div>
-              <div id="skills-list-home"></div>
-            </div>
-            <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;display:inline-block;margin-top:8px;">Browse community skills &rarr;</a>
-          </div>
-        </div>
       </div>
 
       <!-- Workers Tab Content -->
@@ -2413,17 +2397,18 @@
           </div>
 
           <div class="mc-subsection">
-            <div onclick="toggleSkillsLibrary()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
+            <button type="button" id="skills-library-toggle" class="skills-library-toggle" aria-expanded="false" aria-controls="skills-library-body" onclick="toggleSkillsLibrary()">
               <span id="skills-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
-              <div class="mc-subsection-label">Skills</div>
+              <span class="mc-subsection-label">Skills</span>
               <span style="font-size: 13px;color:rgba(239,230,214,0.6);" id="skills-count-badge"></span>
-            </div>
+            </button>
             <div id="skills-library-body" style="display:none;margin-top:10px;">
-              <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:10px;">Instructions for a specific job, used when relevant. When setting up an agent, you can pin the skill(s) it must always use.</p>
+              <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:10px;">Skills explain how to do a job. Connections provide access to the apps it needs. Pin a skill to an agent when it should always use those instructions.</p>
 
               <!-- Built-in skills -->
               <div id="skills-builtin" style="margin-bottom:12px;">
                 <div id="skills-builtin-list"></div>
+                <p id="skills-load-error" role="status" hidden>Could not load skills. <button class="notification-retry" onclick="loadSkills()">Retry</button></p>
               </div>
 
               <!-- User-installed skills -->
@@ -2434,7 +2419,7 @@
 
               <!-- Install from URL, inside the unfurl so a closed section looks closed -->
               <div style="display:flex;gap:6px;align-items:center;margin-top:10px;">
-                <input type="text" id="skill-install-url" placeholder="Paste a link to install a new skill..." style="flex:1;padding:7px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#EFE6D6;font-size: 14px;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
+                <input type="text" id="skill-install-url" aria-label="Skill link" placeholder="Paste a link to install a new skill..." style="flex:1;padding:7px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#EFE6D6;font-size: 14px;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
                 <button onclick="installSkill()" id="skill-install-btn" style="padding:7px 12px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#B6AFA4;font-size: 13px;cursor:pointer;font-family:inherit;white-space:nowrap;">Install</button>
               </div>
               <div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
@@ -2451,25 +2436,49 @@
 
       <!-- Settings Tab Content -->
       <div class="tab-content" id="tab-settings">
-        <section class="settings-group">
-          <div class="settings-group-header"><h2 id="assistant-email-heading">ClosedHand’s email address</h2></div>
-          <div class="settings-group-body" id="assistant-email"></div>
-        </section>
         <div style="padding-top:16px;">
 
-          <!-- AI Model Selection -->
-          <div class="settings-group" style="border-color:rgba(239,230,214,0.1);">
-            <div class="settings-group-header">
-              <h2>Models</h2>
-              <p class="section-desc">Choose your primary model, support model and image model.</p>
+          <!-- Personal access and contact addresses -->
+          <section class="dashboard-link-section" id="phone-block" aria-labelledby="phone-heading" style="display:none;">
+            <h2 id="phone-heading">Personal URL</h2>
+            <p id="phone-desc" role="status">Loading your link…</p>
+            <div id="phone-live" hidden>
+              <div class="dashboard-copy-box">
+                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open ClosedHand"></a>
+                <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
+              </div>
+              <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
             </div>
-            <div style="padding:12px 16px;">
+            <div id="phone-setup" hidden>
+              <p>Choose an optional personal URL, then sign in with Google to confirm that it belongs to you. This is separate from connecting Google services and your dashboard password.</p>
+              <label for="phone-address-name">Choose your personal URL</label>
+              <input id="phone-address-name" class="settings-input" type="text" minlength="3" maxlength="32" pattern="[a-z][a-z0-9-]{1,30}[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="your-name" aria-describedby="phone-address-preview" oninput="previewDashboardAddress()">
+              <p id="phone-address-preview" aria-live="polite">https://your-name.closedhand.ai</p>
+              <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
+              <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Continue with this personal URL</button>
+              <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your personal URL</a>
+            </div>
+            <details id="phone-options" hidden>
+              <summary>Link options</summary>
+              <div class="dashboard-link-options">
+                <p id="phone-link-help">Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.</p>
+                <a id="phone-save" href="/keep" target="_top">How to create a shortcut on your phone’s home screen</a>
+                <div id="phone-qr-details">
+                  <p>Scan with another device to open your dashboard.</p>
+                  <img id="phone-qr" alt="Scan to open your dashboard" width="132" height="132" loading="lazy">
+                </div>
+                <div class="dashboard-link-control">
+                  <p id="phone-pause-help">Pausing stops this link from opening your dashboard. Resume it from Settings on the computer running ClosedHand.</p>
+                  <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Pause link</button>
+                </div>
+              </div>
+            </details>
+          </section>
 
-              <div id="byok-panel"></div>
-              <div id="byok-status" style="margin-top:8px;"></div>
-              <p id="llm-desc" hidden></p>
-            </div>
-          </div>
+        <section class="settings-group">
+          <div class="settings-group-header"><h2 id="assistant-email-heading">Your assistant&#39;s email address</h2></div>
+          <div class="settings-group-body" id="assistant-email"></div>
+        </section>
 
           <!-- Notifications -->
           <div class="settings-group">
@@ -2611,42 +2620,19 @@
             </div>
           </div>
 
-          <!-- The dashboard address is a utility, separate from ClosedHand's behaviour settings. -->
-          <section class="dashboard-link-section" id="phone-block" aria-labelledby="phone-heading" style="display:none;">
-            <h2 id="phone-heading">Personal URL</h2>
-            <p id="phone-desc" role="status">Loading your link…</p>
-            <div id="phone-live" hidden>
-              <div class="dashboard-copy-box">
-                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open ClosedHand"></a>
-                <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
-              </div>
-              <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
+          <!-- AI Model Selection -->
+          <div class="settings-group" style="border-color:rgba(239,230,214,0.1);">
+            <div class="settings-group-header">
+              <h2>Models</h2>
+              <p class="section-desc">Choose your primary model, support model and image model.</p>
             </div>
-            <div id="phone-setup" hidden>
-              <p>Choose an optional personal URL, then sign in with Google to confirm that it belongs to you. This is separate from connecting Google services and your dashboard password.</p>
-              <label for="phone-address-name">Choose your personal URL</label>
-              <input id="phone-address-name" class="settings-input" type="text" minlength="3" maxlength="32" pattern="[a-z][a-z0-9-]{1,30}[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="your-name" aria-describedby="phone-address-preview" oninput="previewDashboardAddress()">
-              <p id="phone-address-preview" aria-live="polite">https://your-name.closedhand.ai</p>
-              <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
-              <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Continue with this personal URL</button>
-              <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your personal URL</a>
+            <div style="padding:12px 16px;">
+
+              <div id="byok-panel"></div>
+              <div id="byok-status" style="margin-top:8px;"></div>
+              <p id="llm-desc" hidden></p>
             </div>
-            <details id="phone-options" hidden>
-              <summary>Link options</summary>
-              <div class="dashboard-link-options">
-                <p id="phone-link-help">Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.</p>
-                <a id="phone-save" href="/keep" target="_top">How to create a shortcut on your phone’s home screen</a>
-                <div id="phone-qr-details">
-                  <p>Scan with another device to open your dashboard.</p>
-                  <img id="phone-qr" alt="Scan to open your dashboard" width="132" height="132" loading="lazy">
-                </div>
-                <div class="dashboard-link-control">
-                  <p id="phone-pause-help">Pausing stops this link from opening your dashboard. Resume it from Settings on the computer running ClosedHand.</p>
-                  <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Pause link</button>
-                </div>
-              </div>
-            </details>
-          </section>
+          </div>
 
           <!-- Account Management Section -->
           <div class="settings-group" id="account-section">
@@ -5528,6 +5514,7 @@
     }
     var _selectedSkills = [];
     var _installedSkills = [];
+    var _builtinSkills = [];
 
     // Worker templates
     var WORKER_TEMPLATES = {
@@ -5638,12 +5625,17 @@
     }
 
     function toggleSkillsLibrary() {
-      // Toggle both workers and home skills sections
-      var bodies = [document.getElementById('skills-library-body'), document.getElementById('skills-library-home')];
-      var chevrons = [document.querySelector('#skills-disclosure .chevron-down'), document.querySelector('#skills-disclosure-home .chevron-down')];
-      var isHidden = bodies[0] ? bodies[0].style.display === 'none' : (bodies[1] ? bodies[1].style.display === 'none' : true);
-      bodies.forEach(function(b) { if (b) b.style.display = isHidden ? 'block' : 'none'; });
-      chevrons.forEach(function(c) { if (c) { isHidden ? c.classList.add('open') : c.classList.remove('open'); } });
+      var body = document.getElementById('skills-library-body');
+      var opening = body.style.display === 'none';
+      body.style.display = opening ? 'block' : 'none';
+      document.querySelector('#skills-disclosure .chevron-down').classList.toggle('open', opening);
+      document.getElementById('skills-library-toggle').setAttribute('aria-expanded', String(opening));
+    }
+
+    function openSkillsLibrary() {
+      switchTab('automations');
+      if (document.getElementById('skills-library-body').style.display === 'none') toggleSkillsLibrary();
+      requestAnimationFrame(function () { document.getElementById('skill-install-url').focus(); });
     }
 
     function togglePulseSection() {
@@ -5667,60 +5659,45 @@
     }
 
     // === Skills ===
-    function renderBuiltinSkills() {
-      var builtins = [
-        { name: 'stop-slop', description: 'Eliminates AI cliche phrases and Americanisms (always active)' },
-        { name: 'email-triage', description: 'Smart email categorisation and priority sorting' },
-        { name: 'intelligence-loop', description: 'Cross-reference Shopify sales and Meta Ads for business insights' },
-        { name: 'meta-ads', description: 'Meta Ads campaign management and reporting' },
-        { name: 'shopify-analytics', description: 'Shopify store analytics and order tracking' },
-        { name: 'slack-workspace', description: 'Slack channel management and messaging' },
-      ];
-      var container = document.getElementById('skills-builtin-list');
-      var html = builtins.map(function(s) {
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:6px;margin-bottom:4px;">' +
-          '<div><span style="font-size: 14px;color:#EFE6D6;">' + s.name + '</span><span style="font-size: 13px;color:rgba(239,230,214,0.6);margin-left:8px;">' + s.description + '</span></div>' +
-          '<span style="font-size: 13px;color:rgba(239,230,214,0.6);background:rgba(239,230,214,0.1);padding:2px 6px;border-radius:3px;">Built-in</span>' +
-        '</div>';
-      }).join('');
-      if (container) container.innerHTML = html;
-      var homeContainer = document.getElementById('skills-builtin-home');
-      if (homeContainer) homeContainer.innerHTML = html;
+    function skillRow(skill, builtin) {
+      var row = document.createElement('div'); row.className = 'skill-library-row';
+      var copy = document.createElement('div'); copy.className = 'skill-library-copy';
+      var name = document.createElement('strong'); name.textContent = skill.name;
+      var description = document.createElement('p'); description.textContent = skill.description || '';
+      copy.append(name, description); row.append(copy);
+      if (builtin) {
+        var tag = document.createElement('span'); tag.className = 'skill-library-tag';
+        tag.textContent = skill.always_active ? 'Built in · Always active' : 'Built in';
+        row.append(tag);
+      } else {
+        var remove = document.createElement('button'); remove.type = 'button'; remove.className = 'skill-library-remove';
+        remove.textContent = '×'; remove.setAttribute('aria-label', 'Remove ' + skill.name);
+        remove.onclick = function () { deleteSkill(skill.id, skill.name); }; row.append(remove);
+      }
+      return row;
     }
 
     async function loadSkills() {
-      renderBuiltinSkills();
+      var error = document.getElementById('skills-load-error');
+      error.hidden = true;
       try {
-        var res = await fetch('/api/skills');
-        if (!res.ok) return;
-        _installedSkills = await res.json();
-        var container = document.getElementById('skills-list');
-        var section = document.getElementById('skills-installed');
-        var homeContainer = document.getElementById('skills-list-home');
-        var homeSection = document.getElementById('skills-installed-home');
-        if (!_installedSkills.length) {
-          if (section) section.style.display = 'none';
-          if (homeSection) homeSection.style.display = 'none';
-          return;
-        }
-        if (section) section.style.display = 'block';
-        if (homeSection) homeSection.style.display = 'block';
-        var html = _installedSkills.map(function(s) {
-          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:6px;margin-bottom:4px;">' +
-            '<div><span style="font-size: 14px;color:#EFE6D6;">' + esc(s.name) + '</span>' +
-            (s.description ? '<span style="font-size: 13px;color:rgba(239,230,214,0.6);margin-left:8px;">' + esc(s.description) + '</span>' : '') + '</div>' +
-            '<button onclick="deleteSkill(\'' + s.id + '\',\'' + esc(s.name) + '\')" style="background:none;border:none;color:rgba(239,230,214,0.6);font-size:14px;cursor:pointer;" title="Remove">&times;</button>' +
-          '</div>';
-        }).join('');
-        if (container) container.innerHTML = html;
-        if (homeContainer) homeContainer.innerHTML = html;
-        // Update count badges
-        var total = 5 + _installedSkills.length; // 5 built-in + installed
-        ['skills-count-badge', 'skills-count-badge-home'].forEach(function(id) {
-          var badge = document.getElementById(id);
-          if (badge) badge.textContent = total + ' active';
-        });
-      } catch (e) { console.error('Load skills error:', e); }
+        var responses = await Promise.all([fetch('/builtin-skills.json'), fetch('/api/skills')]);
+        if (responses.some(function (res) { return !res.ok; })) throw new Error('Skills unavailable');
+        var data = await Promise.all(responses.map(function (res) { return res.json(); }));
+        if (!data.every(Array.isArray)) throw new Error('Invalid skill catalogue');
+        _builtinSkills = data[0]; _installedSkills = data[1];
+        document.getElementById('skills-builtin-list').replaceChildren.apply(
+          document.getElementById('skills-builtin-list'), _builtinSkills.map(function (skill) { return skillRow(skill, true); }));
+        document.getElementById('skills-list').replaceChildren.apply(
+          document.getElementById('skills-list'), _installedSkills.map(function (skill) { return skillRow(skill, false); }));
+        document.getElementById('skills-installed').style.display = _installedSkills.length ? 'block' : 'none';
+        document.getElementById('skills-count-badge').textContent = (_builtinSkills.length + _installedSkills.length) + ' skills';
+        renderSkillsPicker();
+      } catch (e) {
+        error.hidden = false;
+        document.getElementById('skills-count-badge').textContent = 'Unavailable';
+        console.error('Load skills error:', e);
+      }
     }
 
     async function installSkill(acceptWarnings, overrideUrl) {
@@ -5730,7 +5707,7 @@
       var url = overrideUrl || (urlInput ? urlInput.value.trim() : '');
       if (!url) return;
       // If called from MCP input, populate the skill input for feedback
-      if (overrideUrl && urlInput) urlInput.value = url;
+      if (overrideUrl && urlInput) { openSkillsLibrary(); urlInput.value = url; }
       btn.disabled = true; btn.textContent = 'Scanning...';
       if (!acceptWarnings) warnEl.style.display = 'none';
       try {
@@ -5781,21 +5758,19 @@
 
     function renderSkillsPicker() {
       var container = document.getElementById('auto-skills-picker');
-      // Kept in step with skills/ on disk. instagram-web was missing here, so
-      // the one skill written for a specific fiddly task could not be pinned.
-      var builtins = [
-        { name: 'email-triage' }, { name: 'instagram-web' }, { name: 'intelligence-loop' },
-        { name: 'meta-ads' }, { name: 'shopify-analytics' }, { name: 'slack-workspace' },
-      ];
-      var allSkills = builtins.concat(_installedSkills);
-      if (!allSkills.length) {
-        container.innerHTML = '<span style="font-size: 13px;color:rgba(239,230,214,0.6);">No skills available.</span>';
-        return;
-      }
-      container.innerHTML = allSkills.map(function(s) {
-        var isSelected = _selectedSkills.indexOf(s.name) !== -1;
-        return '<button type="button" onclick="toggleSkillSelection(\'' + esc(s.name) + '\')" style="padding:4px 10px;font-size: 13px;border-radius:6px;cursor:pointer;font-family:inherit;border:1px solid ' + (isSelected ? 'rgba(239,230,214,0.28)' : 'rgba(239,230,214,0.16)') + ';background:' + (isSelected ? '#D0563F' : '#1A1817') + ';color:' + (isSelected ? '#D0563F' : '#B6AFA4') + ';">' + esc(s.name) + '</button>';
-      }).join('');
+      if (!container) return;
+      var allSkills = _builtinSkills.filter(function (skill) { return !skill.always_active; })
+        .map(function (skill) { return { name: skill.id, label: skill.name }; })
+        .concat(_installedSkills);
+      container.replaceChildren();
+      if (!allSkills.length) { container.textContent = 'No skills available.'; return; }
+      allSkills.forEach(function (skill) {
+        var button = document.createElement('button'); button.type = 'button'; button.className = 'skill-choice';
+        button.textContent = skill.label || skill.name;
+        button.setAttribute('aria-pressed', String(_selectedSkills.indexOf(skill.name) !== -1));
+        button.onclick = function () { toggleSkillSelection(skill.name); };
+        container.append(button);
+      });
     }
 
     function toggleSkillSelection(name) {
@@ -7708,8 +7683,10 @@
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
       } else if (['connections', 'automations', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
-      } else if (resolved === 'connect' || resolved === 'skills') {
-        // Both start at the add box: it takes a connection or a skill link.
+      } else if (resolved === 'skills') {
+        openSkillsLibrary();
+      } else if (resolved === 'connect') {
+        // Connection links open the catalogue and MCP input.
         switchTab('connections');
         setTimeout(window.beckonAddBox, 150);
       } else if (resolved === 'bridge') {

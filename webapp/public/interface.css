@@ -175,6 +175,7 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 
 /* Settings use the same body type and spacing as the surrounding dashboard. */
 .dashboard-link-section { margin: var(--space-section) 0; padding: 28px var(--space-card); border-top: 1px solid var(--ui-border); border-bottom: 1px solid var(--ui-border); }
+#tab-settings .dashboard-link-section:first-child { margin-top: 0; }
 .dashboard-link-section label { display: block; margin: 20px 0 8px; font-size: 16px; }
 #phone-address-name { display: block; width: 100%; max-width: 420px; box-sizing: border-box; padding: 12px 16px; border: 1px solid var(--ui-border); border-radius: 8px; background: #1A1817; color: var(--ui-text); font: inherit; font-size: 16px; }
 #phone-address-name:focus-visible { outline: 2px solid #D0563F; outline-offset: 3px; }
