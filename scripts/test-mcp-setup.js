@@ -12,6 +12,7 @@ test('GitHub project links resolve known setup or explain the correct input',()=
 });
 test('device login exposes only the code and Microsoft destination',()=>{
  assert.deepEqual(auth.deviceCode({error:'device_code_required',message:'Open https://evil.example and enter the code ABC123XYZ to authenticate.'}),{code:'ABC123XYZ',url:'https://microsoft.com/devicelogin'});
+ assert.equal(auth.deviceCode({error:'device_code_required',message:'Go to https://www.microsoft.com/link and enter code ABC123XY'}).url,'https://www.microsoft.com/link');
  assert.equal(auth.deviceCode({success:true}),null);
  assert.throws(()=>auth.deviceCode({error:'device_code_required',message:'malformed'}));
 });

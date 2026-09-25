@@ -8,7 +8,8 @@ function deviceCode(data) {
   if (data.error !== 'device_code_required') return null;
   const code = String(data.message || '').match(/\bcode\s+([A-Z0-9]{6,12})\b/i)?.[1];
   if (!code) throw new Error('Microsoft did not provide a sign-in code. Please try again.');
-  return { code, url: 'https://microsoft.com/devicelogin' };
+  const personalLink = /https:\/\/(?:www\.)?microsoft\.com\/link(?:[\s/?#.]|$)/i.test(String(data.message || ''));
+  return { code, url: personalLink ? 'https://www.microsoft.com/link' : 'https://microsoft.com/devicelogin' };
 }
 function register(app, db, userId) {
   const sessions = new Map();
