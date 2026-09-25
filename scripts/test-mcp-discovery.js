@@ -5,7 +5,7 @@ const {resolveInput,candidates}=require('../webapp/mcp-input-resolver');
 test('common pasted formats preserve connection details',()=>{
  for(const input of ['```json\n{"mcpServers":{"x":{"command":"npx","args":["-y","example-mcp"]}}}\n```','{"mcp":{"servers":{"x":{"command":"npx","args":["-y","example-mcp"]}}}}'])
   assert.equal(mcp.parseServerInput(input).entries[0].args[1],'example-mcp');
- assert.equal(mcp.parseServerInput('https://www.npmjs.com/package/@softeria/ms-365-mcp-server').entries[0].command,'npx');
+ assert.equal(mcp.parseServerInput('https://www.npmjs.com/package/@modelcontextprotocol/server-everything').entries[0].command,'npx');
  assert.equal(mcp.parseServerInput('https://pypi.org/project/example-mcp/').entries[0].command,'uvx');
  assert.equal(mcp.parseServerInput('[server](https://example.com/mcp)').entries[0].server_url,'https://example.com/mcp');
  assert.equal(mcp.parseServerInput('https://github.com/example/repo/blob/main/README.md').kind,'invalid');
@@ -34,7 +34,7 @@ test('discovery is bounded to public GitHub hosts and reports missing instructio
 test('Microsoft is offered through ClosedHand\'s own app, not a prepared server',async()=>{
  process.env.DB_DRIVER='pg';process.env.CLOSEDHAND_MICROSOFT_APP_ID='00000000-0000-0000-0000-000000000001';
  const {createCatalogue}=require('../webapp/connection-catalogue');
- const rows={connection_clients:[],connections:[],user_mcps:[{user_id:'a',id:'ms',args:['-y','@softeria/ms-365-mcp-server'],status:'connected',caps:{}}]};
+ const rows={connection_clients:[],connections:[],user_mcps:[]};
  const db={from(t){let owner;const q={select(){return q;},eq(k,v){owner=v;return q;},then(resolve){return Promise.resolve({data:rows[t].filter(r=>r.user_id===owner)}).then(resolve);}};return q;}};
  let route;createCatalogue({db,services:{microsoft:{name:'Microsoft'}},userId:r=>r.owner,baseUrl:'https://local'}).register({get(p,fn){route=fn;},put(){}});
  let result;const res={set(){},json(v){result=v;}};

@@ -2082,7 +2082,6 @@ async function connectMcpHandler(req, res) {
   }
 }
 
-require("./mcp-account-auth").register(app, supabase, getUserIdFromRequest);
 require("./microsoft-device").register(app, {
   requireAccess: requireSetupAccess,
   connect: (tokens) => saveMicrosoftAccount(getAdminUserId(), SERVICES.microsoft, tokens),

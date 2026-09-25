@@ -49,7 +49,6 @@ async function resolveInput(input, fetcher=fetch) {
   const parts=url.pathname.split('/').filter(Boolean);
   if(parts.length<2 || !parts.slice(0,2).every(x=>/^[\w.-]+$/.test(x)))throw new Error('Paste a link to a GitHub repository or its configuration file.');
   const [owner,repo]=parts;
-  if(owner.toLowerCase()==='softeria'&&repo.toLowerCase()==='ms-365-mcp-server'&&parts.length===2)return null;
   let api='https://api.github.com/repos/'+owner+'/'+repo.replace(/\.git$/,'');
   if(url.hostname==='raw.githubusercontent.com'){
     if(parts.length<4)throw new Error('This GitHub file link is incomplete.');

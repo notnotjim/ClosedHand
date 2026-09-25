@@ -3591,9 +3591,7 @@
           if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
           if (m.transport === 'stdio') bits.push('runs alongside ClosedHand');
           var subtitle = bits.length ? bits.join(' · ') : escHtml(m.transport === 'stdio' ? (m.command || '') : m.server_url);
-          var microsoftAccount = m.transport === 'stdio' && (m.args || []).some(function(a) { return /^@softeria\/ms-365-mcp-server(?:@|$)/.test(a); });
-          var accounts = caps.account_auth?.accounts || [];
-          var statusBadge = microsoftAccount && !accounts.length ? '<span class="int-badge">Sign in to Microsoft</span>' : m.status === 'connected'
+          var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
             : m.status === 'needs_auth'
             ? '<span style="font-size: 13px;color:#D0A652;background:rgba(208,166,82,0.1);padding:2px 6px;border-radius:4px;white-space:nowrap;">Needs sign-in</span>'
@@ -3605,18 +3603,12 @@
           var detailHtml = m.transport === 'stdio'
             ? '<div class="conn-row"><span class="conn-row-label">Runs</span><span class="conn-row-value" style="word-break:break-all;font-family:ui-monospace,monospace;font-size:12px;">' + escHtml([m.command].concat(m.args || []).join(' ')) + '</span></div>'
             : '<div class="conn-row"><span class="conn-row-label">Server URL</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>';
-          var authLabel = microsoftAccount ? (accounts.length ? accounts.map(function(a) { return escHtml(a.email); }).join(', ') : 'Microsoft sign-in needed') : m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'No server key required';
+          var authLabel = m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'No server key required';
           detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + authLabel + '</span></div>';
-          detailHtml += '<div class="conn-row"><span class="conn-row-label">Status</span><span class="conn-row-value">' + escHtml(microsoftAccount && !accounts.length ? 'Server ready. Microsoft sign-in needed.' : m.status || 'unknown') + '</span></div>';
+          detailHtml += '<div class="conn-row"><span class="conn-row-label">Status</span><span class="conn-row-value">' + escHtml(m.status || 'unknown') + '</span></div>';
           if (m.connected_at) {
             var d = new Date(m.connected_at);
             detailHtml += '<div class="conn-row"><span class="conn-row-label">Connected</span><span class="conn-row-value">' + d.toLocaleDateString() + '</span></div>';
-          }
-
-          if (microsoftAccount) {
-            var tenant = caps.account_auth?.tenant;
-            if (!accounts.length || !tenant || tenant === 'common') detailHtml += '<label>Microsoft account type <select id="mcp-account-type-' + m.id + '"><option value="personal">Personal (Outlook or Hotmail)</option><option value="work">Work or school</option></select></label>';
-            detailHtml += '<p class="section-desc">Choose your Microsoft account to give this connection access to its mail, calendar and files.</p><button class="conn-btn conn-btn-manage" onclick="mcpAccountLogin(\'' + m.id + '\',this)">' + (accounts.length ? 'Check Microsoft sign-in' : 'Sign in to Microsoft') + '</button><div id="mcp-account-' + m.id + '" role="status"></div>';
           }
 
           // Tools list
@@ -3661,45 +3653,6 @@
           '</div>';
         }).join('');
       } catch (e) { console.error('Load MCPs error:', e); }
-    }
-
-    async function mcpAccountLogin(id, button) {
-      var panel = document.getElementById('mcp-account-' + id);
-      button.disabled = true; panel.textContent = 'Opening Microsoft sign-in…';
-      try {
-        var accountType = document.getElementById('mcp-account-type-' + id)?.value;
-        var response = await fetch('/api/mcps/' + id + '/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountType: accountType }) });
-        var data = await response.json();
-        if (!response.ok) throw new Error(data.error);
-        if (data.connected) { showToast('Microsoft sign-in confirmed'); loadMcps(); return; }
-        panel.replaceChildren();
-        if (data.code) {
-          var explanation = document.createElement('p'); explanation.textContent = 'Enter this code on Microsoft’s sign-in page: ' + data.code; panel.append(explanation);
-          var link = document.createElement('a'); link.href = data.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Sign in with Microsoft'; panel.append(link);
-        }
-        var check = document.createElement('button'); check.className = 'conn-btn conn-btn-manage'; check.textContent = 'Check sign-in';
-        check.onclick = async function() {
-          if (check.disabled) return;
-          check.disabled = true; check.textContent = 'Checking…';
-          try {
-            var response = await fetch('/api/mcps/' + id + '/account/status', { method: 'POST' });
-            var state = await response.json(); if (!response.ok) throw new Error(state.error);
-            if (state.connected) { showToast('Microsoft account connected'); loadMcps(); }
-            else { check.textContent = 'Check again after signing in'; }
-          } catch (e) { showToast(e.message || 'Could not check sign-in', true); }
-          finally { check.disabled = false; }
-        };
-        panel.append(document.createElement('br'), check);
-        var polls = 0;
-        var poll = async function() {
-          if (++polls > 120) { check.textContent = 'Sign-in expired. Start again above.'; return; }
-          if (!panel.isConnected || !document.getElementById('mcp-account-' + id)) return;
-          await check.onclick();
-          if (panel.isConnected) setTimeout(poll, 5000);
-        };
-        setTimeout(poll, 5000);
-      } catch (e) { panel.textContent = e.message || 'Could not start Microsoft sign-in.'; }
-      finally { button.disabled = false; }
     }
 
     // What the person pasted, kept while the server asks for more (a key, a
@@ -3809,8 +3762,6 @@
           mcpStatus(probs.map(function(p) { return p.error; }).join(' '));
         }
         await loadMcps();
-        var added = (data.connected || []).find(function(c) { return (c.args || []).some(function(a) { return /^@softeria\/ms-365-mcp-server(?:@|$)/.test(a); }); });
-        if (added) revealMcpAccount(added.id);
       } catch (e) {
         mcpStatus('Error: ' + e.message);
       } finally {
@@ -3818,17 +3769,6 @@
         btn.textContent = 'Connect';
         box.removeAttribute('aria-busy');
       }
-    }
-
-    function revealMcpAccount(id) {
-      var panel = document.getElementById('mcp-account-' + id);
-      if (!panel) return;
-      var wrap = panel.closest('.int-wrap');
-      var card = wrap && wrap.querySelector('.int-card');
-      if (card && !card.classList.contains('expanded')) toggleMcpUnfurl(card);
-      panel.parentElement.scrollIntoView({block:'center',behavior:'smooth'});
-      var button = panel.previousElementSibling;
-      if (button && button.tagName === 'BUTTON') button.focus({preventScroll:true});
     }
 
     function renderMcpChoices(data) {

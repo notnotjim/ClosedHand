@@ -153,10 +153,6 @@ function parseServerInput(text) {
   }
 
   if (/^https?:\/\/(?:www\.)?github\.com\//i.test(raw)) {
-    let pathName; try { pathName = new URL(raw).pathname.replace(/\/$/, '').toLowerCase(); } catch {}
-    if (pathName === '/softeria/ms-365-mcp-server') {
-      return { kind: "command", entries: [entryFromConfig("Microsoft 365", { command: "npx", args: ["-y", "@softeria/ms-365-mcp-server"] })] };
-    }
     return { kind: "invalid", entries: [], error: "This is a GitHub project page, not a server address. Copy its MCP configuration or installation command and paste it here." };
   }
 
@@ -280,13 +276,6 @@ function stdioWorkDir() {
   return base;
 }
 
-// The child gets the SDK's scrubbed environment (PATH, HOME and the like,
-// never this process's database URL or keys), the package caches so a
-// restart does not re-download, and whatever the user set for this server.
-function isMicrosoft365(row) {
-  return row.transport === "stdio" && ["npx", "npx.cmd"].includes(row.command) &&
-    (row.args || []).some(arg => /^@softeria\/ms-365-mcp-server(?:@[a-zA-Z0-9.^~_-]+)?$/.test(arg));
-}
 function publicConnectionError(error) {
   const message = String(error?.message || error || "");
   if (/<(?:!doctype|html|head|body)\b/i.test(message)) return "That address returned a web page, not an MCP server. Paste the server endpoint or its MCP configuration.";
@@ -295,19 +284,11 @@ function publicConnectionError(error) {
   return "Could not connect to this MCP server. Check its configuration and try again.";
 }
 
+// The child gets the SDK's scrubbed environment (PATH, HOME and the like,
+// never this process's database URL or keys), the package caches so a
+// restart does not re-download, and whatever the user set for this server.
 function stdioEnv(row) {
   const env = { ...getDefaultEnvironment() };
-  if (isMicrosoft365(row)) {
-    // Both app processes use the same private, persistent account cache.
-    const tenant = row.env?.MS365_MCP_TENANT_ID;
-    const identity = String(row.user_id || "local") + ":" + row.server_url + (tenant && tenant !== "common" ? ":" + tenant : "");
-    const key = crypto.createHash("sha256").update(identity).digest("hex");
-    const dir = path.join(stdioWorkDir(), "accounts", key);
-    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-    env.MS365_MCP_TOKEN_CACHE_PATH = path.join(dir, "tokens.json");
-    env.MS365_MCP_SELECTED_ACCOUNT_PATH = path.join(dir, "selected.json");
-    env.MS365_MCP_USE_KEYTAR = "false";
-  }
   for (const k of ["npm_config_cache", "UV_CACHE_DIR", "UV_PYTHON_INSTALL_DIR", "XDG_CACHE_HOME", "NODE_EXTRA_CA_CERTS", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]) {
     if (process.env[k]) env[k] = process.env[k];
   }
@@ -645,7 +626,7 @@ async function closeQuietly(client, transport) {
 }
 
 module.exports = {
-  isMicrosoft365, publicConnectionError,
+  publicConnectionError,
   isSelfHost,
   parseServerInput,
   splitArgs,
