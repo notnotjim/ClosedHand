@@ -11,7 +11,8 @@ class BridgeManager: ObservableObject {
     @Published var isConnected = false
     @Published var isPaired = false
     @Published var pairingCode = ""
-    @Published var serverUrl = "wss://closedhand.ai/bridge"
+    // ClosedHand runs on the computer that owns it; by default that is this Mac.
+    @Published var serverUrl = "ws://localhost:3000/bridge"
 
     // Activity indicator — shows when the bot is actively using the computer
     @Published var isActive = false
@@ -65,7 +66,7 @@ class BridgeManager: ObservableObject {
         isPaired = defaults.bool(forKey: "isPaired")
         userId = defaults.string(forKey: "userId")
         bridgeToken = defaults.string(forKey: "bridgeToken")
-        serverUrl = defaults.string(forKey: "serverUrl") ?? "wss://closedhand.ai/bridge"
+        serverUrl = defaults.string(forKey: "serverUrl") ?? "ws://localhost:3000/bridge"
         shareCalendar = defaults.object(forKey: "shareCalendar") == nil ? true : defaults.bool(forKey: "shareCalendar")
         shareReminders = defaults.object(forKey: "shareReminders") == nil ? true : defaults.bool(forKey: "shareReminders")
         shareContacts = defaults.object(forKey: "shareContacts") == nil ? true : defaults.bool(forKey: "shareContacts")

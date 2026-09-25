@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>ClosedHand</title>
+<meta name="description" content="Your own proactive personal assistant, running on a computer you control with no company in between. Open source.">
+<link rel="icon" href="/logocircle.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/interface.css">
+<link rel="stylesheet" href="/recall-demo.css">
+<style>
+:root {
+    --hero-title-size: clamp(25px, 2.9vw, 43px);
+    --hero-copy-size: clamp(13px, 1.8vw, 18px);
+    --text-primary: rgba(239,230,214,0.92);
+    --text-secondary: rgba(239,230,214,0.65);
+    --text-tertiary: rgba(239,230,214,0.4);
+    --bg-raised: rgba(26,24,23,0.9);
+    --bg-overlay: rgba(239,230,214,0.05);
+    --border-default: rgba(239,230,214,0.1);
+    --accent: #D8624B;
+    --accent-dim: rgba(208,86,63,0.15);
+    
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-display: var(--font-brand);
+  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { overflow-x: hidden; }
+body {
+    background: #100E0D;
+    color: #EFE6D6;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+body.chat-active { overflow: hidden; height: 100dvh; }
+body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
+#blobCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+.no-webgl-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    
+    background: radial-gradient(ellipse 70% 45% at 50% 42%, rgba(208,86,63,0.10) 0%, rgba(208,86,63,0.03) 45%, transparent 70%),
+                radial-gradient(ellipse at 50% 45%, rgba(26,24,23,0.8) 0%, rgba(16,14,13,0.4) 40%, transparent 70%),
+                #100E0D;
+  }
+.page {
+    position: relative;
+    z-index: 1;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+.header-left-group { display: flex; align-items: center; gap: 6px; }
+.header-center {
+    display: flex;
+    align-items: center;
+  }
+.header-center .auth-row {
+    font-size: 14px;
+    color: rgba(239,230,214,0.5);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+.header-center .auth-row a {
+    display: inline-flex;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+.header-center .auth-row a:hover { opacity: 0.85; }
+.header-center .auth-row .wordmark {
+    height: 15px;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+.header-center .auth-row a:hover .wordmark { opacity: 0.8; }
+.header-center .auth-row-ms {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    margin-left: 6px;
+    transition: opacity 0.2s;
+  }
+.header-center .auth-row-ms:hover { opacity: 0.85; }
+.header-center .auth-row-ms .wordmark { height: 15px; opacity: 0.55; transition: opacity 0.2s; }
+.header-center .auth-row-ms:hover .wordmark { opacity: 0.8; }
+.header-right { display: flex; align-items: center; gap: 28px; }
+.header-right a {
+    font-size: 16px;
+    color: rgba(239,230,214,0.5);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+.header-right a:hover { color: #B6AFA4; }
+.header-right a#dashboardLink {
+    padding: 6px 14px;
+    border: 1px solid rgba(208,86,63,0.2);
+    border-radius: 8px;
+    color: rgba(208,86,63,0.7);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+.header-right a#dashboardLink:hover {
+    border-color: rgba(208,86,63,0.4);
+    color: rgba(208,86,63,0.9);
+    box-shadow: 0 0 10px rgba(208,86,63,0.08);
+  }
+.hero-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px 20px;
+    gap: 0;
+    
+    min-height: calc(100dvh - 76px);
+  }
+@media (prefers-reduced-motion: reduce) {
+    .hero-area *, .hero-heading, .hero-heading-sub, .input-box-wrap, .suggestions { animation: none !important; opacity: 1 !important; }
+    .hero-heading .hero-heading-more { transition: none; max-width: none; opacity: 0.85; }
+  }
+.hero-heading {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 144, 'SOFT' 60;
+    font-size: var(--hero-title-size);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    text-align: center;
+    line-height: 1.1;
+    white-space: nowrap;
+    width: 100%;
+    max-width: 900px;
+    user-select: none;
+    margin-bottom: 8px;
+    color: #EFE6D6;
+    opacity: 0;
+    animation: heroHeadIn 0.8s ease forwards 0.3s;
+  }
+@keyframes heroHeadIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+.hero-heading .hero-heading-first { display: inline-block; }
+.hero-heading .hero-heading-more {
+    display: inline-block;
+    vertical-align: bottom;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
+    padding-left: 0.28em;
+    
+    padding-bottom: 0.18em;
+    margin-bottom: -0.18em;
+    opacity: 0;
+    color: #D8624B;
+    font-weight: 300;
+    transition: max-width 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 1.2s, opacity 0.9s ease 1.5s;
+  }
+.hero-area.is-live .hero-heading-more {
+    max-width: var(--more-w, 60ch);
+    opacity: 0.85;
+  }
+.hero-heading-sub {
+    display: block;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: var(--hero-copy-size);
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    text-align: center;
+    color: rgba(239,230,214,0.5);
+    line-height: 1.4;
+    max-width: 1060px;
+    text-wrap: balance;
+    user-select: none;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: heroIn 0.8s ease forwards 0.5s;
+  }
+.hero-heading-sub img {
+    width: clamp(20px, 2.5vw, 28px);
+    height: clamp(20px, 2.5vw, 28px);
+    opacity: 0.55;
+    flex-shrink: 0;
+  }
+.hero-footer {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+.hero-footer span {
+    font-size: var(--hero-copy-size);
+    line-height: 1.4;
+    letter-spacing: -0.2px;
+    color: #B6AFA4;
+    max-width: 100%;
+    text-align: center;
+    text-wrap: pretty;
+  }
+.hero-footer { margin-top: 16px; }
+.ethos-link { color: inherit; text-decoration: none; text-underline-offset: 5px; }
+.ethos-link:hover { color: #EFE6D6; text-decoration: underline; text-decoration-color: #D8624B; }
+.ethos-link:focus-visible { outline: 2px solid #D8624B; outline-offset: 5px; }
+body.chat-active .hero-recent-float, body.chat-active .hero-recent-pop { display: none !important; }
+.hero-footer .footer-sep {
+    color: rgba(239,230,214,0.5);
+  }
+@keyframes heroIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+:root { --sidebar-width: 260px; }
+@media (min-width: 900px) {
+    .activity-sidebar.active ~ .chat-messages {
+      margin-left: var(--sidebar-width);
+      margin-right: 0;
+      width: auto;
+      max-width: none;
+      
+      padding-left: max(20px, calc((100% - var(--sidebar-width) - 900px) / 2));
+      padding-right: max(20px, calc((100% - var(--sidebar-width) - 900px) / 2));
+    }
+  }
+@media (max-width: 899px) {
+    .activity-sidebar { width: 240px; }
+  }
+@media (max-width: 767px) {
+    .tl-thinking-text { animation: none; }
+    .tl-badge { font-size: 9px; }
+  }
+.hero-area {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+.hero-area.hiding {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+body.chat-active .input-box { backdrop-filter: none; }
+@media (max-width: 600px) {
+    .header { padding: 12px 14px; gap: 8px; }
+    .header-center { font-size: 11px; }
+    .feat-3d { display: none !important; }
+    .header-right { gap: 14px; }
+    .header-right a { font-size: 13px; }
+
+    
+    .page { min-height: 100svh !important; }
+    .hero-area { padding: 0 16px 16px; flex: none !important; min-height: calc(100svh - 110px) !important; height: auto; }
+    
+    :root { --hero-title-size: clamp(23px, 7.6vw, 38px); --hero-copy-size: 14px; }
+    .hero-heading { font-size: var(--hero-title-size); letter-spacing: -0.3px; margin-bottom: 10px; white-space: nowrap; }
+    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
+    .hero-footer span { white-space: normal; line-height: 1.45; }
+    .hero-footer .footer-sentence { display: block; }
+    .hero-recent-tab { padding: 5px 12px 6px; font-size: 11px; }
+    
+    .input-box-wrap:focus-within { transform: none; }
+    .input-box-wrap:focus-within + .hero-recent-tab { transform: none; }
+    .hero-recent-row { padding: 9px 4px; }
+    .hero-recent-row .title { font-size: 13px; }
+    .hero-recent-row .meta { font-size: 11px; }
+    .hero-recent-float { right: 14px; bottom: 14px; padding: 8px 12px; font-size: 11.5px; }
+    .hero-recent-pop { right: 14px; bottom: 54px; }
+    .hero-heading-sub { line-height: 1.45; gap: 6px; margin-bottom: 18px; max-width: 92vw; }
+    .hero-heading-sub img { width: 20px; height: 20px; }
+
+    .input-box-wrap { max-width: 100%; }
+    .input-textarea-wrap { padding: 16px 16px 8px; }
+    .input-textarea-wrap textarea { min-height: 44px; font-size: 16px; }
+    .input-toolbar { padding: 8px 12px 12px; }
+
+    .message { max-width: 88%; }
+    .suggestions { gap: 6px; padding: 0 16px; }
+    .suggestions-cats { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+    .suggestions-cats::-webkit-scrollbar { display: none; }
+    .suggestion-btn, .cat-pill { padding: 8px 14px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+    .docked-input { padding: 6px 10px 8px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: rgba(26,24,23,0.95); backdrop-filter: blur(20px); }
+    .docked-input .input-box-wrap { border-radius: 12px; }
+    .docked-input textarea { min-height: 36px !important; max-height: 120px !important; font-size: 16px !important; transition: min-height 0.2s ease; }
+    .docked-input:focus-within textarea { min-height: 70px !important; }
+    .docked-input:focus-within .input-box-wrap { border-color: rgba(208,86,63,0.3) !important; box-shadow: 0 0 20px rgba(208,86,63,0.08), 0 0 40px rgba(208,86,63,0.04) !important; }
+    .docked-input:focus-within .input-box { background: rgba(26,24,23,0.65) !important; }
+    body.chat-active .chat-messages { padding-bottom: 24px !important; }
+    body.chat-active { overflow: hidden; height: 100dvh; }
+    body.chat-active .page { height: 100dvh !important; }
+    
+    .docked-input::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, rgba(26,24,23,0.95));
+      pointer-events: none;
+    }
+
+    
+    body.chat-active .activity-sidebar { display: block !important; position: fixed; top: 0; left: 0; bottom: 0; z-index: 30; background: rgba(16,14,13,0.97); backdrop-filter: blur(20px); transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0s linear 0.3s; visibility: hidden; pointer-events: none; }
+    body.chat-active .activity-sidebar.mobile-open { transform: translateX(0); visibility: visible; transition-delay: 0s; pointer-events: auto; }
+    
+    .activity-scrim { position: fixed; inset: 0; z-index: 29; background: rgba(16,14,13,0.45); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    body.chat-active .activity-sidebar.mobile-open ~ .activity-scrim { opacity: 1; pointer-events: auto; }
+
+    
+    body.chat-active .header .back-arrow { display: flex !important; }
+
+    .bridge-pill-wrap { margin-top: 12px !important; border-radius: 10px !important; width: 90%; max-width: 400px; }
+    .bridge-pill-wrap .bridge-cta { padding: 8px 14px; gap: 6px; flex: none !important; width: 50% !important; justify-content: center; overflow: hidden; }
+    .bridge-cta svg { width: 14px; height: 14px; }
+    .bridge-cta-text { min-width: 0; }
+    .bridge-cta-text strong { font-size: 11px; white-space: nowrap; }
+    .bridge-cta-text span { font-size: 9px; white-space: nowrap; }
+    .bridge-cta .bridge-desktop-icon { display: none; }
+    .bridge-cta .bridge-mobile-icon { display: block; }
+    .hero-footer { flex-direction: column; gap: 8px; }
+    
+    .header-right a[href="/privacy"], .header-right a[href="/terms"] { display: none !important; }
+    .header { position: relative; }
+    
+    .header-center { font-size: 11px; pointer-events: none; }
+    .header-center a, .header-center span { pointer-events: auto; }
+    
+    .back-arrow { min-width: 36px; min-height: 40px; align-items: center; justify-content: center; margin-right: -4px; }
+    .back-arrow svg { width: 22px; height: 22px; }
+    body.chat-active .back-arrow { display: flex !important; }
+    #mobileActivityBtn { min-width: 40px; min-height: 40px; align-items: center; justify-content: center; }
+    body.chat-active #mobileActivityBtn { display: inline-flex !important; }
+    .send-via a { width: 26px; height: 26px; }
+    .send-via img { width: 13px; height: 13px; }
+    .send-via-label { font-size: 10px; }
+  }
+@media (max-width: 767px) {
+    .toolbar-btn, .send-btn, .page-tab { min-height: 44px; min-width: 44px; }
+  }
+.features-page {
+    position: relative;
+    z-index: 1;
+    padding: 80px 24px 60px;
+  }
+body.library-active .page { min-height:0; }
+@media (max-width:640px) { .rag-privacy-cards { grid-template-columns:1fr; } }
+.features-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+  }
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.feat-heading {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 72, 'SOFT' 40;
+    font-size: 26px;
+    font-weight: 450;
+    color: #EFE6D6;
+    text-align: center;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+#recall-heading {
+    font-size: clamp(22px, 2.9vw, 26px);
+    font-weight: 500;
+    font-variation-settings: 'opsz' 144, 'SOFT' 60;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+#recall-heading .ethos-link:hover {
+    color: #e3b394;
+    text-decoration: none;
+  }
+.feat-sub {
+    font-size: 18px;
+    color: #B6AFA4;
+    text-align: center;
+    margin-bottom: 48px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+  }
+
+.recall-story { margin-bottom: 72px; }
+
+.feat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 64px;
+  }
+@media (max-width: 700px) { .feat-row { grid-template-columns: 1fr; } }
+.feat-card {
+    background: rgba(26,24,23,0.6);
+    border: 1px solid rgba(239,230,214,0.08);
+    border-radius: 20px;
+    padding: 32px 32px;
+    backdrop-filter: blur(30px);
+  }
+.feat-card-title {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 72, 'SOFT' 40;
+    font-size: 26px;
+    font-weight: 450;
+    color: #EFE6D6;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+.feat-card-desc {
+    font-size: 16px;
+    color: rgba(239,230,214,0.5);
+    line-height: 1.65;
+    margin-bottom: 28px;
+  }
+.feat-card-icons {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+.feat-card-icons img {
+    width: 38px;
+    height: 38px;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+  .feat-card-icons img:hover { opacity: 0.85; }
+  @media (max-width: 600px) {
+    .feat-card-icons { gap: 12px; flex-wrap: nowrap; }
+    .feat-card-icons img { flex: 0 1 38px; min-width: 0; height: auto; aspect-ratio: 1; }
+  }
+.feat-card-action { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: #B6AFA4; padding: 8px 16px; border: 1px solid rgba(239,230,214,0.12); border-radius: 8px; background: rgba(239,230,214,0.04); transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.feat-card:hover .feat-card-action { color: #EFE6D6; border-color: rgba(208,86,63,0.3); background: rgba(208,86,63,0.06); }
+.feat-card-action[data-connected="true"] { color: #8DBD79; border-color: rgba(141,189,121,0.25); background: rgba(141,189,121,0.06); }
+.feat-card-action[data-connected="true"] svg { display: none; }
+.feat-card-action[data-connected="true"]::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #8DBD79; }
+.feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 80px;
+  }
+@media (max-width: 700px) { .feat-grid { grid-template-columns: 1fr; } }
+.feat-mini {
+    background: rgba(16,14,13,0.35);
+    border: 1px solid rgba(239,230,214,0.06);
+    border-radius: 18px;
+    padding: 36px 28px;
+    text-align: center;
+  }
+.feat-mini-icon {
+    font-size: 40px;
+    margin-bottom: 18px;
+    display: block;
+  }
+.feat-mini-title {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 48, 'SOFT' 40;
+    font-size: 22px;
+    font-weight: 450;
+    color: #EFE6D6;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+.feat-mini-desc {
+    font-size: 16px;
+    color: rgba(239,230,214,0.5);
+    line-height: 1.6;
+  }
+.feat-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 64px;
+    border-radius: 16px;
+    border: 1px solid rgba(239,230,214,0.12);
+    background: rgba(26,24,23,0.7);
+    backdrop-filter: blur(16px);
+  }
+.feat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    min-width: 600px;
+  }
+.feat-table th {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 36, 'SOFT' 40;
+    padding: 18px 24px;
+    text-align: left;
+    font-weight: 450;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: #B6AFA4;
+    border-bottom: 1px solid rgba(239,230,214,0.1);
+    background: rgba(26,24,23,0.8);
+  }
+.feat-table th:first-child { color: rgba(239,230,214,0.5); }
+.feat-table th.highlight {
+    color: #D8624B;
+    border-bottom: 2px solid rgba(208,86,63,0.4);
+  }
+.feat-table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(239,230,214,0.06);
+    color: #B6AFA4;
+  }
+.feat-table tr:last-child td { border-bottom: none; }
+.feat-table td:first-child {
+    color: #EFE6D6;
+    font-weight: 400;
+  }
+.feat-table .yes { color: #D8624B; }
+.feat-table .no { color: rgba(239,230,214,0.5); }
+.feat-table .partial { color: rgba(208,166,82,0.7); }
+  @media (max-width: 600px) {
+    .feat-table { min-width: 0; }
+    .feat-table, .feat-table tbody, .feat-table tr, .feat-table th, .feat-table td { display: block; }
+    .feat-table th { padding: 20px 20px 8px; border-bottom: 0; background: none; }
+    .feat-table td { padding: 0 20px 24px; }
+  }
+.feat-cta {
+    text-align: center;
+    padding: 48px 0 0;
+  }
+.feat-cta-heading {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 72, 'SOFT' 40;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 450;
+    color: #EFE6D6;
+    margin-bottom: 20px;
+    letter-spacing: -0.01em;
+  }
+.feat-cta-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+.feat-cta-btns a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    border-radius: 14px;
+    font-size: 17px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+.feat-cta-btns .btn-primary {
+    background: rgba(208,86,63,0.12);
+    border: 1px solid rgba(208,86,63,0.25);
+    color: #D0563F;
+  }
+.feat-cta-btns .btn-primary:hover { background: rgba(208,86,63,0.2); }
+.feat-cta-btns .btn-secondary {
+    background: rgba(239,230,214,0.05);
+    border: 1px solid rgba(239,230,214,0.1);
+    color: #B6AFA4;
+  }
+.feat-cta-btns .btn-secondary:hover { background: rgba(239,230,214,0.1); }
+.feat-cta-btns img { height: 16px; opacity: 0.7; }
+body.canvas-open {
+    overflow-x: hidden;
+  }
+body.canvas-open .activity-sidebar {
+    display: none !important;
+  }
+body.canvas-open .chat-messages {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px 24px 0 24px !important;
+  }
+body.canvas-open .message {
+    max-width: 100% !important;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+body.canvas-open .docked-input {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+body.canvas-open .docked-input .input-box-wrap {
+    max-width: 100%;
+  }
+body.canvas-open .header {
+    padding-left: 8px;
+  }
+@media (max-width: 899px) { .canvas-panel { width: 100vw; max-width: none; min-width: 0; } .canvas-resize-handle { display: none; } }
+@media (hover: none) and (pointer: coarse) { .dash-grab { display: block; } }
+@media (max-width: 700px) { .dash-slide { width: 100vw; max-width: none; } }
+.page-tabs { display:inline-flex; justify-content:center; gap:4px; margin:6px auto 0; position:relative; z-index:2; background:rgba(239,230,214,0.04); border-radius:12px; padding:4px; border:1px solid rgba(239,230,214,0.06); }
+.page-tab { padding:7px 18px; background:none; border:1px solid transparent; color:rgba(239,230,214,0.5); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; border-radius:10px; display:inline-flex; align-items:center; gap:6px; min-height:36px; }
+.page-tab:hover { color:#B6AFA4; }
+.page-tab.active { color:var(--accent); background:rgba(141,189,121,0.1); border:1px solid rgba(141,189,121,0.2); }
+.page-tab svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.page-view { display:none; }
+.page-view.active { display:block; }
+body.computers-active .page { min-height:0; height:auto; }
+body.chat-active .page-tabs { display:none; }
+body.chat-active .computers-view { display:none !important; }
+body.chat-active .chat-messages.active {
+    height: var(--list-h, calc(100dvh - 380px));
+    max-height: var(--list-h, calc(100dvh - 380px));
+    transition: height 0.25s ease, max-height 0.25s ease;
+  }
+body.chat-active .docked-input.active {
+    position: fixed;
+    bottom: 20px;
+    left: 260px;
+    right: 0;
+    z-index: 10;
+    padding: 0 20px;
+  }
+body.chat-active .chat-messages {
+    padding-bottom: 24px;
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 72px), transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 72px), transparent 100%);
+  }
+@media (max-width: 899px) {
+    body.chat-active .docked-input.active {
+      left: 0;
+    }
+  }
+body.mon-dragging iframe, body.mon-dragging webview, body.mon-dragging .mon-screen { pointer-events:none !important; }
+body.chat-active .float-chat { display:none; }
+body.chat-active .mon-area { display:none; }
+.header-center { position:absolute !important; left:50% !important; transform:translateX(-50%) !important; text-align:center; pointer-events:auto; }
+@media (max-width:768px) {
+    .mon-area { width:100%; flex-direction:column; gap:0; padding:0; }
+    .mon-wrap { min-width:0 !important; flex:none !important; width:100%; }
+    .mon-wrap:first-child { height:50%; }
+    .mon-wrap:last-child { height:50%; }
+    .mon { height:100%; min-height:0; border-radius:0; border-left:none; border-right:none; }
+    .mon-wrap:first-child .mon { border-top:none; border-bottom:none; }
+    .mon-wrap:last-child .mon { border-top:none; border-bottom:none; }
+    .mon-stand { display:none; }
+    .mon-bar { padding:6px 10px; min-height:28px; }
+    .mon-dots span { width:6px; height:6px; }
+    .mon-bar-title { font-size:11px; }
+    .mon-grid { gap:4px; padding:8px; }
+    .mon-tile { width:76px; }
+    .mon-tile-icon svg { width:36px; height:36px; }
+    .mon-tile-icon { height:40px; }
+    .mon-tile-name { font-size:11px; }
+    
+    .mon-divider { width:100%; height:24px; cursor:ns-resize; flex-direction:row; }
+    .mon-divider::before { top:50%; bottom:auto; left:0; right:0; width:100%; height:1px; }
+    .mon-divider-grip { width:48px; height:24px; flex-direction:row; gap:4px; }
+    .mon-divider-grip span { width:1.5px; height:10px; }
+    .mon-divider-arrows { display:none; }
+    .mon-divider-label { display:none; }
+    
+    .float-chat { position:fixed; bottom:8px; left:8px; right:8px; width:auto; max-width:none; margin:0; z-index:10; }
+    .float-chat .suggestions { display:none; }
+    .float-chat:focus-within .suggestions { display:block; }
+    
+    .mon-expand-btn { display:flex; width:20px; height:20px; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:none; border-radius:4px; color:rgba(239,230,214,0.5); cursor:pointer; flex-shrink:0; }
+  }
+
+  /* --- The public front door: the install's homepage, with the two ways in
+         where the chat box would be. --- */
+  .header { position: relative; z-index: 2; }
+  .header-right a { font-size: 13px; color: #B6AFA4; text-decoration: none; margin-left: 22px; }
+  .header-right a:hover { color: #EFE6D6; }
+  .header-right a.gh { display: inline-flex; align-items: center; gap: 6px; }
+  .header-right a.gh svg { width: 15px; height: 15px; fill: currentColor; }
+  .ways {
+    width: 100%; max-width: 900px; margin: 0 auto;
+    background: #181615; border: 1.5px solid rgba(208,86,63,0.3); border-radius: 20px;
+    padding: 38px 28px 24px; box-sizing: border-box; text-align: center;
+    opacity: 0; animation: heroIn 0.8s ease forwards 0.7s;
+    box-shadow: 0 0 0 1px rgba(208,86,63,0.04), 0 30px 80px rgba(0,0,0,0.45);
+  }
+  .ways-label { font-size: 14px; color: #B6AFA4; margin: 0 auto 14px; max-width: 62ch; line-height: 1.55; }
+  .way-app .ways-label { font-size: 15px; margin-bottom: 16px; }
+  .way-app .way-actions { padding-top: 2px; }
+  .ways-label strong { color: #EFE6D6; font-weight: 500; }
+  .install {
+    display: flex; align-items: center; gap: 12px;
+    background: #100E0D; border: 1px solid rgba(239,230,214,0.12); border-radius: 12px; padding: 10px 10px 10px 16px;
+  }
+  .install code {
+    flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all;
+    font: 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6;
+  }
+  .install button {
+    flex: none; font: 500 13px/1 var(--font-ui); color: #EFE6D6; background: rgba(239,230,214,0.08);
+    border: 1px solid rgba(239,230,214,0.14); border-radius: 8px; padding: 9px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .install button:hover { background: rgba(208,86,63,0.14); border-color: rgba(208,86,63,0.4); }
+  .ways-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 18px; margin: 12px 0 0; font-size: 13px; color: #B6AFA4; }
+  .ways-note a { color: #B6AFA4; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(239,230,214,0.3); }
+  .ways-note a:hover { color: #EFE6D6; }
+  .ways-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 14px; line-height: 1; color: #B6AFA4; }
+  .ways-divider::before, .ways-divider::after { content: ''; flex: 1; height: 1px; background: rgba(239,230,214,0.08); }
+  .install { max-width: 720px; margin: 0 auto; text-align: left; }
+  .way-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; }
+  .way-meta { font-size: 12.5px; color: #B6AFA4; letter-spacing: 0.01em; }
+  /* The one call to action on the page: solid madder, the only filled thing here. */
+  .dl { display: inline-flex; align-items: center; gap: 12px; font: 500 19px/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.01em; color: #100E0D; text-decoration: none; padding: 15px 30px 16px; border-radius: 12px; background: #EFE6D6; border: 1px solid #EFE6D6; box-shadow: none; transition: background 0.18s, border-color 0.18s, transform 0.18s; }
+  .dl:hover { background: #F7F0E3; border-color: rgba(208,86,63,0.6); transform: translateY(-1px); }
+  .dl:active { transform: translateY(0); background: #E6DCC9; }
+  .dl:focus-visible { outline: 2px solid #D8624B; outline-offset: 4px; }
+  .dl svg { width: 18px; height: 18px; fill: currentColor; margin-top: -2px; }
+  .hero-footer { margin-top: 22px; }
+  .site-foot {
+    position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; align-items: center;
+    padding: 28px 24px 44px; font-size: 13px; color: rgba(239,230,214,0.5);
+  }
+  .site-foot a { color: rgba(239,230,214,0.6); text-decoration: none; }
+  .site-foot a:hover { color: #EFE6D6; }
+  .feat-card { display: block; text-decoration: none; }
+  @media (max-width: 600px) {
+    .header-right a { margin-left: 14px; }
+    .header-right a.gh span { display: none; }
+    .ways { padding: 28px 16px 18px; border-radius: 16px; }
+    .dl { width: 100%; justify-content: center; }
+    .install { padding-left: 12px; }
+    .install code { font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="blobCanvas"></canvas>
+
+<div class="page">
+  <div class="header">
+    <div class="header-left-group">
+      <a href="/" class="header-left ch-brand"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+    </div>
+    <div class="header-center"></div>
+    <div class="header-right">
+      <a class="gh" href="https://github.com/notnotjim/ClosedHand" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+      <a href="/open">My ClosedHand</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+  </div>
+
+  <div class="hero-area" id="heroSection">
+    <div style="flex:0.55"></div>
+    <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
+    <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
+
+    <div class="ways" id="ways">
+      <div class="way way-app" id="wayApp">
+        <p class="way-actions">
+          <a class="dl" id="macAppLink" href="https://github.com/notnotjim/ClosedHand/releases/latest" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>Download ClosedHand for Mac</a>
+          <span class="way-meta" id="macAppNote">For Apple Silicon Macs</span>
+        </p>
+      </div>
+      <div class="ways-divider">Or</div>
+      <div class="way way-docker" id="wayDocker">
+        <p class="ways-label"><strong id="dockerLead">Run it with Docker.</strong> Works on Mac, Windows or Linux.<br>Paste the line below into your terminal.</p>
+        <div class="install">
+          <code id="installLine">curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh</code>
+          <button type="button" id="copyInstall">Copy</button>
+        </div>
+        <p class="ways-note"><a href="https://github.com/notnotjim/ClosedHand#readme" rel="noopener">Read the install script first</a></p>
+      </div>
+    </div>
+
+    <div class="hero-footer">
+      <span><a class="ethos-link" href="/ethos">ClosedHand is local-first and model-agnostic. The keys to your digital life stay with you.</a></span>
+    </div>
+    <div style="flex:1"></div>
+  </div>
+</div>
+
+<div class="features-page" id="featuresPage">
+<div class="features-inner">
+
+  <section class="recall-story" aria-labelledby="recall-heading">
+    <h2 class="feat-heading" id="recall-heading"><a class="ethos-link" href="/architecture">Whereas most AI assistants request tools reactively as they go,<br>ClosedHand already has a complete picture of what's going on in your life.</a></h2>
+    <figure class="recall-demo" id="recallDemo">
+      <div class="recall-comparison">
+      <section class="recall-lane recall-lane-other" aria-labelledby="recall-other-title">
+        <h3 id="recall-other-title">Other assistants</h3>
+        <p class="recall-q">What should I get Sam for his birthday?</p>
+        <div class="recall-box">
+          <ul class="recall-apps">
+            <li class="recall-app is-match" data-app="calendar" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/></svg>Calendar</li>
+            <li class="recall-app is-checked" data-app="mail"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg>Mail</li>
+            <li class="recall-app is-skipped"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5Z"/><path d="M14 2v6h5"/></svg>Drive</li>
+            <li class="recall-app is-skipped" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/></svg>Slack<span class="recall-missed">Missed</span></li>
+            <li class="recall-app is-skipped" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h11l5 5v11H4Z"/><path d="M8 16V8l6 8V8"/></svg>Notion<span class="recall-missed">Missed</span></li>
+            <li class="recall-app is-skipped"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19Z"/><path d="M9 9.5c.5 2.5 2.5 4.5 5 5l1-1.5"/></svg>WhatsApp</li>
+          </ul>
+        </div>
+        <div class="recall-ai">AI</div>
+        <p class="recall-a is-shown">A good bottle of wine is always a safe bet.</p>
+        <div class="recall-timer" aria-hidden="true" style="--done:.9"><svg viewBox="0 0 48 48"><path class="recall-timer-crown" d="M20 3h8M24 3v5"/><circle class="recall-timer-face" cx="24" cy="27" r="17"/><circle class="recall-timer-sweep" cx="24" cy="27" r="8" pathLength="1"/><path class="recall-timer-ticks" d="M24 12v2.5M39 27h-2.5M24 42v-2.5M9 27h2.5"/><line class="recall-timer-hand" x1="24" y1="27" x2="24" y2="14"/><circle class="recall-timer-pin" cx="24" cy="27" r="2"/></svg></div>
+        <span class="recall-token" aria-hidden="true">?</span>
+        <span class="recall-token recall-fetch" aria-hidden="true"></span>
+      </section>
+      <section class="recall-lane recall-lane-ready" aria-labelledby="recall-ready-title">
+        <h3 class="recall-brand" id="recall-ready-title"><img src="/logo.png" alt="">ClosedHand</h3>
+        <p class="recall-q">What should I get Sam for his birthday?</p>
+        <div class="recall-box">
+          <ul class="recall-apps">
+            <li class="recall-app is-match" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/></svg>Calendar</li>
+            <li class="recall-app is-quiet"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg>Mail</li>
+            <li class="recall-app is-quiet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5Z"/><path d="M14 2v6h5"/></svg>Drive</li>
+            <li class="recall-app is-match" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/></svg>Slack</li>
+            <li class="recall-app is-match" data-relevant><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h11l5 5v11H4Z"/><path d="M8 16V8l6 8V8"/></svg>Notion</li>
+            <li class="recall-app is-quiet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19Z"/><path d="M9 9.5c.5 2.5 2.5 4.5 5 5l1-1.5"/></svg>WhatsApp</li>
+          </ul>
+        </div>
+        <div class="recall-ai">AI</div>
+        <p class="recall-a is-shown">Get him the new Murakami, not wine. He's off alcohol this year.</p>
+        <div class="recall-timer" aria-hidden="true" style="--done:.36"><svg viewBox="0 0 48 48"><path class="recall-timer-crown" d="M20 3h8M24 3v5"/><circle class="recall-timer-face" cx="24" cy="27" r="17"/><circle class="recall-timer-sweep" cx="24" cy="27" r="8" pathLength="1"/><path class="recall-timer-ticks" d="M24 12v2.5M39 27h-2.5M24 42v-2.5M9 27h2.5"/><line class="recall-timer-hand" x1="24" y1="27" x2="24" y2="14"/><circle class="recall-timer-pin" cx="24" cy="27" r="2"/></svg></div>
+        <span class="recall-token" aria-hidden="true">?</span>
+        <span class="recall-token recall-fetch" aria-hidden="true"></span>
+      </section>
+      </div>
+    </figure>
+  </section>
+
+  <div class="feat-row reveal">
+    <div class="feat-card">
+      <canvas class="feat-3d" id="feat3dPhone" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
+      <div class="feat-card-title">A proactive support team you speak with on WhatsApp</div>
+      <div class="feat-card-desc">Ask questions and get work done from your connected chat apps, wherever you happen to be.</div>
+      <div class="feat-card-icons">
+        <img src="/logos/whatsapp.svg" alt="WhatsApp"><img src="/logos/telegram.svg" alt="Telegram"><img src="/logos/discord.svg" alt="Discord"><img src="/logos/slack.svg" alt="Slack"><img src="/logos/line.svg" alt="LINE">
+      </div>
+    </div>
+    <div class="feat-card">
+      <canvas class="feat-3d" id="feat3dMac" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></canvas>
+      <div class="feat-card-title">Work with your Mac’s files and apps</div>
+      <div class="feat-card-desc">ClosedHand works with files and apps locally on your Mac, through permissions you control. Choose which access to allow, with a separate switch for broader computer control. You can revoke permissions at any time.</div>
+    </div>
+  </div>
+
+  <div class="feat-grid reveal">
+    <div class="feat-mini">
+      <span class="feat-mini-icon">🧠</span>
+      <div class="feat-mini-title">Context Brain</div>
+      <div class="feat-mini-desc">Unlimited memory that improves over time and recalls by meaning, not just keywords. What it remembers is yours to see, edit and delete.</div>
+    </div>
+    <div class="feat-mini">
+      <span class="feat-mini-icon">🛡</span>
+      <div class="feat-mini-title">Your data stays yours</div>
+      <div class="feat-mini-desc">ClosedHand is fully open source under the Apache 2.0 licence. Choose where it runs, what it can access and which models it uses, including open local models.</div>
+    </div>
+    <div class="feat-mini">
+      <span class="feat-mini-icon">📡</span>
+      <div class="feat-mini-title">Proactive Pulse</div>
+      <div class="feat-mini-desc">When enabled, Pulse checks your connected services and sends useful updates while ClosedHand is running.</div>
+    </div>
+  </div>
+
+  <div class="reveal" style="margin-bottom:24px;">
+    <div class="feat-heading">What you need to run ClosedHand</div>
+    <div class="feat-sub">Install ClosedHand, choose your AI model and connect the services you want to use.</div>
+    <div class="feat-table-wrap">
+      <table class="feat-table">
+        <tbody>
+          <tr><th scope="row">A home for it</th><td>Run the Mac app, or Docker on Mac, Windows, Linux or a rented server (VPS). Keep that computer awake and online, and use ClosedHand from any device through your dashboard or connected chat apps.</td></tr>
+          <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
+          <tr><th scope="row">Your dashboard</th><td>Set up your personal dashboard address in Settings to open ClosedHand from any device, wherever you are. Your dashboard stays on the computer running ClosedHand, protected by your password.</td></tr>
+          <tr><th scope="row">Mac access</th><td>Included in the ClosedHand app for Mac. With Docker, install the optional Bridge app on the Mac you want to access, even if Docker runs on that same Mac. Choose what to allow from the app’s menu bar.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="site-foot">
+  <a href="https://github.com/notnotjim/ClosedHand" rel="noopener">Source on GitHub</a>
+  <a href="/open">My ClosedHand</a>
+  <a href="/privacy">Privacy</a>
+  <a href="/terms">Terms</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  var isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var canvas = document.getElementById('blobCanvas');
+  var renderer;
+  // The second sentence of the heading is measured at its natural width once
+  // the fonts are in, so it can unfold to exactly that; then the hero is live.
+  window.heroLive = function() {
+    var more = document.getElementById('heroMore');
+    var go = function() {
+      if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
+      document.getElementById('heroSection').classList.add('is-live');
+    };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
+  };
+  // Phones get the still version of the ground: the smoke costs battery and
+  // a shader compile on a small screen that is mostly the chat box anyway.
+  var smallScreen = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
+  try {
+    if (isMobileDevice && smallScreen) throw new Error('phone: still background');
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobileDevice, alpha: true });
+  } catch(e) {
+    if (!/phone:/.test(e.message)) console.warn('WebGL not available:', e.message);
+    if (canvas) canvas.style.display = 'none';
+    window.heroLive();
+    // Show CSS gradient fallback
+    var fallback = document.createElement('div');
+    fallback.className = 'no-webgl-bg';
+    document.body.insertBefore(fallback, document.body.firstChild);
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.5 : 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x100E0D, 1);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.z = 5;
+
+  // === STARFIELD (behind everything) ===
+  var starCount = isMobileDevice ? 800 : 2000;
+  var starGeo = new THREE.BufferGeometry();
+  var starPos = new Float32Array(starCount * 3);
+  var starSz = new Float32Array(starCount);
+  for (var i = 0; i < starCount; i++) {
+    starPos[i*3]   = (Math.random() - 0.5) * 140;
+    starPos[i*3+1] = (Math.random() - 0.5) * 100;
+    starPos[i*3+2] = -Math.random() * 70 - 1;
+    starSz[i] = 0.4 + Math.random() * 2.0;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('size', new THREE.BufferAttribute(starSz, 1));
+
+  var starMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: [
+      'attribute float size;',
+      'uniform float uTime;',
+      'varying float vAlpha;',
+      'void main() {',
+      '  vAlpha = 0.4 + 0.6 * sin(uTime * 0.6 + position.x * 0.3 + position.y * 0.2);',
+      '  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);',
+      '  gl_PointSize = size * (50.0 / -mvPos.z);',
+      '  gl_Position = projectionMatrix * mvPos;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'varying float vAlpha;',
+      'void main() {',
+      '  float d = length(gl_PointCoord - 0.5) * 2.0;',
+      '  float a = smoothstep(1.0, 0.2, d) * vAlpha;',
+      '  gl_FragColor = vec4(0.94, 0.9, 0.84, a);',
+      '}'
+    ].join('\n'),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  scene.add(new THREE.Points(starGeo, starMat));
+
+  // === OIL-SLICK BLOB ===
+  var vertexShader = [
+    'uniform float uTime;',
+    'varying vec3 vNormal;',
+    'varying vec3 vPosition;',
+    'varying float vDisplacement;',
+    '',
+    'vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }',
+    'vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }',
+    'vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }',
+    'vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }',
+    '',
+    'float snoise(vec3 v) {',
+    '  const vec2 C = vec2(1.0/6.0, 1.0/3.0);',
+    '  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);',
+    '  vec3 i = floor(v + dot(v, C.yyy));',
+    '  vec3 x0 = v - i + dot(i, C.xxx);',
+    '  vec3 g = step(x0.yzx, x0.xyz);',
+    '  vec3 l = 1.0 - g;',
+    '  vec3 i1 = min(g.xyz, l.zxy);',
+    '  vec3 i2 = max(g.xyz, l.zxy);',
+    '  vec3 x1 = x0 - i1 + C.xxx;',
+    '  vec3 x2 = x0 - i2 + C.yyy;',
+    '  vec3 x3 = x0 - D.yyy;',
+    '  i = mod289(i);',
+    '  vec4 p = permute(permute(permute(',
+    '    i.z + vec4(0.0, i1.z, i2.z, 1.0))',
+    '    + i.y + vec4(0.0, i1.y, i2.y, 1.0))',
+    '    + i.x + vec4(0.0, i1.x, i2.x, 1.0));',
+    '  float n_ = 0.142857142857;',
+    '  vec3 ns = n_ * D.wyz - D.xzx;',
+    '  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);',
+    '  vec4 x_ = floor(j * ns.z);',
+    '  vec4 y_ = floor(j - 7.0 * x_);',
+    '  vec4 x = x_ * ns.x + ns.yyyy;',
+    '  vec4 y = y_ * ns.x + ns.yyyy;',
+    '  vec4 h = 1.0 - abs(x) - abs(y);',
+    '  vec4 b0 = vec4(x.xy, y.xy);',
+    '  vec4 b1 = vec4(x.zw, y.zw);',
+    '  vec4 s0 = floor(b0)*2.0 + 1.0;',
+    '  vec4 s1 = floor(b1)*2.0 + 1.0;',
+    '  vec4 sh = -step(h, vec4(0.0));',
+    '  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;',
+    '  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;',
+    '  vec3 p0 = vec3(a0.xy, h.x);',
+    '  vec3 p1 = vec3(a0.zw, h.y);',
+    '  vec3 p2 = vec3(a1.xy, h.z);',
+    '  vec3 p3 = vec3(a1.zw, h.w);',
+    '  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));',
+    '  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;',
+    '  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);',
+    '  m = m * m;',
+    '  return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));',
+    '}',
+    '',
+    'void main() {',
+    '  float t = uTime * 0.1;',
+    '  float n1 = snoise(position * 0.8 + t) * 0.6;',
+    '  float n2 = snoise(position * 1.5 - t * 0.5) * 0.25;',
+    '  float displacement = n1 + n2;',
+    '  vDisplacement = displacement;',
+    '  vec3 newPos = position + normal * displacement * 0.4;',
+    '  vPosition = (modelViewMatrix * vec4(newPos, 1.0)).xyz;',
+    '',
+    '  float eps = 0.05;',
+    '  vec3 tang = normalize(cross(normal, vec3(0.0,1.0,0.001)));',
+    '  vec3 bitan = cross(normal, tang);',
+    '  float dn1 = snoise((position+tang*eps)*0.8+t)*0.6 + snoise((position+tang*eps)*1.5-t*0.5)*0.25;',
+    '  float dn2 = snoise((position+bitan*eps)*0.8+t)*0.6 + snoise((position+bitan*eps)*1.5-t*0.5)*0.25;',
+    '  vec3 p1 = (position+tang*eps) + normal*dn1*0.4;',
+    '  vec3 p2 = (position+bitan*eps) + normal*dn2*0.4;',
+    '  vNormal = normalize(normalMatrix * normalize(cross(p1 - newPos, p2 - newPos)));',
+    '',
+    '  gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);',
+    '}'
+  ].join('\n');
+
+  var fragmentShader = [
+    'uniform float uTime;',
+    'uniform float uPulse;',
+    'varying vec3 vNormal;',
+    'varying vec3 vPosition;',
+    'varying float vDisplacement;',
+    '',
+    'vec3 iridescence(float angle, float disp) {',
+    '  float film = 0.5 + disp * 0.2 + angle * 0.3;',
+    '  float phase = film * 14.0 + uTime * 0.08;',
+    '  // The film cycles through the warm end of the palette, the same',
+    '  // ember the still phone ground uses: madder, ochre, a deep plum',
+    '  // and cream soft, blended by phase. Never white.',
+    '  vec3 madder = vec3(0.816, 0.337, 0.247);',
+    '  vec3 plum = vec3(0.42, 0.22, 0.30);',
+    '  vec3 ochre = vec3(0.816, 0.651, 0.322);',
+    '  vec3 soft = vec3(0.714, 0.60, 0.50);',
+    '  float w0 = sin(phase) * 0.5 + 0.5;',
+    '  float w1 = sin(phase + 1.57) * 0.5 + 0.5;',
+    '  float w2 = sin(phase + 3.14) * 0.5 + 0.5;',
+    '  float w3 = sin(phase + 4.71) * 0.5 + 0.5;',
+    '  return (madder * w0 + ochre * w1 + plum * w2 + soft * w3) / (w0 + w1 + w2 + w3);',
+    '}',
+    '',
+    'void main() {',
+    '  vec3 viewDir = normalize(-vPosition);',
+    '  vec3 n = normalize(vNormal);',
+    '  float fresnel = 1.0 - abs(dot(viewDir, n));',
+    '',
+    '  // Smoke: very transparent, wispy edges only',
+    '  float edgeFresnel = pow(fresnel, 3.0);',
+    '  vec3 iridCol = iridescence(fresnel, vDisplacement);',
+    '  vec3 base = vec3(0.012, 0.011, 0.011);',
+    '',
+    '  // Subtle iridescent colour on the wispy edges',
+    '  vec3 color = base + iridCol * edgeFresnel * 0.3;',
+    '',
+    '  // Faint rim light, ember rather than white',
+    '  color += vec3(0.78, 0.42, 0.30) * pow(fresnel, 4.5) * 0.09;',
+    '',
+    '  // Specular',
+    '  vec3 lightDir = normalize(vec3(0.3, 1.0, 0.6));',
+    '  vec3 halfDir = normalize(lightDir + viewDir);',
+    '  float spec = pow(max(dot(n, halfDir), 0.0), 60.0);',
+    '  color += vec3(0.9, 0.66, 0.50) * spec * 0.06;',
+    '',
+    '  // Pulse flash: briefly brightens everything',
+    '  color += color * uPulse * 3.0;',
+    '  color += vec3(0.5, 0.25, 0.18) * uPulse * 0.12;',
+    '',
+    '  // Gaseous alpha: very faint, edges only',
+    '  float alpha = edgeFresnel * 0.35 + pow(fresnel, 1.5) * 0.08;',
+    '  alpha += uPulse * 0.12;',
+    '  alpha = clamp(alpha, 0.0, 0.55);',
+    '',
+    '  gl_FragColor = vec4(color, alpha);',
+    '}'
+  ].join('\n');
+
+  var geometry = new THREE.IcosahedronGeometry(2.1, isMobileDevice ? 48 : 128);
+  var material = new THREE.ShaderMaterial({
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+    uniforms: { uTime: { value: 0 }, uPulse: { value: 0 } },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = -0.15;
+  scene.add(mesh);
+
+  // Blob scale target (grows in chat mode)
+  var blobScale = 1;
+  var blobScaleTarget = 1;
+  window._setBlobScale = function(s) { blobScaleTarget = s; };
+
+  var mouseX = 0, mouseY = 0;
+  var pulseValue = 0;
+  document.addEventListener('mousemove', function(e) {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+  document.addEventListener('touchmove', function(e) {
+    var t = e.touches[0];
+    mouseX = (t.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (t.clientY / window.innerHeight - 0.5) * 2;
+  }, { passive: true });
+
+  // Pulse on focus (one-shot, then decay)
+  document.addEventListener('focusin', function(e) {
+    if (e.target && e.target.id === 'chatInput') pulseValue = 1;
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.closest('#copyInstall') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) pulseValue = 1;
+  });
+
+  // === EASTER EGGS: asteroid + satellite drifting across ===
+  var drifters = [];
+  var templates = {};
+
+  function spawnDrifter(type) {
+    var tmpl = templates[type];
+    if (!tmpl) return;
+    // Only 1 of each type on screen at once
+    if (drifters.some(function(d) { return d.userData.type === type; })) return;
+
+    var m = tmpl.clone();
+    var size = type === 'satellite' ? (0.005 + Math.random() * 0.025) : (0.005 + Math.random() * 0.008);
+    var brightness = 0.06 + (size - 0.005) / 0.025 * 0.18;
+    m.traverse(function(c) {
+      if (c.isMesh) {
+        c.material = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(brightness * 1.05, brightness, brightness * 0.9),
+        });
+      }
+    });
+    m.scale.set(size, size, size);
+    var fromLeft = Math.random() > 0.5;
+    var startX = fromLeft ? -14 : 14;
+    var endX = fromLeft ? 14 : -14;
+    var y = (Math.random() - 0.5) * 7;
+    var z = -5 - Math.random() * 15;
+    m.position.set(startX, y, z);
+    m.userData = {
+      type: type,
+      vx: (endX - startX) * (0.00008 + Math.random() * 0.00012),
+      tumbleX: (Math.random() - 0.5) * 0.002,
+      tumbleY: (Math.random() - 0.5) * 0.003,
+      tumbleZ: (Math.random() - 0.5) * 0.001,
+      fromLeft: fromLeft,
+    };
+    scene.add(m);
+    drifters.push(m);
+  }
+
+  var gltfScript = document.createElement('script');
+  gltfScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+  gltfScript.onload = function() {
+    var loader = new THREE.GLTFLoader();
+    loader.load('/models/Asteroid.glb', function(gltf) {
+      templates.asteroid = gltf.scene;
+      setTimeout(function() { spawnDrifter('asteroid'); }, 15000 + Math.random() * 30000);
+    });
+    loader.load('/models/Satellite.glb', function(gltf) {
+      templates.satellite = gltf.scene;
+      setTimeout(function() { spawnDrifter('satellite'); }, 40000 + Math.random() * 60000);
+    });
+  };
+  document.head.appendChild(gltfScript);
+
+
+  function animate() {
+    requestAnimationFrame(animate);
+    starMat.uniforms.uTime.value += 0.008;
+    material.uniforms.uTime.value += 0.0012;
+
+    // Pulse decays quickly back to 0
+    pulseValue *= 0.96;
+    if (pulseValue < 0.001) pulseValue = 0;
+    material.uniforms.uPulse.value = pulseValue;
+
+    // Smooth blob scale transition
+    blobScale += (blobScaleTarget - blobScale) * 0.015;
+    mesh.scale.set(blobScale, blobScale, blobScale);
+
+    mesh.rotation.x += (mouseY * 0.1 - mesh.rotation.x) * 0.01;
+    mesh.rotation.y += (mouseX * 0.1 - mesh.rotation.y) * 0.01;
+    mesh.rotation.z += 0.0003;
+
+    // Animate drifters: straight line drift + tumble
+    for (var ai = drifters.length - 1; ai >= 0; ai--) {
+      var a = drifters[ai];
+      a.position.x += a.userData.vx;
+      a.rotation.x += a.userData.tumbleX;
+      a.rotation.y += a.userData.tumbleY;
+      a.rotation.z += a.userData.tumbleZ;
+      var gone = a.userData.fromLeft ? a.position.x > 15 : a.position.x < -15;
+      if (gone) {
+        scene.remove(a);
+        var type = a.userData.type;
+        drifters.splice(ai, 1);
+        // Schedule next spawn of same type (long delay)
+        setTimeout(function() { spawnDrifter(type); }, 120000 + Math.random() * 180000);
+      }
+    }
+
+    renderer.render(scene, camera);
+  }
+  animate();
+  // The first frame above compiles the shaders and can hold the thread for a
+  // while; the frame after it is the first one on screen, so the heading's
+  // motion starts from there.
+  requestAnimationFrame(function() { requestAnimationFrame(window.heroLive); });
+
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+</script>
+
+
+<script src="/recall-demo.js" defer></script>
+
+<!-- Scroll reveal for features section -->
+<script>
+(function() {
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+})();
+</script>
+
+<!-- 3D models for feature cards -->
+<script>
+(function() {
+  if (typeof THREE === 'undefined') return;
+
+  function waitForLoader(cb) {
+    if (typeof THREE.GLTFLoader !== 'undefined') return cb();
+    if (!document.querySelector('script[src*="GLTFLoader"]')) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+      s.onload = function() { cb(); };
+      document.head.appendChild(s);
+    } else {
+      var check = setInterval(function() {
+        if (typeof THREE.GLTFLoader !== 'undefined') { clearInterval(check); cb(); }
+      }, 100);
+    }
+  }
+
+  function render3D(canvasId, modelPath, initRotY, initRotX, fitSize, yOffset) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var r;
+    try {
+      r = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    } catch(e) { console.warn('WebGL context failed for ' + canvasId); return; }
+    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    r.setSize(canvas.clientWidth, canvas.clientHeight);
+
+    var scene = new THREE.Scene();
+    var cam = new THREE.PerspectiveCamera(28, canvas.clientWidth / canvas.clientHeight, 0.01, 100);
+    cam.position.set(0, 0.15, 3.2);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    var d = new THREE.DirectionalLight(0xffffff, 1);
+    d.position.set(3, 4, 5);
+    scene.add(d);
+    scene.add(new THREE.DirectionalLight(0xB8AC9A, 0.3).position.set(-3, 1, -2) && scene.children[scene.children.length-1] || new THREE.Object3D());
+
+    waitForLoader(function() {
+      new THREE.GLTFLoader().load(modelPath, function(gltf) {
+        var m = gltf.scene;
+        var box = new THREE.Box3().setFromObject(m);
+        var sz = box.getSize(new THREE.Vector3());
+        var ctr = box.getCenter(new THREE.Vector3());
+        var fit = (fitSize || 0.9) / Math.max(sz.x, sz.y, sz.z);
+        m.scale.multiplyScalar(fit);
+        m.position.sub(ctr.multiplyScalar(fit));
+        m.position.y += (yOffset || 0.05);
+        if (initRotY) m.rotation.y = initRotY;
+        scene.add(m);
+
+        var t = 0;
+        (function loop() {
+          requestAnimationFrame(loop);
+          t += 0.012;
+          m.rotation.y = (initRotY || 0) + Math.sin(t) * 0.3;
+          m.rotation.x = (initRotX || 0) + Math.sin(t * 0.7 + 0.5) * 0.2;
+          m.rotation.z = Math.cos(t * 0.5) * 0.08;
+          r.render(scene, cam);
+        })();
+      });
+    });
+
+    window.addEventListener('resize', function() {
+      cam.aspect = canvas.clientWidth / canvas.clientHeight;
+      cam.updateProjectionMatrix();
+      r.setSize(canvas.clientWidth, canvas.clientHeight);
+    });
+  }
+
+  // Lazy-load 3D models when they scroll into view (skip on mobile)
+  if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    var models = [
+      { id: 'feat3dPhone', url: '/models/iphone_3gs_low_poly.glb', rotX: -Math.PI / 2, rotY: 0.5, camZ: 0.7, camY: 0.2 },
+      { id: 'feat3dMac', url: '/models/vintage_computer.glb', rotX: 0 },
+    ];
+    var loaded3d = {};
+    var obs3d = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && !loaded3d[entry.target.id]) {
+          loaded3d[entry.target.id] = true;
+          var m = models.find(function(x) { return x.id === entry.target.id; });
+          if (m) render3D(m.id, m.url, m.rotX, m.rotY, m.camZ, m.camY);
+        }
+      });
+    }, { rootMargin: '200px' });
+    models.forEach(function(m) {
+      var el = document.getElementById(m.id);
+      if (el) obs3d.observe(el);
+    });
+  }
+})();
+</script>
+
+
+<script>
+(function () {
+  var btn = document.getElementById('copyInstall'), line = document.getElementById('installLine');
+  btn.addEventListener('click', function () {
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1800); };
+    function fallback() { var r = document.createRange(); r.selectNodeContents(line); var s = getSelection(); s.removeAllRanges(); s.addRange(r); try { document.execCommand('copy'); done(); } catch (e) {} }
+    if (navigator.clipboard) navigator.clipboard.writeText(line.textContent).then(done, fallback); else fallback();
+  });
+  // Everyone sees both installation options. Release metadata only updates
+  // the download destination and version, never the visitor's presumed setup.
+  fetch('https://api.github.com/repos/notnotjim/ClosedHand/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (rel) {
+      var arm = rel && rel.assets ? rel.assets.find(function (a) { return /arm64\.dmg$/i.test(a.name); }) : null;
+      var intel = rel && rel.assets ? rel.assets.find(function (a) { return /x86_64\.dmg$/i.test(a.name); }) : null;
+      var pick = arm || intel;
+      if (!pick) return;
+      var link = document.getElementById('macAppLink'), note = document.getElementById('macAppNote');
+      link.href = pick.browser_download_url;
+      note.textContent = (arm ? 'Apple Silicon' : 'Intel') + ' \u00b7 ' + Math.round(pick.size / 1048576) + ' MB \u00b7 ' + rel.tag_name;
+      if (arm && intel) { var alt = document.createElement('a'); alt.href = intel.browser_download_url; alt.textContent = 'Intel version'; alt.className = 'way-meta'; alt.style.textDecoration = 'underline'; note.after(alt); }
+    })
+    .catch(function () { /* The release-page link remains usable. */ });
+})();
+</script>
+</body>
+</html>

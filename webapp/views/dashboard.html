@@ -2450,7 +2450,7 @@
               <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
             </div>
             <div id="phone-setup" hidden>
-              <p>Choose an optional personal URL, then sign in with Google to confirm that it belongs to you. This is separate from connecting Google services and your dashboard password.</p>
+              <p>Choose an optional personal URL, then sign in with Google, or Microsoft if you prefer, to confirm that it belongs to you. This is separate from connecting your mail and calendar and from your dashboard password.</p>
               <label for="phone-address-name">Choose your personal URL</label>
               <input id="phone-address-name" class="settings-input" type="text" minlength="3" maxlength="32" pattern="[a-z][a-z0-9-]{1,30}[a-z0-9]" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="your-name" aria-describedby="phone-address-preview" oninput="previewDashboardAddress()">
               <p id="phone-address-preview" aria-live="polite">https://your-name.closedhand.ai</p>
@@ -4706,7 +4706,7 @@
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
           : 'Set up a personal URL to open your ClosedHand dashboard from any device, wherever you are.';
       } else if (p.state === 'pairing') {
-        desc.textContent = 'Open the confirmation link and sign in with Google to create your personal URL. This does not change your dashboard password.';
+        desc.textContent = 'Open the confirmation link and sign in with Google or Microsoft to create your personal URL. This does not change your dashboard password.';
         setup.hidden = false;
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
       } else if (p.error && !base) {

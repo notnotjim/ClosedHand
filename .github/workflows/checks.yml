@@ -22,6 +22,29 @@ jobs:
         run: npm install --prefix "$RUNNER_TEMP/voice-test" --ignore-scripts --no-audit --no-fund opusscript@0.1.1
       - name: Voice queue, cancellation, isolation and audio format
         run: NODE_PATH="$RUNNER_TEMP/voice-test/node_modules" node --test scripts/test-speech.js
+  # The closedhand.com service deploys from this repo, so its sign-in,
+  # personal URL and bug report routes are checked against a real Postgres.
+  closedhand-com:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install the service's packages
+        run: npm ci --prefix closedhand-com --no-audit --no-fund
+      - name: Sign-in, personal URLs and bug reports against a real database
+        run: node --test closedhand-com/test/e2e.js
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
   checks:
     runs-on: ubuntu-latest
     steps:
@@ -39,7 +62,7 @@ jobs:
             -print0 | xargs -0 -n1 node -c
 
       - name: Assistant email and connection catalogue
-        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-setup-feedback.js scripts/test-onedrive.js
+        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-setup-feedback.js scripts/test-onedrive.js scripts/test-closedhand-com.js
 
       - name: Shopify connection and renewal
         run: node --test scripts/test-shopify-connection.js

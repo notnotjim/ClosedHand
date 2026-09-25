@@ -55,6 +55,10 @@ const PAIRS = [
     copies: ["lib/mcp-client.js", "webapp/mcp-client.js"],
   },
   {
+    name: "crypto-tokens",
+    copies: ["crypto-tokens.js", "webapp/crypto-tokens.js", "closedhand-com/lib/crypto-tokens.js"],
+  },
+  {
     name: "microsoft-app",
     copies: ["lib/microsoft-app.js", "webapp/microsoft-app.js"],
   },

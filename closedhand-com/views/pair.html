@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Confirm your personal URL | ClosedHand</title>
+  <link rel="icon" href="/logocircle.png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <link rel="stylesheet" href="/open.css">
+</head>
+<body>
+  <main>
+    <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+    <h1 id="heading">Confirm your personal URL</h1>
+    <p id="requested-address" style="overflow-wrap:anywhere;font-weight:600;"></p>
+    <div id="explanation">
+      <p>Open ClosedHand from anywhere with your personal URL and dashboard password. ClosedHand keeps running on your computer or server, which needs to stay awake and online.</p>
+      <p>This page records your personal URL, the Google or Microsoft account that owns it, and the details needed to connect it. Cloudflare carries traffic to your ClosedHand.</p>
+    </div>
+    <p id="account" style="overflow-wrap:anywhere;" hidden></p>
+    <p id="consent">Confirm only if you chose this personal URL in ClosedHand.</p>
+    <div class="actions">
+      <button id="approve" class="primary" hidden disabled>Confirm personal URL</button>
+      <a id="login" class="button primary" hidden>Sign in with Google</a>
+      <a id="return" class="button primary" hidden>Continue in ClosedHand</a>
+    </div>
+    <p class="finder-secondary" id="other" hidden><a id="login-microsoft">Use a Microsoft account instead</a></p>
+    <p id="status" role="status" aria-live="polite">Checking your sign-in…</p>
+  </main>
+  <script src="/pair.js" defer></script>
+</body>
+</html>

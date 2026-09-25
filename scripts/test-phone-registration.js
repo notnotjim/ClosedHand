@@ -15,7 +15,7 @@ test('installation identity survives restart and tunnel credentials are not stor
   const url = 'https://james.closedhand.ai';
   const request = async (path, options) => { calls.push(options.headers.Authorization); return { ok: true, json: async () => path.endsWith('/register') ? { ticket: 'signed-fixture' } : { state: 'active', url, token: 'fixture-per-install-token-1234567890' } }; };
   const first = registration(values, request);
-  await Promise.all([first.begin(), first.begin()]);
+  await Promise.all([first.begin('fixture'), first.begin('fixture')]);
   assert.equal(calls[0], calls[1]);
   assert.match(values.PHONE_INSTALL_SECRET, /^enc:v1:/);
   await first.connection();
@@ -68,6 +68,14 @@ test('ownership confirmation is distinct from provisioning and a verified URL', 
     assert.equal(client.status().registrationState, state);
     assert.equal(values.PHONE_PERMANENT_URL, undefined);
   }
-  const legacy = registration({}, async () => ({ ok: true, json: async () => ({ state: 'pending' }) }));
-  await legacy.connection(); assert.equal(legacy.status().ownershipConfirmed, false);
+});
+
+test('a personal URL always has a chosen name and uses the one enrollment route', async () => {
+  const calls = [];
+  const client = registration({}, async (url) => { calls.push(url); return { ok: true, json: async () => ({ ticket: 'fixture' }) }; });
+  await assert.rejects(client.begin(), /Choose a name/);
+  assert.equal(calls.length, 0);
+  await client.begin('fixture');
+  await client.connection().catch(() => {});
+  assert.ok(calls.every(u => u.startsWith('https://closedhand.com/api/phone-enrollment/')), 'no calls to the retired route');
 });

@@ -39,7 +39,7 @@
         $('url-preview').textContent = 'https://' + state.addressName + '.closedhand.ai';
       }
       $('url-start').disabled = busy || !password;
-      $('url-start').textContent = busy ? 'Opening Google…' : 'Confirm with Google';
+      $('url-start').textContent = busy ? 'Opening…' : 'Confirm with Google';
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (saved
         ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClosedHand — Privacy Policy</title>
+  <link rel="icon" href="/logocircle.png" type="image/png">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .container { max-width: 860px; }
+    .privacy-card {
+      text-align: left;
+      max-width: 800px;
+      width: 90%;
+      margin: 2em auto;
+      background: rgba(239,230,214,0.05);
+      border-radius: 16px;
+      padding: 2.5em;
+    }
+    .privacy-card h1 { text-align: center; margin-bottom: 0.3em; color: #EFE6D6; }
+    .privacy-card .updated { text-align: center; color: #B6AFA4; font-size: 0.85em; margin-bottom: 2em; }
+    .privacy-card h2 { font-size: 1.1em; margin-top: 1.8em; margin-bottom: 0.5em; color: #EFE6D6; }
+    .privacy-card p { color: #EFE6D6; line-height: 1.7; margin-bottom: 1em; font-size: 0.95em; }
+    .privacy-card strong { color: #EFE6D6; }
+    .back-link { display: inline-block; margin-bottom: 1.5em; color: #B6AFA4; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { color: #EFE6D6; }
+    .highlight-box {
+      background: rgba(239,230,214,0.05);
+      border-left: 3px solid #D8624B;
+      padding: 1em 1.2em;
+      margin: 1.5em 0;
+      border-radius: 4px;
+    }
+    .highlight-box p { margin: 0; }
+    .privacy-footer { text-align: center; padding: 1.5em; color: #B6AFA4; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="privacy-card">
+      <a href="/" class="back-link">&larr; Back to ClosedHand</a>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: 15 September 2026</p>
+
+      <div class="highlight-box">
+        <p>ClosedHand runs on a computer you control. Your conversations, settings, connected-service credentials and Context Brain are stored there. When you choose a hosted AI provider or connect an external service, the content needed for that work is sent to it.</p>
+      </div>
+
+      <h2>What this policy covers</h2>
+      <p>This policy describes the local, open-source version of ClosedHand and the website services that help you access your local dashboard. The website does not host your local bot or its conversation database.</p>
+
+      <h2>What stays on your computer</h2>
+      <p>ClosedHand stores conversation history, preferences, Pinned facts, Context Notes, task results and searchable content from connected services in its local database. Files you upload or generate and the workspace browser's saved sessions can also remain on that computer. Connecting a service gives ClosedHand the permissions you approve, including access used by enabled background features such as Pulse.</p>
+      <p>Local storage is not a promise that every file is encrypted. Protection at rest depends on that computer's disk encryption, backups and configuration. The dashboard password set during setup is stored as a salted hash. Someone with administrator access to the computer can still access or change local data.</p>
+
+      <h2>AI models and connected services</h2>
+      <p>You choose the models and providers ClosedHand uses. Hosted models receive the messages, retrieved content, images or other information needed for their role. Their retention, training and privacy terms apply. ClosedHand cannot promise that every provider or account tier excludes training. A model running locally can process its role on your own hardware, but web searches, chat platforms and other connected services still communicate externally.</p>
+      <p>Third-party services retain data under their own policies. Disconnecting a service from ClosedHand does not delete the account or copies held by that service.</p>
+
+      <h2>Your dashboard link and the public website</h2>
+      <p>An optional personal dashboard address connects another device to the computer running ClosedHand. The computer must be awake and online. The link service stores ownership and address records and the connection credentials needed to provide that access. Signing in to find or approve an address supplies account information such as your name and email address.</p>
+      <p>Remote dashboard traffic passes through Cloudflare and the configured access service. HTTPS protects the connection in transit, but this is not end-to-end encryption that hides dashboard traffic from the infrastructure providing that connection. Website and connection providers may process IP addresses, request metadata and operational logs. Web pages may also load fonts or scripts from third-party hosts. A local dashboard password protects dashboard access; knowing the link alone does not grant access when that password is configured.</p>
+
+      <h2>Mac Bridge and workspace</h2>
+      <p>The optional Bridge app is available for Mac. It connects the Mac features you allow, such as files, apps and screen access, to ClosedHand. Content used in a request may be passed to your selected model. You can change Bridge permissions or disconnect it.</p>
+      <p>The standard local setup includes a separate workspace for browser and code tasks on the computer running ClosedHand. Workspace files and website sessions can persist until you remove them. If you configure an external workspace instead, that host's policies and storage settings also apply.</p>
+
+      <h2>Google and other connections</h2>
+      <p>The provider's consent screen lists the permissions requested. Google connections can support reading and searching mail, working with drafts, sending messages, reading and updating calendars, and finding or creating Drive files. Use the connection controls and email-confirmation setting in your dashboard to choose how ClosedHand acts.</p>
+      <p>ClosedHand's use and transfer of information received from Google APIs must adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements. Google data is used to provide the connected features, not for advertising or training general-purpose models. Choose processing services whose terms support those requirements.</p>
+
+      <h2>Skills, tools and bug reports</h2>
+      <p>Skills and external tools can extend what ClosedHand does. Review their permissions and the services they contact; a security scan is not a guarantee of safety. Ordinary local bug reports are sent to ClosedHand only after you agree to share them. Shared reports may include the diagnostic details you approve and are separate from your local conversation database.</p>
+
+      <h2>Deleting data and revoking access</h2>
+      <p>Use the dashboard to manage connected services, Pinned facts, Context Notes and stored data. You can also revoke access directly in the connected provider's account settings. Local deletion does not remove your own backups or data already held by a chat platform, model provider or other service. Workspace files and browser sessions may need to be cleared separately.</p>
+      <p>For personal information held by the public website or dashboard-link service, contact ClosedHand to request access, correction or deletion. Applicable privacy rights are not changed by storing the main application locally.</p>
+
+      <h2>Contact</h2>
+      <p>For questions about the public website or dashboard-link service, email <a href="mailto:privacy@closedhand.com">privacy@closedhand.com</a>. For a local installation operated by someone else, contact that operator.</p>
+    </div>
+
+    <div class="privacy-footer">
+      <p>&copy; 2026 ClosedHand. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

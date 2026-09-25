@@ -77,7 +77,12 @@ async function list() {
         shots ? `${shots} screenshot${shots > 1 ? "s" : ""}` : null,
         logsGone(r.created_at) ? "logs expired" : null,
       ].filter(Boolean);
-      console.log(`    ${r.id.substring(0, 8)}  ${ago(r.created_at)}  ${r.comment || "(no comment)"}${flags.length ? `  [${flags.join(", ")}]` : ""}`);
+      // Anyone can send a self-host report, so its words never go into this
+      // summary as they are: one line, printable characters, a short preview.
+      const comment = r.source === "self-host"
+        ? (r.comment ? `"${String(r.comment).replace(/[^\x20-\x7e]+/g, " ").slice(0, 80)}" (${String(r.comment).length} chars, from a stranger)` : "(no comment)")
+        : (r.comment || "(no comment)");
+      console.log(`    ${r.id.substring(0, 8)}  ${ago(r.created_at)}  ${comment}${flags.length ? `  [${flags.join(", ")}]` : ""}`);
     }
   }
   console.log(`\n  Triage with: node scripts/bug-queue.js show <id>`);
@@ -144,6 +149,12 @@ async function show(short) {
     console.log(`\nSCREENSHOTS (${shots.length}), read these files to view them:`);
     for (const s of shots) {
       const local = path.join(SHOT_DIR, path.basename(s.path));
+      // Reports sent to closedhand.com carry their screenshots inline.
+      if (typeof s.base64 === "string") {
+        fs.writeFileSync(local, Buffer.from(s.base64, "base64"));
+        console.log(`  ${local}`);
+        continue;
+      }
       const { data: blob, error: dlErr } = await supabase.storage.from("attachments").download(s.path);
       if (dlErr) {
         console.log(`  download failed for ${s.path}: ${dlErr.message}`);

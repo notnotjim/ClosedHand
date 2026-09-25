@@ -1,0 +1,14 @@
+// Copy to wrangler.jsonc (ignored by git) and fill in the IDs. Secrets are
+// set with `wrangler secret put`: CF_PHONE_API_TOKEN and PHONE_PROVISIONER_SECRET.
+{
+  "name": "closedhand-address-provisioner",
+  "main": "worker.mjs",
+  "account_id": "<cloudflare account id>",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": { "CF_ACCOUNT_ID": "<cloudflare account id>", "CF_ZONE_ID": "<closedhand.ai zone id>" },
+  "kv_namespaces": [{ "binding": "ADDRESS_HOSTS", "id": "<ADDRESS_HOSTS namespace id>" }]
+}

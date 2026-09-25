@@ -145,7 +145,7 @@ class DataSync {
         }
 
         // Derive HTTPS base URL from the WebSocket server URL
-        // wss://closedhand.ai/bridge -> https://closedhand.ai
+        // ws://localhost:3000/bridge -> http://localhost:3000
         let baseUrl = serverUrl
             .replacingOccurrences(of: "wss://", with: "https://")
             .replacingOccurrences(of: "ws://", with: "http://")

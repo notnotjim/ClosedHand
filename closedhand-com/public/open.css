@@ -1,0 +1,15 @@
+main { font-size: 16px; }
+#status { margin: 0 0 24px; }
+#address-form { margin-top: 32px; }
+#address-form label { display: block; font-weight: 500; margin-bottom: 8px; }
+#address-help { margin-bottom: 12px; }
+.address-row { display: flex; gap: 12px; }
+.address-row input { flex: 1; min-width: 0; padding: 12px 14px; font: inherit; color: var(--ui-text); background: #181615; border: 1px solid var(--ui-border); border-radius: 10px; }
+.address-row input::placeholder { color: var(--ui-muted); }
+.address-row button { flex: none; }
+#address-error { margin: 12px 0 0; color: var(--ui-text); }
+.finder-secondary { margin-top: 32px; }
+@media (max-width: 480px) {
+  .address-row { flex-direction: column; }
+  .address-row button { align-self: flex-start; }
+}

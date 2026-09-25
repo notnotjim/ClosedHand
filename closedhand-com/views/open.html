@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>My ClosedHand</title>
+  <link rel="icon" href="/logocircle.png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <link rel="stylesheet" href="/open.css">
+</head>
+<body><main>
+  <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+  <h1 id="heading">My ClosedHand</h1>
+  <p id="status" role="status" aria-live="polite">Checking for your ClosedHand personal URL…</p>
+  <div id="opening" hidden>
+    <a id="dashboard" class="button primary">Open ClosedHand</a>
+    <p class="finder-secondary"><a href="/open?choose=1">Use a different personal URL or account</a></p>
+  </div>
+  <div id="finder">
+    <details id="local-help">
+      <summary>Open on the computer where ClosedHand is installed</summary>
+      <p><strong>Mac app:</strong> Launch ClosedHand from Applications. Then click its menu bar icon and choose <strong>Open ClosedHand</strong>.</p>
+      <p><strong>Docker:</strong> Start Docker and your ClosedHand containers first. Then open <a href="http://localhost:3000">http://localhost:3000</a> on that computer. If you changed the port, use that port instead.</p>
+      <p>If Docker runs on a remote server, start ClosedHand there and forward port 3000 over SSH before opening the local link.</p>
+      <p>To open ClosedHand from any device, choose a personal URL in <strong>Settings → Personal URL</strong>.</p>
+    </details>
+    <details id="url-help">
+      <summary>Use a personal URL</summary>
+      <div class="actions">
+        <a id="login" class="button primary" href="/auth/google?return_to=%2Fopen">Find my personal URL with Google</a>
+        <button id="retry" type="button" hidden>Try again</button>
+      </div>
+      <p class="finder-secondary"><a id="login-microsoft" href="/auth/microsoft?return_to=%2Fopen">Find it with a Microsoft account instead</a></p>
+      <form id="address-form">
+        <label for="address">Your personal URL</label>
+        <p id="address-help">Enter your personal URL, such as name.closedhand.ai.</p>
+        <div class="address-row">
+          <input id="address" name="address" type="text" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="name.closedhand.ai" aria-describedby="address-help address-error" required>
+          <button type="submit">Open ClosedHand</button>
+        </div>
+        <p id="address-error" role="alert" hidden></p>
+      </form>
+    </details>
+    <p class="finder-secondary">New here? <a href="/">Get ClosedHand</a></p>
+  </div>
+  <noscript><p>Turn on JavaScript to find your personal URL here, or open your personal URL directly.</p></noscript>
+  <section><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></section>
+</main><script src="/entry-navigation.js" defer></script><script src="/open.js" defer></script></body>
+</html>
