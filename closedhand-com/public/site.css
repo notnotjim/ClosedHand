@@ -105,7 +105,7 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
 /* For visitors without ClosedHand yet: plainly not a sign-up, and where to
    get it. Quieter than the card below: an outline, no fill. */
 .newcomer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0 0; padding: 12px 12px 12px 20px; border-radius: 14px; border: 1px solid rgba(239,230,214,0.12); }
-.newcomer p { margin: 0; font-size: 14px; color: #B6AFA4; }
+.newcomer p { margin: 0; font-size: 14px; color: #B6AFA4; text-wrap: balance; }
 .newcomer strong { font-weight: 500; color: #EFE6D6; }
 .newcomer .btn { width: auto; flex: none; min-height: 40px; padding: 8px 16px; font-size: 14px; }
 /* An empty status line takes no room. */
