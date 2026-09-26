@@ -37,32 +37,36 @@
       </span>
     </div>
 
-    <!-- Returning visitors are usually sent straight on, so many who see
-         this page have no ClosedHand yet. Before any sign-in button, say
-         plainly there is nothing to sign up for, and where to get it. -->
-    <section class="newcomer" aria-label="New to ClosedHand">
-      <p><strong>New to ClosedHand?</strong> There’s nothing to sign up for. You download it.</p>
-      <a class="btn" href="/">Download ClosedHand</a>
-    </section>
-
     <!-- Shown only while Chrome asks whether this page may look for
          ClosedHand on this computer, so the question makes sense. -->
     <p class="here-note" id="here-note" hidden><span>On the computer running ClosedHand?</span> <span>Allow Chrome to look for it, and it opens straight away.</span></p>
 
-    <!-- Found: the one thing to do is open it. -->
+    <!-- One of these shows, whichever fits the visitor (see open.js). -->
+
+    <!-- Their account has a personal URL: on the way there. -->
     <section class="card" id="found" hidden>
       <p class="address" id="found-address"></p>
-      <p class="address-note" id="found-note">Your personal URL</p>
+      <p class="address-note">Your personal URL</p>
       <a class="btn btn-primary" id="found-open">Open ClosedHand</a>
       <div class="who" style="margin:16px 0 0"><span id="found-who"></span><a href="/open?choose=1">Use another account</a></div>
     </section>
 
-    <!-- Not found yet: look it up with Google or Microsoft, or type it.
-         The account is only used to look the address up; there is no
-         ClosedHand account. -->
-    <section class="card" id="find">
-      <h2 id="find-heading">Find your personal URL</h2>
-      <p id="find-hint">Continue with the Google or Microsoft account you used when you set up your personal URL.</p>
+    <!-- Their account has no personal URL, and ClosedHand isn't answering on
+         this device. closedhand.com can't tell whether they have ClosedHand
+         at all, so a quiet download line follows. -->
+    <section class="card" id="not-here" hidden>
+      <h2>Looks like you’re not on the computer running ClosedHand</h2>
+      <p>Choose a personal URL in ClosedHand’s Settings, under Personal URL, on that computer. After that, My ClosedHand takes you straight to it from any device.</p>
+      <div class="who"><span id="not-here-who"></span><a href="/open?choose=1">Use another account</a></div>
+    </section>
+    <p class="aside" id="not-here-new" hidden>Don’t have ClosedHand yet? <a href="/">Download it</a></p>
+
+    <!-- Not signed in: look it up with Google or Microsoft, or type it. The
+         account is only used to look the address up; there is no ClosedHand
+         account. -->
+    <section class="card" id="find" hidden>
+      <h2>Find your personal URL</h2>
+      <p>Continue with the Google or Microsoft account you used when you set up your personal URL.</p>
       <div class="stack">
         <a class="btn btn-primary" id="login-google" href="/auth/google?return_to=%2Fopen"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
         <a class="btn" id="login-microsoft" href="/auth/microsoft?return_to=%2Fopen"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>
@@ -77,13 +81,12 @@
         <p class="error" id="address-error" role="alert" hidden></p>
       </form>
     </section>
-
-    <p class="status" id="status" role="status" aria-live="polite"></p>
-
-    <section class="aside-block">
-      <h2>No personal URL yet?</h2>
-      <p>Until you choose one, ClosedHand opens only on the computer or server it runs on. Visit this page on that computer, or use the ClosedHand app in the menu bar or the address shown when you set it up. Choose a personal URL there in Settings, and it will open from anywhere.</p>
+    <section class="newcomer" id="newcomer" aria-label="New to ClosedHand" hidden>
+      <p><strong>New to ClosedHand?</strong> There’s nothing to sign up for. You download it.</p>
+      <a class="btn" href="/">Download ClosedHand</a>
     </section>
+
+    <p class="status" id="status" role="status" aria-live="polite">Checking…</p>
   </main>
   <footer class="site-foot"><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
   <script src="/entry-navigation.js" defer></script>

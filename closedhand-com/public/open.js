@@ -9,6 +9,15 @@
   $('login-microsoft').href = '/auth/microsoft?return_to=' + back;
   const say = (text, warn) => { $('status').textContent = text || ''; $('status').classList.toggle('warn', !!warn); };
   const providerName = p => p === 'microsoft' ? 'Microsoft' : 'Google';
+  // The page shows one screen, whichever fits the visitor: on the way to
+  // their personal URL ("found"), signed in without one ("not-here"), or
+  // not signed in ("find", with "New to ClosedHand?" under it). Nothing
+  // shows until it knows which.
+  function show(screen) {
+    for (const id of ['found', 'not-here', 'find']) $(id).hidden = id !== screen;
+    $('not-here-new').hidden = screen !== 'not-here';
+    $('newcomer').hidden = screen !== 'find';
+  }
 
   $('address').addEventListener('input', () => { automatic = false; $('address-error').hidden = true; });
   $('address-form').addEventListener('submit', event => {
@@ -37,7 +46,7 @@
       .then(d => (d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject(new Error('not here'))));
     return Promise.any(PORTS.map(ask)).catch(() => null);
   }
-  function openLocal(base) { say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
+  function openLocal(base) { show(null); say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
   async function permission() {
     if (!navigator.permissions?.query) return null;
     for (const name of ['loopback-network', 'local-network-access']) {
@@ -68,7 +77,7 @@
   })();
   lookingHere.then(found => { if (found && automatic) openLocal(found); });
 
-  let checking = false, missed = null;
+  let checking = false;
   async function check() {
     if (checking) return;
     checking = true;
@@ -77,11 +86,14 @@
       if (!response.ok) throw new Error();
       const data = await response.json();
       const found = navigation.registeredAddress(data.url);
-      const who = data.signedIn ? (data.email || 'your ' + providerName(data.provider) + ' account') : '';
-      $('found').hidden = !found || choosing;
-      $('find').hidden = found && !choosing;
-      if (found && !choosing) {
+      const who = data.email || 'your ' + providerName(data.provider) + ' account';
+      if (!data.signedIn || choosing || failedSignIn || (!found && !data.available)) {
+        show('find');
+        say(failedSignIn ? 'Sign-in didn’t finish. Try again, or type your personal URL.'
+          : !data.available ? 'Looking up personal URLs isn’t working right now. You can still type yours.' : '', failedSignIn || !data.available);
+      } else if (found) {
         const url = new URL(next, data.url).href;
+        show('found');
         $('found-address').textContent = new URL(data.url).hostname;
         $('route-url').textContent = new URL(data.url).hostname;
         $('found-open').href = url;
@@ -89,23 +101,13 @@
         say(automatic ? 'Opening your ClosedHand…' : '');
         // On the computer running ClosedHand, opening it there comes first.
         if (automatic && !(await lookingHere) && automatic) location.replace(url);
-      } else if (failedSignIn) {
-        say('Sign-in didn’t finish. Try again, or type your personal URL.', true);
-      } else if (!data.available) {
-        say('Looking up personal URLs isn’t working right now. You can still type yours.', true);
-      } else if (data.signedIn || missed) {
-        // Looked up, nothing there. Say so once, offer another account or
-        // where to set one up, and forget this account: remembering it only
-        // left a "signed in" state that meant nothing.
-        missed = missed || who;
-        $('find-heading').textContent = 'No personal URL found';
-        $('find-hint').textContent = 'There isn’t one linked to ' + missed + '. Try the account you used when you set yours up, or choose one in ClosedHand’s Settings on the computer running it.';
-        if (data.signedIn) fetch('/logout', { method: 'POST', redirect: 'manual' }).catch(() => {});
-        say('');
       } else {
+        show('not-here');
+        $('not-here-who').textContent = 'No personal URL is linked to ' + who + ' yet.';
         say('');
       }
     } catch (_) {
+      show('find');
       say('Couldn’t check just now. You can still type your personal URL.', true);
     } finally { checking = false; }
   }

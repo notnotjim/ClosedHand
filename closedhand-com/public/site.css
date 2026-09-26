@@ -53,8 +53,11 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
 .card .address-note { text-align: center; font-size: 13px; color: #8C857B; margin: 0 0 24px; }
 
 .who { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.08); margin: 0 0 16px; font-size: 14px; }
-.who span { overflow-wrap: anywhere; }
+.who span { overflow-wrap: break-word; min-width: 0; }
 .who a { flex: none; font-size: 13px; color: #B6AFA4; }
+
+#not-here .who { margin: 0; }
+#not-here h2 { font: 500 17px/1.35 var(--font-ui); margin-bottom: 8px; }
 
 /* The code the owner types into their own ClosedHand. */
 .card .code { font: 600 36px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2em; text-align: center; color: #EFE6D6; padding: 18px 12px 18px calc(12px + 0.2em); margin: 0; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.14); user-select: all; }
@@ -101,7 +104,7 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
 
 /* For visitors without ClosedHand yet: plainly not a sign-up, and where to
    get it. Quieter than the card below: an outline, no fill. */
-.newcomer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 12px 12px 12px 20px; border-radius: 14px; border: 1px solid rgba(239,230,214,0.12); }
+.newcomer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0 0; padding: 12px 12px 12px 20px; border-radius: 14px; border: 1px solid rgba(239,230,214,0.12); }
 .newcomer p { margin: 0; font-size: 14px; color: #B6AFA4; }
 .newcomer strong { font-weight: 500; color: #EFE6D6; }
 .newcomer .btn { width: auto; flex: none; min-height: 40px; padding: 8px 16px; font-size: 14px; }
@@ -132,6 +135,7 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
   .route-link { height: 32px; }
   .route-url { font-size: 11px; }
   .field input { font-size: 14px; padding: 0 12px; }
+  .who { flex-direction: column; align-items: flex-start; gap: 6px; }
   .newcomer { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px 16px; }
   .newcomer .btn { width: 100%; }
 }
