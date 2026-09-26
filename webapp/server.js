@@ -413,6 +413,16 @@ app.use((req, res, next) => {
 
 // Public health check (container healthcheck hits this; must bypass the gate below).
 app.get("/health", (req, res) => res.json({ status: "ok", service: "closedhand-webapp" }));
+// "My ClosedHand" on closedhand.com asks whether ClosedHand answers on the
+// computer the visitor is using, and opens it when it does. Only that page
+// may ask, and the answer says nothing but "here".
+function hereHeaders(req, res) {
+  if (req.headers.origin !== "https://closedhand.com") return false;
+  res.set({ "Access-Control-Allow-Origin": "https://closedhand.com", "Access-Control-Allow-Private-Network": "true", "Access-Control-Allow-Methods": "GET", "Vary": "Origin", "Cache-Control": "no-store" });
+  return true;
+}
+app.options("/closedhand-here", (req, res) => res.status(hereHeaders(req, res) ? 204 : 403).end());
+app.get("/closedhand-here", (req, res) => { if (!hereHeaders(req, res)) return res.status(403).end(); res.json({ closedhand: true }); });
 app.get('/.well-known/closedhand-installation', async (req, res) => {
   res.set('Cache-Control','no-store');
   try { res.json({ proof: await require('./phone-registration').challenge(req.query.nonce) }); }

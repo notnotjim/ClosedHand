@@ -57,6 +57,24 @@
       say('Couldn’t check just now. You can still type your personal URL.', true);
     } finally { checking = false; }
   }
-  window.addEventListener('focus', check);
-  check();
+  // On the computer running ClosedHand, open it there first. Docker uses
+  // 3000; the Mac app takes 3000 or the next free port beside a Docker one.
+  // Phones and tablets never run it, so they skip straight to the card.
+  async function local() {
+    if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) return null;
+    const ask = port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
+      .then(r => r.ok ? r.json() : null).then(d => d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject())
+      .catch(() => Promise.reject());
+    try { return await Promise.any([3000, 3002, 3001, 3003, 3004, 3005].map(ask)); } catch (_) { return null; }
+  }
+  (async () => {
+    if (automatic) {
+      say('Looking for ClosedHand on this computer…');
+      const here = await local();
+      if (here) { say('Opening ClosedHand on this computer…'); location.replace(here + (next === '/' ? '/' : next)); return; }
+      say('');
+    }
+    window.addEventListener('focus', check);
+    check();
+  })();
 })();
