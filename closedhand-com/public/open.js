@@ -23,10 +23,10 @@
 
   // On the computer running ClosedHand, open it there. Docker uses 3000; the
   // Mac app takes 3000 or the next free port beside a Docker one. Phones and
-  // tablets never run it. Chrome asks before a website may talk to programs
-  // on this computer, so the page only tries by itself where the browser
-  // allows it without asking; otherwise the person chooses "Open it here",
-  // and Chrome asks once, when it makes sense.
+  // tablets never run it. Chrome asks once before a website may look for
+  // programs on this computer; arriving here means "open my ClosedHand", so
+  // it asks now, and allowing it opens ClosedHand straight away. After that
+  // Chrome remembers, and it is automatic.
   const desktop = !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   function findLocal() {
     const ask = port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
@@ -36,28 +36,33 @@
   }
   function openLocal(base) { say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
   async function permission() {
-    if (!navigator.permissions?.query) return 'unknown';
+    if (!navigator.permissions?.query) return null;
     for (const name of ['loopback-network', 'local-network-access']) {
-      try { return (await navigator.permissions.query({ name })).state; } catch (_) {}
+      try { return await navigator.permissions.query({ name }); } catch (_) {}
     }
-    return 'unknown';
+    return null;
   }
+  // Settles quickly: where ClosedHand answers on this computer, or null.
+  // While Chrome is still asking it settles null, so a personal URL still
+  // opens; allowing afterwards opens ClosedHand here instead.
   const lookingHere = (async () => {
     if (!desktop || !automatic) return null;
-    const state = await permission();
-    if (state === 'prompt') { $('here').hidden = false; return null; }
-    return state === 'denied' ? null : findLocal();
+    const status = await permission();
+    if (!status || status.state === 'granted') return findLocal();
+    if (status.state === 'denied') return null;
+    $('here-note').hidden = false;
+    status.addEventListener('change', async () => {
+      $('here-note').hidden = true;
+      const found = status.state === 'granted' && automatic ? await findLocal() : null;
+      if (found && automatic) openLocal(found);
+    }, { once: true });
+    // This request is what makes Chrome ask. It waits for the answer, and if
+    // the question is closed without one, the note goes away.
+    fetch('http://localhost:3000/closedhand-here', { cache: 'no-store' }).catch(() => {})
+      .finally(() => { if (status.state === 'prompt') $('here-note').hidden = true; });
+    return null;
   })();
   lookingHere.then(found => { if (found && automatic) openLocal(found); });
-  $('here-open').addEventListener('click', async () => {
-    automatic = false;
-    $('here-open').disabled = true;
-    say('Looking for ClosedHand on this computer…');
-    const found = await findLocal();
-    if (found) return openLocal(found);
-    $('here-open').disabled = false;
-    say('ClosedHand isn’t answering on this computer. Check it’s running, or use your personal URL.', true);
-  });
 
   let checking = false;
   async function check() {

@@ -92,9 +92,9 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
 @keyframes route-travel { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 7px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .route-pulse { display: none; } }
 
-/* On the computer running ClosedHand: one quiet row to open it there. */
-.here { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 18px; margin: 0 0 16px; border-radius: 14px; background: #181615; border: 1px solid rgba(239,230,214,0.1); font-size: 14px; color: #B6AFA4; }
-.here .btn { width: auto; min-height: 38px; padding: 8px 16px; font-size: 14px; flex: none; }
+/* While Chrome asks to look for ClosedHand on this computer. */
+.here-note { margin: -12px auto 24px; text-align: center; font-size: 13px; color: #B6AFA4; }
+.here-note span { display: block; }
 .lede span { display: block; text-wrap: balance; }
 
 .aside-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,0.08); }
@@ -121,6 +121,5 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
   .route-icon { width: 32px; height: 32px; }
   .route-link { height: 32px; }
   .route-url { font-size: 11px; }
-  .here { padding-left: 14px; font-size: 13px; }
   .field input { font-size: 14px; padding: 0 12px; }
 }
