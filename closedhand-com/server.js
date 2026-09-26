@@ -2,7 +2,7 @@
 // for copies of ClosedHand. It holds no one's mail, files or conversations.
 const path = require('node:path');
 const express = require('express');
-const { createSessions } = require('./lib/session');
+const { createSessions, equal } = require('./lib/session');
 
 function page(name) {
   const file = path.join(__dirname, 'views', name);
@@ -27,6 +27,17 @@ function createApp({ db, env = process.env, request = fetch }) {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY' });
     next();
   });
+  // Visitors arrive through Cloudflare, which adds a header carrying
+  // EDGE_SECRET. A request that goes around Cloudflare could pretend to come
+  // from any address and slip past the rate limits, so it is turned away.
+  // Railway's health check and the route-building Worker, which carries its
+  // own secret, are let through.
+  if (env.EDGE_SECRET) {
+    app.use((req, res, next) => {
+      if (req.path === '/health' || req.path.startsWith('/api/phone-enrollment/jobs/') || equal(req.headers['x-closedhand-edge'], env.EDGE_SECRET)) return next();
+      res.status(403).type('text/plain').send('Please open https://closedhand.com');
+    });
+  }
   // Only bug reports carry screenshots; every other request is small.
   app.use('/api/bug-intake', express.json({ limit: '8mb' }));
   app.use(express.json({ limit: '32kb' }));

@@ -219,7 +219,8 @@
     #url-copy:hover { color: var(--text-primary); background: var(--accent-faint); }
     #url-copy:focus-visible, #url-value:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
     #url-copy-status { margin: 8px 0 0; font-size: 13px; color: var(--text-secondary); }
-    #url-continue { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
+    #url-continue, #url-start.is-quiet { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
+    #url-code-form { margin-top: 24px; }
     #url-password-note { color: var(--text-primary); font-weight: 500; }
     #url-preview { color: var(--text-primary); }
     .field { margin-bottom: 12px; }
@@ -493,6 +494,14 @@
                 </div>
                 <p>Your Google account confirms ownership, or a Microsoft account if you prefer.</p>
                 <button class="save-btn" id="url-start" type="submit">Confirm with Google</button>
+              </form>
+              <form id="url-code-form" hidden>
+                <div class="field">
+                  <label for="url-code">Code from closedhand.com</label>
+                  <input id="url-code" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234" aria-describedby="url-code-help">
+                  <p id="url-code-help">Confirm on closedhand.com and it shows you a code. Typing it here finishes, so the address can only ever open this ClosedHand.</p>
+                </div>
+                <button class="save-btn" id="url-code-submit" type="submit">Finish</button>
               </form>
               <p id="url-status" role="status" aria-live="polite"></p>
               <p><button class="save-btn" id="url-continue" type="button">Continue without a personal URL</button></p>

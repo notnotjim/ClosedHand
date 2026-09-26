@@ -1,7 +1,8 @@
 // Personal URLs (name.closedhand.ai). A copy of ClosedHand asks for a name,
-// its owner confirms it here after signing in, a separate Cloudflare Worker
-// builds the route, and the copy proves it answers at the new address before
-// the address is marked ready. Only routing records live here.
+// its owner confirms it here after signing in and is shown a code, and the
+// code typed into that copy finishes the request. A separate Cloudflare
+// Worker builds the route, and the copy proves it answers at the new address
+// before the address is marked ready. Only routing records live here.
 const crypto = require('node:crypto');
 const { encryptString, decryptString } = require('./crypto-tokens');
 const { equal } = require('./session');
@@ -12,6 +13,10 @@ const RESERVED = new Set(['www', 'app', 'api', 'admin', 'account', 'accounts', '
   'autodiscover', 'autoconfig', 'mta-sts', 'webmail', 'imap', 'pop', 'mx', 'ns1', 'ns2', 'sso', 'id', 'help', 'security', 'docs', 'relay', 'assist',
   'billing', 'pay', 'secure', 'static', 'cdn', 'blog', 'open', 'keep', 'setup']);
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
+// Codes leave out characters that are easy to misread (0 and O, 1, I and L).
+const CODE_LETTERS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const newCode = () => Array.from({ length: 6 }, () => CODE_LETTERS[crypto.randomInt(CODE_LETTERS.length)]).join('');
+const MAX_CODE_TRIES = 5;
 
 function validHostname(hostname) {
   if (typeof hostname !== 'string' || !hostname.endsWith('.closedhand.ai')) return false;
@@ -44,16 +49,18 @@ async function smallJson(response, max = 2048) {
 }
 
 // A copy of ClosedHand signs its requests with "Bearer <install id>.<secret>".
+// It is known by its secret alone: the ID it states proves nothing, so
+// knowing a copy's ID never lets anyone take its place.
 function installation(req) {
   const match = /^Bearer ([a-f0-9-]{36})\.([a-f0-9]{64})$/.exec(req.headers.authorization || '');
-  return match && uuid.test(match[1]) ? { id: match[1], secret: match[2], secret_hash: hash(match[2]) } : null;
+  return match ? { secret: match[2], secret_hash: hash(match[2]) } : null;
 }
 
 // A ticket carries a naming request from the copy to its owner's browser.
 // It names the copy (by the hash of its secret, never the secret) and the
 // address asked for, and is good for thirty minutes.
 function ticketFor(request, secret, now = Date.now()) {
-  const text = Buffer.from(JSON.stringify({ ...request, version: 2, expires: now + 30 * 60000 })).toString('base64url');
+  const text = Buffer.from(JSON.stringify({ ...request, version: 3, expires: now + 30 * 60000 })).toString('base64url');
   return text + '.' + crypto.createHmac('sha256', secret).update('phone-pair:' + text).digest('hex');
 }
 function readTicket(ticket, secret) {
@@ -63,37 +70,44 @@ function readTicket(ticket, secret) {
   if (!equal(parts[1], crypto.createHmac('sha256', secret).update('phone-pair:' + parts[0]).digest('hex'))) return null;
   try {
     const t = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-    return t.version === 2 && uuid.test(t.id) && /^[a-f0-9]{64}$/.test(t.secret_hash) && validHostname(t.hostname) &&
+    return t.version === 3 && /^[a-f0-9]{64}$/.test(t.secret_hash) && validHostname(t.hostname) &&
       Number.isInteger(t.port) && t.port >= 1024 && t.port <= 65535 && typeof t.expires === 'number' ? t : null;
   } catch (_) { return null; }
 }
 
 class Refusal extends Error {}
 
-// Reserve under one lock so two owners can never take the same name, one
-// owner never gets two addresses, and the address limit is exact.
-async function reserve(pool, { ownerId, ticket, limit }) {
+// A personal URL on its way to another copy reads as being built.
+const shown = row => row.state === 'revoked' && row.reprovision ? 'provisioning' : row.state;
+
+// Give an owner's personal URL to the copy that typed in their code. Under
+// one lock, so two owners can never take the same name, one owner never gets
+// two addresses, and the address limit is exact. An owner's existing address
+// moves to the new copy: the old computer's connection is cut and the route
+// is built again for this one.
+async function reserve(pool, { ownerId, secretHash, hostname, port, limit }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(490048)');
-    const existing = (await client.query('SELECT * FROM addresses WHERE id = $1 FOR UPDATE', [ticket.id])).rows[0];
-    if (existing) {
-      if (existing.owner_id !== ownerId || existing.secret_hash !== ticket.secret_hash || existing.hostname !== ticket.hostname ||
-          existing.web_port !== ticket.port || existing.state === 'revoked') {
-        throw new Refusal('This computer already has a personal URL, or it belongs to another account.');
-      }
-      await client.query('COMMIT');
-      return existing;
+    const mine = (await client.query('SELECT * FROM addresses WHERE owner_id = $1 FOR UPDATE', [ownerId])).rows[0];
+    const copy = (await client.query('SELECT id FROM addresses WHERE secret_hash = $1', [secretHash])).rows[0];
+    if (copy && copy.id !== mine?.id) throw new Refusal('This computer already has a personal URL on another account.');
+    let row;
+    if (mine) {
+      if (mine.hostname !== hostname) throw new Refusal('This account already has a personal URL, ' + mine.hostname + '.');
+      row = mine.secret_hash === secretHash && mine.state !== 'revoked' ? mine : (await client.query(
+        `UPDATE addresses SET secret_hash = $2, web_port = $3, state = 'revoked', revocation_complete = false, reprovision = true,
+           tunnel_token = NULL, updated_at = now() WHERE id = $1 RETURNING *`, [mine.id, secretHash, port])).rows[0];
+    } else {
+      if ((await client.query('SELECT 1 FROM addresses WHERE hostname = $1', [hostname])).rowCount) throw new Refusal('That personal URL is already taken. Choose another name.');
+      // Working addresses and fresh reservations count; released ones do not.
+      const live = await client.query("SELECT count(*)::int AS n FROM addresses WHERE state <> 'revoked' AND (activated_at IS NOT NULL OR created_at > now() - interval '24 hours')");
+      if (live.rows[0].n >= limit) throw new Refusal('Personal URLs are full for now. Try again later.');
+      row = (await client.query(
+        'INSERT INTO addresses (id, owner_id, secret_hash, hostname, web_port) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [crypto.randomUUID(), ownerId, secretHash, hostname, port])).rows[0];
     }
-    if ((await client.query('SELECT 1 FROM addresses WHERE owner_id = $1', [ownerId])).rowCount) throw new Refusal('This account already has a personal URL.');
-    if ((await client.query('SELECT 1 FROM addresses WHERE hostname = $1', [ticket.hostname])).rowCount) throw new Refusal('That personal URL is already taken. Choose another name.');
-    // Working addresses and fresh reservations count; released ones do not.
-    const live = await client.query("SELECT count(*)::int AS n FROM addresses WHERE state <> 'revoked' AND (activated_at IS NOT NULL OR created_at > now() - interval '24 hours')");
-    if (live.rows[0].n >= limit) throw new Refusal('Personal URLs are full for now. Try again later.');
-    const row = (await client.query(
-      'INSERT INTO addresses (id, owner_id, secret_hash, hostname, web_port) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [ticket.id, ownerId, ticket.secret_hash, ticket.hostname, ticket.port])).rows[0];
     await client.query('COMMIT');
     return row;
   } catch (e) {
@@ -130,50 +144,104 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   async function owned(req) {
     const copy = installation(req);
     if (!copy) return null;
-    const row = (await db.query('SELECT * FROM addresses WHERE id = $1', [copy.id])).rows[0];
-    return row && equal(row.secret_hash, copy.secret_hash) && row.state !== 'revoked' ? { row, copy } : null;
+    const row = (await db.query('SELECT * FROM addresses WHERE secret_hash = $1', [copy.secret_hash])).rows[0];
+    return row && shown(row) !== 'revoked' ? { row, copy } : null;
   }
 
   app.post('/api/phone-enrollment/register', wrap(async (req, res) => {
-    const copy = installation(req), { name, port } = req.body || {};
+    const copy = installation(req), { name, port, confirm } = req.body || {};
     if (!copy) return res.status(401).json({ error: 'Invalid installation.' });
+    // Copies from before confirmation codes could never finish.
+    if (confirm !== 'code') return res.status(400).json({ error: 'Update ClosedHand on your computer, then choose your personal URL again.' });
     const hostname = typeof name === 'string' ? name + '.closedhand.ai' : '';
     if (!validHostname(hostname) || !Number.isInteger(port) || port < 1024 || port > 65535) {
       return res.status(400).json({ error: 'Use 3 to 32 lowercase letters, numbers or hyphens. Start with a letter and end with a letter or number.' });
     }
-    res.json({ ticket: ticketFor({ id: copy.id, secret_hash: copy.secret_hash, hostname, port }, secret) });
+    res.json({ ticket: ticketFor({ secret_hash: copy.secret_hash, hostname, port }, secret) });
   }));
 
-  // What the confirmation page shows. Progress is revealed only to the owner
-  // of this exact request; an expired ticket can still show its owner a
-  // finished request, but can never approve anything.
+  // What the confirmation page shows. Progress, and the code while it is
+  // waiting to be typed in, are revealed only to the owner who confirmed;
+  // an expired ticket can still show its owner a finished request, but can
+  // never approve anything. "move" means this owner's address currently
+  // opens another copy.
   app.post('/api/phone-enrollment/details', wrap(async (req, res) => {
     const t = readTicket(req.body?.ticket, secret);
     if (!t) return res.status(400).json({ error: 'This confirmation link is not valid. Start again in ClosedHand.' });
-    let state = 'unconfirmed';
+    const answer = { url: 'https://' + t.hostname, state: 'unconfirmed' };
     const owner = sessions.owner(req);
     if (owner) {
-      const row = (await db.query('SELECT owner_id, secret_hash, hostname, state FROM addresses WHERE id = $1', [t.id])).rows[0];
-      if (row && row.owner_id === owner && row.hostname === t.hostname && equal(row.secret_hash, t.secret_hash)) state = row.state;
+      const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
+      if (mine && mine.hostname === t.hostname && mine.secret_hash === t.secret_hash) answer.state = shown(mine);
+      else {
+        if (mine?.hostname === t.hostname && mine.state !== 'revoked') answer.move = true;
+        const waiting = (await db.query('SELECT code FROM approvals WHERE secret_hash = $1 AND owner_id = $2 AND hostname = $3 AND expires_at > now()',
+          [t.secret_hash, owner, t.hostname])).rows[0];
+        const code = waiting && decryptString(waiting.code);
+        if (code) Object.assign(answer, { state: 'awaiting-code', code });
+      }
     }
-    if (t.expires <= Date.now() && state === 'unconfirmed') return res.status(400).json({ error: 'This confirmation expired. Start again in ClosedHand.' });
-    res.json({ url: 'https://' + t.hostname, state });
+    if (t.expires <= Date.now() && answer.state === 'unconfirmed') return res.status(400).json({ error: 'This confirmation expired. Start again in ClosedHand.' });
+    res.json(answer);
   }));
 
+  // The owner confirms. Nothing changes yet: they are shown a code, and only
+  // the copy that asked can finish by typing it in (see claim). Anything the
+  // code could not fix is refused now.
   app.post('/api/phone-enrollment/approve', wrap(async (req, res) => {
     const owner = sessions.owner(req), t = readTicket(req.body?.ticket, secret);
     if (!owner) return res.status(401).json({ error: 'Sign in to confirm that this personal URL is yours.' });
     if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this confirmation on ClosedHand.' });
     if (!t || t.expires <= Date.now()) return res.status(400).json({ error: 'This confirmation expired. Start again in ClosedHand.' });
-    const row = await reserve(db, { ownerId: owner, ticket: t, limit });
-    res.json({ state: row.state, url: 'https://' + row.hostname });
+    const url = 'https://' + t.hostname;
+    const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
+    if (mine && mine.hostname !== t.hostname) {
+      throw new Refusal('This account already has a personal URL, ' + mine.hostname + '. To use it with this computer, choose ' + mine.hostname.split('.')[0] + ' in ClosedHand.');
+    }
+    if (mine && mine.secret_hash === t.secret_hash && mine.state !== 'revoked') return res.json({ state: shown(mine), url });
+    if (!mine && (await db.query('SELECT 1 FROM addresses WHERE hostname = $1', [t.hostname])).rowCount) throw new Refusal('That personal URL is already taken. Choose another name.');
+    const copy = (await db.query('SELECT owner_id FROM addresses WHERE secret_hash = $1', [t.secret_hash])).rows[0];
+    if (copy && copy.owner_id !== owner) throw new Refusal('This computer already has a personal URL on another account.');
+    const code = newCode(), sealed = encryptString(code);
+    if (!sealed?.startsWith('enc:v1:')) throw new Error('Encryption unavailable');
+    await db.query('DELETE FROM approvals WHERE expires_at < now()');
+    // Confirming again replaces the waiting code.
+    await db.query(
+      `INSERT INTO approvals (secret_hash, owner_id, hostname, web_port, code, expires_at) VALUES ($1, $2, $3, $4, $5, now() + interval '10 minutes')
+       ON CONFLICT (secret_hash) DO UPDATE SET owner_id = EXCLUDED.owner_id, hostname = EXCLUDED.hostname, web_port = EXCLUDED.web_port,
+         code = EXCLUDED.code, attempts = 0, expires_at = EXCLUDED.expires_at, created_at = now()`,
+      [t.secret_hash, owner, t.hostname, t.port, sealed]);
+    res.json({ state: 'awaiting-code', url, code, ...(mine && mine.state !== 'revoked' ? { move: true } : {}) });
+  }));
+
+  // The copy types in the code its owner was shown. Each try is counted
+  // before the code is compared, so trying many at once gains nothing.
+  app.post('/api/phone-enrollment/claim', wrap(async (req, res) => {
+    const copy = installation(req);
+    if (!copy) return res.status(401).json({ error: 'Invalid installation.' });
+    const code = String(req.body?.code || '').toUpperCase().replace(/[\s-]/g, '');
+    const waiting = (await db.query(
+      'UPDATE approvals SET attempts = attempts + 1 WHERE secret_hash = $1 AND expires_at > now() AND attempts < $2 RETURNING *',
+      [copy.secret_hash, MAX_CODE_TRIES])).rows[0];
+    if (!waiting) return res.status(409).json({ error: 'Confirm your personal URL on closedhand.com first. It then shows the code to type here.' });
+    if (!/^[A-Z0-9]{6}$/.test(code) || !equal(code, decryptString(waiting.code) || '')) {
+      if (waiting.attempts < MAX_CODE_TRIES) return res.status(400).json({ error: 'That code does not match. Check the code on closedhand.com and try again.' });
+      await db.query('DELETE FROM approvals WHERE secret_hash = $1 AND code = $2', [copy.secret_hash, waiting.code]);
+      return res.status(400).json({ error: 'That code did not match, so it no longer works. Confirm again on closedhand.com for a new code.' });
+    }
+    // One use: only the request that removes it goes on.
+    const used = await db.query('DELETE FROM approvals WHERE secret_hash = $1 AND code = $2 RETURNING owner_id, hostname, web_port', [copy.secret_hash, waiting.code]);
+    if (!used.rowCount) return res.status(409).json({ error: 'Confirm your personal URL on closedhand.com first. It then shows the code to type here.' });
+    const a = used.rows[0];
+    const row = await reserve(db, { ownerId: a.owner_id, secretHash: copy.secret_hash, hostname: a.hostname, port: a.web_port, limit });
+    res.json({ state: shown(row), url: 'https://' + row.hostname });
   }));
 
   app.get('/api/phone-enrollment/connection', wrap(async (req, res) => {
     const found = await owned(req);
     if (!found) return res.json({ state: 'unconfirmed' });
     const { row } = found;
-    if (!['connecting', 'active'].includes(row.state)) return res.json({ state: row.state });
+    if (!['connecting', 'active'].includes(row.state)) return res.json({ state: shown(row) });
     const token = decryptString(row.tunnel_token);
     if (!token || token.length < 30) throw new Error('Missing connection');
     res.json({ state: row.state, url: 'https://' + row.hostname, token });
@@ -258,8 +326,12 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
       return res.status(400).json({ error: 'Invalid checkpoint' });
     }
     if (revoked) {
+      // A personal URL moving to another copy is built again straight away.
       const done = await db.query(
-        "UPDATE addresses SET revocation_complete = true, tunnel_token = NULL, updated_at = now() WHERE id = $1 AND attempt_id = $2 AND state = 'revoked' AND lease_until > now() RETURNING id",
+        `UPDATE addresses SET tunnel_token = NULL, updated_at = now(),
+           state = CASE WHEN reprovision THEN 'pending' ELSE 'revoked' END, revocation_complete = NOT reprovision,
+           lease_until = CASE WHEN reprovision THEN NULL ELSE lease_until END, reprovision = false
+         WHERE id = $1 AND attempt_id = $2 AND state = 'revoked' AND lease_until > now() RETURNING id`,
         [id, attempt]);
       return done.rowCount ? res.json({ ok: true }) : res.status(409).json({ error: 'Revocation lease changed' });
     }

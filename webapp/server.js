@@ -809,6 +809,17 @@ app.post("/api/phone", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// The code closedhand.com showed after its owner confirmed the personal URL.
+// Typing it here finishes the request, so only this copy can.
+app.post("/api/phone/claim", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  try {
+    await require("./phone-registration").claim((req.body || {}).code);
+    res.json(phoneAccess.status());
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
 app.get("/api/phone/qr.svg", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
   const url = await require("./config").dashboardBase() || phoneAccess.status().url;

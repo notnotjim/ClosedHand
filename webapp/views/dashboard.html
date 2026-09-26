@@ -2457,6 +2457,13 @@
               <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Continue with this personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Confirm your personal URL</a>
+              <div id="phone-code" hidden>
+                <label for="phone-code-input">Code from closedhand.com</label>
+                <input id="phone-code-input" class="settings-input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234">
+                <p>After you confirm on closedhand.com, it shows a code. Type it here to finish. Only this ClosedHand can finish, so your address can never be pointed at somebody else's computer.</p>
+                <button class="account-action-btn" id="phone-code-submit" onclick="claimDashboardLink()">Finish</button>
+                <p id="phone-code-status" role="status"></p>
+              </div>
             </div>
             <details id="phone-options" hidden>
               <summary>Link options</summary>
@@ -4677,9 +4684,12 @@
       live.hidden = !base;
       setup.hidden = !!base && permanent;
       document.getElementById('phone-options').hidden = !base && !p.enabled;
+      // Waiting for the owner to confirm on closedhand.com and type its code here.
+      var awaiting = p.state === 'pairing' && !!p.pairingUrl && !p.ownershipConfirmed;
       var pair = document.getElementById('phone-setup-link');
-      pair.hidden = !p.pairingUrl;
+      pair.hidden = !awaiting;
       if (p.pairingUrl) pair.href = p.pairingUrl;
+      document.getElementById('phone-code').hidden = !awaiting;
       document.getElementById('phone-start').textContent = p.pairingUrl ? 'Get a new confirmation link' : 'Continue with this personal URL';
       document.getElementById('phone-start').disabled = false;
       document.getElementById('phone-save').hidden = !permanent;
@@ -4705,8 +4715,8 @@
       } else if (!p.enabled) {
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
           : 'Set up a personal URL to open your ClosedHand dashboard from any device, wherever you are.';
-      } else if (p.state === 'pairing') {
-        desc.textContent = 'Open the confirmation link and sign in with Google or Microsoft to create your personal URL. This does not change your dashboard password.';
+      } else if (awaiting) {
+        desc.textContent = 'Open the confirmation link and sign in with Google or Microsoft. closedhand.com then shows a code to type below. This does not change your dashboard password.';
         setup.hidden = false;
         _phonePoll = setTimeout(loadPhoneAccess, 4000);
       } else if (p.error && !base) {
@@ -4735,6 +4745,19 @@
         if (!r.ok) throw new Error(data.error || 'Could not connect your address. Try again.');
         renderPhone(data);
       } catch (e) { document.getElementById('phone-desc').textContent = e.message; }
+      finally { btn.disabled = false; }
+    }
+    async function claimDashboardLink() {
+      var btn = document.getElementById('phone-code-submit'), status = document.getElementById('phone-code-status');
+      btn.disabled = true; status.textContent = 'Checking…';
+      try {
+        var r = await fetch('/api/phone/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: document.getElementById('phone-code-input').value }) });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error(data.error || 'Could not check the code. Please try again.');
+        document.getElementById('phone-code-input').value = '';
+        status.textContent = '';
+        loadPhoneAccess();
+      } catch (e) { status.textContent = e.message; }
       finally { btn.disabled = false; }
     }
     async function copyDashboardLink() {

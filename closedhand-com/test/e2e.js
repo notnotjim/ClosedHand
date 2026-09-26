@@ -100,55 +100,150 @@ test('an owner carried over from the old service is claimed only by the same ver
   assert.ok(unverified.cookie && ms.cookie && verified.cookie);
 });
 
-test('personal URL: request, confirm, build, connect, and every refusal on the way', async () => {
-  const installId = crypto.randomUUID(), installSecret = crypto.randomBytes(32).toString('hex');
-  challengeSecret = installSecret;
-  const bearer = { Authorization: `Bearer ${installId}.${installSecret}` };
-  const reg = await (await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000 }, bearer)).json();
-  assert.ok(reg.ticket);
-  assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'admin', port: 3000 }, bearer)).status, 400, 'reserved name');
-  assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000 })).status, 401, 'no installation');
-  const unsigned = await (await json('POST', '/api/phone-enrollment/details', { ticket: reg.ticket })).json();
-  assert.deepEqual(unsigned, { url: 'https://alex.closedhand.ai', state: 'unconfirmed' });
+// A copy of ClosedHand, as the service sees it: a secret and the port it runs on.
+const newCopy = (port = 3000) => {
+  const secret = crypto.randomBytes(32).toString('hex');
+  return { secret, port, hash: crypto.createHash('sha256').update(secret).digest('hex'), auth: { Authorization: `Bearer ${crypto.randomUUID()}.${secret}` } };
+};
+const signedIn = cookie => ({ cookie, Origin: 'https://closedhand.com' });
+const worker = { Authorization: 'Bearer ' + env.PHONE_PROVISIONER_SECRET };
+const tunnelToken = t => Buffer.from(JSON.stringify({ a: 'f'.repeat(32), t, s: crypto.randomBytes(32).toString('base64') })).toString('base64');
+async function ask(copy, name) {
+  const r = await json('POST', '/api/phone-enrollment/register', { name, port: copy.port, confirm: 'code' }, copy.auth);
+  assert.equal(r.status, 200, name);
+  return (await r.json()).ticket;
+}
+// The Worker builds (or rebuilds) the route and hands over a connection.
+async function build(tunnelId = crypto.randomUUID(), dnsId = crypto.randomBytes(16).toString('hex')) {
+  const { job } = await (await json('POST', '/api/phone-enrollment/jobs/lease', {}, worker)).json();
+  assert.ok(job && !job.revoked, 'a build job');
+  const token = tunnelToken(tunnelId);
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/jobs/checkpoint', { id: job.id, attempt: job.attempt, tunnelId, dnsId, token }, worker)).json(), { ok: true });
+  return { job, token };
+}
+
+test('personal URL: request, confirm, type the code, build, connect, and every refusal on the way', async () => {
+  const copy = newCopy();
+  challengeSecret = copy.secret;
+  const outdated = await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000 }, copy.auth);
+  assert.equal(outdated.status, 400);
+  assert.match((await outdated.json()).error, /Update ClosedHand/, 'a copy from before codes is told to update');
+  const ticket = await ask(copy, 'alex');
+  assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'admin', port: 3000, confirm: 'code' }, copy.auth)).status, 400, 'reserved name');
+  assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000, confirm: 'code' })).status, 401, 'no installation');
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/details', { ticket })).json(), { url: 'https://alex.closedhand.ai', state: 'unconfirmed' });
   const owner = await signIn('microsoft', microsoft('9188040d-6c67-4c5b-b112-36a304b66dad', '00000000-0000-0000-aaaa-000000000001', 'alex@outlook.com'));
-  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket: reg.ticket })).status, 401, 'not signed in');
-  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket: reg.ticket }, { cookie: owner.cookie, Origin: 'https://evil.example' })).status, 403, 'other origin');
-  const tampered = reg.ticket.replace(/.$/, c => (c === 'a' ? 'b' : 'a'));
-  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket: tampered }, { cookie: owner.cookie, Origin: 'https://closedhand.com' })).status, 400, 'tampered ticket');
-  const approved = await (await json('POST', '/api/phone-enrollment/approve', { ticket: reg.ticket }, { cookie: owner.cookie, Origin: 'https://closedhand.com' })).json();
-  assert.deepEqual(approved, { state: 'pending', url: 'https://alex.closedhand.ai' });
-  // Somebody else asking for the same name is refused.
-  const otherId = crypto.randomUUID(), otherSecret = crypto.randomBytes(32).toString('hex');
-  const other = await (await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000 }, { Authorization: `Bearer ${otherId}.${otherSecret}` })).json();
+  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket })).status, 401, 'not signed in');
+  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket }, { cookie: owner.cookie, Origin: 'https://evil.example' })).status, 403, 'other origin');
+  const tampered = ticket.replace(/.$/, c => (c === 'a' ? 'b' : 'a'));
+  assert.equal((await json('POST', '/api/phone-enrollment/approve', { ticket: tampered }, signedIn(owner.cookie))).status, 400, 'tampered ticket');
+  // Confirming shows a code and changes nothing yet.
+  assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: 'ABC234' }, copy.auth)).status, 409, 'nothing to finish before confirming');
+  const approved = await (await json('POST', '/api/phone-enrollment/approve', { ticket }, signedIn(owner.cookie))).json();
+  assert.equal(approved.state, 'awaiting-code'); assert.match(approved.code, /^[A-HJKMNP-Z2-9]{6}$/); assert.equal(approved.move, undefined);
+  assert.equal((await db.query("SELECT 1 FROM addresses WHERE hostname = 'alex.closedhand.ai'")).rowCount, 0);
+  const shown = await (await json('POST', '/api/phone-enrollment/details', { ticket }, { cookie: owner.cookie })).json();
+  assert.deepEqual(shown, { url: 'https://alex.closedhand.ai', state: 'awaiting-code', code: approved.code }, 'the owner sees the code again after a reload');
   const rival = await signIn('google', google('g-rival', 'rival@example.com'));
-  const taken = await json('POST', '/api/phone-enrollment/approve', { ticket: other.ticket }, { cookie: rival.cookie, Origin: 'https://closedhand.com' });
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/details', { ticket }, { cookie: rival.cookie })).json(), { url: 'https://alex.closedhand.ai', state: 'unconfirmed' }, 'nobody else sees it');
+  const stored = (await db.query('SELECT code FROM approvals WHERE secret_hash = $1', [copy.hash])).rows[0].code;
+  assert.ok(stored.startsWith('enc:v1:') && !stored.includes(approved.code), 'the code is stored sealed');
+  // Only the copy that asked can finish, and only with the right code.
+  assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: approved.code }, newCopy().auth)).status, 409, 'another copy cannot use the code');
+  const wrong = await json('POST', '/api/phone-enrollment/claim', { code: approved.code === 'ABC234' ? 'ABC235' : 'ABC234' }, copy.auth);
+  assert.equal(wrong.status, 400); assert.match((await wrong.json()).error, /does not match/);
+  const done = await (await json('POST', '/api/phone-enrollment/claim', { code: approved.code.slice(0, 3).toLowerCase() + ' ' + approved.code.slice(3) }, copy.auth)).json();
+  assert.deepEqual(done, { state: 'pending', url: 'https://alex.closedhand.ai' }, 'typed with a space and in lower case still works');
+  assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: approved.code }, copy.auth)).status, 409, 'a code works once');
+  // Somebody else asking for the same name is refused before any code.
+  const otherTicket = await ask(newCopy(), 'alex');
+  const taken = await json('POST', '/api/phone-enrollment/approve', { ticket: otherTicket }, signedIn(rival.cookie));
   assert.equal(taken.status, 409);
   assert.match((await taken.json()).error, /already taken/);
   // The Worker builds the route.
-  const worker = { Authorization: 'Bearer ' + env.PHONE_PROVISIONER_SECRET };
   assert.equal((await json('POST', '/api/phone-enrollment/jobs/lease', {}, { Authorization: 'Bearer wrong' })).status, 401);
   const { job } = await (await json('POST', '/api/phone-enrollment/jobs/lease', {}, worker)).json();
   assert.equal(job.hostname, 'alex.closedhand.ai'); assert.equal(job.port, 3000);
-  const tunnelId = crypto.randomUUID(), dnsId = crypto.randomBytes(16).toString('hex');
-  const tunnelToken = t => Buffer.from(JSON.stringify({ a: 'f'.repeat(32), t, s: crypto.randomBytes(32).toString('base64') })).toString('base64');
-  const token = tunnelToken(tunnelId);
+  const tunnelId = crypto.randomUUID(), dnsId = crypto.randomBytes(16).toString('hex'), token = tunnelToken(tunnelId);
   const wrongTunnel = await json('POST', '/api/phone-enrollment/jobs/checkpoint', { id: job.id, attempt: job.attempt, tunnelId, dnsId, token: tunnelToken(crypto.randomUUID()) }, worker);
   assert.equal(wrongTunnel.status, 400, 'a token for some other tunnel is refused');
   assert.deepEqual(await (await json('POST', '/api/phone-enrollment/jobs/checkpoint', { id: job.id, attempt: job.attempt, tunnelId, dnsId, token }, worker)).json(), { ok: true });
-  const stored = (await db.query('SELECT tunnel_token, state FROM addresses WHERE id = $1', [installId])).rows[0];
-  assert.equal(stored.state, 'connecting'); assert.ok(stored.tunnel_token.startsWith('enc:v1:')); assert.ok(!stored.tunnel_token.includes(token));
+  const row = (await db.query('SELECT tunnel_token, state FROM addresses WHERE id = $1', [job.id])).rows[0];
+  assert.equal(row.state, 'connecting'); assert.ok(row.tunnel_token.startsWith('enc:v1:')); assert.ok(!row.tunnel_token.includes(token));
   // The copy collects its connection, connects, and proves it answers there.
-  const conn = await (await fetch(base + '/api/phone-enrollment/connection', { headers: bearer })).json();
-  assert.deepEqual(conn, { state: 'connecting', url: 'https://alex.closedhand.ai', token });
-  const wrongCopy = await (await fetch(base + '/api/phone-enrollment/connection', { headers: { Authorization: `Bearer ${installId}.${'0'.repeat(64)}` } })).json();
-  assert.deepEqual(wrongCopy, { state: 'unconfirmed' }, 'the wrong secret learns nothing');
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: copy.auth })).json(), { state: 'connecting', url: 'https://alex.closedhand.ai', token });
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: newCopy().auth })).json(), { state: 'unconfirmed' }, 'the wrong secret learns nothing');
   challengeSecret = crypto.randomBytes(32).toString('hex');
-  assert.equal((await json('POST', '/api/phone-enrollment/connected', {}, bearer)).status, 409, 'a wrong answer to the challenge does not activate');
-  challengeSecret = installSecret;
-  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/connected', {}, bearer)).json(), { state: 'active' });
+  assert.equal((await json('POST', '/api/phone-enrollment/connected', {}, copy.auth)).status, 409, 'a wrong answer to the challenge does not activate');
+  challengeSecret = copy.secret;
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/connected', {}, copy.auth)).json(), { state: 'active' });
   assert.equal((await account(owner.cookie)).url, 'https://alex.closedhand.ai');
   assert.equal((await account(rival.cookie)).url, null);
-  assert.equal((await (await json('POST', '/api/phone-enrollment/details', { ticket: reg.ticket }, { cookie: rival.cookie })).json()).state, 'unconfirmed', 'progress only for its owner');
+  assert.equal((await (await json('POST', '/api/phone-enrollment/details', { ticket }, { cookie: rival.cookie })).json()).state, 'unconfirmed', 'progress only for its owner');
+
+  // Reinstalling: the owner moves alex to a new copy on another port.
+  const fresh = newCopy(3100);
+  const moveTicket = await ask(fresh, 'alex');
+  assert.equal((await (await json('POST', '/api/phone-enrollment/details', { ticket: moveTicket }, { cookie: owner.cookie })).json()).move, true, 'the page says it is a move');
+  const moving = await (await json('POST', '/api/phone-enrollment/approve', { ticket: moveTicket }, signedIn(owner.cookie))).json();
+  assert.equal(moving.move, true);
+  assert.equal((await account(owner.cookie)).url, 'https://alex.closedhand.ai', 'confirming alone moves nothing');
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/claim', { code: moving.code }, fresh.auth)).json(), { state: 'provisioning', url: 'https://alex.closedhand.ai' });
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: copy.auth })).json(), { state: 'unconfirmed' }, 'the old copy lost it');
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: fresh.auth })).json(), { state: 'provisioning' });
+  // The Worker cuts the old computer off, then builds the route again, keeping its name.
+  const cut = (await (await json('POST', '/api/phone-enrollment/jobs/lease', {}, worker)).json()).job;
+  assert.equal(cut.id, job.id); assert.equal(cut.revoked, true); assert.equal(cut.tunnelId, tunnelId);
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/jobs/checkpoint', { id: cut.id, attempt: cut.attempt, revoked: true }, worker)).json(), { ok: true });
+  const rebuilt = await build(tunnelId, dnsId);
+  assert.equal(rebuilt.job.id, job.id); assert.equal(rebuilt.job.port, 3100); assert.equal(rebuilt.job.revoked, false);
+  assert.equal((await (await fetch(base + '/api/phone-enrollment/connection', { headers: fresh.auth })).json()).token, rebuilt.token);
+  challengeSecret = fresh.secret;
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/connected', {}, fresh.auth)).json(), { state: 'active' });
+  assert.equal((await account(owner.cookie)).url, 'https://alex.closedhand.ai');
+  // An owner cannot take a second name, even from a new copy.
+  const second = await json('POST', '/api/phone-enrollment/approve', { ticket: await ask(newCopy(), 'alex-two') }, signedIn(owner.cookie));
+  assert.equal(second.status, 409); assert.match((await second.json()).error, /already has a personal URL, alex\.closedhand\.ai/);
+});
+
+test('a confirmation link sent by somebody else cannot point your address at their computer', async () => {
+  const victim = await signIn('google', google('g-target', 'target@example.com'));
+  // The attacker's copy asks for a name and sends the victim the link.
+  const attacker = newCopy();
+  const approved = await (await json('POST', '/api/phone-enrollment/approve', { ticket: await ask(attacker, 'target') }, signedIn(victim.cookie))).json();
+  assert.equal(approved.state, 'awaiting-code');
+  // The victim types the code into their own ClosedHand: it does not finish the attacker's request.
+  assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: approved.code }, newCopy().auth)).status, 409);
+  // The attacker guesses, many at once: only five tries ever count, then the code is gone.
+  const guesses = Array.from({ length: 30 }, (_, i) => 'ZZZ' + String(200 + i).slice(-3).replace(/[01]/g, '2'));
+  const answers = await Promise.all(guesses.filter(g => g !== approved.code).map(code => json('POST', '/api/phone-enrollment/claim', { code }, attacker.auth)));
+  assert.equal(answers.filter(r => r.status === 400).length, 5, 'five tries counted');
+  assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: approved.code }, attacker.auth)).status, 409, 'even the right code is too late');
+  assert.equal((await db.query("SELECT 1 FROM addresses WHERE hostname = 'target.closedhand.ai'")).rowCount, 0);
+  // Knowing a copy's install ID is no longer a way to take its place: IDs are not identities.
+  const id = crypto.randomUUID(), a = newCopy(), b = newCopy();
+  a.auth = { Authorization: `Bearer ${id}.${a.secret}` }; b.auth = { Authorization: `Bearer ${id}.${b.secret}` };
+  const first = await signIn('google', google('g-first', 'first@example.com'));
+  const aCode = (await (await json('POST', '/api/phone-enrollment/approve', { ticket: await ask(a, 'first') }, signedIn(first.cookie))).json()).code;
+  assert.equal((await (await json('POST', '/api/phone-enrollment/claim', { code: aCode }, a.auth)).json()).state, 'pending');
+  const second = await signIn('google', google('g-second', 'second@example.com'));
+  const bCode = (await (await json('POST', '/api/phone-enrollment/approve', { ticket: await ask(b, 'second') }, signedIn(second.cookie))).json()).code;
+  assert.equal((await (await json('POST', '/api/phone-enrollment/claim', { code: bCode }, b.auth)).json()).state, 'pending', 'the same stated ID does not block another copy');
+  assert.equal((await (await fetch(base + '/api/phone-enrollment/connection', { headers: b.auth })).json()).state, 'pending');
+});
+
+test('with EDGE_SECRET set, only requests through Cloudflare reach the site', async () => {
+  const edge = createApp({ db, env: { ...env, EDGE_SECRET: 'e'.repeat(48) }, request }).app;
+  const s = await new Promise(r => { const x = edge.listen(0, () => r(x)); });
+  const at = 'http://127.0.0.1:' + s.address().port;
+  try {
+    assert.equal((await fetch(at + '/')).status, 403, 'straight to the origin');
+    assert.equal((await fetch(at + '/', { headers: { 'X-ClosedHand-Edge': 'wrong' } })).status, 403);
+    assert.equal((await fetch(at + '/', { headers: { 'X-ClosedHand-Edge': 'e'.repeat(48) } })).status, 200, 'through Cloudflare');
+    assert.equal((await fetch(at + '/health')).status, 200, 'Railway health check');
+    const lease = await fetch(at + '/api/phone-enrollment/jobs/lease', { method: 'POST', headers: { 'Content-Type': 'application/json', ...worker }, body: '{}' });
+    assert.equal(lease.status, 200, 'the route-building Worker');
+  } finally { s.close(); }
 });
 
 test('bug reports: saved once per submission, with a receipt that checks only that report', async () => {
@@ -173,7 +268,7 @@ test('the attacks from the security review fail cleanly', async () => {
   // Lookalike and service-style names are refused.
   const id = crypto.randomUUID(), sec = crypto.randomBytes(32).toString('hex');
   for (const name of ['xn--pple-43d', 'autodiscover', 'webmail']) {
-    assert.equal((await json('POST', '/api/phone-enrollment/register', { name, port: 3000 }, { Authorization: `Bearer ${id}.${sec}` })).status, 400, name);
+    assert.equal((await json('POST', '/api/phone-enrollment/register', { name, port: 3000, confirm: 'code' }, { Authorization: `Bearer ${id}.${sec}` })).status, 400, name);
   }
   // Large bodies only on bug intake; errors never show internals.
   const big = await json('POST', '/api/phone-enrollment/register', { name: 'x'.repeat(40000), port: 3000 }, { Authorization: `Bearer ${id}.${sec}` });

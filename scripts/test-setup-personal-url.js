@@ -91,7 +91,9 @@ test('background polling cannot silently swallow an enrollment click or overwrit
   assert.equal(f.calls.filter(c => c.method === 'POST').length, 1);
   finishPoll({ state: 'off' }); await tick();
   assert.deepEqual(f.opened, ['https://closedhand.com/phone-access/pair#new-ticket']);
-  assert.equal(f.node('url-status').textContent, 'Waiting for Google confirmation.');
+  assert.equal(f.node('url-status').textContent, '');
+  assert.equal(f.node('url-code-form').hidden, false, 'the code field says what to do next');
+  assert.equal(f.node('url-start').textContent, 'Open closedhand.com again');
   assert.equal(f.node('url-start').disabled, false);
 });
 test('a pending confirmation can be refreshed after reload without retyping the URL name', async () => {
@@ -126,10 +128,11 @@ test('approved setup replaces the confirmation form while the URL connects, then
   let state = { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#ticket', addressName: 'example' };
   const f = fixture(() => state); await f.update();
   assert.equal(f.node('url-form').hidden, false);
-  assert.match(f.node('url-status').textContent, /Waiting for Google/);
+  assert.equal(f.node('url-code-form').hidden, false, 'the code field shows while waiting');
   state = { enabled: true, state: 'provisioning', ownershipConfirmed: true, registrationState: 'pending', addressName: 'example' };
   await f.update();
   assert.equal(f.node('url-form').hidden, true);
+  assert.equal(f.node('url-code-form').hidden, true, 'and goes once the code is accepted');
   assert.match(f.node('url-status').textContent, /confirmed/);
   assert.equal(f.node('url-value').value, 'https://example.closedhand.ai/');
   assert.equal(f.node('url-copy').hidden, true);
@@ -157,4 +160,20 @@ test('reloading a completed setup still announces readiness once so an old step 
   f.storage.set('ch-setup-personal-url:first','done');
   await f.update();assert.equal(f.api.settled(),true);assert.equal(f.changes(),1);
   await f.update();assert.equal(f.changes(),1,'background polling must not close a manually reopened step');
+});
+
+test('typing the code sends it once, clears it on success and keeps a refusal readable', async () => {
+  let reply = { error: 'That code does not match. Check the code on closedhand.com and try again.' };
+  const f = fixture(o => o.method === 'POST' ? reply : { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#ticket', addressName: 'example' });
+  await f.update();
+  f.node('url-code').value = 'abc 234';
+  await f.event('url-code-form', 'submit'); await tick();
+  const sent = f.calls.filter(c => c.method === 'POST');
+  assert.equal(sent.length, 1); assert.deepEqual(JSON.parse(sent[0].body), { code: 'abc 234' });
+  assert.match(f.node('url-status').textContent, /does not match/);
+  assert.equal(f.node('url-code').value, 'abc 234', 'a refused code stays so it can be corrected');
+  reply = { state: 'pairing', enabled: true, ownershipConfirmed: true };
+  await f.event('url-code-form', 'submit'); await tick();
+  assert.equal(f.node('url-code').value, '');
+  assert.equal(f.node('url-code-submit').disabled, false);
 });

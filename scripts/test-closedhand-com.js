@@ -38,7 +38,7 @@ test('Google and Microsoft identities come from their permanent IDs, never the e
 });
 
 test('personal URL tickets carry one request, signed, for thirty minutes', () => {
-  const secret = 'k'.repeat(40), request = { id: crypto.randomUUID(), secret_hash: 'a'.repeat(64), hostname: 'alex.closedhand.ai', port: 3000 };
+  const secret = 'k'.repeat(40), request = { secret_hash: 'a'.repeat(64), hostname: 'alex.closedhand.ai', port: 3000 };
   const ticket = addresses.ticketFor(request, secret);
   assert.equal(addresses.readTicket(ticket, secret).hostname, 'alex.closedhand.ai');
   assert.equal(addresses.readTicket(ticket, 'other'.repeat(8)), null);
@@ -46,7 +46,13 @@ test('personal URL tickets carry one request, signed, for thirty minutes', () =>
   assert.ok(addresses.readTicket(addresses.ticketFor(request, secret, Date.now() - 31 * 60000), secret).expires < Date.now(), 'expiry is visible to the caller');
   assert.equal(addresses.validHostname('a.closedhand.ai'), false);
   assert.equal(addresses.validHostname('alex.closedhand.ai.evil.com'), false);
-  assert.equal(addresses.installation({ headers: { authorization: 'Bearer ' + request.id + '.' + 'b'.repeat(64) } }).secret_hash, crypto.createHash('sha256').update('b'.repeat(64)).digest('hex'));
+  // A copy is known by its secret; the ID it states is not part of who it is.
+  const copy = addresses.installation({ headers: { authorization: 'Bearer ' + crypto.randomUUID() + '.' + 'b'.repeat(64) } });
+  assert.equal(copy.secret_hash, crypto.createHash('sha256').update('b'.repeat(64)).digest('hex'));
+  assert.equal(copy.id, undefined);
+  // Tickets from before confirmation codes are not accepted.
+  const old = Buffer.from(JSON.stringify({ ...request, id: crypto.randomUUID(), version: 2, expires: Date.now() + 60000 })).toString('base64url');
+  assert.equal(addresses.readTicket(old + '.' + crypto.createHmac('sha256', secret).update('phone-pair:' + old).digest('hex'), secret), null);
 });
 
 test('bug receipts and sign-in return paths stay narrow', () => {

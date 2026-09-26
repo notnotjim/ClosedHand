@@ -52,6 +52,10 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
 .who span { overflow-wrap: anywhere; }
 .who a { flex: none; font-size: 13px; color: #B6AFA4; }
 
+/* The code the owner types into their own ClosedHand. */
+.card .code { font: 600 36px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2em; text-align: center; color: #EFE6D6; padding: 18px 12px 18px calc(12px + 0.2em); margin: 0; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.14); user-select: all; }
+.card .code-note { text-align: center; }
+
 /* Where a confirmation has got to: confirmed, connecting, ready. */
 .steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 14px; }
 .steps li { display: flex; align-items: center; gap: 12px; color: #8C857B; font-size: 14px; }
@@ -97,6 +101,7 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
   .title { font-size: 28px; }
   .card { padding: 22px 18px; border-radius: 16px; }
   .card .address { font-size: 21px; }
+  .card .code { font-size: 30px; }
   .route { gap: 8px; }
   .route-link span { font-size: 11px; padding: 3px 8px; }
 }

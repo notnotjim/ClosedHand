@@ -46,7 +46,7 @@ test('new address stays unpublished until the exact installation confirms it', a
   });
   await client.begin('fixture');
   assert.ok(calls[0].url.includes('/phone-enrollment/register'));
-  assert.deepEqual(JSON.parse(calls[0].options.body),{name:'fixture',port:3000});
+  assert.deepEqual(JSON.parse(calls[0].options.body),{name:'fixture',port:3000,confirm:'code'});
   const connecting=await client.connection();assert.equal(connecting.verify,true);
   assert.equal(values.PHONE_PERMANENT_URL,undefined);assert.equal(values.PHONE_TUNNEL_TOKEN,undefined);
   const nonce='b'.repeat(64),secret=values.PHONE_INSTALL_SECRET.replace('enc:v1:','');
@@ -78,4 +78,20 @@ test('a personal URL always has a chosen name and uses the one enrollment route'
   await client.begin('fixture');
   await client.connection().catch(() => {});
   assert.ok(calls.every(u => u.startsWith('https://closedhand.com/api/phone-enrollment/')), 'no calls to the retired route');
+});
+
+test('the code from closedhand.com is checked, tidied and sent only by this copy', async () => {
+  const values = {}, calls = [];
+  const client = registration(values, async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ state: 'pending', url: 'https://fixture.closedhand.ai' }) }; });
+  await assert.rejects(client.claim('12'), /6 letters and numbers/);
+  await assert.rejects(client.claim(''), /6 letters and numbers/);
+  assert.equal(calls.length, 0, 'nothing sent for a malformed code');
+  assert.equal((await client.claim(' abc-234 ')).state, 'pending');
+  assert.ok(calls[0].url.endsWith('/api/phone-enrollment/claim'));
+  assert.deepEqual(JSON.parse(calls[0].options.body), { code: 'ABC234' });
+  assert.match(calls[0].options.headers.Authorization, /^Bearer [a-f0-9-]{36}\.[a-f0-9]{64}$/);
+  assert.equal(client.status().ownershipConfirmed, true);
+  const refused = registration({}, async () => ({ ok: false, json: async () => ({ error: 'That code does not match. Check the code on closedhand.com and try again.' }) }));
+  await assert.rejects(refused.claim('ABC234'), /does not match/);
+  assert.equal(refused.status().ownershipConfirmed, false);
 });

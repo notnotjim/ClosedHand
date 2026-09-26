@@ -38,7 +38,9 @@ async function begin(name) {
   name = name || await getConf('PHONE_ADDRESS_NAME');
   if (!name) throw new Error('Choose a name for your personal URL first.');
   if (!validAddress('https://' + name + '.closedhand.ai')) throw new Error('Choose a valid address name.');
-  const data = await call('register', 'POST', { name, port: Number(process.env.PORT || 3000) });
+  // closedhand.com shows its owner a code after they confirm; typing it in
+  // here (claim) is what finishes, so only this copy can.
+  const data = await call('register', 'POST', { name, port: Number(process.env.PORT || 3000), confirm: 'code' });
   if (typeof data.ticket !== 'string') throw new Error('Could not start phone access.');
   await setConf({ PHONE_ADDRESS_NAME: name, PHONE_ENROLLMENT: '2' });
   return PROVIDER + '/phone-access/pair#' + encodeURIComponent(data.ticket);
@@ -75,6 +77,13 @@ async function confirm(permanent) {
   await call('connected','POST',{});
   await setConf({ PHONE_PERMANENT_URL: permanent.url, PHONE_TUNNEL_TOKEN: encrypted(permanent.token) });
 }
+async function claim(code) {
+  code = String(code || '').toUpperCase().replace(/[\s-]/g, '');
+  if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error('The code is 6 letters and numbers, as shown on closedhand.com.');
+  const data = await call('claim', 'POST', { code });
+  if (['pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state)) registrationState = data.state;
+  return data;
+}
 async function challenge(nonce) {
   if (typeof nonce !== 'string' || !/^[a-f0-9]{64}$/.test(nonce)) throw new Error('Invalid challenge');
   const secret = (await credentials()).split('.').pop();
@@ -83,4 +92,4 @@ async function challenge(nonce) {
 function status() {
   return { registrationState, ownershipConfirmed: ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(registrationState) };
 }
-module.exports = { begin, connection, validAddress, confirm, challenge, status };
+module.exports = { begin, claim, connection, validAddress, confirm, challenge, status };

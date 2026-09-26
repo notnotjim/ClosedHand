@@ -37,7 +37,14 @@
       <div id="confirm" hidden>
         <div class="who"><span id="who"></span><a id="switch">Switch account</a></div>
         <button class="btn btn-primary" id="approve" type="button">Confirm</button>
-        <p class="fine">Only confirm an address you just chose in your own ClosedHand.</p>
+        <p class="fine" id="confirm-note">Only confirm an address you just chose in your own ClosedHand.</p>
+      </div>
+
+      <!-- Step 3: the code, typed into the ClosedHand that asked. Only that
+           copy can finish, so a link from somebody else leads nowhere. -->
+      <div id="code-step" hidden>
+        <p class="code" id="code" aria-label="Confirmation code"></p>
+        <p class="fine code-note">It works for ten minutes. Only the ClosedHand that asked can use it, so this address only ever opens yours.</p>
       </div>
 
       <!-- After confirming: what is happening, until it opens. -->

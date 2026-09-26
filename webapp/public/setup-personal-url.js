@@ -4,7 +4,7 @@
   function mount(container, changed) {
     var $ = function (id) { return container.querySelector('#' + id); };
     var key = null, password = false, settled = false, state = {}, busy = false, checking = false;
-    var lastCheck = 0, generation = 0, actionError = null, completedReady = false;
+    var lastCheck = 0, generation = 0, actionError = null, completedReady = false, claiming = false;
     function remember() {
       settled = true;
       try { if (key) localStorage.setItem(key, 'done'); } catch (_) {}
@@ -30,7 +30,14 @@
       var confirm = pairingUrl(state.pairingUrl);
       var confirmed = state.enabled && state.ownershipConfirmed;
       var reserved = confirmed && personalUrl('https://' + state.addressName + '.closedhand.ai');
+      // While a code is awaited, the code is the next thing to do; reopening
+      // the confirmation page becomes the quiet option.
+      var waiting = !!confirm && !(saved || confirmed);
       $('url-form').hidden = !!(saved || confirmed);
+      // Confirming on closedhand.com shows a code; typing it here finishes.
+      $('url-code-form').hidden = !waiting;
+      $('url-code-submit').disabled = claiming || !password;
+      $('url-code-submit').textContent = claiming ? 'Checking…' : 'Finish';
       $('url-saved').hidden = !password || !(saved || reserved);
       $('url-value').value = saved || reserved || '';
       $('url-copy').hidden = !saved;
@@ -39,14 +46,15 @@
         $('url-preview').textContent = 'https://' + state.addressName + '.closedhand.ai';
       }
       $('url-start').disabled = busy || !password;
-      $('url-start').textContent = busy ? 'Opening…' : 'Confirm with Google';
+      $('url-start').textContent = busy ? 'Opening…' : waiting ? 'Open closedhand.com again' : 'Confirm with Google';
+      $('url-start').classList.toggle('is-quiet', waiting);
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (saved
         ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')
         : confirmed ? (state.registrationState === 'error'
           ? 'Your personal URL is confirmed, but its connection is delayed. ClosedHand will retry automatically.'
           : 'Your personal URL is confirmed. Connecting it now. You can continue setup.')
-        : confirm ? 'Waiting for Google confirmation.'
+        : confirm ? ''
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
       $('url-continue').textContent = saved || confirmed ? 'Continue setup' : state.enabled ? 'Continue setup while this finishes' : 'Continue without a personal URL';
     }
@@ -107,6 +115,18 @@
         if (confirmationTab) confirmationTab.close();
         if (run === generation) actionError = e.message;
       } finally { if (run === generation) { busy = false; lastCheck = 0; display(); } }
+    });
+    $('url-code-form').addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (!password || claiming) return;
+      claiming = true; actionError = null; display();
+      try {
+        var response = await fetch('/api/phone/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: $('url-code').value }), signal: AbortSignal.timeout(20000) });
+        var result = await response.json().catch(function () { return {}; });
+        if (!response.ok) throw new Error(result.error || 'Could not check the code. Please try again.');
+        $('url-code').value = '';
+      } catch (e) { actionError = e.message; }
+      finally { claiming = false; lastCheck = 0; display(); check(); }
     });
     $('url-continue').addEventListener('click', function () {
       if (!password) return;

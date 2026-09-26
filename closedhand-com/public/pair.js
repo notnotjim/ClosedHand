@@ -8,7 +8,7 @@
   const validUrl = value => /^https:\/\/[a-z][a-z0-9-]{1,30}[a-z0-9]\.closedhand\.ai$/.test(value || '');
   const providerName = p => p === 'microsoft' ? 'Microsoft' : 'Google';
   const say = (text, warn) => { $('status').textContent = text || ''; $('status').classList.toggle('warn', !!warn); };
-  const show = which => { for (const id of ['signin', 'confirm', 'progress']) $(id).hidden = id !== which; };
+  const show = which => { for (const id of ['signin', 'confirm', 'code-step', 'progress']) $(id).hidden = id !== which; };
   let timer, confirmedAt = 0, busy = false, leaving = false;
 
   async function request(path, body) {
@@ -44,6 +44,17 @@
     timer = setTimeout(check, 3000);
   }
 
+  // Confirmed here; finished by typing the code into the ClosedHand that
+  // asked. Keep checking so the page moves on once it has been typed.
+  function awaitCode(data) {
+    show('code-step');
+    $('heading').textContent = 'Now type this code in ClosedHand';
+    $('lede').textContent = 'Go back to ClosedHand on your computer, where you chose this address, and type the code there.';
+    $('code').textContent = data.code.slice(0, 3) + ' ' + data.code.slice(3);
+    say('');
+    timer = setTimeout(check, 3000);
+  }
+
   async function check() {
     clearTimeout(timer);
     if (busy || leaving) return;
@@ -54,8 +65,9 @@
       const name = new URL(address.url).hostname;
       $('address').textContent = name;
       if (account.signedIn && ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(address.state)) { progress(address); return; }
+      if (account.signedIn && address.state === 'awaiting-code' && /^[A-Z0-9]{6}$/.test(address.code || '')) { awaitCode(address); return; }
       if (address.state === 'revoked') throw new Error('This personal URL was removed. Choose a new one in ClosedHand.');
-      if (validUrl(account.url)) {
+      if (validUrl(account.url) && new URL(account.url).hostname !== name) {
         show(null);
         $('address-note').textContent = 'Already owns ' + new URL(account.url).hostname;
         $('open').href = account.url + '/dashboard#dashboard-link'; $('open').textContent = 'Open your ClosedHand'; $('open').hidden = false;
@@ -69,13 +81,18 @@
         return;
       }
       show('confirm');
+      $('approve').disabled = false;
       $('who').textContent = 'Signed in as ' + (account.email || 'your ' + providerName(account.provider) + ' account');
       $('switch').href = (account.provider === 'microsoft' ? $('login-microsoft') : $('login-google')).href;
-      $('approve').textContent = 'Confirm ' + name;
+      // The owner's address opens another computer now: say what confirming does.
+      $('approve').textContent = (address.move ? 'Move ' : 'Confirm ') + name;
+      $('confirm-note').textContent = address.move
+        ? name + ' opens ClosedHand on another computer now. Confirming moves it to the computer where you just chose it, and the other computer stops being reachable there.'
+        : 'Only confirm an address you just chose in your own ClosedHand.';
       say('');
     } catch (e) {
       say(e.message, true);
-      if (confirmedAt) timer = setTimeout(check, 5000);
+      if (confirmedAt || !$('code-step').hidden) timer = setTimeout(check, 5000);
     }
   }
 
@@ -83,7 +100,10 @@
     if (busy) return;
     clearTimeout(timer); busy = true; $('approve').disabled = true;
     say('Confirming…');
-    try { progress(await request('/api/phone-enrollment/approve', { ticket })); }
+    try {
+      const result = await request('/api/phone-enrollment/approve', { ticket });
+      if (result.state === 'awaiting-code') awaitCode(result); else progress(result);
+    }
     catch (e) { say(e.message, true); $('approve').disabled = false; }
     finally { busy = false; }
   };
