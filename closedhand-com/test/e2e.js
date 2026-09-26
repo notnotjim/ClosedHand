@@ -66,6 +66,16 @@ test('the website pages answer and old dashboard links lead to the finder', asyn
     const html = fs.readFileSync(path.join(__dirname, '..', 'views', view), 'utf8');
     for (const [, ref] of html.matchAll(/(?:href|src)="(\/[^"#?]+\.(?:css|js|png|svg|glb))"/g)) assert.equal((await fetch(base + ref)).status, 200, view + ' -> ' + ref);
   }
+  // Pages name their files with a fingerprint, so a deploy can never pair a
+  // new page with an old stylesheet or script kept by a browser or Cloudflare.
+  const served = await (await fetch(base + '/open')).text();
+  const css = served.match(/href="(\/site\.css\?v=[a-f0-9]{12})"/)?.[1], js = served.match(/src="(\/open\.js\?v=[a-f0-9]{12})"/)?.[1];
+  assert.ok(css && js, 'the page links fingerprinted files');
+  assert.match((await fetch(base + css)).headers.get('cache-control'), /immutable/);
+  assert.equal((await fetch(base + '/site.css')).headers.get('cache-control'), 'no-cache');
+  assert.equal((await fetch(base + '/site.css?v=000000000000')).headers.get('cache-control'), 'no-cache', 'a stale fingerprint is never kept');
+  const missing = await fetch(base + '/nope');
+  assert.equal(missing.status, 404); assert.match(await missing.text(), /site\.css\?v=/);
   // Signing out from My ClosedHand comes back to it, and never leaves the site.
   assert.equal((await fetch(base + '/logout?return_to=%2Fopen', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');
   assert.equal((await fetch(base + '/logout?return_to=https%3A%2F%2Fevil.example', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');

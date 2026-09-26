@@ -1,12 +1,38 @@
 // closedhand.com: the public website, personal URLs and bug report intake
 // for copies of ClosedHand. It holds no one's mail, files or conversations.
+const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const { createSessions, equal } = require('./lib/session');
 
+const PUBLIC = path.join(__dirname, 'public');
+// Pages name their stylesheets, scripts and images with a fingerprint of the
+// file (?v=...). A changed file gets a new address, so no copy of the old one,
+// in a browser or at Cloudflare, can ever be paired with a new page. That
+// happened: Cloudflare keeps these files four hours, and a deploy showed new
+// pages with old styling. An unchanged file can then be kept for a year.
+const fingerprints = new Map();
+function fingerprint(rel) {
+  if (!fingerprints.has(rel)) {
+    let v = null;
+    try { v = crypto.createHash('sha256').update(fs.readFileSync(path.join(PUBLIC, rel))).digest('hex').slice(0, 12); } catch (_) {}
+    fingerprints.set(rel, v);
+  }
+  return fingerprints.get(rel);
+}
+const pages = new Map();
+function render(name) {
+  if (!pages.has(name)) {
+    const html = fs.readFileSync(path.join(__dirname, 'views', name), 'utf8').replace(
+      /((?:href|src)=")(\/[^"#?]+\.(?:css|js|png|svg|jpg|webp|ico))"/g,
+      (whole, attr, url) => { const v = fingerprint(url.slice(1)); return v ? attr + url + '?v=' + v + '"' : whole; });
+    pages.set(name, html);
+  }
+  return pages.get(name);
+}
 function page(name) {
-  const file = path.join(__dirname, 'views', name);
-  return (req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(file); };
+  return (req, res) => { res.set('Cache-Control', 'no-cache').type('html').send(render(name)); };
 }
 
 // request is the fetch used to reach Google, Microsoft and copies of
@@ -41,7 +67,13 @@ function createApp({ db, env = process.env, request = fetch }) {
   // Only bug reports carry screenshots; every other request is small.
   app.use('/api/bug-intake', express.json({ limit: '8mb' }));
   app.use(express.json({ limit: '32kb' }));
-  app.use(express.static(path.join(__dirname, 'public'), { maxAge: '5m', index: false }));
+  app.use(express.static(PUBLIC, {
+    index: false,
+    setHeaders(res, file) {
+      const v = res.req.query.v, rel = path.relative(PUBLIC, file).split(path.sep).join('/');
+      res.set('Cache-Control', v && v === fingerprint(rel) ? 'public, max-age=31536000, immutable' : 'no-cache');
+    },
+  }));
 
   app.get('/health', (req, res) => res.json({ ok: true }));
   // Lets Microsoft confirm closedhand.com publishes these sign-in apps, so
@@ -80,7 +112,7 @@ function createApp({ db, env = process.env, request = fetch }) {
   app.all('/api/assistant-mail-relay/*', (req, res) => res.status(503).json({ error: 'Email delivery is not available yet.' }));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
-  app.use((req, res) => res.status(404).sendFile(path.join(__dirname, 'views', 'not-found.html')));
+  app.use((req, res) => res.status(404).set('Cache-Control', 'no-cache').type('html').send(render('not-found.html')));
   // Malformed or oversized requests get a plain answer, never a stack trace.
   app.use((err, req, res, next) => {
     const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 500 ? err.status : 500;

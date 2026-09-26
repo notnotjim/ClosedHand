@@ -17,20 +17,32 @@
   </header>
   <main class="site-main">
     <h1 class="title">Open your ClosedHand</h1>
-    <p class="lede" id="lede">Your ClosedHand assistant runs on your own computer or server.<br>Your personal URL enables you to control it from any device.</p>
+    <p class="lede" id="lede"><span>Your ClosedHand assistant runs on your own computer or server.</span> <span>Your personal URL enables you to control it from any device.</span></p>
 
-    <!-- What a personal URL is, at a glance: this device reaches your computer. -->
+    <!-- What a personal URL is, at a glance: an arrow from this device to
+         your computer, labelled with the address, with a light travelling
+         along it. -->
     <div class="route" aria-hidden="true">
       <span class="route-end">
-        <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>
-        This device
+        <svg class="route-icon" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>
+        <span>This device</span>
       </span>
-      <span class="route-link"><span id="route-url">yourname.closedhand.ai</span><small>connects them, like a remote</small></span>
+      <span class="route-link">
+        <span class="route-url" id="route-url">yourname.closedhand.ai</span>
+        <span class="route-line"><span class="route-pulse"></span></span>
+      </span>
       <span class="route-end">
-        <svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>
-        Your computer or server
+        <svg class="route-icon" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>
+        <span>Your computer<br>or server</span>
       </span>
     </div>
+
+    <!-- On the computer running ClosedHand: open it right here. Shown when
+         the browser must ask first, so it only asks when the person chooses. -->
+    <section class="here" id="here" hidden>
+      <span>On the computer running ClosedHand?</span>
+      <button class="btn" id="here-open" type="button">Open it here</button>
+    </section>
 
     <!-- Found: the one thing to do is open it. -->
     <section class="card" id="found" hidden>
@@ -70,7 +82,7 @@
 
     <section class="aside-block">
       <h2>No personal URL yet?</h2>
-      <p>Until you choose one, ClosedHand opens only on the computer or server it runs on. On that computer this page opens it for you; you can also use the ClosedHand app in the menu bar or the address shown when you set it up. Choose a personal URL there in Settings, and it will open from anywhere.</p>
+      <p>Until you choose one, ClosedHand opens only on the computer or server it runs on. Visit this page on that computer, or use the ClosedHand app in the menu bar or the address shown when you set it up. Choose a personal URL there in Settings, and it will open from anywhere.</p>
     </section>
     <p class="aside">Don't have ClosedHand yet? <a href="/">Download it</a></p>
   </main>

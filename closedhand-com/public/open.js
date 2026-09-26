@@ -21,6 +21,44 @@
     location.assign(next === '/' ? url : new URL(next, url).href);
   });
 
+  // On the computer running ClosedHand, open it there. Docker uses 3000; the
+  // Mac app takes 3000 or the next free port beside a Docker one. Phones and
+  // tablets never run it. Chrome asks before a website may talk to programs
+  // on this computer, so the page only tries by itself where the browser
+  // allows it without asking; otherwise the person chooses "Open it here",
+  // and Chrome asks once, when it makes sense.
+  const desktop = !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  function findLocal() {
+    const ask = port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => (d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject(new Error('not here'))));
+    return Promise.any([3000, 3002, 3001, 3003, 3004, 3005].map(ask)).catch(() => null);
+  }
+  function openLocal(base) { say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
+  async function permission() {
+    if (!navigator.permissions?.query) return 'unknown';
+    for (const name of ['loopback-network', 'local-network-access']) {
+      try { return (await navigator.permissions.query({ name })).state; } catch (_) {}
+    }
+    return 'unknown';
+  }
+  const lookingHere = (async () => {
+    if (!desktop || !automatic) return null;
+    const state = await permission();
+    if (state === 'prompt') { $('here').hidden = false; return null; }
+    return state === 'denied' ? null : findLocal();
+  })();
+  lookingHere.then(found => { if (found && automatic) openLocal(found); });
+  $('here-open').addEventListener('click', async () => {
+    automatic = false;
+    $('here-open').disabled = true;
+    say('Looking for ClosedHand on this computer…');
+    const found = await findLocal();
+    if (found) return openLocal(found);
+    $('here-open').disabled = false;
+    say('ClosedHand isn’t answering on this computer. Check it’s running, or use your personal URL.', true);
+  });
+
   let checking = false;
   async function check() {
     if (checking) return;
@@ -42,7 +80,8 @@
         $('found-open').href = url;
         $('found-who').textContent = 'Signed in as ' + who;
         say(automatic ? 'Opening your ClosedHand…' : '');
-        if (automatic) location.replace(url);
+        // On the computer running ClosedHand, opening it there comes first.
+        if (automatic && !(await lookingHere) && automatic) location.replace(url);
       } else if (failedSignIn) {
         say('Sign-in didn’t finish. Try again, or type your personal URL.', true);
       } else if (!data.available) {
@@ -57,24 +96,6 @@
       say('Couldn’t check just now. You can still type your personal URL.', true);
     } finally { checking = false; }
   }
-  // On the computer running ClosedHand, open it there first. Docker uses
-  // 3000; the Mac app takes 3000 or the next free port beside a Docker one.
-  // Phones and tablets never run it, so they skip straight to the card.
-  async function local() {
-    if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) return null;
-    const ask = port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
-      .then(r => r.ok ? r.json() : null).then(d => d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject())
-      .catch(() => Promise.reject());
-    try { return await Promise.any([3000, 3002, 3001, 3003, 3004, 3005].map(ask)); } catch (_) { return null; }
-  }
-  (async () => {
-    if (automatic) {
-      say('Looking for ClosedHand on this computer…');
-      const here = await local();
-      if (here) { say('Opening ClosedHand on this computer…'); location.replace(here + (next === '/' ? '/' : next)); return; }
-      say('');
-    }
-    window.addEventListener('focus', check);
-    check();
-  })();
+  window.addEventListener('focus', check);
+  check();
 })();
