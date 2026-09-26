@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<script>
+  // Phones and tablets can't run ClosedHand, and most people open this site
+  // there to reach the one they have. There, the page leads with opening it;
+  // the downloads follow, for their computer. Set before anything is drawn.
+  (function () {
+    var ua = navigator.userAgent;
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) document.documentElement.classList.add('handheld');
+  })();
+</script>
 <title>ClosedHand</title>
 <meta name="description" content="Your own proactive personal assistant, running on a computer you control with no company in between. Open source.">
 <link rel="icon" href="/logocircle.png" type="image/png">
@@ -278,7 +287,7 @@ body.chat-active .input-box { backdrop-filter: none; }
     .header-right a.nav-cta { font-size: 13.5px; padding: 7px 13px; }
     /* On a phone the first screen is all there is: sit the hero in the
        middle of it and let each part breathe, instead of hugging the top. */
-    .hero-space-top { flex: 1 !important; }
+    .hero-space-top { flex: 1 !important; min-height: 28px; }
     .hero-space-bottom { flex: 1.15 !important; }
 
     
@@ -745,6 +754,18 @@ body.chat-active .mon-area { display:none; }
   .dl:focus-visible { outline: 2px solid #D8624B; outline-offset: 4px; }
   .dl svg { width: 18px; height: 18px; fill: currentColor; margin-top: -2px; }
   .hero-footer { margin-top: 22px; }
+  /* Phones and tablets (html.handheld): Open my ClosedHand is the one filled
+     button; the Mac download steps back to an outline beneath it. */
+  .handheld-only { display: none; }
+  html.handheld .handheld-only { display: block; }
+  .open-mine { width: 100%; max-width: 420px; margin: 0 auto 28px; text-align: center; opacity: 0; animation: heroIn 0.8s ease forwards 0.6s; }
+  .open-mine .dl { width: 100%; justify-content: center; }
+  .open-mine-note { margin: 12px auto 0; max-width: 34ch; font-size: 13.5px; line-height: 1.45; color: #B6AFA4; text-wrap: balance; }
+  .ways-heading { margin: 0 0 18px; font: 500 15px/1.45 var(--font-ui); color: #EFE6D6; }
+  .ways-heading span { display: block; }
+  .ways-heading span + span { color: #B6AFA4; font-weight: 400; }
+  html.handheld .way-app .dl { background: transparent; color: #EFE6D6; border-color: rgba(239,230,214,0.3); }
+  html.handheld .way-app .dl:hover { background: rgba(239,230,214,0.08); border-color: rgba(239,230,214,0.5); }
   .site-foot {
     position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; align-items: center;
     padding: 28px 24px 44px; font-size: 13px; color: rgba(239,230,214,0.5);
@@ -785,7 +806,14 @@ body.chat-active .mon-area { display:none; }
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
     <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
 
+    <!-- Phones and tablets only: open the ClosedHand you already have. -->
+    <div class="open-mine handheld-only">
+      <a class="dl" href="/open">Open my ClosedHand</a>
+      <p class="open-mine-note">Your personal URL opens ClosedHand on your computer, wherever you are.</p>
+    </div>
+
     <div class="ways" id="ways">
+      <p class="ways-heading handheld-only"><span>New to ClosedHand?</span> <span>Get it for your computer or server.</span></p>
       <div class="way way-app" id="wayApp">
         <p class="way-actions">
           <a class="dl" id="macAppLink" href="https://github.com/notnotjim/ClosedHand/releases/latest" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>Download ClosedHand for Mac</a>
