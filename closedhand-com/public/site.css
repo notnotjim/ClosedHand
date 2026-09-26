@@ -112,7 +112,6 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
    ClosedHand: there, newcomers send the site to a computer instead of
    downloading. */
 html:not(.handheld) .handheld-only, html.handheld .computer-only { display: none !important; }
-.link-button { background: none; border: 0; padding: 0; font: inherit; color: #B6AFA4; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 /* An empty status line takes no room. */
 .status:empty { min-height: 0; margin: 0; }
 .aside-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,0.08); }

@@ -752,23 +752,26 @@ body.chat-active .mon-area { display:none; }
      The downloads are for computers only. */
   html:not(.handheld) .handheld-only { display: none !important; }
   html.handheld .computer-only, html.handheld .header-right a.nav-cta { display: none !important; }
-  .orb-open { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 8px auto 36px; text-decoration: none; -webkit-tap-highlight-color: transparent; opacity: 0; animation: heroIn 0.8s ease forwards 0.6s; }
-  .orb { width: 136px; height: 136px; border-radius: 50%; display: grid; place-items: center;
+  html.handheld .hero-footer { display: none !important; }
+  .orb-open { display: flex; flex-direction: column; align-items: center; margin: 0 auto 26px; text-decoration: none; -webkit-tap-highlight-color: transparent; opacity: 0; animation: heroIn 0.8s ease forwards 0.6s; }
+  .orb-stage { position: relative; width: 236px; height: 236px; display: grid; place-items: center; }
+  .orb-ring { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease; }
+  .orb-ring.is-live { opacity: 1; }
+  .orb { position: relative; width: 116px; height: 116px; border-radius: 50%; display: grid; place-items: center;
     background: radial-gradient(circle at 50% 36%, #2C2724 0%, #1B1817 58%, #141211 100%);
-    border: 1px solid rgba(239,230,214,0.22);
-    box-shadow: 0 0 0 12px rgba(239,230,214,0.035), 0 0 0 26px rgba(239,230,214,0.018), 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(239,230,214,0.1);
+    border: 1px solid rgba(239,230,214,0.2);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.55), inset 0 1px 0 rgba(239,230,214,0.1);
     transition: transform 0.15s ease; }
-  .orb img { width: 64px; height: 64px; }
-  .orb-open:active .orb { transform: scale(0.96); }
-  .orb-label { display: inline-flex; align-items: center; gap: 8px; font: 500 24px/1.1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.01em; color: #EFE6D6; }
-  .orb-label svg { width: 20px; height: 20px; fill: none; stroke: #B6AFA4; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
-  .orb-address { margin-top: -6px; font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #B6AFA4; }
-  .get-it { display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; animation: heroIn 0.8s ease forwards 0.8s; }
-  .get-it-q { font-size: 14px; color: #B6AFA4; }
-  .get-it-send { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-ui); color: #EFE6D6; background: rgba(239,230,214,0.04); border: 1px solid rgba(239,230,214,0.26); border-radius: 999px; padding: 11px 18px; cursor: pointer; }
-  .get-it-send:active { background: rgba(239,230,214,0.1); }
-  .get-it-send svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .get-it-note { margin: 0; max-width: 30ch; text-align: center; font-size: 12.5px; color: rgba(239,230,214,0.5); }
+  .orb img { width: 56px; height: 56px; }
+  .orb-open:active .orb { transform: scale(0.95); }
+  .orb-label { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font: 500 23px/1.1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.01em; color: #EFE6D6; }
+  .orb-label svg { width: 19px; height: 19px; fill: none; stroke: #B6AFA4; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
+  .orb-address { margin-top: 8px; font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #B6AFA4; }
+  .get-it { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #B6AFA4; text-decoration: none; padding: 8px 4px; opacity: 0; animation: heroIn 0.8s ease forwards 0.8s; }
+  .get-it span { color: #EFE6D6; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(239,230,214,0.35); }
+  .get-it svg { width: 16px; height: 16px; fill: none; stroke: #EFE6D6; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   .site-foot {
     position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; align-items: center;
     padding: 28px 24px 44px; font-size: 13px; color: rgba(239,230,214,0.5);
@@ -809,19 +812,19 @@ body.chat-active .mon-area { display:none; }
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
     <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
 
-    <!-- Phones and tablets: the ClosedHand you have, one tap away. On a phone
-         that has used My ClosedHand it shows and opens that exact address. -->
-    <a class="orb-open handheld-only" id="orbOpen" href="/open">
-      <span class="orb" aria-hidden="true"><img src="/fist.png" alt=""></span>
-      <span class="orb-label">Open ClosedHand<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+    <!-- Phones and tablets: the ClosedHand someone already uses, one tap
+         away, with the smoke ring drifting round the fist. On a phone that
+         has used My ClosedHand it shows and opens that exact address. -->
+    <a class="orb-open handheld-only" id="orbOpen" href="/open" aria-label="Open your ClosedHand">
+      <span class="orb-stage" aria-hidden="true">
+        <canvas class="orb-ring" id="orbRing"></canvas>
+        <span class="orb"><img src="/fist.png" alt=""></span>
+      </span>
+      <span class="orb-label">Jump back in<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
       <span class="orb-address" id="orbAddress" hidden></span>
     </a>
-    <!-- A newcomer on a phone sends the site to a computer that can run it. -->
-    <div class="get-it handheld-only" id="getIt">
-      <span class="get-it-q">New to ClosedHand?</span>
-      <button class="get-it-send" type="button" data-send-to-computer="getItNote"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Send to my computer</button>
-      <p class="get-it-note" id="getItNote">Mac · Windows · Linux</p>
-    </div>
+    <!-- Newcomers on a phone can't install it there: they see what it does. -->
+    <a class="get-it handheld-only" id="getIt" href="#featuresPage">New here? <span>See how it works</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
 
     <div class="ways computer-only" id="ways">
       <div class="way way-app" id="wayApp">
@@ -962,80 +965,6 @@ body.chat-active .mon-area { display:none; }
   var isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var canvas = document.getElementById('blobCanvas');
   var renderer;
-  // The second sentence of the heading is measured at its natural width once
-  // the fonts are in, so it can unfold to exactly that; then the hero is live.
-  window.heroLive = function() {
-    var more = document.getElementById('heroMore');
-    var go = function() {
-      if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
-      document.getElementById('heroSection').classList.add('is-live');
-    };
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
-  };
-  // Phones get the still version of the ground: the smoke costs battery and
-  // a shader compile on a small screen that is mostly the chat box anyway.
-  var smallScreen = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
-  try {
-    if (isMobileDevice && smallScreen) throw new Error('phone: still background');
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobileDevice, alpha: true });
-  } catch(e) {
-    if (!/phone:/.test(e.message)) console.warn('WebGL not available:', e.message);
-    if (canvas) canvas.style.display = 'none';
-    window.heroLive();
-    // Show CSS gradient fallback
-    var fallback = document.createElement('div');
-    fallback.className = 'no-webgl-bg';
-    document.body.insertBefore(fallback, document.body.firstChild);
-    return;
-  }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.5 : 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x100E0D, 1);
-
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.z = 5;
-
-  // === STARFIELD (behind everything) ===
-  var starCount = isMobileDevice ? 800 : 2000;
-  var starGeo = new THREE.BufferGeometry();
-  var starPos = new Float32Array(starCount * 3);
-  var starSz = new Float32Array(starCount);
-  for (var i = 0; i < starCount; i++) {
-    starPos[i*3]   = (Math.random() - 0.5) * 140;
-    starPos[i*3+1] = (Math.random() - 0.5) * 100;
-    starPos[i*3+2] = -Math.random() * 70 - 1;
-    starSz[i] = 0.4 + Math.random() * 2.0;
-  }
-  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  starGeo.setAttribute('size', new THREE.BufferAttribute(starSz, 1));
-
-  var starMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 } },
-    vertexShader: [
-      'attribute float size;',
-      'uniform float uTime;',
-      'varying float vAlpha;',
-      'void main() {',
-      '  vAlpha = 0.4 + 0.6 * sin(uTime * 0.6 + position.x * 0.3 + position.y * 0.2);',
-      '  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);',
-      '  gl_PointSize = size * (50.0 / -mvPos.z);',
-      '  gl_Position = projectionMatrix * mvPos;',
-      '}'
-    ].join('\n'),
-    fragmentShader: [
-      'varying float vAlpha;',
-      'void main() {',
-      '  float d = length(gl_PointCoord - 0.5) * 2.0;',
-      '  float a = smoothstep(1.0, 0.2, d) * vAlpha;',
-      '  gl_FragColor = vec4(0.94, 0.9, 0.84, a);',
-      '}'
-    ].join('\n'),
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  scene.add(new THREE.Points(starGeo, starMat));
 
   // === OIL-SLICK BLOB ===
   var vertexShader = [
@@ -1117,6 +1046,7 @@ body.chat-active .mon-area { display:none; }
   var fragmentShader = [
     'uniform float uTime;',
     'uniform float uPulse;',
+    'uniform float uGain;',
     'varying vec3 vNormal;',
     'varying vec3 vPosition;',
     'varying float vDisplacement;',
@@ -1169,15 +1099,144 @@ body.chat-active .mon-area { display:none; }
     '  alpha += uPulse * 0.12;',
     '  alpha = clamp(alpha, 0.0, 0.55);',
     '',
-    '  gl_FragColor = vec4(color, alpha);',
+    '  // uGain lets the small ring round the fist on phones show as clearly',
+    '  // as the large one; the desktop ring uses 1.',
+    '  gl_FragColor = vec4(color * uGain, clamp(alpha * uGain, 0.0, 0.85));',
     '}'
   ].join('\n');
+
+  // The second sentence of the heading is measured at its natural width once
+  // the fonts are in, so it can unfold to exactly that; then the hero is live.
+  window.heroLive = function() {
+    var more = document.getElementById('heroMore');
+    var go = function() {
+      if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
+      document.getElementById('heroSection').classList.add('is-live');
+    };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
+  };
+  // Phones and tablets get the still version of the ground: the full-screen
+  // smoke costs battery. Their hero is the fist instead, with a small copy
+  // of the same ring floating round it (startOrbRing).
+  var handheld = document.documentElement.classList.contains('handheld');
+  try {
+    if (handheld) throw new Error('phone: still background');
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobileDevice, alpha: true });
+  } catch(e) {
+    if (!/phone:/.test(e.message)) console.warn('WebGL not available:', e.message);
+    if (canvas) canvas.style.display = 'none';
+    window.heroLive();
+    // Show CSS gradient fallback
+    var fallback = document.createElement('div');
+    fallback.className = 'no-webgl-bg';
+    document.body.insertBefore(fallback, document.body.firstChild);
+    if (handheld) startOrbRing();
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.5 : 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x100E0D, 1);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.z = 5;
+
+  // === STARFIELD (behind everything) ===
+  var starCount = isMobileDevice ? 800 : 2000;
+  var starGeo = new THREE.BufferGeometry();
+  var starPos = new Float32Array(starCount * 3);
+  var starSz = new Float32Array(starCount);
+  for (var i = 0; i < starCount; i++) {
+    starPos[i*3]   = (Math.random() - 0.5) * 140;
+    starPos[i*3+1] = (Math.random() - 0.5) * 100;
+    starPos[i*3+2] = -Math.random() * 70 - 1;
+    starSz[i] = 0.4 + Math.random() * 2.0;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('size', new THREE.BufferAttribute(starSz, 1));
+
+  var starMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: [
+      'attribute float size;',
+      'uniform float uTime;',
+      'varying float vAlpha;',
+      'void main() {',
+      '  vAlpha = 0.4 + 0.6 * sin(uTime * 0.6 + position.x * 0.3 + position.y * 0.2);',
+      '  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);',
+      '  gl_PointSize = size * (50.0 / -mvPos.z);',
+      '  gl_Position = projectionMatrix * mvPos;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'varying float vAlpha;',
+      'void main() {',
+      '  float d = length(gl_PointCoord - 0.5) * 2.0;',
+      '  float a = smoothstep(1.0, 0.2, d) * vAlpha;',
+      '  gl_FragColor = vec4(0.94, 0.9, 0.84, a);',
+      '}'
+    ].join('\n'),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  scene.add(new THREE.Points(starGeo, starMat));
+
+  // The same smoke ring, small, drifting round the fist on phones and
+  // tablets. Tapping the fist pulses it, as the desktop ring pulses, then
+  // opens. It only draws while on screen and the page is visible.
+  function startOrbRing() {
+    var ring = document.getElementById('orbRing'), link = document.getElementById('orbOpen');
+    if (!ring || !link || typeof THREE === 'undefined') return;
+    var r;
+    try { r = new THREE.WebGLRenderer({ canvas: ring, antialias: true, alpha: true }); } catch (e) { return; }
+    var size = ring.clientWidth || 240;
+    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    r.setSize(size, size, false);
+    r.setClearColor(0x000000, 0);
+    var ringScene = new THREE.Scene();
+    var ringCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
+    ringCamera.position.z = 7.4;
+    var ringMaterial = new THREE.ShaderMaterial({
+      vertexShader: vertexShader, fragmentShader: fragmentShader,
+      uniforms: { uTime: { value: Math.random() * 20 }, uPulse: { value: 0 }, uGain: { value: 2.4 } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    });
+    var ringMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 40), ringMaterial);
+    ringScene.add(ringMesh);
+    var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var pulse = 0, onScreen = true, t = 0;
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (entries) { onScreen = entries[0].isIntersecting; }).observe(ring);
+    link.addEventListener('click', function (e) {
+      if (still || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      pulse = 0.6;
+      var href = link.href;
+      setTimeout(function () { location.href = href; }, 420);
+    });
+    ring.classList.add('is-live');
+    (function frame() {
+      requestAnimationFrame(frame);
+      if (!onScreen || document.hidden) return;
+      if (!still) {
+        t += 0.01;
+        ringMaterial.uniforms.uTime.value += 0.004;
+        ringMesh.rotation.x = Math.sin(t * 0.7) * 0.28;
+        ringMesh.rotation.y = Math.cos(t * 0.5) * 0.28;
+        ringMesh.rotation.z += 0.002;
+      }
+      pulse *= 0.93;
+      if (pulse < 0.001) pulse = 0;
+      ringMaterial.uniforms.uPulse.value = pulse;
+      r.render(ringScene, ringCamera);
+    })();
+  }
 
   var geometry = new THREE.IcosahedronGeometry(2.1, isMobileDevice ? 48 : 128);
   var material = new THREE.ShaderMaterial({
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
-    uniforms: { uTime: { value: 0 }, uPulse: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uPulse: { value: 0 }, uGain: { value: 1 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -1469,11 +1528,10 @@ body.chat-active .mon-area { display:none; }
     var address = document.getElementById('orbAddress');
     address.textContent = url.slice('https://'.length);
     address.hidden = false;
-    // This phone already reaches a ClosedHand: nothing to send anywhere.
+    // This phone already reaches a ClosedHand: it isn't new here.
     document.getElementById('getIt').style.setProperty('display', 'none', 'important');
   }).catch(function () {});
 })();
 </script>
-<script src="/send-to-computer.js" defer></script>
 </body>
 </html>
