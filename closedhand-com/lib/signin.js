@@ -107,7 +107,7 @@ function register(app, { db, sessions, baseUrl, clients, request = fetch }) {
     }
   });
 
-  app.post('/logout', (req, res) => { sessions.signOut(res); res.redirect('/'); });
+  app.post('/logout', (req, res) => { sessions.signOut(res); res.redirect(req.query.return_to ? navigation.signInReturn(req.query.return_to) : '/'); });
 
   return { available };
 }

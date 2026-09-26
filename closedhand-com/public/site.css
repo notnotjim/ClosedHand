@@ -13,7 +13,7 @@ a { color: inherit; }
 
 .site-main { flex: 1; width: 100%; max-width: 520px; margin: 0 auto; padding: 56px 20px 40px; }
 .title { font: 500 34px/1.15 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.02em; margin: 0 0 10px; text-align: center; }
-.lede { margin: 0 auto 32px; max-width: 42ch; text-align: center; color: #B6AFA4; }
+.lede { margin: 0 auto 32px; max-width: 46ch; text-align: center; color: #B6AFA4; }
 
 .card { background: #181615; border: 1px solid rgba(239,230,214,0.1); border-radius: 18px; padding: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.4); }
 .card + .card { margin-top: 16px; }
@@ -50,7 +50,9 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
 
 .who { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.08); margin: 0 0 16px; font-size: 14px; }
 .who span { overflow-wrap: anywhere; }
-.who a { flex: none; font-size: 13px; color: #B6AFA4; }
+.who a, .who .link { flex: none; font-size: 13px; color: #B6AFA4; }
+.who form { flex: none; margin: 0; }
+.who .link { background: none; border: 0; padding: 0; font-family: inherit; text-decoration: underline; cursor: pointer; }
 
 /* The code the owner types into their own ClosedHand. */
 .card .code { font: 600 36px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2em; text-align: center; color: #EFE6D6; padding: 18px 12px 18px calc(12px + 0.2em); margin: 0; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.14); user-select: all; }

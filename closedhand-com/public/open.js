@@ -31,6 +31,8 @@
       const data = await response.json();
       const found = navigation.registeredAddress(data.url);
       const who = data.signedIn ? (data.email || 'your ' + providerName(data.provider) + ' account') : '';
+      $('find-who-row').hidden = !data.signedIn;
+      $('find-who').textContent = data.signedIn ? 'Signed in with ' + providerName(data.provider) + ' as ' + who : '';
       $('found').hidden = !found || choosing;
       $('find').hidden = found && !choosing;
       if (found && !choosing) {
@@ -46,7 +48,7 @@
       } else if (!data.available) {
         say('Looking up personal URLs isn’t working right now. You can still type yours.', true);
       } else if (data.signedIn) {
-        $('find-hint').textContent = 'No personal URL belongs to ' + who + '. Try the account you confirmed it with.';
+        $('find-hint').textContent = 'No personal URL is linked to this ' + providerName(data.provider) + ' account. Continue with the account you used when you set up your personal URL.';
         say('');
       } else {
         say('');

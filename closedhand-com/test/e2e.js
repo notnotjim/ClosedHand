@@ -66,6 +66,10 @@ test('the website pages answer and old dashboard links lead to the finder', asyn
     const html = fs.readFileSync(path.join(__dirname, '..', 'views', view), 'utf8');
     for (const [, ref] of html.matchAll(/(?:href|src)="(\/[^"#?]+\.(?:css|js|png|svg|glb))"/g)) assert.equal((await fetch(base + ref)).status, 200, view + ' -> ' + ref);
   }
+  // Signing out from My ClosedHand comes back to it, and never leaves the site.
+  assert.equal((await fetch(base + '/logout?return_to=%2Fopen', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');
+  assert.equal((await fetch(base + '/logout?return_to=https%3A%2F%2Fevil.example', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');
+  assert.equal((await fetch(base + '/logout', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/');
   const old = await fetch(base + '/dashboard#x', { redirect: 'manual' });
   assert.equal(old.headers.get('location'), '/open?next=%2Fdashboard');
   assert.equal((await fetch(base + '/nope')).status, 404);
