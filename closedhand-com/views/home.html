@@ -3,15 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<script>
-  // Phones and tablets can't run ClosedHand, and most people open this site
-  // there to reach the one they have. There, the page leads with opening it;
-  // the downloads follow, for their computer. Set before anything is drawn.
-  (function () {
-    var ua = navigator.userAgent;
-    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) document.documentElement.classList.add('handheld');
-  })();
-</script>
+<script src="/handheld.js"></script>
 <title>ClosedHand</title>
 <meta name="description" content="Your own proactive personal assistant, running on a computer you control with no company in between. Open source.">
 <link rel="icon" href="/logocircle.png" type="image/png">
@@ -754,18 +746,29 @@ body.chat-active .mon-area { display:none; }
   .dl:focus-visible { outline: 2px solid #D8624B; outline-offset: 4px; }
   .dl svg { width: 18px; height: 18px; fill: currentColor; margin-top: -2px; }
   .hero-footer { margin-top: 22px; }
-  /* Phones and tablets (html.handheld): Open my ClosedHand is the one filled
-     button; the Mac download steps back to an outline beneath it. */
-  .handheld-only { display: none; }
-  html.handheld .handheld-only { display: block; }
-  .open-mine { width: 100%; max-width: 420px; margin: 0 auto 28px; text-align: center; opacity: 0; animation: heroIn 0.8s ease forwards 0.6s; }
-  .open-mine .dl { width: 100%; justify-content: center; }
-  .open-mine-note { margin: 12px auto 0; max-width: 34ch; font-size: 13.5px; line-height: 1.45; color: #B6AFA4; text-wrap: balance; }
-  .ways-heading { margin: 0 0 18px; font: 500 15px/1.45 var(--font-ui); color: #EFE6D6; }
-  .ways-heading span { display: block; }
-  .ways-heading span + span { color: #B6AFA4; font-weight: 400; }
-  html.handheld .way-app .dl { background: transparent; color: #EFE6D6; border-color: rgba(239,230,214,0.3); }
-  html.handheld .way-app .dl:hover { background: rgba(239,230,214,0.08); border-color: rgba(239,230,214,0.5); }
+  /* Phones and tablets (html.handheld) can't run ClosedHand, and most people
+     open this site there to reach the one they have. There the hero is that
+     ClosedHand, one tap away, and a newcomer sends the site to a computer.
+     The downloads are for computers only. */
+  html:not(.handheld) .handheld-only { display: none !important; }
+  html.handheld .computer-only, html.handheld .header-right a.nav-cta { display: none !important; }
+  .orb-open { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 8px auto 36px; text-decoration: none; -webkit-tap-highlight-color: transparent; opacity: 0; animation: heroIn 0.8s ease forwards 0.6s; }
+  .orb { width: 136px; height: 136px; border-radius: 50%; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 36%, #2C2724 0%, #1B1817 58%, #141211 100%);
+    border: 1px solid rgba(239,230,214,0.22);
+    box-shadow: 0 0 0 12px rgba(239,230,214,0.035), 0 0 0 26px rgba(239,230,214,0.018), 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(239,230,214,0.1);
+    transition: transform 0.15s ease; }
+  .orb img { width: 64px; height: 64px; }
+  .orb-open:active .orb { transform: scale(0.96); }
+  .orb-label { display: inline-flex; align-items: center; gap: 8px; font: 500 24px/1.1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.01em; color: #EFE6D6; }
+  .orb-label svg { width: 20px; height: 20px; fill: none; stroke: #B6AFA4; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
+  .orb-address { margin-top: -6px; font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #B6AFA4; }
+  .get-it { display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; animation: heroIn 0.8s ease forwards 0.8s; }
+  .get-it-q { font-size: 14px; color: #B6AFA4; }
+  .get-it-send { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-ui); color: #EFE6D6; background: rgba(239,230,214,0.04); border: 1px solid rgba(239,230,214,0.26); border-radius: 999px; padding: 11px 18px; cursor: pointer; }
+  .get-it-send:active { background: rgba(239,230,214,0.1); }
+  .get-it-send svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .get-it-note { margin: 0; max-width: 30ch; text-align: center; font-size: 12.5px; color: rgba(239,230,214,0.5); }
   .site-foot {
     position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; align-items: center;
     padding: 28px 24px 44px; font-size: 13px; color: rgba(239,230,214,0.5);
@@ -806,14 +809,21 @@ body.chat-active .mon-area { display:none; }
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
     <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
 
-    <!-- Phones and tablets only: open the ClosedHand you already have. -->
-    <div class="open-mine handheld-only">
-      <a class="dl" href="/open">Open my ClosedHand</a>
-      <p class="open-mine-note">Your personal URL opens ClosedHand on your computer, wherever you are.</p>
+    <!-- Phones and tablets: the ClosedHand you have, one tap away. On a phone
+         that has used My ClosedHand it shows and opens that exact address. -->
+    <a class="orb-open handheld-only" id="orbOpen" href="/open">
+      <span class="orb" aria-hidden="true"><img src="/fist.png" alt=""></span>
+      <span class="orb-label">Open ClosedHand<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      <span class="orb-address" id="orbAddress" hidden></span>
+    </a>
+    <!-- A newcomer on a phone sends the site to a computer that can run it. -->
+    <div class="get-it handheld-only" id="getIt">
+      <span class="get-it-q">New to ClosedHand?</span>
+      <button class="get-it-send" type="button" data-send-to-computer="getItNote"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Send to my computer</button>
+      <p class="get-it-note" id="getItNote">Mac · Windows · Linux</p>
     </div>
 
-    <div class="ways" id="ways">
-      <p class="ways-heading handheld-only"><span>New to ClosedHand?</span> <span>Get it for your computer or server.</span></p>
+    <div class="ways computer-only" id="ways">
       <div class="way way-app" id="wayApp">
         <p class="way-actions">
           <a class="dl" id="macAppLink" href="https://github.com/notnotjim/ClosedHand/releases/latest" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>Download ClosedHand for Mac</a>
@@ -822,7 +832,7 @@ body.chat-active .mon-area { display:none; }
       </div>
       <div class="ways-divider">Or</div>
       <div class="way way-docker" id="wayDocker">
-        <p class="ways-label"><strong id="dockerLead">Run it with Docker.</strong> Works on Mac, Windows or Linux.<br>Paste the line below into your terminal.</p>
+        <p class="ways-label"><strong id="dockerLead">Run it with Docker</strong> on Mac, Windows or Linux.</p>
         <div class="install">
           <code id="installLine">curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh</code>
           <button type="button" id="copyInstall">Copy</button>
@@ -1447,5 +1457,23 @@ body.chat-active .mon-area { display:none; }
     .catch(function () { /* The release-page link remains usable. */ });
 })();
 </script>
+<script>
+// On a phone that has used My ClosedHand, the fist opens that exact
+// ClosedHand and shows its address.
+(function () {
+  if (!document.documentElement.classList.contains('handheld')) return;
+  fetch('/api/account', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (a) {
+    var url = a && a.url;
+    if (!/^https:\/\/[a-z][a-z0-9-]{1,30}[a-z0-9]\.closedhand\.ai$/.test(url || '')) return;
+    document.getElementById('orbOpen').href = url + '/';
+    var address = document.getElementById('orbAddress');
+    address.textContent = url.slice('https://'.length);
+    address.hidden = false;
+    // This phone already reaches a ClosedHand: nothing to send anywhere.
+    document.getElementById('getIt').style.setProperty('display', 'none', 'important');
+  }).catch(function () {});
+})();
+</script>
+<script src="/send-to-computer.js" defer></script>
 </body>
 </html>

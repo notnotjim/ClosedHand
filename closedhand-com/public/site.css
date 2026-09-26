@@ -22,7 +22,7 @@ a { color: inherit; }
 .card { background: #181615; border: 1px solid rgba(239,230,214,0.1); border-radius: 18px; padding: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.4); }
 .card + .card { margin-top: 16px; }
 .card h2 { font: 500 15px/1.4 var(--font-ui); margin: 0 0 4px; }
-.card p { margin: 0 0 18px; color: #B6AFA4; font-size: 14px; }
+.card p { margin: 0 0 18px; color: #B6AFA4; font-size: 14px; text-wrap: pretty; }
 .card .fine { font-size: 13px; margin: 14px 0 0; }
 
 .stack { display: grid; gap: 10px; }
@@ -108,6 +108,11 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
 .newcomer p { margin: 0; font-size: 14px; color: #B6AFA4; text-wrap: balance; }
 .newcomer strong { font-weight: 500; color: #EFE6D6; }
 .newcomer .btn { width: auto; flex: none; min-height: 40px; padding: 8px 16px; font-size: 14px; }
+/* Phones and tablets (html.handheld, set by handheld.js) can't run
+   ClosedHand: there, newcomers send the site to a computer instead of
+   downloading. */
+html:not(.handheld) .handheld-only, html.handheld .computer-only { display: none !important; }
+.link-button { background: none; border: 0; padding: 0; font: inherit; color: #B6AFA4; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 /* An empty status line takes no room. */
 .status:empty { min-height: 0; margin: 0; }
 .aside-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,0.08); }

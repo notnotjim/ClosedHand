@@ -17,6 +17,8 @@
     for (const id of ['found', 'not-here', 'find']) $(id).hidden = id !== screen;
     $('not-here-new').hidden = screen !== 'not-here';
     $('newcomer').hidden = screen !== 'find';
+    if (screen !== 'not-here') $('not-here-sent').hidden = true;
+    if (screen !== 'find') $('newcomer-sent').hidden = true;
   }
 
   $('address').addEventListener('input', () => { automatic = false; $('address-error').hidden = true; });

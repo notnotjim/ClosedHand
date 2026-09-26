@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/interface.css">
   <link rel="stylesheet" href="/site.css">
+  <script src="/handheld.js"></script>
 </head>
 <body>
   <header class="site-head">
@@ -56,17 +57,18 @@
          at all, so a quiet download line follows. -->
     <section class="card" id="not-here" hidden>
       <h2>Looks like you’re not on the computer running ClosedHand</h2>
-      <p>Choose a personal URL in ClosedHand’s Settings, under Personal URL, on that computer. After that, My ClosedHand takes you straight to it from any device.</p>
+      <p>Set up a personal URL in ClosedHand’s Settings on that computer, and this page will take you straight to it from anywhere.</p>
       <div class="who"><span id="not-here-who"></span><a href="/open?choose=1">Use another account</a></div>
     </section>
-    <p class="aside" id="not-here-new" hidden>Don’t have ClosedHand yet? <a href="/">Download it</a></p>
+    <p class="aside" id="not-here-new" hidden>Don’t have ClosedHand yet? <a class="computer-only" href="/">Download it</a><button class="link-button handheld-only" type="button" data-send-to-computer="not-here-sent">Send it to your computer</button></p>
+    <p class="aside" id="not-here-sent" hidden></p>
 
     <!-- Not signed in: look it up with Google or Microsoft, or type it. The
          account is only used to look the address up; there is no ClosedHand
          account. -->
     <section class="card" id="find" hidden>
       <h2>Find your personal URL</h2>
-      <p>Continue with the Google or Microsoft account you used when you set up your personal URL.</p>
+      <p>Use the Google or Microsoft account you set it up with.</p>
       <div class="stack">
         <a class="btn btn-primary" id="login-google" href="/auth/google?return_to=%2Fopen"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
         <a class="btn" id="login-microsoft" href="/auth/microsoft?return_to=%2Fopen"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>
@@ -82,14 +84,17 @@
       </form>
     </section>
     <section class="newcomer" id="newcomer" aria-label="New to ClosedHand" hidden>
-      <p><strong>New to ClosedHand?</strong> No sign up required. Simply download it to get started.</p>
-      <a class="btn" href="/">Download ClosedHand</a>
+      <p><strong>New to ClosedHand?</strong> <span class="computer-only">No sign up required. Simply download it to get started.</span><span class="handheld-only">No sign up required. Send it to your computer to get started.</span></p>
+      <a class="btn computer-only" href="/">Download ClosedHand</a>
+      <button class="btn handheld-only" type="button" data-send-to-computer="newcomer-sent">Send to my computer</button>
     </section>
+    <p class="aside" id="newcomer-sent" hidden></p>
 
     <p class="status" id="status" role="status" aria-live="polite">Checking…</p>
   </main>
   <footer class="site-foot"><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
   <script src="/entry-navigation.js" defer></script>
   <script src="/open.js" defer></script>
+  <script src="/send-to-computer.js" defer></script>
 </body>
 </html>
