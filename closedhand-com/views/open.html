@@ -49,17 +49,12 @@
       <div class="who" style="margin:16px 0 0"><span id="found-who"></span><a href="/open?choose=1">Use another account</a></div>
     </section>
 
-    <!-- Not found yet: sign in to look it up, or type it. -->
+    <!-- Not found yet: look it up with Google or Microsoft, or type it.
+         The account is only used to look the address up; there is no
+         ClosedHand account. -->
     <section class="card" id="find">
-      <h2>Find your personal URL</h2>
-      <!-- closedhand.com remembers the last Google or Microsoft account used
-           here, which may not be the one the browser is signed in to. Always
-           show it, with a way out. -->
-      <div class="who" id="find-who-row" hidden>
-        <span id="find-who"></span>
-        <form method="post" action="/logout?return_to=%2Fopen"><button type="submit" class="link">Sign out</button></form>
-      </div>
-      <p id="find-hint">Sign in with the Google or Microsoft account you used when you set up your personal URL.</p>
+      <h2 id="find-heading">Find your personal URL</h2>
+      <p id="find-hint">Continue with the Google or Microsoft account you used when you set up your personal URL.</p>
       <div class="stack">
         <a class="btn btn-primary" id="login-google" href="/auth/google?return_to=%2Fopen"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
         <a class="btn" id="login-microsoft" href="/auth/microsoft?return_to=%2Fopen"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>

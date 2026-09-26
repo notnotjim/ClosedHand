@@ -68,7 +68,7 @@
   })();
   lookingHere.then(found => { if (found && automatic) openLocal(found); });
 
-  let checking = false;
+  let checking = false, missed = null;
   async function check() {
     if (checking) return;
     checking = true;
@@ -78,8 +78,6 @@
       const data = await response.json();
       const found = navigation.registeredAddress(data.url);
       const who = data.signedIn ? (data.email || 'your ' + providerName(data.provider) + ' account') : '';
-      $('find-who-row').hidden = !data.signedIn;
-      $('find-who').textContent = data.signedIn ? 'Signed in with ' + providerName(data.provider) + ' as ' + who : '';
       $('found').hidden = !found || choosing;
       $('find').hidden = found && !choosing;
       if (found && !choosing) {
@@ -87,7 +85,7 @@
         $('found-address').textContent = new URL(data.url).hostname;
         $('route-url').textContent = new URL(data.url).hostname;
         $('found-open').href = url;
-        $('found-who').textContent = 'Signed in as ' + who;
+        $('found-who').textContent = 'Linked to ' + who;
         say(automatic ? 'Opening your ClosedHand…' : '');
         // On the computer running ClosedHand, opening it there comes first.
         if (automatic && !(await lookingHere) && automatic) location.replace(url);
@@ -95,8 +93,14 @@
         say('Sign-in didn’t finish. Try again, or type your personal URL.', true);
       } else if (!data.available) {
         say('Looking up personal URLs isn’t working right now. You can still type yours.', true);
-      } else if (data.signedIn) {
-        $('find-hint').textContent = 'No personal URL is linked to this ' + providerName(data.provider) + ' account. Continue with the account you used when you set up your personal URL.';
+      } else if (data.signedIn || missed) {
+        // Looked up, nothing there. Say so once, offer another account or
+        // where to set one up, and forget this account: remembering it only
+        // left a "signed in" state that meant nothing.
+        missed = missed || who;
+        $('find-heading').textContent = 'No personal URL found';
+        $('find-hint').textContent = 'There isn’t one linked to ' + missed + '. Try the account you used when you set yours up, or choose one in ClosedHand’s Settings on the computer running it.';
+        if (data.signedIn) fetch('/logout', { method: 'POST', redirect: 'manual' }).catch(() => {});
         say('');
       } else {
         say('');
