@@ -17,7 +17,20 @@
   </header>
   <main class="site-main">
     <h1 class="title">Open your ClosedHand</h1>
-    <p class="lede" id="lede">ClosedHand runs on your own computer. Reach it from this device with your personal URL.</p>
+    <p class="lede" id="lede">Your ClosedHand runs on your own computer. Your personal URL opens it from any device.</p>
+
+    <!-- What a personal URL is, at a glance: this device reaches your computer. -->
+    <div class="route" aria-hidden="true">
+      <span class="route-end">
+        <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>
+        This device
+      </span>
+      <span class="route-link"><span id="route-url">yourname.closedhand.ai</span></span>
+      <span class="route-end">
+        <svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>
+        Your computer
+      </span>
+    </div>
 
     <!-- Found: the one thing to do is open it. -->
     <section class="card" id="found" hidden>
@@ -48,13 +61,11 @@
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
 
-    <details class="help" id="local-help">
-      <summary>On the computer running ClosedHand?</summary>
-      <p><strong>Mac app:</strong> click the ClosedHand icon in the menu bar, then Open ClosedHand.</p>
-      <p><strong>Docker:</strong> open <a href="http://localhost:3000">localhost:3000</a> on that computer. If ClosedHand runs on a server, forward port 3000 over SSH first.</p>
-      <p>No personal URL yet? Choose one in ClosedHand under Settings, Personal URL.</p>
-    </details>
-    <p class="aside">New to ClosedHand? <a href="/">Get it here</a></p>
+    <section class="aside-block">
+      <h2>No personal URL yet?</h2>
+      <p>Until you choose one, your ClosedHand opens only on the computer it runs on, from the ClosedHand app in the menu bar or the address shown when you installed it. Choose a personal URL there in Settings, and it will open from anywhere.</p>
+    </section>
+    <p class="aside">Don't have ClosedHand yet? <a href="/">Download it</a></p>
   </main>
   <footer class="site-foot"><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
   <script src="/entry-navigation.js" defer></script>

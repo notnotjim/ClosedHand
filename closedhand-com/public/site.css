@@ -71,6 +71,18 @@ details.help[open] summary::after { content: '\2212'; }
 details.help p { margin: 10px 0 0; font-size: 14px; }
 details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6; }
 
+/* This device, your personal URL, your computer: what the page is for. */
+.route { display: flex; align-items: center; justify-content: center; gap: 12px; margin: -8px auto 32px; font-size: 13px; color: #B6AFA4; }
+.route-end { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; }
+.route-end svg { width: 26px; height: 26px; fill: none; stroke: #EFE6D6; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.route-link { position: relative; flex: 1; max-width: 220px; display: flex; justify-content: center; margin-bottom: 20px; }
+.route-link::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(239,230,214,0.25); }
+.route-link span { position: relative; padding: 3px 10px; border-radius: 999px; background: #100E0D; border: 1px solid rgba(239,230,214,0.14); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6; white-space: nowrap; }
+
+.aside-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,0.08); }
+.aside-block h2 { font: 500 14px/1.4 var(--font-ui); margin: 0 0 6px; color: #EFE6D6; }
+.aside-block p { margin: 0; font-size: 14px; color: #B6AFA4; }
+
 .aside { text-align: center; font-size: 14px; color: #8C857B; margin: 24px 0 0; }
 .aside a { color: #B6AFA4; text-underline-offset: 3px; }
 .site-foot { display: flex; justify-content: center; gap: 22px; padding: 28px 20px 40px; font-size: 13px; }
@@ -85,4 +97,6 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
   .title { font-size: 28px; }
   .card { padding: 22px 18px; border-radius: 16px; }
   .card .address { font-size: 21px; }
+  .route { gap: 8px; }
+  .route-link span { font-size: 11px; padding: 3px 8px; }
 }

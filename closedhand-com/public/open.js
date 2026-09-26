@@ -36,6 +36,7 @@
       if (found && !choosing) {
         const url = new URL(next, data.url).href;
         $('found-address').textContent = new URL(data.url).hostname;
+        $('route-url').textContent = new URL(data.url).hostname;
         $('found-open').href = url;
         $('found-who').textContent = 'Signed in as ' + who;
         say(automatic ? 'Opening your ClosedHand…' : '');
