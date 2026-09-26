@@ -22,8 +22,8 @@
   }
   function render() {
     content.replaceChildren();
-    const heading = document.getElementById('assistant-email-heading'); heading.textContent = "Your assistant's email address";
-    content.append(el('p', "Send and forward emails to your ClosedHand assistant's own secure email address, or CC them in a conversation.", 'section-desc'));
+    const heading = document.getElementById('assistant-email-heading'); heading.textContent = "ClosedHand's email address";
+    content.append(el('p', "Send and forward emails to ClosedHand's own secure email address, or CC it into a conversation.", 'section-desc'));
     if (state.available === false) {
       const unavailable = el('button', 'Coming soon', 'conn-btn conn-btn-manage');
       unavailable.type = 'button'; unavailable.disabled = true;

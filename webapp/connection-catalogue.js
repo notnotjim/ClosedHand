@@ -71,7 +71,7 @@ function createCatalogue({db, services, userId, baseUrl}) {
       if(!validClient(clientId)||!validClient(clientSecret))return res.status(400).json({error:'Enter the client ID and client secret from your application.'});
       try{
         const encrypted=encryptString(clientSecret.trim());
-        if(!encrypted.startsWith('enc:v1:'))throw new Error('Encrypted storage is unavailable. Check your installation settings.');
+        if(!encrypted.startsWith('enc:v1:'))throw new Error('Encrypted storage is unavailable. Check ClosedHand’s settings.');
         const {error}=await db.from('connection_clients').upsert({user_id:owner,service:key,client_id:clientId.trim(),client_secret:encrypted,updated_at:new Date().toISOString()},{onConflict:'user_id,service'});
         if(error)throw new Error('Could not save connection settings. Try again.');
         res.json({redirectUrl:'/auth/'+key+(service.isSignup?'?extra=1':'')});

@@ -150,7 +150,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
 
   app.post('/api/phone-enrollment/register', wrap(async (req, res) => {
     const copy = installation(req), { name, port, confirm } = req.body || {};
-    if (!copy) return res.status(401).json({ error: 'Invalid installation.' });
+    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
     // Copies from before confirmation codes could never finish.
     if (confirm !== 'code') return res.status(400).json({ error: 'Update ClosedHand on your computer, then choose your personal URL again.' });
     const hostname = typeof name === 'string' ? name + '.closedhand.ai' : '';
@@ -218,7 +218,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // before the code is compared, so trying many at once gains nothing.
   app.post('/api/phone-enrollment/claim', wrap(async (req, res) => {
     const copy = installation(req);
-    if (!copy) return res.status(401).json({ error: 'Invalid installation.' });
+    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
     const code = String(req.body?.code || '').toUpperCase().replace(/[\s-]/g, '');
     const waiting = (await db.query(
       'UPDATE approvals SET attempts = attempts + 1 WHERE secret_hash = $1 AND expires_at > now() AND attempts < $2 RETURNING *',

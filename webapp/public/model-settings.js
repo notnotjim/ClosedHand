@@ -186,7 +186,7 @@
       region("connection-help").textContent = local
         ? runtime === "docker" ? "This URL reaches Ollama on the computer running Docker. Ollama must accept connections from Docker. Change it if Ollama runs elsewhere."
           : runtime === "desktop" ? "This URL reaches Ollama on this Mac. Change it if Ollama runs elsewhere."
-          : "Enter the URL where this ClosedHand installation can reach Ollama. A hosted installation cannot reach your computer through localhost."
+          : "Enter the URL where ClosedHand can reach Ollama. If ClosedHand runs on a rented server, it cannot reach your computer through localhost."
         : custom ? "Enter the service URL and an API key if the service requires one."
         : "Paste an API key from this provider to load its models. ClosedHand sends it only to that provider.";
       region("address").hidden = !["custom", "ollama"].includes(value("provider"));

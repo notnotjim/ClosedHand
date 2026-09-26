@@ -2483,7 +2483,7 @@
           </section>
 
         <section class="settings-group">
-          <div class="settings-group-header"><h2 id="assistant-email-heading">Your assistant&#39;s email address</h2></div>
+          <div class="settings-group-header"><h2 id="assistant-email-heading">ClosedHand&#39;s email address</h2></div>
           <div class="settings-group-body" id="assistant-email"></div>
         </section>
 
@@ -2551,7 +2551,7 @@
               <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask. Purchases need your approval unless you change the rules here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
-              <p class="section-desc">Card numbers stay encrypted on the computer running ClosedHand, unlocked by a key unique to this installation. ClosedHand uses them at checkout; the model never sees them.</p>
+              <p class="section-desc">Card numbers stay encrypted on the computer running ClosedHand, unlocked by a key only this ClosedHand has. ClosedHand uses them at checkout; the model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
                 <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:8px;">Spending rules</div>
@@ -4541,7 +4541,7 @@
         if (!w.available) {
           un.style.display = 'block';
           un.textContent = w.reason === 'no encryption key'
-            ? 'Your copy of ClosedHand has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
+            ? 'ClosedHand has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
             : 'The Wallet is for a ClosedHand you run yourself.';
           main.style.display = 'none';
           return;

@@ -27,6 +27,14 @@ they neither get published nor drift out of step with a second copy.
 
 ## User-Facing Copy
 - The bot is "ClosedHand", not "your assistant".
+- Naming the thing running on the person's computer. On the website (closedhand.com), where
+  "ClosedHand" could also mean the site, the first mention of it in a page's text is "your
+  ClosedHand assistant": it says what the thing is and keeps it apart from the site. After that,
+  "it" or "ClosedHand". Headings, navigation and buttons stay short ("My ClosedHand", "Open
+  ClosedHand"). Inside the app (setup, dashboard, chat replies, the menu bar) it is simply
+  "ClosedHand": the person is already using it. Never "install", "installation", "instance" or
+  "copy" as a noun for it in anything people read: website, app, chat replies, error messages,
+  release notes, README. Code, comments and contributor docs may use them. (James, 2026-09-26)
 - It's chat-based. Don't call anything "voice control".
 - Key positioning phrase: "recalls by meaning, not just keywords" (Context Brain / File
   Search copy). Reuse it, don't invent variants. The "just" is load-bearing: retrieval

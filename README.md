@@ -2,8 +2,8 @@
 
 A personal AI assistant you actually own. It lives in your messaging apps, reads the email and calendar you already have, remembers what matters, and keeps working while you sleep, all from a box you control with keys you hold.
 
-> **Demo coming.** A 30-second ask-your-inbox GIF will sit here once the maintainer's own instance is running the shipped build.
-<!-- DEMO GIF PLACEHOLDER: 30s of "ask your inbox anything", recorded on a live instance. -->
+> **Demo coming.** A 30-second ask-your-inbox GIF will sit here once it is recorded on the shipped build.
+<!-- DEMO GIF PLACEHOLDER: 30s of "ask your inbox anything", recorded on a live ClosedHand. -->
 
 ## Why this exists
 
@@ -38,7 +38,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-To give a Docker installation access to a Mac’s files and apps, download the optional ClosedHand Bridge app from your dashboard and install it on that Mac. This can be the Mac running Docker or a different Mac. Choose what to allow from Bridge in the menu bar.
+If you run ClosedHand with Docker, it can use a Mac’s files and apps through the optional ClosedHand Bridge app: download it from your dashboard and install it on that Mac. This can be the Mac running Docker or a different Mac. Choose what to allow from Bridge in the menu bar.
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
@@ -97,9 +97,9 @@ Two Node services (bot and dashboard) that share a Postgres with pgvector and ne
 
 The Mac app, or Docker with the compose plugin, and at least one model provider key. Docker supports amd64 and arm64, including Apple Silicon and ARM VPSes.
 
-Set up your personal dashboard address under **Settings → Dashboard link** to open ClosedHand from any device, wherever you are. Your dashboard and data stay on the computer running ClosedHand. Keep it awake and online, and sign in with your dashboard password. Reserving a permanent address requires signing in to ClosedHand. Temporary addresses are also available, but change when the connection restarts.
+Choose a personal URL under **Settings → Personal URL** to open ClosedHand from any device, wherever you are (see below). Your dashboard and data stay on the computer running ClosedHand. Keep it awake and online, and sign in with your dashboard password. Temporary addresses are also available, but change when the connection restarts.
 
-For Docker installations using their own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
+If you run ClosedHand with Docker on your own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
 
 Memory depends on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so memory works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
@@ -107,12 +107,12 @@ Where you run it sets the tier. On a laptop it works while the lid is open and c
 
 ## Security posture
 
-Single-tenant by construction, not by configuration: every request resolves to the one admin. The first platform sender claims the instance and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
+Single-tenant by construction, not by configuration: every request resolves to the one admin. The first person to message it on a chat app becomes its owner and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
 
 ## Reporting a problem
 
 Send `/bug` followed by what went wrong in your ClosedHand chat. The report stays
-on your installation unless you agree to send it to ClosedHand. Before you decide,
+on your computer unless you agree to send it to ClosedHand. Before you decide,
 ClosedHand explains what is included and lets you review the saved conversation.
 
 Use `/bugs` to see your reports and any outcomes, `/bugs <reference>` to review one,
@@ -130,24 +130,24 @@ Issues and PRs welcome. Open an issue before starting anything sizeable so the a
 Earlier versions released under MIT remain available under that licence.
 
 
-### Open your dashboard from anywhere
+### Open ClosedHand from anywhere
 
-On your computer, open [the dashboard](http://localhost:3000/dashboard). Under
-Settings, choose **Dashboard link → Set up a permanent link**. The same
-page is available from the dashboard’s help menu and after linking a chat app.
+On your computer, open ClosedHand and go to **Settings → Personal URL**, or choose
+one during setup. Pick a name, confirm it on closedhand.com with your Google or
+Microsoft account, then type the code closedhand.com shows you back into
+ClosedHand. The code means a confirmation link sent by somebody else can never
+point your address at their computer. Bookmark your address, pin it in your chat,
+or add it to your phone's home screen (in Safari on iPhone, **Share → Add to Home
+Screen**).
 
-Your personal dashboard address is optional. Sign in to ClosedHand to reserve an address
-for this installation, then copy it, send it to your connected chat, or scan its
-QR code. You can bookmark that address or pin the message and reuse it after
-restarts. In Safari on iPhone, use **Share → Add to Home Screen → Add**. Browsers
-that support an install prompt also show an install button.
-
-The dashboard and database stay on the machine running ClosedHand. ClosedHand
-stores the address and connection details, and Cloudflare relays the connection
-to that machine. Open the address from any device, wherever you are, while the
-computer running ClosedHand is awake and online. Your dashboard password is required.
-Turning phone access off stops the connection; re-enabling the same installation
-keeps its reserved address. Local access needs no ClosedHand account.
+Your dashboard and data stay on the computer running ClosedHand. closedhand.com
+keeps only your personal URL, the Google or Microsoft account that confirmed it,
+and what Cloudflare needs to carry the connection to that computer. Open the
+address from any device while the computer running ClosedHand is awake and
+online; your dashboard password is always required. Pausing the link stops the
+connection and resuming keeps the same address. If you set ClosedHand up again,
+choose the same name and confirm it to move your personal URL there. Using
+ClosedHand on the computer itself needs no sign-in to closedhand.com.
 
 Temporary phone access remains available in Settings. Its address changes when
-the connection restarts, so use a lasting address before bookmarking or pinning.
+the connection restarts, so use a personal URL before bookmarking or pinning.

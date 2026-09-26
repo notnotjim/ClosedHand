@@ -647,7 +647,7 @@ app.post("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a ClosedHand you run yourself." });
-  if (!walletAvailable()) return res.status(400).json({ error: "Your copy of ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
+  if (!walletAvailable()) return res.status(400).json({ error: "ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
   try {
     const b = req.body || {};
     const number = String(b.number || "").replace(/[\s-]/g, "");

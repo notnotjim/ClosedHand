@@ -5,7 +5,7 @@ const { encryptString, decryptString } = require('./crypto-tokens');
 const PROVIDER = 'https://closedhand.com';
 function encrypted(value) {
   const result = encryptString(value);
-  if (!result?.startsWith('enc:v1:')) throw new Error('Phone access needs encrypted storage. Check your installation settings.');
+  if (!result?.startsWith('enc:v1:')) throw new Error('Phone access needs encrypted storage. Check ClosedHand’s settings.');
   return result;
 }
 let identityPromise;

@@ -380,11 +380,11 @@ docker info >/dev/null 2>&1 || fail "the docker daemon isn't running. Start Dock
 # those is what makes a rebuild quick.
 if [ "${CLOSEDHAND_RESET:-0}" = "1" ]; then
   if [ -f docker-compose.yml ] && [ -f .env.example ]; then
-    say "Reset: removing this install's containers, volumes and settings."
+    say "Reset: removing ClosedHand's containers, volumes and settings."
     docker compose down -v --remove-orphans >/dev/null 2>&1 || true
     rm -f .env
   elif [ -d "$DIR" ] && [ -f "$DIR/docker-compose.yml" ]; then
-    say "Reset: removing this install's containers, volumes and $(pwd)/$DIR."
+    say "Reset: removing ClosedHand's containers, volumes and $(pwd)/$DIR."
     ( cd "$DIR" && docker compose down -v --remove-orphans >/dev/null 2>&1 ) || true
     rm -rf "$DIR"
   else

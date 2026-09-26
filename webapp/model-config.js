@@ -153,7 +153,7 @@ function install(app, deps) {
     res.set("Cache-Control", "no-store").json({ decisions: decisions.publicStatus(next) });
   }));
   app.post("/api/model-config/default", route(async (req, res, id) => {
-    if (!deps.allowDefault) return res.status(400).json({ error: "This installation needs its own model connection." });
+    if (!deps.allowDefault) return res.status(400).json({ error: "There is no default model here. Connect a model provider for ClosedHand to use." });
     const settings = { ...await profile(id) };
     for (const key of ["model_config", "llm_provider", "anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key", "custom_base_url", "custom_model", "custom_model_fast", "byok_models"]) delete settings[key];
     const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", id);

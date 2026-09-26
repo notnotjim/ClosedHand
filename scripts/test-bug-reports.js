@@ -65,7 +65,7 @@ test("ordinary OSS report stays local until explicit consent; bare bug and space
   assert.equal(r.api.isBugReport("bug wrong"), false);
   const reply = await file(r.api);
   assert.match(reply, /Send this to ClosedHand to check/);
-  assert.match(reply, /installation identifier/);
+  assert.match(reply, /random ID for this ClosedHand/);
   assert.equal(r.calls.length, 0);
   await r.api.handleBugSendReply("alice", "no");
   assert.equal(r.calls.length, 0);
