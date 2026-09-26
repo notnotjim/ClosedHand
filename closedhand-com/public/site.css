@@ -10,6 +10,10 @@ a { color: inherit; }
 .site-head nav { display: flex; gap: 26px; font-size: 13px; }
 .site-head nav a { color: rgba(239,230,214,0.6); text-decoration: none; }
 .site-head nav a:hover, .site-head nav a[aria-current] { color: #EFE6D6; }
+/* "My ClosedHand" as a button, as on the home page. */
+.site-head nav { align-items: center; }
+.site-head nav a.nav-cta { padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(239,230,214,0.32); background: rgba(239,230,214,0.05); color: #EFE6D6; transition: background 0.15s, border-color 0.15s; }
+.site-head nav a.nav-cta:hover { background: rgba(239,230,214,0.1); border-color: rgba(239,230,214,0.5); }
 
 .site-main { flex: 1; width: 100%; max-width: 520px; margin: 0 auto; padding: 56px 20px 40px; }
 .title { font: 500 34px/1.15 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.02em; margin: 0 0 10px; text-align: center; }

@@ -114,6 +114,11 @@ body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
     transition: color 0.2s;
   }
 .header-right a:hover { color: #B6AFA4; }
+/* The way back to your own ClosedHand from any device, which is why most
+   people open this site on a phone: a button, not a plain link. Outlined,
+   so the download button stays the one filled thing on the page. */
+.header-right a.nav-cta { white-space: nowrap; flex: none; padding: 7px 16px; border-radius: 999px; border: 1px solid rgba(239,230,214,0.32); background: rgba(239,230,214,0.05); color: #EFE6D6; font-size: 15px; transition: background 0.2s, border-color 0.2s; }
+.header-right a.nav-cta:hover { color: #EFE6D6; background: rgba(239,230,214,0.1); border-color: rgba(239,230,214,0.5); }
 .header-right a#dashboardLink {
     padding: 6px 14px;
     border: 1px solid rgba(208,86,63,0.2);
@@ -268,15 +273,20 @@ body.chat-active .input-box { backdrop-filter: none; }
     .header { padding: 12px 14px; gap: 8px; }
     .header-center { font-size: 11px; }
     .feat-3d { display: none !important; }
-    .header-right { gap: 14px; }
+    .header-right { gap: 12px; }
     .header-right a { font-size: 13px; }
+    .header-right a.nav-cta { font-size: 13.5px; padding: 7px 13px; }
+    /* On a phone the first screen is all there is: sit the hero in the
+       middle of it and let each part breathe, instead of hugging the top. */
+    .hero-space-top { flex: 1 !important; }
+    .hero-space-bottom { flex: 1.15 !important; }
 
     
     .page { min-height: 100svh !important; }
-    .hero-area { padding: 0 16px 16px; flex: none !important; min-height: calc(100svh - 110px) !important; height: auto; }
+    .hero-area { padding: 0 16px 16px; flex: none !important; min-height: calc(100svh - 64px) !important; height: auto; }
     
     :root { --hero-title-size: clamp(23px, 7.6vw, 38px); --hero-copy-size: 14px; }
-    .hero-heading { font-size: var(--hero-title-size); letter-spacing: -0.3px; margin-bottom: 10px; white-space: nowrap; }
+    .hero-heading { font-size: var(--hero-title-size); letter-spacing: -0.3px; margin-bottom: 16px; white-space: nowrap; }
     .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
     .hero-footer span { white-space: normal; line-height: 1.45; }
     .hero-footer .footer-sentence { display: block; }
@@ -289,7 +299,7 @@ body.chat-active .input-box { backdrop-filter: none; }
     .hero-recent-row .meta { font-size: 11px; }
     .hero-recent-float { right: 14px; bottom: 14px; padding: 8px 12px; font-size: 11.5px; }
     .hero-recent-pop { right: 14px; bottom: 54px; }
-    .hero-heading-sub { line-height: 1.45; gap: 6px; margin-bottom: 18px; max-width: 92vw; }
+    .hero-heading-sub { line-height: 1.45; gap: 6px; margin-bottom: 30px; max-width: 92vw; }
     .hero-heading-sub img { width: 20px; height: 20px; }
 
     .input-box-wrap { max-width: 100%; }
@@ -341,7 +351,7 @@ body.chat-active .input-box { backdrop-filter: none; }
     .bridge-cta-text span { font-size: 9px; white-space: nowrap; }
     .bridge-cta .bridge-desktop-icon { display: none; }
     .bridge-cta .bridge-mobile-icon { display: block; }
-    .hero-footer { flex-direction: column; gap: 8px; }
+    .hero-footer { flex-direction: column; gap: 8px; margin-top: 30px; }
     
     .header-right a[href="/privacy"], .header-right a[href="/terms"] { display: none !important; }
     .header { position: relative; }
@@ -746,7 +756,7 @@ body.chat-active .mon-area { display:none; }
     .header-right a { margin-left: 14px; }
     .header-right a.gh span { display: none; }
     .ways { padding: 28px 16px 18px; border-radius: 16px; }
-    .dl { width: 100%; justify-content: center; }
+    .dl { width: 100%; justify-content: center; gap: 10px; padding: 15px 14px 16px; font-size: clamp(16px, 4.4vw, 19px); white-space: nowrap; }
     .install { padding-left: 12px; }
     .install code { font-size: 12.5px; }
   }
@@ -764,14 +774,14 @@ body.chat-active .mon-area { display:none; }
     <div class="header-center"></div>
     <div class="header-right">
       <a class="gh" href="https://github.com/notnotjim/ClosedHand" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
-      <a href="/open">My ClosedHand</a>
+      <a href="/open" class="nav-cta">My ClosedHand</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
     </div>
   </div>
 
   <div class="hero-area" id="heroSection">
-    <div style="flex:0.55"></div>
+    <div class="hero-space-top" style="flex:0.55"></div>
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
     <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
 
@@ -796,7 +806,7 @@ body.chat-active .mon-area { display:none; }
     <div class="hero-footer">
       <span><a class="ethos-link" href="/ethos">ClosedHand is local-first and model-agnostic. The keys to your digital life stay with you.</a></span>
     </div>
-    <div style="flex:1"></div>
+    <div class="hero-space-bottom" style="flex:1"></div>
   </div>
 </div>
 
