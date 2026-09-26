@@ -4,32 +4,60 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>Confirm your personal URL | ClosedHand</title>
+  <title>Confirm your personal URL</title>
   <link rel="icon" href="/logocircle.png">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/interface.css">
-  <link rel="stylesheet" href="/page.css">
-  <link rel="stylesheet" href="/open.css">
+  <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-  <main>
+  <header class="site-head">
     <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
-    <h1 id="heading">Confirm your personal URL</h1>
-    <p id="requested-address" style="overflow-wrap:anywhere;font-weight:600;"></p>
-    <div id="explanation">
-      <p>Open ClosedHand from anywhere with your personal URL and dashboard password. ClosedHand keeps running on your computer or server, which needs to stay awake and online.</p>
-      <p>This page records your personal URL, the Google or Microsoft account that owns it, and the details needed to connect it. Cloudflare carries traffic to your ClosedHand.</p>
-    </div>
-    <p id="account" style="overflow-wrap:anywhere;" hidden></p>
-    <p id="consent">Confirm only if you chose this personal URL in ClosedHand.</p>
-    <div class="actions">
-      <button id="approve" class="primary" hidden disabled>Confirm personal URL</button>
-      <a id="login" class="button primary" hidden>Sign in with Google</a>
-      <a id="return" class="button primary" hidden>Continue in ClosedHand</a>
-    </div>
-    <p class="finder-secondary" id="other" hidden><a id="login-microsoft">Use a Microsoft account instead</a></p>
-    <p id="status" role="status" aria-live="polite">Checking your sign-in…</p>
+    <nav><a href="/open">My ClosedHand</a><a href="/privacy">Privacy</a></nav>
+  </header>
+  <main class="site-main">
+    <h1 class="title" id="heading">Confirm your personal URL</h1>
+    <p class="lede" id="lede">You chose this address in ClosedHand. Confirm it here and it will open your ClosedHand from any device.</p>
+
+    <section class="card">
+      <p class="address" id="address">&nbsp;</p>
+      <p class="address-note" id="address-note">Your personal URL</p>
+
+      <!-- Step 1: sign in. The account used here owns the address. -->
+      <div id="signin" hidden>
+        <h2>Sign in to confirm it's yours</h2>
+        <p>You'll use the same account to find this address later from any device.</p>
+        <div class="stack">
+          <a class="btn btn-primary" id="login-google"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
+          <a class="btn" id="login-microsoft"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>
+        </div>
+      </div>
+
+      <!-- Step 2: confirm, as the signed-in account. -->
+      <div id="confirm" hidden>
+        <div class="who"><span id="who"></span><a id="switch">Switch account</a></div>
+        <button class="btn btn-primary" id="approve" type="button">Confirm</button>
+        <p class="fine">Only confirm an address you just chose in your own ClosedHand.</p>
+      </div>
+
+      <!-- After confirming: what is happening, until it opens. -->
+      <ol class="steps" id="progress" hidden>
+        <li id="step-confirmed">Confirmed</li>
+        <li id="step-connecting">Connecting to the computer running ClosedHand</li>
+        <li id="step-ready">Ready to open</li>
+      </ol>
+
+      <a class="btn btn-primary" id="open" hidden style="margin-top:20px">Open ClosedHand</a>
+    </section>
+
+    <p class="status" id="status" role="status" aria-live="polite">Checking…</p>
+
+    <details class="help">
+      <summary>What gets stored</summary>
+      <p>Your personal URL, the Google or Microsoft account that owns it, and what Cloudflare needs to carry traffic to your ClosedHand. Your ClosedHand, and everything in it, stays on your computer. The computer needs to be on and online for the address to work.</p>
+    </details>
   </main>
+  <footer class="site-foot"><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
   <script src="/pair.js" defer></script>
 </body>
 </html>

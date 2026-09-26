@@ -1,0 +1,88 @@
+/* Pages that help someone reach their ClosedHand: the same header, card and
+   buttons as the home page, so they read as one site. */
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #100E0D; color: #EFE6D6; font: 400 15px/1.6 var(--font-ui); -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
+a { color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid #D8624B; outline-offset: 3px; border-radius: 6px; }
+
+.site-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 28px; }
+.site-head nav { display: flex; gap: 26px; font-size: 13px; }
+.site-head nav a { color: rgba(239,230,214,0.6); text-decoration: none; }
+.site-head nav a:hover, .site-head nav a[aria-current] { color: #EFE6D6; }
+
+.site-main { flex: 1; width: 100%; max-width: 520px; margin: 0 auto; padding: 56px 20px 40px; }
+.title { font: 500 34px/1.15 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.02em; margin: 0 0 10px; text-align: center; }
+.lede { margin: 0 auto 32px; max-width: 42ch; text-align: center; color: #B6AFA4; }
+
+.card { background: #181615; border: 1px solid rgba(239,230,214,0.1); border-radius: 18px; padding: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.4); }
+.card + .card { margin-top: 16px; }
+.card h2 { font: 500 15px/1.4 var(--font-ui); margin: 0 0 4px; }
+.card p { margin: 0 0 18px; color: #B6AFA4; font-size: 14px; }
+.card .fine { font-size: 13px; margin: 14px 0 0; }
+
+.stack { display: grid; gap: 10px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; padding: 12px 18px; border-radius: 12px; font: 500 15px/1.2 var(--font-ui); text-decoration: none; cursor: pointer; border: 1px solid rgba(239,230,214,0.16); background: rgba(239,230,214,0.04); color: #EFE6D6; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+.btn:hover { background: rgba(239,230,214,0.08); border-color: rgba(239,230,214,0.28); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn img { width: 18px; height: 18px; flex: none; }
+/* The one filled thing on a page, as on the home page. */
+.btn-primary { background: #EFE6D6; border-color: #EFE6D6; color: #100E0D; font: 500 17px/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; }
+.btn-primary:hover { background: #F7F0E3; border-color: #F7F0E3; transform: translateY(-1px); }
+
+.or { display: flex; align-items: center; gap: 12px; margin: 22px 0; font-size: 13px; color: #8C857B; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: rgba(239,230,214,0.08); }
+
+label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+.field { display: flex; gap: 8px; }
+.field input { flex: 1; min-width: 0; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(239,230,214,0.14); background: #100E0D; color: #EFE6D6; font: 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.field input::placeholder { color: #6F695F; }
+.field input:focus { outline: none; border-color: rgba(239,230,214,0.4); }
+.field .btn { width: auto; flex: none; }
+.error { color: #E8A493; font-size: 13px; margin: 10px 0 0; }
+
+.status { min-height: 22px; margin: 18px 0 0; text-align: center; font-size: 14px; color: #B6AFA4; }
+.status.warn { color: #E8A493; }
+
+/* The address a page is about, shown as the thing itself. */
+.card .address { font: 500 26px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -0.01em; color: #EFE6D6; text-align: center; overflow-wrap: anywhere; margin: 4px 0 6px; }
+.card .address-note { text-align: center; font-size: 13px; color: #8C857B; margin: 0 0 24px; }
+
+.who { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #100E0D; border: 1px solid rgba(239,230,214,0.08); margin: 0 0 16px; font-size: 14px; }
+.who span { overflow-wrap: anywhere; }
+.who a { flex: none; font-size: 13px; color: #B6AFA4; }
+
+/* Where a confirmation has got to: confirmed, connecting, ready. */
+.steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 14px; }
+.steps li { display: flex; align-items: center; gap: 12px; color: #8C857B; font-size: 14px; }
+.steps li::before { content: ''; width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1.5px solid rgba(239,230,214,0.2); box-sizing: border-box; }
+.steps li.done { color: #EFE6D6; }
+.steps li.done::before { background: #EFE6D6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23100E0D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; border-color: #EFE6D6; }
+.steps li.now { color: #EFE6D6; }
+.steps li.now::before { border-color: #EFE6D6; border-top-color: transparent; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .steps li.now::before { animation: none; border-top-color: #EFE6D6; } }
+
+details.help { margin-top: 24px; border-top: 1px solid rgba(239,230,214,0.08); padding-top: 14px; font-size: 14px; color: #B6AFA4; }
+details.help summary { cursor: pointer; color: #EFE6D6; list-style: none; }
+details.help summary::-webkit-details-marker { display: none; }
+details.help summary::after { content: '+'; float: right; color: #8C857B; }
+details.help[open] summary::after { content: '\2212'; }
+details.help p { margin: 10px 0 0; font-size: 14px; }
+details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6; }
+
+.aside { text-align: center; font-size: 14px; color: #8C857B; margin: 24px 0 0; }
+.aside a { color: #B6AFA4; text-underline-offset: 3px; }
+.site-foot { display: flex; justify-content: center; gap: 22px; padding: 28px 20px 40px; font-size: 13px; }
+.site-foot a { color: rgba(239,230,214,0.5); text-decoration: none; }
+.site-foot a:hover { color: #EFE6D6; }
+
+@media (max-width: 560px) {
+  .site-head { padding: 18px 16px; }
+  .site-head nav { gap: 16px; }
+  .site-head nav .wide { display: none; }
+  .site-main { padding: 28px 16px 32px; }
+  .title { font-size: 28px; }
+  .card { padding: 22px 18px; border-radius: 16px; }
+  .card .address { font-size: 21px; }
+}
