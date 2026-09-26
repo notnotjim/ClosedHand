@@ -70,6 +70,8 @@ test('the website pages answer and old dashboard links lead to the finder', asyn
   assert.equal(old.headers.get('location'), '/open?next=%2Fdashboard');
   assert.equal((await fetch(base + '/nope')).status, 404);
   assert.deepEqual(await (await fetch(base + '/api/assistant-mail-relay/availability')).json(), { available: false });
+  // Microsoft reads this to confirm closedhand.com publishes the sign-in app.
+  assert.deepEqual(await (await fetch(base + '/.well-known/microsoft-identity-association.json')).json(), { associatedApplications: [] }, 'no real app IDs in the test settings');
 });
 
 test('a Microsoft account claiming someone else\'s email becomes its own owner, never theirs', async () => {

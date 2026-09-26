@@ -33,6 +33,13 @@ function createApp({ db, env = process.env, request = fetch }) {
   app.use(express.static(path.join(__dirname, 'public'), { maxAge: '5m', index: false }));
 
   app.get('/health', (req, res) => res.json({ ok: true }));
+  // Lets Microsoft confirm closedhand.com publishes these sign-in apps, so
+  // its permission screen names closedhand.com.
+  app.get('/.well-known/microsoft-identity-association.json', (req, res) => {
+    const ids = String(env.MICROSOFT_ASSOCIATED_APP_IDS || env.MICROSOFT_CLIENT_ID || '').split(',').map(s => s.trim())
+      .filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id));
+    res.json({ associatedApplications: ids.map(applicationId => ({ applicationId })) });
+  });
   app.get('/', page('home.html'));
   app.get('/ethos', page('ethos.html'));
   app.get('/architecture', page('architecture.html'));
