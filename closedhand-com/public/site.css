@@ -95,6 +95,14 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
 .here-note span { display: block; }
 .lede span { display: block; text-wrap: balance; }
 
+/* For visitors without ClosedHand yet: plainly not a sign-up, and where to
+   get it. Quieter than the card below: an outline, no fill. */
+.newcomer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 12px 12px 12px 20px; border-radius: 14px; border: 1px solid rgba(239,230,214,0.12); }
+.newcomer p { margin: 0; font-size: 14px; color: #B6AFA4; }
+.newcomer strong { font-weight: 500; color: #EFE6D6; }
+.newcomer .btn { width: auto; flex: none; min-height: 40px; padding: 8px 16px; font-size: 14px; }
+/* An empty status line takes no room. */
+.status:empty { min-height: 0; margin: 0; }
 .aside-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,0.08); }
 .aside-block h2 { font: 500 14px/1.4 var(--font-ui); margin: 0 0 6px; color: #EFE6D6; }
 .aside-block p { margin: 0; font-size: 14px; color: #B6AFA4; }
@@ -120,4 +128,6 @@ details.help code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; c
   .route-link { height: 32px; }
   .route-url { font-size: 11px; }
   .field input { font-size: 14px; padding: 0 12px; }
+  .newcomer { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px 16px; }
+  .newcomer .btn { width: 100%; }
 }
