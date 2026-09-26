@@ -24,15 +24,18 @@
   // On the computer running ClosedHand, open it there. Docker uses 3000; the
   // Mac app takes 3000 or the next free port beside a Docker one. Phones and
   // tablets never run it. Chrome asks once before a website may look for
-  // programs on this computer; arriving here means "open my ClosedHand", so
-  // it asks now, and allowing it opens ClosedHand straight away. After that
-  // Chrome remembers, and it is automatic.
+  // programs on this computer, and only when something is running there
+  // (checked in Chrome 2026-09-26: with nothing listening the request just
+  // fails, no question). Arriving here means "open my ClosedHand", so it
+  // asks now; allowing it opens ClosedHand straight away, and after that
+  // Chrome remembers and it is automatic.
   const desktop = !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  const PORTS = [3000, 3002, 3001, 3003, 3004, 3005];
   function findLocal() {
     const ask = port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
       .then(r => (r.ok ? r.json() : null))
       .then(d => (d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject(new Error('not here'))));
-    return Promise.any([3000, 3002, 3001, 3003, 3004, 3005].map(ask)).catch(() => null);
+    return Promise.any(PORTS.map(ask)).catch(() => null);
   }
   function openLocal(base) { say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
   async function permission() {
@@ -56,10 +59,11 @@
       const found = status.state === 'granted' && automatic ? await findLocal() : null;
       if (found && automatic) openLocal(found);
     }, { once: true });
-    // This request is what makes Chrome ask. It waits for the answer, and if
-    // the question is closed without one, the note goes away.
-    fetch('http://localhost:3000/closedhand-here', { cache: 'no-store' }).catch(() => {})
-      .finally(() => { if (status.state === 'prompt') $('here-note').hidden = true; });
+    // These requests are what make Chrome ask. Ports with nothing on them
+    // fail at once; one with ClosedHand waits for the answer. If none waits,
+    // or the question is closed unanswered, the note goes away.
+    Promise.allSettled(PORTS.map(port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store' })))
+      .then(() => { if (status.state === 'prompt') $('here-note').hidden = true; });
     return null;
   })();
   lookingHere.then(found => { if (found && automatic) openLocal(found); });
