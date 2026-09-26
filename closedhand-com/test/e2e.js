@@ -60,6 +60,12 @@ const json = (method, path, body, headers = {}) => fetch(base + path, { method, 
 
 test('the website pages answer and old dashboard links lead to the finder', async () => {
   for (const p of ['/', '/privacy', '/terms', '/ethos', '/architecture', '/open', '/phone-access/pair']) assert.equal((await fetch(base + p)).status, 200, p);
+  // Every stylesheet, script and image a page links to exists.
+  const fs = require('node:fs'), path = require('node:path');
+  for (const view of fs.readdirSync(path.join(__dirname, '..', 'views'))) {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'views', view), 'utf8');
+    for (const [, ref] of html.matchAll(/(?:href|src)="(\/[^"#?]+\.(?:css|js|png|svg|glb))"/g)) assert.equal((await fetch(base + ref)).status, 200, view + ' -> ' + ref);
+  }
   const old = await fetch(base + '/dashboard#x', { redirect: 'manual' });
   assert.equal(old.headers.get('location'), '/open?next=%2Fdashboard');
   assert.equal((await fetch(base + '/nope')).status, 404);
