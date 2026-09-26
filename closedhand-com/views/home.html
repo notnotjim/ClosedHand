@@ -757,6 +757,17 @@ body.chat-active .mon-area { display:none; }
   .orb-stage { position: relative; width: 236px; height: 236px; display: grid; place-items: center; }
   .orb-ring { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease; }
   .orb-ring.is-live { opacity: 1; }
+  /* The ring without WebGL: a soft ember band turning slowly round the fist. */
+  .orb-stage::before { content: ''; position: absolute; inset: 20px; border-radius: 50%; opacity: 0; transition: opacity 1s ease;
+    background: conic-gradient(from 0deg, rgba(208,86,63,0.08), rgba(208,86,63,0.65), rgba(216,166,82,0.5), rgba(107,56,76,0.45), rgba(239,200,170,0.55), rgba(208,86,63,0.08));
+    -webkit-mask: radial-gradient(closest-side, transparent 70%, #000 77%, #000 86%, transparent 97%);
+            mask: radial-gradient(closest-side, transparent 70%, #000 77%, #000 86%, transparent 97%);
+    filter: blur(2.5px); animation: orb-turn 14s linear infinite; }
+  .orb-stage.css-ring::before { opacity: 1; }
+  .orb-stage.css-ring.pulsing::before { animation: orb-turn 14s linear infinite, orb-flash 0.45s ease-out; }
+  @keyframes orb-turn { to { transform: rotate(1turn); } }
+  @keyframes orb-flash { 0% { filter: blur(2.5px) brightness(2.2); scale: 1.05; } 100% { filter: blur(2.5px) brightness(1); scale: 1; } }
+  @media (prefers-reduced-motion: reduce) { .orb-stage::before { animation: none; } }
   .orb { position: relative; width: 116px; height: 116px; border-radius: 50%; display: grid; place-items: center;
     background: radial-gradient(circle at 50% 36%, #2C2724 0%, #1B1817 58%, #141211 100%);
     border: 1px solid rgba(239,230,214,0.2);
@@ -1184,12 +1195,31 @@ body.chat-active .mon-area { display:none; }
 
   // The same smoke ring, small, drifting round the fist on phones and
   // tablets. Tapping the fist pulses it, as the desktop ring pulses, then
-  // opens. It only draws while on screen and the page is visible.
+  // opens. It only draws while on screen and the page is visible. If it
+  // can't be drawn, or is drawn but doesn't actually show (no WebGL, the 3D
+  // library blocked, a screen that displays it differently), a light CSS
+  // ring takes its place, so every device gets a ring.
   function startOrbRing() {
     var ring = document.getElementById('orbRing'), link = document.getElementById('orbOpen');
-    if (!ring || !link || typeof THREE === 'undefined') return;
+    if (!ring || !link) return;
+    var stage = ring.parentNode;
+    var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var pulseRing = function () {};
+    function useCssRing() {
+      ring.classList.remove('is-live');
+      stage.classList.add('css-ring');
+      pulseRing = function () { stage.classList.remove('pulsing'); void stage.offsetWidth; stage.classList.add('pulsing'); };
+    }
+    link.addEventListener('click', function (e) {
+      if (still || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      pulseRing();
+      var href = link.href;
+      setTimeout(function () { location.href = href; }, 420);
+    });
+    if (typeof THREE === 'undefined') return useCssRing();
     var r;
-    try { r = new THREE.WebGLRenderer({ canvas: ring, antialias: true, alpha: true }); } catch (e) { return; }
+    try { r = new THREE.WebGLRenderer({ canvas: ring, antialias: true, alpha: true }); } catch (e) { return useCssRing(); }
     var size = ring.clientWidth || 240;
     r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     r.setSize(size, size, false);
@@ -1200,22 +1230,22 @@ body.chat-active .mon-area { display:none; }
     var ringMaterial = new THREE.ShaderMaterial({
       vertexShader: vertexShader, fragmentShader: fragmentShader,
       uniforms: { uTime: { value: Math.random() * 20 }, uPulse: { value: 0 }, uGain: { value: 2.4 } },
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      // Colour that never exceeds its own opacity, which every browser shows
+      // the same way. Additive blending onto a see-through canvas breaks
+      // that rule, and some screens then show nothing.
+      blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
+      blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneFactor,
+      blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneFactor,
     });
     var ringMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 40), ringMaterial);
     ringScene.add(ringMesh);
-    var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var pulse = 0, onScreen = true, t = 0;
+    var pulse = 0, onScreen = true, t = 0, frames = 0;
+    pulseRing = function () { pulse = 0.6; };
     if ('IntersectionObserver' in window) new IntersectionObserver(function (entries) { onScreen = entries[0].isIntersecting; }).observe(ring);
-    link.addEventListener('click', function (e) {
-      if (still || e.metaKey || e.ctrlKey || e.shiftKey) return;
-      e.preventDefault();
-      pulse = 0.6;
-      var href = link.href;
-      setTimeout(function () { location.href = href; }, 420);
-    });
     ring.classList.add('is-live');
     (function frame() {
+      if (stage.classList.contains('css-ring')) return;
       requestAnimationFrame(frame);
       if (!onScreen || document.hidden) return;
       if (!still) {
@@ -1229,6 +1259,14 @@ body.chat-active .mon-area { display:none; }
       if (pulse < 0.001) pulse = 0;
       ringMaterial.uniforms.uPulse.value = pulse;
       r.render(ringScene, ringCamera);
+      // Once, check the ring really shows: read the row across its middle,
+      // which crosses the ring on both sides.
+      if (++frames === 20) {
+        var gl = r.getContext(), w = gl.drawingBufferWidth, row = new Uint8Array(w * 4), lit = 0;
+        try { gl.readPixels(0, Math.floor(gl.drawingBufferHeight / 2), w, 1, gl.RGBA, gl.UNSIGNED_BYTE, row); } catch (_) {}
+        for (var i = 0; i < row.length; i++) if (row[i] > 12) lit++;
+        if (lit < 8) useCssRing();
+      }
     })();
   }
 
