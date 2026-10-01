@@ -643,7 +643,7 @@
           </div>
 
           <div class="fb-block chooser" id="m-block">
-          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-quick">One sign-in</span> <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-quick">Quick setup</span> <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
           <div class="choice-body">
             <div id="m-connected" style="display:none;">
               <p><span id="m-account">Connected.</span> ClosedHand reads this account's mail, calendar
@@ -954,7 +954,7 @@
     $("#url-required").hidden = personalUrl.settled();
     $("#password-form").hidden = passwordDone;
     $("#password-saved").hidden = !passwordDone;
-    var doneCount = 0;
+    var doneCount = 0, requiredDone = true;
     var next = null;
 
     state.steps.forEach(function (serverStep) {
@@ -971,6 +971,7 @@
       var head = $(".card-head", li);
 
       if (s.done) doneCount++;
+      if (s.required && !s.done) requiredDone = false;
       var freshlyDone = s.done && lastDone[s.key] === false;
       lastDone[s.key] = s.done;
 
@@ -1085,6 +1086,12 @@
     }
     $("#ready-banner").classList.toggle("is-on", !!state.ready);
 
+    // Every required step done: tell the assistant, which holds a chat app's
+    // welcome until then.
+    if (requiredDone && !_finishedSent) {
+      _finishedSent = true;
+      fetch("/api/setup/finished", { method: "POST" }).then(function (r) { if (!r.ok) _finishedSent = false; }, function () { _finishedSent = false; });
+    }
     // Everything done: the finish card appears at the foot of the spine, and
     // the page brings it into view once, so the end is not a small footer link.
     var allDone = doneCount === state.steps.length;
@@ -1228,7 +1235,7 @@
   }
 
   // Keep the welcome open until the person chooses where to go next.
-  var _celebKey = null, _welcomeTimer = null, _welcomeRequest = 0;
+  var _celebKey = null, _welcomeTimer = null, _welcomeRequest = 0, _finishedSent = false;
   function celebrated() {
     try { return !!(_celebKey && localStorage.getItem(_celebKey)); } catch (e) { return false; }
   }

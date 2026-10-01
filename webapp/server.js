@@ -908,6 +908,19 @@ async function mustWrite(what, query) {
   if (error) throw new Error(`${what} (${error.message})`);
 }
 
+// The setup page says when every required step is done (the personal URL
+// included), so a chat app linked partway through hears "finish setup" first
+// and the welcome only after (lib/platforms/whatsapp-linked.js).
+app.post("/api/setup/finished", async (req, res) => {
+  if (!(await requireSetupAccess(req, res))) return;
+  try {
+    await setRuntimeConf({ SETUP_FINISHED: "1" });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "could not record that setup is finished" });
+  }
+});
+
 app.post("/api/setup/password", async (req, res) => {
   try {
     if (!(await requireSetupAccess(req, res))) return;
@@ -7860,6 +7873,12 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
 // ============================================================
 
 const server = app.listen(PORT, async () => {
+  // Installs that finished setup before setup recorded it: ready, with a
+  // personal URL claimed, counts as finished.
+  try {
+    if (!(await getRuntimeConf("SETUP_FINISHED")) && (await require("./setup-state").getSetupState()).ready
+      && (await getRuntimeConf("PHONE_PERMANENT_URL") || await getRuntimeConf("PHONE_ADDRESS_NAME"))) await setRuntimeConf({ SETUP_FINISHED: "1" });
+  } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
   const configured = Object.entries(SERVICES).filter(([, s]) => s.clientId && s.clientSecret).map(([k]) => k);
