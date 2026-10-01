@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The app itself: no sandbox (it runs Postgres and Node from its own
+         bundle and reaches the user's files), and Apple Events for the Mac
+         capabilities Bridge has always had. -->
+    <key>com.apple.security.app-sandbox</key><false/>
+    <key>com.apple.security.automation.apple-events</key><true/>
+    <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>

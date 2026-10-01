@@ -1,0 +1,47 @@
+[
+  {
+    "id": "instagram-web",
+    "name": "Instagram (Workspace browser)",
+    "description": "Read and comment on Instagram posts through the logged-in Workspace browser",
+    "requires_service": null,
+    "always_active": false
+  },
+  {
+    "id": "intelligence-loop",
+    "name": "Intelligence Loop",
+    "description": "Cross-reference Shopify sales and Meta Ads data for smart business recommendations",
+    "requires_service": [
+      "shopify",
+      "meta_ads"
+    ],
+    "always_active": false
+  },
+  {
+    "id": "meta-ads",
+    "name": "Meta Ads",
+    "description": "View and manage Facebook/Instagram ad campaigns, ad sets, and performance insights",
+    "requires_service": "meta_ads",
+    "always_active": false
+  },
+  {
+    "id": "shopify-analytics",
+    "name": "Shopify Analytics",
+    "description": "Query Shopify orders, products, inventory, customers, and sales summaries",
+    "requires_service": "shopify",
+    "always_active": false
+  },
+  {
+    "id": "slack-workspace",
+    "name": "Slack Workspace",
+    "description": "Read Slack channels, search messages, and post to channels",
+    "requires_service": "slack",
+    "always_active": false
+  },
+  {
+    "id": "stop-slop",
+    "name": "stop-slop",
+    "description": "Eliminates AI cliche phrases and Americanisms. Always active.",
+    "requires_service": null,
+    "always_active": true
+  }
+]

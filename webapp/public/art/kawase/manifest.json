@@ -1,0 +1,82 @@
+{
+  "source": "Wikimedia Commons — all works reproduced here are in the public domain. Scans credited in each entry.",
+  "prints": [
+    {
+      "file": "day-oirase.jpg",
+      "title": "Autumn in Oirase",
+      "year": "c. 1933",
+      "buckets": ["day", "morning"],
+      "credit": "Rijksmuseum, Amsterdam (AK-MAK-1631)"
+    },
+    {
+      "file": "day-hikawa.jpg",
+      "title": "Hikawa Park in Ōmiya",
+      "year": "1930",
+      "buckets": ["day", "morning"],
+      "credit": "Rijksmuseum, Amsterdam (RP-P-1994-49)"
+    },
+    {
+      "file": "day-toya.jpg",
+      "title": "Lake Tōya, Hokkaidō",
+      "year": "1952",
+      "buckets": ["day"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "day-chii.jpg",
+      "title": "Chii Mountain Temple, Korea",
+      "year": "1935",
+      "buckets": ["day"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "dusk-ushibori.jpg",
+      "title": "Evening at Ushibori",
+      "year": "1930",
+      "buckets": ["dusk", "evening"],
+      "credit": "Rijksmuseum, Amsterdam (RP-P-1994-51)"
+    },
+    {
+      "file": "dusk-zojoji.jpg",
+      "title": "Snow at Zōjō-ji (Yuki no Zōjō-ji)",
+      "year": "1953",
+      "buckets": ["dusk", "evening", "snow"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "night-matsushima.jpg",
+      "title": "Moon over Matsushima",
+      "year": "c. 1930",
+      "buckets": ["night"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "snow-mukojima.jpg",
+      "title": "Snow in Mukōjima",
+      "year": "1931",
+      "buckets": ["snow", "day"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "snow-nezu.jpg",
+      "title": "Snow at Nezu Gongen Shrine",
+      "year": "1933",
+      "buckets": ["snow", "day"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "snow-zojoji.jpg",
+      "title": "Snow over Zōjō-ji (Shiba, Tokyo)",
+      "year": "c. 1930s",
+      "buckets": ["snow", "dusk"],
+      "credit": "Wikimedia Commons"
+    },
+    {
+      "file": "rain-okayama.jpg",
+      "title": "Bell Tower in Rain, Okayama",
+      "year": "1947",
+      "buckets": ["rain", "dusk"],
+      "credit": "Wikimedia Commons"
+    }
+  ]
+}

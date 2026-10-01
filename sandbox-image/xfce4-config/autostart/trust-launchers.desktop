@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Trust Desktop Launchers
+Exec=bash -c "sleep 2 && for f in ~/Desktop/*.desktop; do gio set \"$f\" metadata::trusted true 2>/dev/null; done"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

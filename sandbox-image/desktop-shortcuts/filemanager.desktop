@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=My Computer
+Comment=File Manager
+Exec=thunar /workspace
+Icon=system-file-manager
+Type=Application
+Categories=System;FileManager;

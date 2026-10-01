@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #100E0D; color: var(--ui-text); font-size: 1.125rem; line-height: 1.7; }
+main, footer { width: min(100%, 48.75rem); margin: 0 auto; padding-left: 1.75rem; padding-right: 1.75rem; }
+main { padding-top: 3rem; padding-bottom: 3.5rem; }
+h1 { font-family: var(--font-brand); font-weight: 500; font-size: clamp(2.125rem, 5vw, 3rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; margin: 0 0 1.5rem; }
+.lead { font-size: 1.4375rem; line-height: 1.45; color: var(--ui-text); }
+h2 { font-size: 1.4375rem; font-weight: 600; line-height: 1.35; margin: 2.75rem 0 1rem; text-wrap: balance; }
+p { margin: 0 0 1.25rem; color: var(--ui-muted); }
+a { color: var(--ui-text); text-underline-offset: .3125rem; text-decoration-color: #D8624B; }
+a:hover { color: #E48C79; }
+a:focus-visible { outline: 2px solid #D8624B; outline-offset: .3125rem; }
+::selection { background: #D8624B; color: #100E0D; }
+.ethos-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem 1.75rem; margin-top: 2.5rem; }
+.ethos-actions a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.get-closedhand { padding: .75rem 1.25rem; border-radius: .625rem; background: #EFE6D6; color: #100E0D; font-weight: 600; text-decoration: none; }
+.get-closedhand:hover { background: #D9CDB9; color: #100E0D; }
+footer { display: flex; flex-wrap: wrap; gap: 0 1.5rem; padding-top: 1.5rem; padding-bottom: 2.5rem; font-size: .9375rem; }
+footer a, footer span { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--ui-muted); }
+footer span { color: #8C857B; margin-right: auto; }
+/* Privacy and Terms: the same reading page, with smaller section headings
+   for their many short sections. */
+.updated { margin: -.75rem 0 2rem; font-size: .875rem; color: #8C857B; }
+.legal h2 { font-size: 1.1875rem; margin: 2.25rem 0 .75rem; }
+ul { margin: 0 0 1.25rem; padding-left: 1.375rem; color: var(--ui-muted); }
+li { margin: 0 0 .5rem; }
+@media (max-width: 600px) {
+  main, footer { padding-left: 1.5rem; padding-right: 1.5rem; }
+  main { padding-top: 1.75rem; }
+  h2 { font-size: 1.3125rem; margin-top: 2.25rem; }
+  .legal h2 { font-size: 1.125rem; }
+  .lead { font-size: 1.3125rem; }
+}

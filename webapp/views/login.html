@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>Log in | ClosedHand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <style>
+    :root {
+      --text-primary: rgba(239,230,214,0.92);
+      --text-secondary: rgba(239,230,214,0.65);
+      --text-tertiary: rgba(239,230,214,0.4);
+      --bg-raised: rgba(26,24,23,0.55);
+      --bg-input: #1A1817;
+      --border-default: rgba(239,230,214,0.1);
+      --border-faint: rgba(239,230,214,0.06);
+      --accent: #D8624B;
+      --accent-dim: rgba(208,86,63,0.15);
+      --warn: #D0A652;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #100E0D; color: var(--text-primary);
+      font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0;
+      background: radial-gradient(560px 380px at 30% 10%, rgba(208,86,63,0.06), transparent 70%);
+      pointer-events: none;
+    }
+    .box { width: min(360px, 90vw); position: relative; }
+    /* The same fist and wordmark as every other page (interface.css). */
+    .box > .ch-brand { display: flex; justify-content: center; margin-bottom: 26px; }
+    .card {
+      background: var(--bg-raised); border: 1px solid var(--border-faint); border-radius: 16px;
+      padding: 26px; backdrop-filter: blur(6px);
+    }
+    label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+    input[type="password"] {
+      width: 100%; padding: 11px 14px; background: var(--bg-input);
+      border: 1px solid var(--border-default); border-radius: 10px;
+      color: var(--text-primary); font-family: inherit; font-size: 15px; outline: none;
+      transition: border-color 0.15s ease;
+    }
+    input[type="password"]:focus { border-color: var(--accent-dim); }
+    button {
+      width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
+      background: var(--accent); color: #100E0D; font-family: inherit; font-size: 14.5px;
+      font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    .err { display: none; margin-top: 12px; font-size: 13px; color: var(--warn); }
+    .hint { margin-top: 16px; font-size: 12.5px; color: var(--text-tertiary); text-align: center; }
+  </style>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/logocircle.png">
+  <meta name="theme-color" content="#100E0D">
+</head>
+<body>
+  <div class="box">
+    <span class="ch-brand"><img src="/fist.png" alt=""><span>ClosedHand</span></span>
+    <form class="card" id="login-form">
+      <label for="pw">Dashboard password</label>
+      <input type="password" id="pw" autocomplete="current-password" autofocus>
+      <button type="submit">Log in</button>
+      <p class="err" id="err"></p>
+    </form>
+    <p class="hint">The password you chose during setup.</p>
+  </div>
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("login-form");
+  var err = document.getElementById("err");
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    err.style.display = "none";
+    fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: document.getElementById("pw").value }),
+    }).then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
+      .then(function (r) {
+        if (r.ok) {
+          var next = new URLSearchParams(location.search).get("next") || "/";
+          // The server cannot see #agents; browsers carry it onto the login URL.
+          // Restore it after signing in, while keeping redirects on this origin.
+          var destination = new URL(next, location.origin);
+          if (!next.startsWith("/") || destination.origin !== location.origin) destination = new URL("/", location.origin);
+          if (!destination.hash) destination.hash = location.hash;
+          location.href = destination.pathname + destination.search + destination.hash;
+        } else {
+          err.textContent = (r.j && r.j.error) || "Wrong password";
+          err.style.display = "block";
+        }
+      })
+      .catch(function () { err.textContent = "Could not reach the server"; err.style.display = "block"; });
+  });
+})();
+</script>
+</body>
+</html>

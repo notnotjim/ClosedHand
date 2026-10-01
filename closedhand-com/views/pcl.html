@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#100E0D">
+  <meta name="description" content="The Preemptive Context Layer (PCL): one live picture of a person’s world, kept current from everything their assistant connects to and searched once before the language model sees each message. Free to use. First published by ClosedHand, 29 September 2026.">
+  <link rel="canonical" href="https://closedhand.com/pcl">
+  <link rel="icon" href="/logocircle.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <link rel="stylesheet" href="/ethos.css">
+  <title>Preemptive Context Layer | ClosedHand</title>
+</head>
+<body>
+  <header class="site-head">
+    <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+    <nav aria-label="ClosedHand"><a class="gh" href="https://github.com/notnotjim/ClosedHand" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a><a href="/open" class="nav-cta">My ClosedHand</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+  </header>
+  <main>
+    <article>
+      <h1>Preemptive Context Layer</h1>
+      <p class="lead">One live picture of your world, searched before the model reads your message.</p>
+      <p>A Preemptive Context Layer (PCL) keeps everything an assistant is connected to in one continuously updated index, a single live picture of a person’s world, and searches it automatically, without any language-model call, before the language model sees each message. The model starts with the relevant context, instead of spending tokens and tool calls deciding which apps might be worth searching. The name and this definition were first published here by ClosedHand on 29 September 2026.</p>
+
+      <h2>Why it matters</h2>
+      <p>An assistant that chooses its tools can only find what it thinks to look for. Ask what to get Sam for his birthday and it may check your calendar and mail, then never open the chat where Sam said what he wanted. With a Preemptive Context Layer there is nothing to choose between. That chat is already part of the one picture, so a single search finds it alongside the calendar and mail, and the model sees connections it would never have gone looking for.</p>
+
+      <h2>How it works in your ClosedHand assistant</h2>
+      <p><strong>Everything it can read joins one index.</strong> Mail, calendars, chat and notes services have their own readers. Other connections are read through a common description of the information they offer: a built-in description, a published API description, or an MCP server's read-only resources and tools. A connection that can't be described this way is still used, just on demand.</p>
+      <p><strong>It stays current on its own.</strong> Connected services are checked every 5 to 15 minutes and new items join the index as they arrive, without anyone asking. A background model writes a short summary of most items, and a small embedding model turns each one into a vector so it can be found by meaning. No language model decides what to fetch.</p>
+      <p><strong>One search, in one place.</strong> Each message is searched once, by meaning and by its exact words together, in that single index. The best few matches, whichever services they came from, are placed in front of the model before it answers or picks a tool.</p>
+      <p><strong>Detail when it’s needed.</strong> The picture gives the model the gist. For exact wording, amounts or dates it reads the full original from ClosedHand’s own copy on your computer, and goes to the live service only when that copy isn’t enough or something may have just changed. That is also how it sends, books or changes anything.</p>
+      <p><strong>It belongs to you, not the model.</strong> The index lives with ClosedHand on your computer, so changing your language model keeps everything it knows. Hosted models you choose see the content they work on.</p>
+
+      <h2>What it is not</h2>
+      <p>It doesn't replace live tools. Flight status, weather, purchases and other actions still use them, and the model can still search further on its own. It isn't perfect recall either: coverage depends on what each service allows, very short or casual messages skip the search, and something newer than the last check can be missed.</p>
+      <p>Fetching context before a model runs isn't new in itself. Enterprise tools, such as Microsoft 365 Copilot's semantic index, ground prompts in a company's own data. The Preemptive Context Layer names a particular form of it: for one person, across every service they connect, kept current without a language model choosing what to look up, and held by that person rather than a model provider.</p>
+
+      <h2>Using the name</h2>
+      <p>Anyone is free to use the name Preemptive Context Layer, or PCL, and to build one. If you do, please link to closedhand.com/pcl, where the name and this definition were first published. ClosedHand’s own implementation is open source under Apache 2.0.</p>
+      <p>The full technical note, with how it relates to earlier work, is archived at Zenodo: <a href="https://doi.org/10.5281/zenodo.23040633" rel="noopener">doi.org/10.5281/zenodo.23040633</a>, which always leads to its latest version.</p>
+      <p>Cite as: ClosedHand, “Preemptive Context Layer (PCL)”, technical note, Zenodo, doi:10.5281/zenodo.23040633, first published 29 September 2026.</p>
+    </article>
+    <nav class="ethos-actions" aria-label="Explore ClosedHand">
+      <a class="get-closedhand" href="/#ways">Get ClosedHand</a>
+      <a href="https://github.com/notnotjim/ClosedHand/tree/main/lib/services">Read the implementation</a>
+      <a href="/architecture">How ClosedHand works</a>
+    </nav>
+  </main>
+  <footer><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
+</body>
+</html>

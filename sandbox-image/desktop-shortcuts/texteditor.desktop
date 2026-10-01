@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Notepad
+Comment=Text Editor
+Exec=mousepad
+Icon=accessories-text-editor
+Type=Application
+Categories=Utility;TextEditor;

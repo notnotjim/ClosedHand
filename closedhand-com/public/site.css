@@ -1,0 +1,149 @@
+/* Pages that help someone reach their ClosedHand: the same header, card and
+   buttons as the home page, so they read as one site. */
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #100E0D; color: #EFE6D6; font: 400 .9375rem/1.6 var(--font-ui); -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
+a { color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid #D8624B; outline-offset: .1875rem; border-radius: .375rem; }
+
+.site-main { flex: 1; width: 100%; max-width: 32.5rem; margin: 0 auto; padding: 3.5rem 1.25rem 2.5rem; }
+.title { font: 500 2.125rem/1.15 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.02em; margin: 0 0 .625rem; text-align: center; }
+.lede { margin: 0 auto 2rem; max-width: 62ch; text-align: center; color: #B6AFA4; }
+
+.card { background: #181615; border: 1px solid rgba(239,230,214,0.1); border-radius: 1.125rem; padding: 1.75rem; box-shadow: 0 1.875rem 5rem rgba(0,0,0,0.4); }
+.card + .card { margin-top: 1rem; }
+.card h2 { font: 500 .9375rem/1.4 var(--font-ui); margin: 0 0 .25rem; }
+.card p { margin: 0 0 1.125rem; color: #B6AFA4; font-size: .875rem; text-wrap: pretty; }
+.card .fine { font-size: .8125rem; margin: .875rem 0 0; }
+
+.stack { display: grid; gap: .625rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .625rem; width: 100%; min-height: 3rem; padding: .75rem 1.125rem; border-radius: .75rem; font: 500 .9375rem/1.2 var(--font-ui); text-decoration: none; cursor: pointer; border: 1px solid rgba(239,230,214,0.16); background: rgba(239,230,214,0.04); color: #EFE6D6; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+.btn:hover { background: rgba(239,230,214,0.08); border-color: rgba(239,230,214,0.28); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn img { width: 1.125rem; height: 1.125rem; flex: none; }
+/* The one filled thing on a page, as on the home page. */
+.btn-primary { background: #EFE6D6; border-color: #EFE6D6; color: #100E0D; font: 500 1.0625rem/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; }
+.btn-primary:hover { background: #F7F0E3; border-color: #F7F0E3; transform: translateY(-1px); }
+
+.or { display: flex; align-items: center; gap: .75rem; margin: 1.375rem 0; font-size: .8125rem; color: #8C857B; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: rgba(239,230,214,0.08); }
+
+label { display: block; font-size: .875rem; font-weight: 500; margin-bottom: .5rem; }
+.field { display: flex; gap: .5rem; }
+.field input { flex: 1; min-width: 0; min-height: 3rem; padding: 0 .875rem; border-radius: .75rem; border: 1px solid rgba(239,230,214,0.14); background: #100E0D; color: #EFE6D6; font: .9375rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.field input::placeholder { color: #6F695F; }
+.field input:focus { outline: none; border-color: rgba(239,230,214,0.4); }
+.field .btn { width: auto; flex: none; }
+.error { color: #E8A493; font-size: .8125rem; margin: .625rem 0 0; }
+
+.status { min-height: 1.375rem; margin: 1.125rem 0 0; text-align: center; font-size: .875rem; color: #B6AFA4; }
+.status.warn { color: #E8A493; }
+
+/* The address a page is about, shown as the thing itself. */
+.card .address { font: 500 1.625rem/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -0.01em; color: #EFE6D6; text-align: center; overflow-wrap: anywhere; margin: .25rem 0 .375rem; }
+.card .address-note { text-align: center; font-size: .8125rem; color: #8C857B; margin: 0 0 1.5rem; }
+
+.who { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem .875rem; border-radius: .75rem; background: #100E0D; border: 1px solid rgba(239,230,214,0.08); margin: 0 0 1rem; font-size: .875rem; }
+.who span { overflow-wrap: break-word; min-width: 0; }
+.who a { flex: none; font-size: .8125rem; color: #B6AFA4; }
+
+#not-set-up .who { margin: 0; }
+#not-set-up h2 { font: 500 1.0625rem/1.35 var(--font-ui); margin-bottom: .5rem; }
+
+/* The code the owner types into their own ClosedHand. */
+.card .code { font: 600 2.25rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2em; text-align: center; color: #EFE6D6; padding: 1.125rem .75rem 1.125rem calc(.75rem + 0.2em); margin: 0; border-radius: .75rem; background: #100E0D; border: 1px solid rgba(239,230,214,0.14); user-select: all; }
+.card .code-note { text-align: center; }
+#copy-code { margin-top: .875rem; }
+
+/* Where a confirmation has got to: confirmed, connecting, ready. */
+.steps { list-style: none; margin: .25rem 0 0; padding: 0; display: grid; gap: .875rem; }
+.steps li { display: flex; align-items: center; gap: .75rem; color: #8C857B; font-size: .875rem; }
+.steps li::before { content: ''; width: 1.125rem; height: 1.125rem; flex: none; border-radius: 50%; border: 1.5px solid rgba(239,230,214,0.2); box-sizing: border-box; }
+.steps li.done { color: #EFE6D6; }
+.steps li.done::before { background: #EFE6D6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23100E0D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/.75rem no-repeat; border-color: #EFE6D6; }
+.steps li.now { color: #EFE6D6; }
+.steps li.now::before { border-color: #EFE6D6; border-top-color: transparent; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .steps li.now::before { animation: none; border-top-color: #EFE6D6; } }
+
+details.help { margin-top: 1.5rem; border-top: 1px solid rgba(239,230,214,0.08); padding-top: .875rem; font-size: .875rem; color: #B6AFA4; }
+details.help summary { cursor: pointer; color: #EFE6D6; list-style: none; }
+details.help summary::-webkit-details-marker { display: none; }
+details.help summary::after { content: '+'; float: right; color: #8C857B; }
+details.help[open] summary::after { content: '\2212'; }
+details.help p { margin: .625rem 0 0; font-size: .875rem; }
+details.help code { font: .8125rem ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6; }
+
+/* This device, your personal URL, your computer: what the page is for. An
+   arrow from the device into the computer, labelled with the address, with
+   a light travelling along it, reads as "this reaches that" even when still. */
+.route { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 6.5rem; align-items: start; max-width: 28.75rem; margin: 0 auto 2.25rem; }
+.route-end { display: flex; flex-direction: column; align-items: center; gap: .5rem; font-size: .8125rem; line-height: 1.35; color: #B6AFA4; text-align: center; }
+.route-icon { width: 2.25rem; height: 2.25rem; fill: none; stroke: #EFE6D6; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+/* As tall as the icons, so the arrow meets them at their middle. */
+.route-link { position: relative; height: 2.25rem; }
+.route-url { position: absolute; left: 50%; bottom: calc(50% + .4375rem); transform: translateX(-50%); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: .75rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #EFE6D6; }
+.route-line { position: absolute; left: .25rem; right: .75rem; top: 50%; height: 1px; background: linear-gradient(90deg, rgba(239,230,214,0.18), rgba(239,230,214,0.55)); }
+.route-line::after { content: ''; position: absolute; right: -.5rem; top: -.25rem; border-left: .5rem solid rgba(239,230,214,0.6); border-top: .28125rem solid transparent; border-bottom: .28125rem solid transparent; }
+.route-pulse { position: absolute; top: -.1875rem; left: 0; width: .4375rem; height: .4375rem; border-radius: 50%; background: #EFE6D6; box-shadow: 0 0 .625rem 2px rgba(239,230,214,0.35); animation: route-travel 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes route-travel { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - .4375rem); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .route-pulse { display: none; } }
+
+/* While Chrome asks to look for ClosedHand on this computer. */
+.here-note { margin: -.75rem auto 1.5rem; text-align: center; font-size: .8125rem; color: #B6AFA4; }
+.here-note span { display: block; }
+.lede span { display: block; text-wrap: balance; }
+
+/* For visitors without ClosedHand yet: plainly not a sign-up, and where to
+   get it. Quieter than the card below: an outline, no fill. */
+.newcomer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 0; padding: .75rem .75rem .75rem 1.25rem; border-radius: .875rem; border: 1px solid rgba(239,230,214,0.12); }
+.newcomer p { margin: 0; font-size: .875rem; color: #B6AFA4; text-wrap: balance; }
+.newcomer strong { font-weight: 500; color: #EFE6D6; }
+.newcomer .btn { width: auto; flex: none; min-height: 2.5rem; padding: .5rem 1rem; font-size: .875rem; }
+/* Phones and tablets (html.handheld, set by handheld.js) can't run
+   ClosedHand: there, newcomers send the site to a computer instead of
+   downloading. */
+html:not(.handheld) .handheld-only, html.handheld .computer-only { display: none !important; }
+/* An empty status line takes no room. */
+.status:empty { min-height: 0; margin: 0; }
+.aside-block { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(239,230,214,0.08); }
+.aside-block h2 { font: 500 .875rem/1.4 var(--font-ui); margin: 0 0 .375rem; color: #EFE6D6; }
+.aside-block p { margin: 0; font-size: .875rem; color: #B6AFA4; }
+
+/* A newcomer's way in on /open: one filled button, and a quiet way on for
+   people who already have ClosedHand. */
+.welcome { display: flex; flex-direction: column; align-items: center; gap: .875rem; max-width: 22.5rem; margin: 0 auto; }
+.welcome .get-it-ways { margin-bottom: .25rem; }
+.have-it { padding: .5rem .25rem; border: 0; background: none; color: #B6AFA4; font: 400 .875rem/1.4 var(--font-ui); text-decoration: underline; text-underline-offset: .25rem; text-decoration-color: rgba(239,230,214,0.25); cursor: pointer; }
+.have-it:hover { color: #EFE6D6; }
+.aside { text-align: center; font-size: .875rem; color: #8C857B; margin: 1.5rem 0 0; }
+.aside a { color: #B6AFA4; text-underline-offset: .1875rem; }
+.site-foot { display: flex; justify-content: center; gap: 1.375rem; padding: 1.75rem 1.25rem 2.5rem; font-size: .8125rem; }
+.site-foot a { color: rgba(239,230,214,0.5); text-decoration: none; }
+.site-foot a:hover { color: #EFE6D6; }
+
+@media (max-width: 560px) {
+  .site-main { padding: 1.75rem 1rem 2rem; }
+  .title { font-size: 1.75rem; }
+  .card { padding: 1.375rem 1.125rem; border-radius: 1rem; }
+  .card .address { font-size: 1.3125rem; }
+  .card .code { font-size: 1.875rem; }
+  .route { grid-template-columns: 5rem minmax(0, 1fr) 5rem; margin-bottom: 1.75rem; }
+  .route-end { font-size: .75rem; }
+  .route-icon { width: 2rem; height: 2rem; }
+  .route-link { height: 2rem; }
+  .route-url { font-size: .6875rem; }
+  .field input { font-size: .875rem; padding: 0 .75rem; }
+  .who { flex-direction: column; align-items: flex-start; gap: .375rem; }
+  .newcomer { flex-direction: column; align-items: stretch; gap: .75rem; padding: 1rem 1rem; }
+  .newcomer .btn { width: 100%; }
+}
+
+/* The account page: deleting an account is the one destructive action on
+   the site, so its button reads as one. */
+.btn-danger { color: #E8A493; border-color: rgba(232,164,147,0.35); }
+.btn-danger:hover { background: rgba(232,164,147,0.08); border-color: rgba(232,164,147,0.55); }
+#confirm .confirm-text { color: #EFE6D6; }
+.who form { margin: 0; flex: none; }
+.who button.link { background: none; border: 0; padding: 0; font: 400 .8125rem/1.4 var(--font-ui); color: #B6AFA4; text-decoration: underline; text-underline-offset: .1875rem; cursor: pointer; }
+#confirm .confirm-text .nowrap { white-space: nowrap; font-weight: 500; }

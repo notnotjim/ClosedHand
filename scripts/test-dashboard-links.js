@@ -1,0 +1,222 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const { EventEmitter } = require('node:events');
+const root = path.join(__dirname, '..');
+function load(file, dependencies = {}, extras = {}) {
+  const context = { module: { exports: {} }, URL, URLSearchParams, console,
+    process: { env: {} }, setInterval: () => ({ unref() {} }),
+    require: name => { if (!(name in dependencies)) throw Error(name); return dependencies[name]; }, ...extras };
+  vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), context);
+  return context.module.exports;
+}
+function config(values, env = {}) {
+  const query = { select() { return this; }, eq() { return this; }, async single() {
+    await new Promise(resolve => setImmediate(resolve));
+    return { data: { settings: { self_host_config: values } } };
+  } };
+  return load('lib/config.js', { './db': { isDbConfigured: () => true, supabase: { from: () => query } },
+    './admin': { getAdminUserId: () => 'test' } }, { process: { env } });
+}
+function links(conf) { return load('lib/dashboard-links.js', { './config': conf }); }
+const phone = 'https://test-phone.trycloudflare.com';
+test('first chat link awaits phone config, including a cold cache', async () => {
+  const conf = config({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone });
+  assert.equal(await links(conf).dashboardUrl('whatsapp'), phone + '/dashboard#agents');
+  assert.equal(await links(conf).dashboardUrl('telegram'), phone + '/dashboard#agents');
+});
+test('web stays relative and disabled phone access never emits localhost or stale URLs', async () => {
+  const client = links(config({ PHONE_ACCESS_URL: phone }, { BASE_URL: 'http://localhost:3000' }));
+  assert.equal(await client.dashboardUrl('web'), '/dashboard#agents');
+  assert.equal(await client.dashboardUrl('whatsapp'), null);
+  assert.match(await client.agentLinkNotice('whatsapp'), /Your phone/);
+});
+test('configured permanent HTTPS address wins over the temporary tunnel', async () => {
+  const conf = config({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone }, { WEBAPP_URL: 'https://my.example.com/' });
+  assert.equal(await links(conf).dashboardUrl('telegram'), 'https://my.example.com/dashboard#agents');
+});
+test('unsafe or computer-only addresses are never sent to chat', async () => {
+  for (const address of ['http://example.com', 'https://localhost:3000', 'https://127.0.0.1', 'https://192.168.1.3', 'https://bot', 'https://laptop.local', 'https://user:secret@example.com', 'https://example.com/?token=secret']) {
+    assert.equal(await config({}, { WEBAPP_URL: address }).dashboardBase(), null, address);
+  }
+});
+const flush = () => new Promise(resolve => setImmediate(resolve));
+function tunnel(initial = {}, permanent = null, registration = {}) {
+  const values = { ...initial }, children = [], intervals = [], retries = [];
+  let health = async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) });
+  const api = load('webapp/phone-access.js', {
+    './config': { getConf: async key => values[key], setConf: async patch => Object.assign(values, patch) },
+    './phone-registration': { connection: async () => permanent, status: () => registration, begin: async () => 'https://closedhand.com/phone-access/pair#fixture' },
+    child_process: { spawn(bin, args, options) { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; child.args = args; child.options = options; children.push(child); return child; } },
+  }, { setTimeout: fn => { retries.push(fn); return retries.length; }, clearTimeout() {}, console: { log() {}, error() {} },
+    AbortSignal, fetch: (...args) => health(...args),
+    setInterval: fn => { const timer = { fn, unref() {} }; intervals.push(timer); return timer; },
+    clearInterval: timer => { timer.cleared = true; } });
+  return { api, values, children, intervals, retries, setHealth: fn => { health = fn; } };
+}
+test('phone access requires a password on enable and on restart', async () => {
+  const t = tunnel({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone });
+  await assert.rejects(t.api.enable(), /password/);
+  await t.api.boot();
+  assert.equal(t.children.length, 0);
+  assert.equal(t.values.PHONE_ACCESS_URL, null);
+});
+test('quitting stops the tunnel but retains the setting needed to resume', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.api.shutdown();
+  assert.equal(t.children[0].killed, true);
+  assert.equal(t.values.PHONE_ACCESS, '1');
+  assert.equal(t.api.status().enabled, false);
+  const resumed = tunnel(t.values);
+  await resumed.api.boot();
+  assert.equal(resumed.children.length, 1);
+});
+test('phone URL is published only after connection, clears on failure and ignores old children', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  const first = t.children[0];
+  first.stderr.emit('data', 'https://test-phone.trycloud');
+  first.stderr.emit('data', 'flare.com\n');
+  await flush();
+  assert.equal(t.values.PHONE_ACCESS_URL, null);
+  first.stderr.emit('data', 'Registered tunnel connection');
+  await flush();
+  assert.equal(t.api.status().url, phone);
+  await t.api.disable();
+  await t.api.enable();
+  const second = t.children[1];
+  second.stderr.emit('data', 'https://new-phone.trycloudflare.com\nRegistered tunnel connection');
+  await flush();
+  first.emit('exit', 0);
+  await flush();
+  assert.equal(t.api.status().url, 'https://new-phone.trycloudflare.com');
+  second.emit('error', Object.assign(new Error('missing binary'), { code: 'ENOENT' }));
+  await flush();
+  assert.equal(t.api.status().state, 'unavailable');
+  assert.equal(t.values.PHONE_ACCESS_URL, null);
+});
+test('successful login preserves the Agents tab and rejects external redirects', async () => {
+  const html = fs.readFileSync(path.join(root, 'webapp/views/login.html'), 'utf8');
+  const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
+  for (const [next, expected] of [['/dashboard', '/dashboard#agents'], ['/dashboard?view=1', '/dashboard?view=1#agents'], ['//evil.example', '/#agents'], ['/\\evil.example', '/#agents']]) {
+    let submit;
+    const location = { origin: 'https://my.example.com', search: '?next=' + encodeURIComponent(next), hash: '#agents' };
+    vm.runInNewContext(script, { URL, URLSearchParams, location,
+      document: { getElementById: id => id === 'login-form' ? { addEventListener: (_, fn) => { submit = fn; } } : { style: {}, value: 'fixture' } },
+      fetch: async () => ({ ok: true, json: async () => ({ success: true }) }) });
+    submit({ preventDefault() {} });
+    await flush();
+    assert.equal(location.href, expected);
+  }
+});
+
+test('a live process with a dead public address clears the URL and reconnects after repeated failures', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  const first = t.children[0];
+  first.stderr.emit('data', phone + '\nRegistered tunnel connection');
+  await flush();
+  const check = t.intervals[0].fn;
+  t.setHealth(async () => { throw new Error('DNS address gone'); });
+  await check(); await check();
+  assert.equal(first.killed, undefined, 'a brief outage does not rotate the address');
+  t.setHealth(async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) }));
+  await check();
+  t.setHealth(async () => ({ ok: false }));
+  await check(); await check();
+  assert.equal(first.killed, undefined, 'success resets the failure count');
+  await check(); await flush();
+  assert.equal(first.killed, true);
+  assert.equal(t.values.PHONE_ACCESS_URL, null);
+  assert.equal(t.api.status().state, 'error');
+  assert.equal(t.intervals[0].cleared, true);
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.children.length, 2);
+  t.children[1].stderr.emit('data', 'https://reconnected.trycloudflare.com\nRegistered tunnel connection');
+  await flush();
+  assert.equal(t.api.status().url, 'https://reconnected.trycloudflare.com');
+});
+
+test('a health check finishing after disable cannot restart or clear a replacement connection', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.children[0].stderr.emit('data', phone + '\nRegistered tunnel connection');
+  await flush();
+  t.setHealth(async () => { throw new Error('offline'); });
+  await t.intervals[0].fn(); await t.intervals[0].fn();
+  let reject;
+  t.setHealth(() => new Promise((_, fail) => { reject = fail; }));
+  const pending = t.intervals[0].fn();
+  await t.api.disable(); await t.api.enable();
+  t.children[1].stderr.emit('data', 'https://replacement.trycloudflare.com\nRegistered tunnel connection');
+  await flush();
+  reject(new Error('old check')); await pending;
+  assert.equal(t.api.status().url, 'https://replacement.trycloudflare.com');
+  assert.equal(t.children[1].killed, undefined);
+  assert.equal(t.retries.length, 0);
+});
+
+
+test('named connection retains the exact address across a disconnect and an installation restart', async () => {
+  const permanent = { url: 'https://ch-11111111111141118111111111111111.closedhand.com', token: 'fixture-named-token' };
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' }, permanent);
+  await t.api.enable('managed');
+  assert.equal(t.api.status().url, null);
+  assert.equal(t.children[0].args.includes(permanent.token), false);
+  assert.equal(t.children[0].options.env.TUNNEL_TOKEN, permanent.token);
+  t.children[0].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(t.api.status().url, permanent.url);
+  t.children[0].emit('exit', 1); await flush();
+  t.retries.at(-1)(); await flush();
+  t.children[1].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(t.api.status().url, permanent.url);
+  const restarted = tunnel(t.values, permanent); await restarted.api.boot();
+  restarted.children[0].stderr.emit('data', 'Registered tunnel connection'); await flush();
+  assert.equal(restarted.api.status().url, permanent.url);
+  await restarted.api.disable();
+  assert.equal(restarted.api.status().url, null);
+  assert.equal(restarted.children[0].killed, true);
+});
+test('pending registration does not start a tunnel or publish a link', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable('managed');
+  assert.equal(t.children.length, 0);
+  assert.equal(t.api.status().state, 'pairing');
+  assert.equal(t.api.status().permanent, true);
+  assert.equal(t.api.status().url, null);
+  await t.api.disable();
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.children.length, 0);
+  assert.equal(t.api.status().pairingUrl, null);
+});
+
+test('confirmed ownership replaces pairing while provisioning, without advertising an unverified URL', async () => {
+  const registration = { ownershipConfirmed: false, registrationState: 'unconfirmed' };
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' }, null, registration);
+  await t.api.enable('managed');
+  assert.ok(t.api.status().pairingUrl);
+  registration.ownershipConfirmed = true; registration.registrationState = 'pending';
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.api.status().state, 'provisioning');
+  assert.equal(t.api.status().ownershipConfirmed, true);
+  assert.equal(t.api.status().pairingUrl, null);
+  assert.equal(t.api.status().url, null); assert.equal(t.children.length, 0);
+});
+
+test('upgrading a temporary phone connection keeps it reachable during approval', async () => {
+  const t = tunnel({ DASHBOARD_PASSWORD_HASH: 'fixture' });
+  await t.api.enable();
+  t.children[0].stderr.emit('data', phone + '\nRegistered tunnel connection'); await flush();
+  await t.api.enable('managed');
+  assert.equal(t.children[0].killed, undefined);
+  assert.equal(t.api.status().url, phone);
+  assert.equal(t.api.status().permanent, false);
+  assert.equal(t.api.status().state, 'pairing');
+  assert.ok(t.api.status().pairingUrl);
+  await t.api.disable();
+  t.retries.at(-1)(); await flush();
+  assert.equal(t.api.status().enabled, false);
+});

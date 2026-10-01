@@ -1,0 +1,130 @@
+<!doctype html><meta charset="utf-8">
+<body style="margin:0;background:#000">
+<canvas id="c" width="1296" height="1296"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/SVGLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegmentsGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineMaterial.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegments2.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/Line2.js"></script>
+<script src="shaders.js"></script>
+<script>
+// The smoke ring (the desktop's own shaders, drift made periodic, brighter
+// for its small size) with the ClosedHand fist in 3D inside it: the traced
+// logo extruded as thin glass with its outline drawn round the front face.
+var ringVS = vertexShader.replace('uniform float uTime;', 'uniform vec3 uLoop;').replace('  float t = uTime * 0.1;', '  vec3 t = uLoop;');
+var ringFS = fragmentShader.replace('uniform float uPulse;', 'uniform float uPulse;\nuniform float uGain;').replace('  gl_FragColor = vec4(color, alpha);', '  gl_FragColor = vec4(color * uGain, alpha);');
+if (ringVS === vertexShader || ringFS === fragmentShader) throw new Error('ring shader did not match');
+// Rendered at twice the 648 pixels a phone shows it at (216 CSS pixels at
+// three device pixels each), then scaled down, so every edge is clean.
+var S = 1296, canvas = document.getElementById('c');
+var r = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(S, S, false); r.setClearColor(0x000000, 1);
+var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
+camera.position.z = 7.9;
+var ringMat = new THREE.ShaderMaterial({ vertexShader: ringVS, fragmentShader: ringFS,
+  uniforms: { uLoop: { value: new THREE.Vector3() }, uTime: { value: 4.0 }, uPulse: { value: 0 }, uGain: { value: 4.6 } },
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+var ring = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 96), ringMat);
+scene.add(ring);
+
+var fist = new THREE.Group(); scene.add(fist);
+// Glass: the smoke shows dimly through a tinted face, the side walls are
+// dense lit glass, a bright rim where the surface turns away, a soft band
+// of reflected light and a sharp highlight from above left.
+var glassMat = new THREE.ShaderMaterial({
+  // Writes its depth and draws only in front of it, so where two triangles
+  // meet the glass is laid once, not twice (which showed as streaks).
+  side: THREE.DoubleSide, transparent: true, depthFunc: THREE.LessDepth,
+  polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  uniforms: { uTint: { value: new THREE.Color(0.27, 0.2, 0.17) }, uRim: { value: new THREE.Color(0.95, 0.62, 0.48) }, uShine: { value: new THREE.Color(1.0, 0.94, 0.86) } },
+  vertexShader: [
+    'varying vec3 vN; varying vec3 vView; varying float vWall;',
+    'void main() {',
+    '  vWall = 1.0 - abs(normal.z);',
+    '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+    '  vView = -mv.xyz; vN = normalize(normalMatrix * normal);',
+    '  gl_Position = projectionMatrix * mv;',
+    '}'].join('\n'),
+  fragmentShader: [
+    'uniform vec3 uTint; uniform vec3 uRim; uniform vec3 uShine;',
+    'varying vec3 vN; varying vec3 vView; varying float vWall;',
+    'void main() {',
+    '  vec3 n = normalize(vN), v = normalize(vView);',
+    '  if (dot(n, v) < 0.0) n = -n;',
+    '  float facing = clamp(dot(n, v), 0.0, 1.0);',
+    '  float rim = pow(1.0 - facing, 2.2);',
+    '  vec3 l = normalize(vec3(-0.45, 0.8, 0.6));',
+    '  vec3 h = normalize(l + v);',
+    '  float spec = pow(max(dot(n, h), 0.0), 48.0);',
+    // What the glass reflects: a dim room lit from above, with one soft
+    // diagonal band of light that glides over the faces as the fist turns.
+    '  vec3 r = reflect(-v, n);',
+    '  float room = 0.16 * smoothstep(-0.3, 0.9, r.y);',
+    '  float band = pow(max(0.0, 1.0 - abs(r.x * 0.75 + r.y * 0.65 - 0.25) * 3.2), 2.5);',
+    '  vec3 col = uTint + uRim * rim * 0.85 + uShine * (spec * 0.9 + band * 0.55 + room);',
+    '  float alpha = clamp(0.62 + rim * 0.55 + spec * 0.5 + band * 0.35, 0.0, 0.92);',
+    // The side walls are where you look through the most glass, so they
+    // read dense and lit, which keeps the front and back outlines one object.
+    '  vec3 wall = uRim * (0.72 + 0.28 * dot(n, l)) + uShine * spec * 0.6;',
+    '  col = mix(col, wall, vWall);',
+    '  alpha = mix(alpha, 0.95, vWall);',
+    '  gl_FragColor = vec4(col, alpha);',
+    '}'].join('\n'),
+});
+window.loadFist = async function (svgText, height, depth) {
+  var data = new THREE.SVGLoader().parse(svgText), shapes = [];
+  data.paths.forEach(function (path) { shapes = shapes.concat(THREE.SVGLoader.createShapes(path)); });
+  var box = new THREE.Box2().setFromPoints([].concat.apply([], shapes.map(function (sh) { return sh.getPoints(); })));
+  var k = height / (box.max.y - box.min.y), cx = (box.min.x + box.max.x) / 2, cy = (box.min.y + box.max.y) / 2;
+  // The logo's exact outline, extruded straight back. Thin next to the
+  // stroke, so turned, a side wall shows as a slim edge, not a second band.
+  var geo = new THREE.ExtrudeGeometry(shapes, { depth: depth / k, bevelEnabled: false, curveSegments: 24 });
+  geo.translate(-cx, -cy, -depth / k / 2);
+  geo.scale(k, -k, k);   // SVG y runs down; three's runs up
+  geo.computeVertexNormals();
+  // Draw only the surface nearest the camera: a depth-only pass first, so
+  // the far side never shows through the glass as a second, offset fist.
+  // Nudged back so the outline on the near surface passes.
+  var near = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide, transparent: true,
+    polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 }));
+  near.renderOrder = 1;
+  var body = new THREE.Mesh(geo, glassMat); body.renderOrder = 2;
+  fist.add(near, body);
+  // One outline, the logo's own, round the front face only.
+  // Drawn wide enough in pixels to match the look it was designed at (one
+  // pixel in a 480 pixel frame); plain WebGL lines are always one pixel.
+  var lineMat = new THREE.LineMaterial({ color: 0xfae6d1, linewidth: S / 480, resolution: new THREE.Vector2(S, S) });
+  shapes.forEach(function (sh) {
+    var e = sh.extractPoints(24);
+    [e.shape].concat(e.holes).forEach(function (pts) {
+      var flat = [];
+      pts.concat([pts[0]]).forEach(function (p) { flat.push((p.x - cx) * k, -(p.y - cy) * k, depth / 2); });
+      var line = new THREE.Line2(new THREE.LineGeometry().setPositions(flat), lineMat);
+      line.renderOrder = 3; fist.add(line);
+    });
+  });
+  window.ready = true;
+};
+var out = document.createElement('canvas'); out.width = out.height = S;
+var ctx = out.getContext('2d'), gl = r.getContext(), px = new Uint8Array(S * S * 4);
+window.frame = function (i, n, radius) {
+  var th = 2 * Math.PI * i / n;
+  ringMat.uniforms.uLoop.value.set(radius * Math.cos(th), radius * Math.sin(th), radius * 0.6 * Math.sin(th));
+  ring.rotation.set(Math.sin(th) * 0.21, Math.cos(th) * 0.21, 0.26 * Math.sin(th));
+  fist.rotation.set(0.1 * Math.cos(th), 0.45 * Math.sin(th), 0);
+  fist.position.y = 0.05 * Math.sin(2 * th);
+  r.render(scene, camera);
+  gl.readPixels(0, 0, S, S, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  var img = ctx.createImageData(S, S), d = img.data;
+  for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
+    var src = ((S - 1 - y) * S + x) * 4, dst = (y * S + x) * 4;
+    var R = px[src], G = px[src + 1], B = px[src + 2], A = Math.max(R, G, B);
+    d[dst + 3] = A;
+    if (A > 0) { d[dst] = R * 255 / A; d[dst + 1] = G * 255 / A; d[dst + 2] = B * 255 / A; }
+  }
+  ctx.putImageData(img, 0, 0);
+  return out.toDataURL('image/png');
+};
+</script>

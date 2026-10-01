@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Your ClosedHand account</title>
+  <link rel="icon" href="/logocircle.png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <link rel="stylesheet" href="/site.css">
+  <script src="/handheld.js"></script>
+</head>
+<body>
+  <header class="site-head">
+    <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+    <nav aria-label="ClosedHand"><a class="gh" href="https://github.com/notnotjim/ClosedHand" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a><a href="/open" class="nav-cta">My ClosedHand</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+  </header>
+  <main class="site-main">
+    <h1 class="title">Your ClosedHand account</h1>
+    <p class="lede"><span>Your ClosedHand account is the Google or Microsoft account you claimed your personal URL with.</span> <span>closedhand.com keeps only its name and email, linked to your address. Everything your ClosedHand assistant knows about you stays on your computer.</span></p>
+
+    <!-- One of these shows (see account.js). -->
+    <section class="card" id="signed-out" hidden>
+      <h2>Sign in to see your account</h2>
+      <p>Use the Google or Microsoft account you set ClosedHand up with.</p>
+      <div class="stack">
+        <a class="btn btn-primary" href="/auth/google?return_to=%2Faccount"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
+        <a class="btn" href="/auth/microsoft?return_to=%2Faccount"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>
+      </div>
+    </section>
+
+    <section class="card" id="details" hidden>
+      <p class="address" id="acct-address"></p>
+      <p class="address-note" id="acct-address-note">Your personal URL</p>
+      <div class="who"><span id="acct-who"></span><form method="post" action="/logout?return_to=%2Faccount"><button class="link" type="submit">Sign out</button></form></div>
+      <button class="btn btn-danger" id="delete" type="button">Delete account</button>
+      <!-- Says exactly what goes and what stays before anything is deleted. -->
+      <div id="confirm" hidden>
+        <p class="confirm-text" id="confirm-text"></p>
+        <div class="stack">
+          <button class="btn btn-danger" id="delete-go" type="button">Delete my account</button>
+          <button class="btn" id="delete-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="deleted" hidden>
+      <h2>Your ClosedHand account is deleted.</h2>
+      <p>closedhand.com has forgotten your sign-in, and nothing here links to you any more.</p>
+      <a class="btn" href="/">Back to closedhand.com</a>
+    </section>
+
+    <p class="status" id="status" role="status" aria-live="polite">Checking…</p>
+  </main>
+  <footer class="site-foot"><a aria-current="page" href="/account">Account</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
+  <script src="/account.js" defer></script>
+</body>
+</html>

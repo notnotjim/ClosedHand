@@ -1,0 +1,16 @@
+{
+  "name": "closedhand-com",
+  "private": true,
+  "description": "The closedhand.com service: the public website, personal URLs and bug report intake for copies of ClosedHand.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "pg": "^8.22.0"
+  }
+}

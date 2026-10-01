@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.TCC.configuration-profile-policy</string>
+            <key>PayloadIdentifier</key>
+            <string>com.closedhand.bridge.tcc</string>
+            <key>PayloadUUID</key>
+            <string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>Services</key>
+            <dict>
+                <key>Accessibility</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                    </dict>
+                </array>
+                <key>ScreenCapture</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                    </dict>
+                </array>
+                <key>AppleEvents</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                        <key>AEReceiverIdentifier</key>
+                        <string>com.apple.systemevents</string>
+                        <key>AEReceiverIdentifierType</key>
+                        <string>bundleID</string>
+                        <key>AEReceiverCodeRequirement</key>
+                        <string>identifier "com.apple.systemevents" and anchor apple</string>
+                    </dict>
+                </array>
+                <key>AddressBook</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                    </dict>
+                </array>
+                <key>Calendar</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                    </dict>
+                </array>
+                <key>Reminders</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.closedhand.bridge</string>
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+                        <key>Allowed</key>
+                        <true/>
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.closedhand.bridge" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "826NDD62L9"</string>
+                    </dict>
+                </array>
+            </dict>
+        </dict>
+    </array>
+    <key>PayloadDescription</key>
+    <string>Grants ClosedHand Bridge access to Accessibility, Screen Recording, Contacts, Calendar, Reminders, and Apple Events. Install this profile to skip manual permission prompts.</string>
+    <key>PayloadDisplayName</key>
+    <string>ClosedHand Bridge Permissions</string>
+    <key>PayloadIdentifier</key>
+    <string>com.closedhand.bridge.permissions</string>
+    <key>PayloadOrganization</key>
+    <string>ClosedHand</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>F1E2D3C4-B5A6-7890-1234-567890ABCDEF</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>

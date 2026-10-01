@@ -1,0 +1,30 @@
+# Root build context = the bot image. Keep it to what index.js needs.
+node_modules
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+data
+attachments
+assets/voice/kokoro-v1
+config.json
+.DS_Store
+
+# The webapp is its own image (build context ./webapp) — not needed in the bot.
+webapp
+
+# Not needed at runtime.
+# The Mac app's sources and its build output (gigabytes of cached Node,
+# Postgres and finished apps) never go into the bot image.
+desktop
+sandbox-image
+bridge-app
+tasks
+reference
+mcp-library
+.claude
+.mcp.json
+*.md
+Dockerfile
+docker-compose.yml

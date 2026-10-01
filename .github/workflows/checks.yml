@@ -1,0 +1,125 @@
+name: Checks
+
+# Cheap, dependency-free guards that run on every push and PR. These exist
+# because of a specific class of bug: failures that are invisible at the moment
+# they happen. An unchecked database write and a vendored file that quietly
+# drifted both look exactly like working code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install voice encoder for protocol tests
+        run: npm install --prefix "$RUNNER_TEMP/voice-test" --ignore-scripts --no-audit --no-fund opusscript@0.1.1
+      - name: Voice queue, cancellation, isolation and audio format
+        run: NODE_PATH="$RUNNER_TEMP/voice-test/node_modules" node --test scripts/test-speech.js
+  # The closedhand.com service deploys from this repo, so its sign-in,
+  # personal URL and bug report routes are checked against a real Postgres.
+  closedhand-com:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install the service's packages
+        run: npm ci --prefix closedhand-com --no-audit --no-fund
+      - name: Sign-in, personal URLs and bug reports against a real database
+        run: node --test closedhand-com/test/e2e.js closedhand-com/test/download-link.js
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Every .js file must at least parse. A syntax error here has twice
+      # shipped a dashboard whose entire inline script was dead.
+      - name: Syntax
+        run: |
+          set -e
+          find . -name '*.js' -not -path './node_modules/*' -not -path './.git/*' \
+            -print0 | xargs -0 -n1 node -c
+
+      - name: Assistant email and connection catalogue
+        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-setup-feedback.js scripts/test-onedrive.js scripts/test-closedhand-com.js scripts/test-address-workers.js scripts/test-installer-fist.js
+
+      - name: Shopify connection and renewal
+        run: node --test scripts/test-shopify-connection.js
+
+      - name: Agent dashboard visibility and counts
+        run: node --test scripts/test-agent-dashboard.js
+
+      - name: Dashboard overview from chat
+        run: node --test scripts/test-dashboard-overview.js
+
+      - name: Chat presentation and generated media
+        run: node --test scripts/test-chat-presentation.js
+
+      - name: Connected sources and files in automatic recall
+        run: node --test scripts/test-recall-context.js scripts/test-recall-sync.js scripts/test-recall-protocol.js
+
+      - name: Requests preserved through onboarding
+        run: node --test scripts/test-onboarding-handoff.js
+
+      - name: Task continuity, verification and budgets
+        run: node --test scripts/test-agent-execution.js scripts/test-agent-runners.js scripts/test-pg-task-queries.js
+
+      - name: Agent context and current task state
+        run: node --test scripts/test-agent-context-state.js scripts/test-confirmation-lifetime.js scripts/test-thread-size.js scripts/test-outbound-guard.js scripts/test-maps-fallback.js scripts/test-search-route.js scripts/test-facts-prose.js scripts/test-stuck-tools.js scripts/test-sleep-watch.js scripts/test-fx.js
+
+      - name: Phone dashboard links
+        run: node --test scripts/test-dashboard-links.js scripts/test-phone-registration.js scripts/test-phone-link-delivery.js scripts/test-dashboard-link-settings.js scripts/test-instance-navigation.js scripts/test-setup-personal-url.js
+
+      - name: Bug reporting and consent
+        run: node --test scripts/test-bug-reports.js
+
+      - name: Flight times and booking changes
+        run: node --test scripts/test-flights.js scripts/test-time-context.js scripts/test-bookings.js
+
+      - name: Model routing and setup
+        run: node --test scripts/test-pulse-triage.js scripts/test-pulse-tools.js scripts/test-prompt-caching.js scripts/test-model-routing.js scripts/test-model-settings-ui.js scripts/test-settings.js scripts/test-static-assets.js
+
+      - name: Built-in skill catalogue matches runtime
+        run: node scripts/check-builtin-skills.js && node --test scripts/test-builtin-skills.js
+
+      - name: Dashboard inline scripts parse
+        run: node scripts/check-inline-scripts.js
+
+      - name: Mac access setup and recovery
+        run: node --test scripts/test-mac-access.js
+
+      - name: Workspace file boundaries
+        run: node --test scripts/test-workspace-paths.js scripts/test-workspace-network.js scripts/test-workspace-host.js scripts/test-workspace-ui.js
+
+      - name: No new unchecked database writes
+        run: node scripts/check-unchecked-writes.js
+
+      - name: Vendored copies have not drifted
+        run: node scripts/check-vendored-identical.js
+
+      - name: No count-gated reranking
+        run: node scripts/check-rerank-callers.js
+
+      - name: Payment lookup and checkout boundaries
+        run: node --test scripts/test-spend-page-context.js

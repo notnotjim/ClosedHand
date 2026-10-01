@@ -1,0 +1,15 @@
+// Copy to wrangler.jsonc (ignored by git) and fill in the three IDs.
+{
+  "name": "closedhand-phone-offline",
+  "main": ".generated/worker.mjs",
+  "build": { "command": "node build.mjs .generated/worker.mjs" },
+  "account_id": "<cloudflare account id>",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
+  "vars": { "DASHBOARD_HOST": "<a personal URL to always route, or leave empty>" },
+  "kv_namespaces": [{ "binding": "ADDRESS_HOSTS", "id": "<ADDRESS_HOSTS namespace id>" }],
+  "routes": [{ "pattern": "*.closedhand.ai/*", "zone_name": "closedhand.ai" }]
+}

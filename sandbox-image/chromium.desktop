@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Chrome
+Exec=/usr/local/bin/chromium-launcher %U
+Icon=/usr/share/pixmaps/chrome-icon.png
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;
+StartupNotify=true

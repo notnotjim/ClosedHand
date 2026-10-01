@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!--
+    noVNC example: lightweight example using minimal UI and features
+
+    This is a self-contained file which doesn't import WebUtil or external CSS.
+
+    Copyright (C) 2019 The noVNC Authors
+    noVNC is licensed under the MPL 2.0 (see LICENSE.txt)
+    This file is licensed under the 2-Clause BSD license (see LICENSE.txt).
+
+    Connect parameters are provided in query string:
+        http://example.com/?host=HOST&port=PORT&scale=true
+    -->
+    <title>noVNC</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            background-color: dimgrey;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        html {
+            height: 100%;
+        }
+
+        #top_bar {
+            display: none;
+        }
+        #status {
+            display: none;
+        }
+        #sendCtrlAltDelButton {
+            display: none;
+        }
+
+        #screen {
+            flex: 1; /* fill remaining space */
+            overflow: hidden;
+        }
+
+    </style>
+
+    <script type="module" crossorigin="anonymous">
+        // RFB holds the API to connect and communicate with a VNC server
+        import RFB from './core/rfb.js';
+
+        let rfb;
+        let desktopName;
+
+        // When this function is called we have
+        // successfully connected to a server
+        function connectedToServer(e) {
+            status("Connected to " + desktopName);
+        }
+
+        // This function is called when we are disconnected.
+        // Idle proxies drop the websocket after a while even though the
+        // remote desktop is still running, so always try to reconnect.
+        // Tokens expire after 5 minutes, so fetch a fresh one first.
+        function disconnectedFromServer(e) {
+            status("Reconnecting…");
+            setTimeout(reconnect, 3000);
+        }
+
+        async function reconnect() {
+            try {
+                const resp = await fetch('/api/sandbox/vnc-token');
+                const data = await resp.json();
+                if (data.token) {
+                    url = urlBase + '/vnc?token=' + data.token;
+                }
+            } catch (err) { /* keep old url, retry below */ }
+            connect();
+        }
+
+        // When this function is called, the server requires
+        // credentials to authenticate
+        function credentialsAreRequired(e) {
+            const password = prompt("Password Required:");
+            rfb.sendCredentials({ password: password });
+        }
+
+        // When this function is called we have received
+        // a desktop name from the server
+        function updateDesktopName(e) {
+            desktopName = e.detail.name;
+        }
+
+        // Since most operating systems will catch Ctrl+Alt+Del
+        // before they get a chance to be intercepted by the browser,
+        // we provide a way to emulate this key sequence.
+        function sendCtrlAltDel() {
+            rfb.sendCtrlAltDel();
+            return false;
+        }
+
+        // Show a status text in the top bar
+        function status(text) {
+            document.getElementById('status').textContent = text;
+        }
+
+        // This function extracts the value of one variable from the
+        // query string. If the variable isn't defined in the URL
+        // it returns the default value instead.
+        function readQueryVariable(name, defaultValue) {
+            // A URL with a query parameter can look like this:
+            // https://www.example.com?myqueryparam=myvalue
+            //
+            // Note that we use location.href instead of location.search
+            // because Firefox < 53 has a bug w.r.t location.search
+            const re = new RegExp('.*[?&]' + name + '=([^&#]*)'),
+                  match = document.location.href.match(re);
+
+            if (match) {
+                // We have to decode the URL since want the cleartext value
+                return decodeURIComponent(match[1]);
+            }
+
+            return defaultValue;
+        }
+
+        document.getElementById('sendCtrlAltDelButton')
+            .onclick = sendCtrlAltDel;
+
+        // Read parameters specified in the URL query string
+        // By default, use the host and port of server that served this file
+        const host = readQueryVariable('host', window.location.hostname);
+        let port = readQueryVariable('port', window.location.port);
+        const password = readQueryVariable('password');
+        const path = readQueryVariable('path', 'websockify');
+
+        // | | |         | | |
+        // | | | Connect | | |
+        // v v v         v v v
+
+        // Build the websocket URL used to connect
+        let urlBase = (window.location.protocol === "https:") ? 'wss' : 'ws';
+        urlBase += '://' + host;
+        if(port) {
+            urlBase += ':' + port;
+        }
+        let url = urlBase + '/' + path;
+
+        function connect() {
+            status("Connecting");
+
+            // Creating a new RFB object will start a new connection
+            rfb = new RFB(document.getElementById('screen'), url,
+                          { credentials: { password: password } });
+
+            // Add listeners to important events from the RFB module
+            rfb.addEventListener("connect",  connectedToServer);
+            rfb.addEventListener("disconnect", disconnectedFromServer);
+            rfb.addEventListener("credentialsrequired", credentialsAreRequired);
+            rfb.addEventListener("desktopname", updateDesktopName);
+
+            // Set parameters that can be changed on an active connection
+            rfb.viewOnly = readQueryVariable('view_only', false);
+            rfb.scaleViewport = readQueryVariable('scale', false);
+
+            // Latency tuning for browser-inside-VNC workloads.
+            // - resizeSession: tell the server to match our viewport so we don't encode extra pixels.
+            // - qualityLevel 5 (default 6): ever-so-slightly lower JPEG quality, noticeable reduction in
+            //   packet size per frame, barely visible in typical web content.
+            // - compressionLevel 2 (default): keep moderate CPU cost.
+            // - showDotCursor=false: skip drawing the local cursor overlay; the remote cursor is enough.
+            // - Pause rendering when the iframe isn't visible (parent tab hidden or Files tab shown).
+            rfb.resizeSession = true;
+            rfb.qualityLevel = 5;
+            rfb.compressionLevel = 2;
+            rfb.showDotCursor = false;
+        }
+
+        connect();
+
+        document.addEventListener('visibilitychange', function() {
+          try { rfb.focusOnClick = !document.hidden; } catch (e) {}
+        });
+    </script>
+</head>
+
+<body>
+    <div id="top_bar">
+        <div id="status">Loading</div>
+        <div id="sendCtrlAltDelButton">Send CtrlAltDel</div>
+    </div>
+    <div id="screen">
+        <!-- This is where the remote screen will appear -->
+    </div>
+</body>
+</html>

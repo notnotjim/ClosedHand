@@ -1,0 +1,15 @@
+{
+  "assistant-email-protocol": "c270cba453c111a7",
+  "recall-settings": "69d4a9b8f9049041",
+  "model-policy": "c043f44b724d303d",
+  "model-wire": "78979f912405c8e9",
+  "shopify-auth": "2bf2671e84dc1436",
+  "flight-time": "1110cee1ad446319",
+  "reranker": "5e51133e8d715c6c",
+  "lexical": "75c74a7230a13203",
+  "fact-vectors": "a43405b9c6a0900e",
+  "doc-search": "a16b870d429cde91",
+  "mcp-client": "0605de51be5443ff",
+  "crypto-tokens": "ca68f85b1197424d",
+  "microsoft-app": "cf74e772fe8447b7"
+}

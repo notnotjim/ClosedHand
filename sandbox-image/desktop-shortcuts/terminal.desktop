@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Command Prompt
+Comment=Open Terminal
+Exec=xfce4-terminal
+Icon=utilities-terminal
+Type=Application
+Categories=System;TerminalEmulator;
