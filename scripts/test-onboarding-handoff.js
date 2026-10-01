@@ -4,9 +4,9 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
 
-function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails = false, saveFails = false, settings = {} } = {}) {
+function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails = false, saveFails = false, settings = {}, displayName = "Alex Example", facts = {} } = {}) {
   const conversation = [], sent = [], calls = [];
-  const ctx = { store: { facts: {} }, activeUserStore: { userId: "fixture-user", profile: { display_name: "Alex Example", settings } } };
+  const ctx = { store: { facts: { ...facts } }, activeUserStore: { userId: "fixture-user", profile: { display_name: displayName, settings } } };
   let saved = structuredClone(settings);
   const dependencies = {
     "./context": ctx,
@@ -43,15 +43,15 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../lib/onboarding.js"), "utf8"), sandbox);
   return {
     ctx, sent, calls, conversation, saved: () => saved,
-    message: text => sandbox.module.exports.handleOnboardingMessage("fixture-user", "fixture-chat", text),
+    message: (text, opts) => sandbox.module.exports.handleOnboardingMessage("fixture-user", "fixture-chat", text, opts),
     reload: () => { ctx.activeUserStore.profile.settings = structuredClone(saved); },
   };
 }
 
+// The account says Alex, so ClosedHand checks it: a name for itself, then yes.
 async function finish(flow, botName = "Robin") {
   await flow.message(botName);
   await flow.message("yes");
-  await flow.message("skip");
 }
 
 test("a first request survives profile reloads and is answered in the same chat after introductions", async () => {
@@ -120,27 +120,51 @@ test("failed profile persistence does not advance onboarding in memory", async (
   assert.equal(flow.calls.length, 0);
 });
 
-test("onboarding describes the host independently of the phone reading the message", async () => {
-  for (const env of [{ DB_DRIVER: "pg" }, {}]) {
-    const flow = onboarding({ env });
-    await flow.message("Hi");
-    await finish(flow);
-    const signoff = flow.sent.at(-1).text;
-    assert.doesNotMatch(signoff, /this machine|this computer|Nothing reaches us|only thing that leaves|can't be read by anyone|never used for training/);
-    assert.match(signoff, /requests and relevant context/);
-    assert.match(signoff, env.DB_DRIVER ? /computer or server running ClosedHand/ : /ClosedHand's hosted service/);
-  }
+test("introductions start with names: a likely name is checked, then a short hello", async () => {
+  const flow = onboarding();
+  await flow.message(null);
+  assert.equal(flow.sent[0].text, "Hey! Is it Alex? And what would you like to call me?");
+  await flow.message("Robin");
+  assert.equal(flow.sent.at(-1).text, "And is it Alex?");
+  await flow.message("yes");
+  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is.\n\nAsk me anything, or send me something to remember.");
+  assert.equal(flow.saved().bot_name, "Robin");
+  assert.equal(flow.saved().preferred_name, "Alex");
+  assert.equal(flow.saved().onboarding_step, "done");
 });
 
+test("a name two sources agree on is used from the off, over the account's", async () => {
+  // The chat app and the mail agree on Sam; the account says Sammy.
+  const flow = onboarding({ displayName: "Sammy Example", facts: { "profile-name": "Sam" } });
+  await flow.message(null, { platformName: "Sam Example" });
+  assert.equal(flow.sent[0].text, "Hey Sam! Before we start, what would you like to call me?");
+  await flow.message("Max", { platformName: "Sam Example" });
+  assert.match(flow.sent.at(-1).text, /^Nice to meet you, Sam\. Max it is\./);
+  const signed = onboarding({ displayName: "Sammy Example", facts: { "profile-name": "Sam" }, settings: { name_certainty: "certain" } });
+  await signed.message(null);
+  assert.equal(signed.sent[0].text, "Hey Sam! Before we start, what would you like to call me?", "their own mail signs it");
+});
+
+test("with no name to go on, it asks for both", async () => {
+  const flow = onboarding({ displayName: null });
+  await flow.message(null);
+  assert.equal(flow.sent[0].text, "Hey! Before anything else, what should I call you, and what would you like to call me?");
+});
+
+test("a plan of theirs the scan found is mentioned once, in passing", async () => {
+  const flow = onboarding({ settings: { welcome_highlight: "your trip to Lisbon on 12 October" } });
+  await flow.message(null);
+  await finish(flow);
+  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is. Looks like your trip to Lisbon on 12 October is coming up, so I'll keep an eye on that.\n\nAsk me anything, or send me something to remember.");
+});
 
 test("a failed completion write keeps onboarding open and the request pending", async () => {
   const flow = onboarding({ saveFails: settings => settings.onboarding_step === "done" });
   await flow.message("Find my train booking");
   await flow.message("Robin");
-  await flow.message("yes");
-  await assert.rejects(flow.message("skip"), /database unavailable/);
+  await assert.rejects(flow.message("yes"), /database unavailable/);
   assert.equal(flow.ctx.store.facts._onboarded, undefined);
-  assert.equal(flow.saved().onboarding_step, "ask_location");
+  assert.equal(flow.saved().onboarding_step, "names");
   assert.equal(flow.saved().onboarding_pending, "Find my train booking");
   assert.equal(flow.calls.length, 0);
 });
