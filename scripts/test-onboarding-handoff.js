@@ -48,10 +48,12 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
   };
 }
 
-// The account says Alex, so ClosedHand checks it: a name for itself, then yes.
+// The account says Alex, so ClosedHand checks it: a name for itself, yes,
+// then where they are, which they skip.
 async function finish(flow, botName = "Robin") {
   await flow.message(botName);
   await flow.message("yes");
+  await flow.message("skip");
 }
 
 test("a first request survives profile reloads and is answered in the same chat after introductions", async () => {
@@ -127,9 +129,11 @@ test("introductions start with names: a likely name is checked, then a short hel
   await flow.message("Robin");
   assert.equal(flow.sent.at(-1).text, "And is it Alex?");
   await flow.message("yes");
-  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is.\n\nAsk me anything, or send me something to remember.");
+  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is. And where are you these days? A city's plenty, so I get your timezone right.");
   assert.equal(flow.saved().bot_name, "Robin");
   assert.equal(flow.saved().preferred_name, "Alex");
+  await flow.message("skip");
+  assert.equal(flow.sent.at(-1).text, "No problem, tell me any time.\n\nAsk me anything, or send me something to remember.");
   assert.equal(flow.saved().onboarding_step, "done");
 });
 
@@ -155,16 +159,31 @@ test("a plan of theirs the scan found is mentioned once, in passing", async () =
   const flow = onboarding({ settings: { welcome_highlight: "your trip to Lisbon on 12 October" } });
   await flow.message(null);
   await finish(flow);
-  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is. Looks like your trip to Lisbon on 12 October is coming up, so I'll keep an eye on that.\n\nAsk me anything, or send me something to remember.");
+  assert.equal(flow.sent.at(-1).text, "No problem, tell me any time. Looks like your trip to Lisbon on 12 October is coming up, so I'll keep an eye on that.\n\nAsk me anything, or send me something to remember.");
 });
 
 test("a failed completion write keeps onboarding open and the request pending", async () => {
   const flow = onboarding({ saveFails: settings => settings.onboarding_step === "done" });
   await flow.message("Find my train booking");
   await flow.message("Robin");
-  await assert.rejects(flow.message("yes"), /database unavailable/);
+  await flow.message("yes");
+  await assert.rejects(flow.message("skip"), /database unavailable/);
   assert.equal(flow.ctx.store.facts._onboarded, undefined);
-  assert.equal(flow.saved().onboarding_step, "names");
+  assert.equal(flow.saved().onboarding_step, "place");
   assert.equal(flow.saved().onboarding_pending, "Find my train booking");
   assert.equal(flow.calls.length, 0);
+});
+
+test("where they are: a guess from their calendar, and asked to guess, it says what gave it away", async () => {
+  const flow = onboarding({ settings: { calendar_timezone: "Asia/Bangkok" } });
+  await flow.message(null);
+  await flow.message("Robin");
+  await flow.message("yes");
+  assert.equal(flow.sent.at(-1).text, "Nice to meet you, Alex. Robin it is. Is Bangkok where you are at the moment?");
+  await flow.message("guess");
+  assert.equal(flow.sent.at(-1).text, "My money's on Bangkok, going by your calendar running on Bangkok time. Close?");
+  assert.notEqual(flow.saved().onboarding_step, "done", "a guess is not an answer");
+  await flow.message("yes");
+  assert.match(flow.sent.at(-1).text, /^Got it, Bangkok\./);
+  assert.equal(flow.saved().onboarding_step, "done");
 });
