@@ -3022,6 +3022,73 @@ app.get("/api/chat/stream", (req, res) => {
 // ============================================================================
 
 // GET /api/threads - list all threads
+// --- Here: where the person is, and their weather ---------------------------
+// The home page's "Orientate" asks the browser where it is, on request only.
+// That sets ClosedHand's local time (reminders, briefings) and lets the page
+// show the weather there. Only a rounded position (about a kilometre) goes to
+// OpenStreetMap for the place name and Open-Meteo for the weather and timezone.
+const WX = [[[0, 1], "clear", "clear"], [[2], "partly cloudy", "cloud"], [[3], "cloudy", "cloud"], [[45, 48], "foggy", "fog"],
+  [[51, 53, 55, 56, 57], "drizzly", "rain"], [[61, 63, 65, 66, 67, 80, 81, 82], "raining", "rain"],
+  [[71, 73, 75, 77, 85, 86], "snowing", "snow"], [[95, 96, 99], "stormy", "storm"]];
+const _hereWeather = new Map();
+async function weatherHere(lat, lon) {
+  const key = lat + "," + lon, hit = _hereWeather.get(key);
+  if (hit && Date.now() - hit.at < 15 * 60000) return hit.value;
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=1`,
+    { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error("weather " + r.status);
+  const d = await r.json(), code = d.current?.weather_code;
+  const [, label, kind] = WX.find(([codes]) => codes.includes(code)) || [null, "out", "cloud"];
+  // Fahrenheit where people read it, Celsius elsewhere.
+  const f = /^America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Indiana)|^Pacific\/Honolulu/.test(d.timezone || "");
+  const t = d.current?.temperature_2m;
+  const value = { temp: Math.round(f ? t * 9 / 5 + 32 : t), unit: f ? "F" : "C", label, kind, isDay: d.current?.is_day === 1, timezone: d.timezone || null };
+  _hereWeather.set(key, { at: Date.now(), value });
+  return value;
+}
+const _validTz = (tz) => { try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; } };
+
+app.get("/api/here", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const loc = data?.settings?.location;
+    if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return res.json({ location: null });
+    const lat = Math.round(loc.latitude * 100) / 100, lon = Math.round(loc.longitude * 100) / 100;
+    res.json({ location: { name: loc.name || null }, weather: await weatherHere(lat, lon).catch(() => null) });
+  } catch (e) {
+    res.status(500).json({ error: "Could not load where you are." });
+  }
+});
+
+app.post("/api/here", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const lat = Math.round(Number(req.body?.latitude) * 100) / 100, lon = Math.round(Number(req.body?.longitude) * 100) / 100;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return res.status(400).json({ error: "That position isn't readable." });
+  try {
+    let name = null;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`,
+        { headers: { "User-Agent": "ClosedHand/1.0 (https://closedhand.com)" }, signal: AbortSignal.timeout(8000) });
+      const a = (await r.json()).address || {};
+      name = a.city || a.town || a.village || a.municipality || a.county || a.state || null;
+    } catch (_) { /* the weather still comes, without a place name */ }
+    const weather = await weatherHere(lat, lon).catch(() => null);
+    const browserTz = typeof req.body?.timezone === "string" && _validTz(req.body.timezone) ? req.body.timezone : null;
+    const timezone = browserTz || weather?.timezone || null;
+    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const settings = data?.settings || {};
+    const location = { name: name || "where you are", latitude: lat, longitude: lon, ...(timezone ? { timezone } : {}), updated: new Date().toISOString(), source: "browser" };
+    const { error } = await supabase.from("profiles").update({ settings: { ...settings, location }, updated_at: new Date().toISOString() }).eq("id", userId);
+    if (error) throw new Error(error.message);
+    res.json({ location: { name: location.name, timezone: timezone }, weather });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save where you are." });
+  }
+});
+
 app.get("/api/threads", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -3032,11 +3099,19 @@ app.get("/api/threads", async (req, res) => {
       .eq("archived", false)
       .order("updated_at", { ascending: false })
       .limit(50);
-    const threads = (data || []).map(t => ({
-      id: t.id, title: t.title, is_active: t.is_active,
-      created_at: t.created_at, updated_at: t.updated_at,
-      message_count: (t.messages || []).length,
-    }));
+    const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const intro = prof?.settings?.intro || null;
+    const text = (m) => typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((c) => c.text || "").join(" ") : "";
+    const threads = (data || []).map(t => {
+      const messages = t.messages || [];
+      // Something to pick up: a title, or a real request after introductions,
+      // not a chat that was only hello, names and "yep".
+      const after = intro && intro.thread === t.id ? messages.slice(intro.messages || 0) : messages;
+      const resumable = !!t.title || after.some((m) => m.role === "user" && text(m).trim().length >= 12);
+      return { id: t.id, title: t.title, is_active: t.is_active,
+        created_at: t.created_at, updated_at: t.updated_at,
+        message_count: messages.length, resumable };
+    });
     res.json(threads);
   } catch (e) {
     res.status(500).json({ error: e.message });
