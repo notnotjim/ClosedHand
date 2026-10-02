@@ -33,6 +33,13 @@ RUN npm ci --omit=dev \
 # Python on first use). Their caches sit on the storage volume so a restart
 # does not download everything again.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# The system CA bundle. Node carries its own roots, but the slim image ships
+# none for anything else the bot runs: the bundled Google Workspace CLI failed
+# every call with "invalid peer certificate: UnknownIssuer" and Gmail search
+# fell back to plain HTTP each time, and command-style MCP servers need it too.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 ENV npm_config_cache=/data/storage/cache/npm \
     UV_CACHE_DIR=/data/storage/cache/uv \
     UV_PYTHON_INSTALL_DIR=/data/storage/cache/uv-python
