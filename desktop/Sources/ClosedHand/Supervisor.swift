@@ -276,6 +276,9 @@ final class Supervisor: ObservableObject {
             proc.currentDirectoryURL = appDir.appendingPathComponent("webapp", isDirectory: true)
             proc.arguments = ["server.js"]
             env["PORT"] = "\(webPort)"
+            // The dashboard answers this Mac only: other devices reach it
+            // through the personal URL, never the local network.
+            env["LISTEN_HOST"] = "127.0.0.1"
         }
         proc.environment = env
         let handle = logHandle(which)

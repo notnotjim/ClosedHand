@@ -43,7 +43,7 @@ services:
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
       PORT: "3000"
     ports:
-      - "${BOT_PORT:-3001}:3000" # bot service and health endpoint
+      - "127.0.0.1:${BOT_PORT:-3001}:3000" # bot service and health endpoint, this computer only
     volumes:
       - storage:/data/storage # shared with the webapp (attachments + logos)
     healthcheck:
@@ -71,7 +71,7 @@ services:
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
       PORT: "3000"
     ports:
-      - "${WEBAPP_PORT:-3000}:3000"
+      - "127.0.0.1:${WEBAPP_PORT:-3000}:3000"
     volumes:
       - storage:/data/storage # same volume as the bot
     healthcheck:
@@ -94,7 +94,7 @@ services:
       GATEWAY_URL: http://bot:3000
       USER_ID: admin
     ports:
-      - "${SANDBOX_VNC_PORT:-6080}:6080"
+      - "127.0.0.1:${SANDBOX_VNC_PORT:-6080}:6080"
     volumes:
       - sandbox-workspace:/workspace # files + browser profile survive restarts
     healthcheck:

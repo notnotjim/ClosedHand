@@ -1274,7 +1274,9 @@ app.get("/api/setup/wa-qr", async (req, res) => {
 // byte (LINE signs the raw body). Providers carry no session, so this sits
 // in front of the gate.
 const BOT_INTERNAL_URL = (process.env.BOT_INTERNAL_URL || "http://bot:3000").replace(/\/$/, "");
-for (const hook of ["slack", "line"]) {
+// Slack is not relayed: its handler accepts only signed requests, and the
+// self-host setup has no place for a Slack signing secret.
+for (const hook of ["line"]) {
   app.post(`/webhook/${hook}`, async (req, res) => {
     try {
       const headers = {};
@@ -7947,7 +7949,9 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
 // START SERVER
 // ============================================================
 
-const server = app.listen(PORT, async () => {
+// LISTEN_HOST keeps the dashboard to this computer where nothing in between
+// does (the Mac app); in Docker the port binding does it instead.
+const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () => {
   // Installs that finished setup before setup recorded it: ready, with a
   // personal URL claimed, counts as finished.
   try {

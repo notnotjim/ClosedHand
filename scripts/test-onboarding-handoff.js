@@ -45,6 +45,7 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
     ctx, sent, calls, conversation, saved: () => saved,
     message: (text, opts) => sandbox.module.exports.handleOnboardingMessage("fixture-user", "fixture-chat", text, opts),
     reload: () => { ctx.activeUserStore.profile.settings = structuredClone(saved); },
+    exports: () => sandbox.module.exports,
   };
 }
 
@@ -186,4 +187,10 @@ test("where they are: a guess from their calendar, and asked to guess, it says w
   await flow.message("yes");
   assert.match(flow.sent.at(-1).text, /^Got it, Bangkok\./);
   assert.equal(flow.saved().onboarding_step, "done");
+});
+
+test("a chat app linked after introductions says hello as the same assistant, never asks again", async () => {
+  const flow = onboarding({ settings: { onboarding_step: "done", preferred_name: "Alex", bot_name: "Robin" } });
+  const { hereTooLine } = flow.exports();
+  assert.equal(hereTooLine("Telegram"), "Hey Alex, it's Robin, here on Telegram too. Same memory as everywhere else, so carry on wherever suits.");
 });
