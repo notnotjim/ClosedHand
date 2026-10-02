@@ -7,7 +7,7 @@ A personal AI assistant you actually own. It lives in your messaging apps, reads
 
 ## Why this exists
 
-Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (Telegram in three taps, with Discord, Slack, LINE and WhatsApp available too), and everything about it is yours: the server, the database, the model keys, the memory. There is no hosted relay and no telemetry. The only ClosedHand account is the Google or Microsoft sign-in that holds your personal URL, and it holds nothing else.
+Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the memory. There is no telemetry. The only ClosedHand account is the Google or Microsoft sign-in that claims your personal URL, and closedhand.com keeps only its name and email.
 
 It is strictly single-tenant. One install serves one person, and the first account to message your bot becomes its owner. Everyone else is politely refused.
 
@@ -54,7 +54,7 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **A real computer, sandboxed.** ClosedHand browses and runs code on its own sandboxed computer, with its own Chrome and a workspace that survives restarts. It cannot see your files or the rest of the machine it runs on unless you connect them yourself. Watch it work live at `localhost:6080`.
 
-**Chat apps, honestly ranked.** Telegram is the easy one: a token from BotFather, no public address needed, works behind your router on a laptop. Discord is nearly as simple. WhatsApp is possible but heavy: Meta requires a Business account, a dedicated number and a public HTTPS address, so it belongs on an always-on server rather than a laptop.
+**Chat apps.** WhatsApp links your own number as a device, the way WhatsApp on a laptop does, and Telegram uses a bot you make with BotFather in three taps. Both work on a laptop behind your router. Discord, Slack and LINE are coming soon.
 
 **Any MCP server, any way it is published.** Paste a server's web address, the `npx` or `uvx` command from its README, or its JSON block into the dashboard and ClosedHand connects to it: remote servers with a key or a sign-in, servers that run on your machine, and servers that offer documents and ready-made prompts as well as tools. Everything is scanned for prompt injection and impersonation before it is switched on, an action that deletes or sends is put to you first, and the connection is there for agents, automations and the morning pulse, not only the chat window. Skill files work from the same box.
 
@@ -82,7 +82,7 @@ What it is not: multi-user, a hosted service, or mature. It is a young project w
 
 ```mermaid
 graph LR
-  TG[Telegram / WhatsApp / Slack / Discord / LINE] --> Bot
+  TG[WhatsApp / Telegram] --> Bot
   Browser[Your browser] --> Webapp[Dashboard webapp]
   Bot[Bot service] <--> DB[(Postgres + pgvector)]
   Webapp <--> DB

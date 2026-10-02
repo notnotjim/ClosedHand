@@ -3006,6 +3006,12 @@
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <a class="plat-connect-btn" target="_top" href="/setup#step-chat=${key}" onclick="event.stopPropagation()">Set up</a>
             </div>`;
+        } else if (data.selfHost && !platform.available && COMING_SOON_CHAT.includes(key)) {
+          platformsGrid.innerHTML += `
+            <div class="plat-card unavailable">
+              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+              <span class="badge badge-soon">Coming soon</span>
+            </div>`;
         } else if (data.selfHost && !platform.available) {
           // The app exists once its keys are pasted in; the card opens that.
           platformsGrid.innerHTML += `
@@ -4259,7 +4265,7 @@
       // After the linked apps sits one dashed "Link another app" pill, in the
       // Connect more card's manner. A click unfolds the apps not yet linked
       // as quiet pills; each takes the same route the Connections tab would.
-      const addable = Object.entries(platforms).filter(([, info]) => !info.connected && (info.available || window._selfHost));
+      const addable = Object.entries(platforms).filter(([key, info]) => !info.connected && (info.available || (window._selfHost && !COMING_SOON_CHAT.includes(key))));
       const adds = !addable.length ? "" : container.dataset.showAdds
         ? addable.map(([key, info]) =>
             `<button class="pill pill-add" data-add-platform="${escAttribute(key)}" title="Link ${escAttribute(info.name || key)}">${pillLogo(key)}${escHtml(info.name || key)}<span class="pill-add-plus" aria-hidden="true">+</span></button>`
@@ -8235,6 +8241,8 @@
         ]
       }
     };
+    // Not ready on an install you run yourself yet: shown, but not offered.
+    var COMING_SOON_CHAT = ['discord', 'slack', 'line'];
     var _chatAppOpen = null;
     async function openChatAppSetup(app) {
       var spec = CHAT_APP_SPECS[app]; if (!spec) return;
@@ -8505,7 +8513,9 @@
       (progress || []).forEach(function (r) {
         var busy = r.status === 'indexing' || (r.phase1_total && r.phase1_done < r.phase1_total);
         if (!busy) return;
-        var firstRead = !r.created_at || (Date.now() - Date.parse(r.created_at)) < FIRST_READ_MS;
+        // First read until a pass has ever finished (last_sync); older rows
+        // without it fall back to their age.
+        var firstRead = r.last_sync ? false : (!r.created_at || (Date.now() - Date.parse(r.created_at)) < FIRST_READ_MS);
         var noun = r.service === 'email' ? 'email' : r.service === 'calendar' ? 'calendar event' : r.service + ' item';
         if (firstRead) {
           var label = r.service === 'email' ? 'Reading your mail' : r.service === 'calendar' ? 'Reading your calendar' : 'Reading ' + r.service;
@@ -8524,7 +8534,7 @@
         card.querySelector('.close').onclick = function () { dismissed = true; card.remove(); card = null; };
       } else {
         card.className = 'ready-card routine';
-        card.innerHTML = '<span class="dot"></span><span>Syncing ' + routine.join(' and ') + '</span>';
+        card.innerHTML = '<span class="dot"></span><span>Reading ' + routine.join(' and ') + ', so recall stays up to date</span>';
       }
     }
     function tick() {

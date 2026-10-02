@@ -1165,6 +1165,7 @@ app.get("/api/chat-apps", async (req, res) => {
 });
 
 app.post("/api/chat-apps/:app", async (req, res) => {
+  if (["discord", "slack", "line"].includes(req.params.app)) return res.status(400).json({ error: "Coming soon." });
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
