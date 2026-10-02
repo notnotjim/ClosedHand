@@ -53,8 +53,8 @@ test('setup offers the quick route first and keeps the own project one link away
  assert.match(html,/<div id="g-quick" hidden>/);
  assert.match(html,/href="\/auth\/google\?return=setup&amp;quick=1"/);
  assert.match(html,/id="g-own-open"/);
- assert.match(html,/<span class="fb-quick" id="g-quick-badge" hidden>Quick setup<\/span>/);
- assert.match(html,/\$\("#g-quick-badge"\)\.hidden = !st\.googleQuick \|\| done;/);
+ // Both routes sign in the usual way now, so neither card carries a "Quick setup" badge.
+ assert.doesNotMatch(html,/Quick setup/);
 });
 
 test('ClosedHand\'s Google app comes from the build, never from the source',()=>{

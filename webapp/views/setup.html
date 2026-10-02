@@ -533,7 +533,7 @@
         <div class="card-body">
           <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later. This access goes to ClosedHand on your computer, not to closedhand.com.</p>
           <div class="fb-block chooser" id="g-block">
-          <h3 class="choose" data-choose="google"><span>Google <span class="fb-quick" id="g-quick-badge" hidden>Quick setup</span> <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
           <div class="choice-body">
           <div id="g-quick" hidden>
             <p class="note">Google sends your mail, calendar and Drive straight to ClosedHand on your computer.
@@ -656,7 +656,7 @@
           </div>
 
           <div class="fb-block chooser" id="m-block">
-          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-quick">Quick setup</span> <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
           <div class="choice-body">
             <div id="m-connected" style="display:none;">
               <p><span id="m-account">Connected.</span> ClosedHand reads this account's mail, calendar
@@ -1411,7 +1411,6 @@
     _msCode = !!st.microsoftCode;
     var done = !!st.microsoftConnected;
     $("#m-done").style.display = done ? "" : "none";
-    $("#m-block .fb-quick").style.display = done ? "none" : "";
     var acct = st.microsoftAccount || {};
     $("#m-account").textContent = acct.email ? "Connected as " + acct.email + "." : "Connected.";
     // Connected: say who, and keep a way to add another account. A sign-in
@@ -1554,7 +1553,6 @@
     $("#g-connect").style.display = st.googleCreds ? "inline-block" : "none";
     $("#g-nocreds").style.display = st.googleCreds ? "none" : "";
     var done = !!st.googleConnected;
-    $("#g-quick-badge").hidden = !st.googleQuick || done;
     if (_gQuick !== !!st.googleQuick || _gDone !== done) { _gQuick = !!st.googleQuick; _gDone = done; if (gStep === 0) gRender(); }
     if (done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
     // Connected: the pitch and the steps give way to who is connected and

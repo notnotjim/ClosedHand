@@ -28,15 +28,14 @@ test('a successful Google connection on the next status check replaces setup wit
  context.reflectGoogle({googleCreds:true,googleRedirectUri:'http://localhost:3000/auth/google/callback',googleConnected:true,googleAccount:{email:'alex@example.com'}});
  assert.equal($('#g-connected').style.display,'');assert.equal($('#g-flow').style.display,'none');
  assert.equal($('#g-account').textContent,'Connected as alex@example.com.');assert.equal(saved,1);
- assert.equal($('#g-quick-badge').hidden,true);
  // A build with ClosedHand's Google app: the quick route shows until connected.
  const $q=nodes();let rendered=0;
  const quick={$:$q,_gKey:'fixture',gStep:0,_gQuick:false,_gDone:false,gSave(){},gRender:()=>rendered++,gApplyProject(){}};
  vm.runInNewContext(html.slice(start,end),quick);
  quick.reflectGoogle({googleQuick:true,googleConnected:false});
- assert.equal($q('#g-quick-badge').hidden,false);assert.equal(quick._gQuick,true);assert.equal(rendered,1);
+ assert.equal(quick._gQuick,true);assert.equal(rendered,1);
  quick.reflectGoogle({googleQuick:true,googleConnected:true,googleAccount:{email:'alex@example.com'}});
- assert.equal($q('#g-quick-badge').hidden,true);assert.equal(quick._gDone,true);
+ assert.equal(quick._gDone,true);
  assert.match(html, /id="g-connect"[^>]+href="\/auth\/google\?return=setup"[^>]+target="_blank"/);
  const server=fs.readFileSync(require.resolve('../webapp/server.js'),'utf8');
  assert.match(server,/returnTo: req.query.return === "setup" \? "\/setup"/);
