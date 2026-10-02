@@ -54,3 +54,9 @@ test("a failed look or a failed sync never stops the watch", async () => {
   await check();
   assert.ok(lines.some((l) => /db down/.test(l)));
 });
+
+test("a calendar answer comes from Google unless the synced copy is under a minute old", () => {
+  assert.match(src, /const CALENDAR_COPY_FRESH_MS = 60 \* 1000;/);
+  assert.match(src, /fresh: cacheAgeMs < CALENDAR_COPY_FRESH_MS,/);
+  assert.doesNotMatch(src.slice(src.indexOf("async function queryCacheCalendar"), src.indexOf("async function queryCacheCalendar") + 4000), /fresh: cacheAgeMin < 30/);
+});
