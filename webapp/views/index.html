@@ -4173,7 +4173,7 @@
     var visibleCompleted = completed.slice(-maxVisible);
     for (var c = 0; c < visibleCompleted.length; c++) {
       var item = visibleCompleted[c];
-      var desc = item.end.description || (item.start ? item.start.description : '') || item.end.toolName || '';
+      var desc = item.end.description || (item.start ? item.start.description : '') || 'Working on it';
       var elapsed = item.end.elapsed;
       var elapsedStr = elapsed ? '<span class="tl-elapsed">' + formatElapsed(elapsed) + '</span>' : '';
       var isFail = item.end.success === false;
@@ -4188,7 +4188,7 @@
 
     // Running tools
     for (var r = 0; r < running.length; r++) {
-      var runDesc = running[r].description || running[r].toolName || 'Working';
+      var runDesc = running[r].description || 'Working on it';
       var runMs = now - running[r].timestamp;
       var dotClass = runMs > 30000 ? 'stalled' : 'running';
       if (runMs > 15000 && runMs <= 30000) dotClass = 'stalled';
