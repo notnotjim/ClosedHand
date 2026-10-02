@@ -194,3 +194,10 @@ test("a chat app linked after introductions says hello as the same assistant, ne
   const { hereTooLine } = flow.exports();
   assert.equal(hereTooLine("Telegram"), "Hey Alex, it's Robin, here on Telegram too. Same memory as everywhere else, so carry on wherever suits.");
 });
+
+test("the first scan reads the calendar's timezone from its events, never from the calendar itself", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "lib", "onboarding.js"), "utf8");
+  // Reading calendars/primary needs a calendar scope ClosedHand does not request (calendar.events only).
+  assert.doesNotMatch(src, /calendar\/v3\/calendars\/primary["'`]/);
+  assert.match(src, /saveProfileSetting\("calendar_timezone", calData\.timeZone\)/);
+});
