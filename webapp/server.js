@@ -1846,6 +1846,18 @@ app.get("/auth/:service", async (req, res) => {
     return res.redirect("/setup#step-accounts=microsoft");
   }
 
+  // Google signs in through ClosedHand's own Google app when this build has
+  // one and the person has no app of their own, or picked the quick route.
+  // The sign-in keeps that app with it, so it renews through the same app.
+  if (serviceKey === "google") {
+    const googleApp = require("./google-app");
+    const quick = googleApp.app();
+    const own = !!(svc?.clientId && svc?.clientSecret);
+    if (quick && googleApp.canReturnTo(BASE_URL) && (req.query.quick === "1" || !own)) {
+      svc = { ...svc, clientId: quick.clientId, clientSecret: quick.clientSecret, personalClient: true, usePKCE: true };
+    }
+  }
+
   if (!svc || !svc.clientId || !svc.clientSecret) {
     return res.status(400).send("Service not available");
   }
@@ -4164,8 +4176,7 @@ app.get("/api/connections/scopes", async (req, res) => {
       try {
         const toks = require("./crypto-tokens").decryptTokens(c.tokens);
         const body = new URLSearchParams({
-          client_id: process.env.GOOGLE_CLIENT_ID,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          ...require("./google-app").clientFor(toks, SERVICES.google.clientId, SERVICES.google.clientSecret),
           refresh_token: toks.refresh_token,
           grant_type: "refresh_token",
         });

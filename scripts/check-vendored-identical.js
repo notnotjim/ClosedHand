@@ -61,6 +61,10 @@ const PAIRS = [
     name: "microsoft-app",
     copies: ["lib/microsoft-app.js", "webapp/microsoft-app.js"],
   },
+  {
+    name: "google-app",
+    copies: ["lib/google-app.js", "webapp/google-app.js"],
+  },
 ];
 
 function normalise(src, name) {

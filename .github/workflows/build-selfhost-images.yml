@@ -81,8 +81,13 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:latest
             ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:${{ github.sha }}
+          # ClosedHand's Google app goes in only once these repository
+          # secrets exist; without them the images connect Google through
+          # each person's own project, as before.
           build-args: |
             GIT_SHA=${{ github.sha }}
+            CLOSEDHAND_GOOGLE_CLIENT_ID=${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_ID }}
+            CLOSEDHAND_GOOGLE_CLIENT_SECRET=${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_SECRET }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

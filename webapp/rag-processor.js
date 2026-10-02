@@ -71,6 +71,11 @@ async function getServiceToken(userId, service) {
   return tokens.access_token;
 }
 
+// The person's own Google app, from .env or saved during setup, as the
+// dashboard's sign-in reads it.
+const ownGoogleClientId = () => process.env.GOOGLE_CLIENT_ID || require("./config").getConfCached("GOOGLE_CLIENT_ID");
+const ownGoogleClientSecret = () => process.env.GOOGLE_CLIENT_SECRET || require("./config").getConfCached("GOOGLE_CLIENT_SECRET");
+
 async function refreshGoogleToken(userId, serviceKey = "google") {
   const { data: conn } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", serviceKey).single();
   const tokens = decryptTokens(conn?.tokens);
@@ -81,8 +86,7 @@ async function refreshGoogleToken(userId, serviceKey = "google") {
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: tokens.refresh_token,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      ...require("./google-app").clientFor(tokens, ownGoogleClientId(), ownGoogleClientSecret()),
     }),
   });
   const data = await resp.json();

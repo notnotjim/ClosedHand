@@ -44,6 +44,8 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
+          CLOSEDHAND_GOOGLE_CLIENT_ID: ${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_ID }}
+          CLOSEDHAND_GOOGLE_CLIENT_SECRET: ${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_SECRET }}
         run: |
           VERSION="${VERSION#v}" desktop/build.sh
           ARCH="$ARCH" desktop/dmg.sh

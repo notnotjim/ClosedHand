@@ -533,8 +533,15 @@
         <div class="card-body">
           <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later. This access goes to ClosedHand on your computer, not to closedhand.com.</p>
           <div class="fb-block chooser" id="g-block">
-          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="google"><span>Google <span class="fb-quick" id="g-quick-badge" hidden>Quick setup</span> <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
           <div class="choice-body">
+          <div id="g-quick" hidden>
+            <p class="note">Google sends your mail, calendar and Drive straight to ClosedHand on your computer.
+               Its sign-in page shows ClosedHand's name, but nothing passes through closedhand.com or any other company on the way.</p>
+            <a class="cta" id="g-quick-start" href="/auth/google?return=setup&amp;quick=1" target="_blank" rel="noopener">Sign in with Google</a>
+            <p class="note hint">On Google's last screen, tick Select all.</p>
+            <p class="note">Rather own the connection yourself? <a href="#g-intro" id="g-own-open">Use a Google Cloud project of your own</a>.</p>
+          </div>
           <p id="g-intro">ClosedHand uses Google’s usual sign-in, through a free Google Cloud project you own. This one-time setup keeps the connection to your mail, calendar and Drive under your control, with no company account in between.</p>
           <p class="note hint" id="g-ownership">Setting this up takes about 5 minutes but gives you digital sovereignty over the connection.</p>
           <button class="cta" type="button" id="g-start">Connect to Google</button>
@@ -1450,12 +1457,18 @@
       }
     });
   }
+  // Builds that carry ClosedHand's own Google app sign in straight away, and
+  // the person's own Google project stays one link away.
+  var _gQuick = false, _gOwn = false, _gDone = false;
   function gRender() {
     var on = gStep >= 1;
+    var quickFirst = _gQuick && !_gOwn;
     $("#g-flow").style.display = on ? "" : "none";
-    $("#g-intro").style.display = on ? "none" : "";
-    $("#g-ownership").style.display = on ? "none" : "";
-    $("#g-start").style.display = on ? "none" : "";
+    $("#g-quick").hidden = on || !quickFirst || _gDone;
+    var pitch = on || quickFirst || _gDone ? "none" : "";
+    $("#g-intro").style.display = pitch;
+    $("#g-ownership").style.display = pitch;
+    $("#g-start").style.display = pitch;
     if (!on) return;
     $all("#g-flow .g-step").forEach(function (el) { el.classList.toggle("is-on", parseInt(el.getAttribute("data-g"), 10) === gStep); });
     $("#g-count").textContent = gStep === G_LAST ? "Last step" : "Step " + gStep + " of " + G_TOTAL;
@@ -1472,6 +1485,7 @@
     if (gStep === 1) setTimeout(function () { $("#g-project").focus(); }, 50);
   }
   $("#g-start").addEventListener("click", function () { gStep = 1; gSave(); gRender(); });
+  $("#g-own-open").addEventListener("click", function (ev) { ev.preventDefault(); _gOwn = true; gRender(); });
   $all("#g-flow .peek").forEach(function (peek) {
     peek.addEventListener("click", function (ev) {
       ev.preventDefault();
@@ -1540,6 +1554,8 @@
     $("#g-connect").style.display = st.googleCreds ? "inline-block" : "none";
     $("#g-nocreds").style.display = st.googleCreds ? "none" : "";
     var done = !!st.googleConnected;
+    $("#g-quick-badge").hidden = !st.googleQuick || done;
+    if (_gQuick !== !!st.googleQuick || _gDone !== done) { _gQuick = !!st.googleQuick; _gDone = done; if (gStep === 0) gRender(); }
     if (done && gStep !== 0) { gStep = 0; gSave(); gRender(); }
     // Connected: the pitch and the steps give way to who is connected and
     // what can be done about it.

@@ -43,6 +43,13 @@ RUN node scripts/prepare-voice.js
 # The commit this image was built from, for bug reports.
 ARG GIT_SHA=""
 ENV CLOSEDHAND_SHA=$GIT_SHA
+# ClosedHand's own Google app (see lib/google-app.js), passed in by the
+# official image build. A build from source leaves both empty and connects
+# Google through the person's own project.
+ARG CLOSEDHAND_GOOGLE_CLIENT_ID=""
+ARG CLOSEDHAND_GOOGLE_CLIENT_SECRET=""
+ENV CLOSEDHAND_GOOGLE_CLIENT_ID=$CLOSEDHAND_GOOGLE_CLIENT_ID \
+    CLOSEDHAND_GOOGLE_CLIENT_SECRET=$CLOSEDHAND_GOOGLE_CLIENT_SECRET
 
 # Boot-with-nothing: the bot starts with no keys into setup mode. The port serves
 # /health, the platform webhooks, and the /chat WebSocket (exposed to the host so

@@ -17,5 +17,7 @@
     <key>NSHumanReadableCopyright</key><string>ClosedHand</string>
     <key>NSAppleEventsUsageDescription</key><string>ClosedHand needs to control apps on your behalf to carry out your requests.</string>
     <key>ClosedHandSHA</key><string>__SHA__</string>
+    <key>ClosedHandGoogleClientID</key><string>__GOOGLE_CLIENT_ID__</string>
+    <key>ClosedHandGoogleClientSecret</key><string>__GOOGLE_CLIENT_SECRET__</string>
 </dict>
 </plist>

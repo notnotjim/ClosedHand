@@ -78,6 +78,10 @@ async function getSetupState() {
   const microsoft = connections.some((s) => s === "microsoft" || s.startsWith("microsoft_extra_"));
   // Signing in by code through ClosedHand's app needs no setup of its own;
   // an app of the person's own in .env is used by the dashboard instead.
+  // Google through ClosedHand's own app: only in builds that carry one, and
+  // only where Google can hand the sign-in back to this computer.
+  const googleApp = require("./google-app");
+  const googleQuick = !!googleApp.app() && googleApp.canReturnTo(process.env.BASE_URL || "http://localhost:3000");
   const microsoftCode = !!require("./microsoft-app").appId() && !(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
 
   const waLinked = await (async () => {
@@ -154,6 +158,7 @@ async function getSetupState() {
     microsoftConnected: microsoft,
     microsoftAccount,
     microsoftCode,
+    googleQuick,
     waLinked,
     // Chat apps beyond Telegram and WhatsApp need the operator's own app
     // credentials in .env; the dashboard says so rather than offering a

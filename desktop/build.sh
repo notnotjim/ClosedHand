@@ -115,7 +115,17 @@ rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ClosedHand"
 [ -d "$BUNDLE_RES" ] && cp -R "$BUNDLE_RES" "$APP/Contents/Resources/"
 cp "$HERE/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-sed -e "s/__VERSION__/$VERSION/g" -e "s/__SHA__/$SHA/g" "$HERE/Info.plist" > "$APP/Contents/Info.plist"
+# ClosedHand's own Google app (see lib/google-app.js): from the environment,
+# or from a file kept outside the repository on the machine that builds
+# releases. Without either the app connects Google through the person's own
+# project.
+GOOGLE_APP_ENV="${CLOSEDHAND_GOOGLE_APP_ENV:-$HOME/.config/closedhand/google-app.env}"
+if [ -z "${CLOSEDHAND_GOOGLE_CLIENT_ID:-}" ] && [ -f "$GOOGLE_APP_ENV" ]; then . "$GOOGLE_APP_ENV"; fi
+GOOGLE_ID="$(printf '%s' "${CLOSEDHAND_GOOGLE_CLIENT_ID:-}" | tr -cd 'A-Za-z0-9._-')"
+GOOGLE_SECRET="$(printf '%s' "${CLOSEDHAND_GOOGLE_CLIENT_SECRET:-}" | tr -cd 'A-Za-z0-9._-')"
+sed -e "s/__VERSION__/$VERSION/g" -e "s/__SHA__/$SHA/g" \
+    -e "s/__GOOGLE_CLIENT_ID__/$GOOGLE_ID/g" -e "s/__GOOGLE_CLIENT_SECRET__/$GOOGLE_SECRET/g" \
+    "$HERE/Info.plist" > "$APP/Contents/Info.plist"
 mkdir -p "$APP/Contents/Resources/node/bin" "$APP/Contents/Resources/node/lib"
 cp "$NODE_DIR/bin/node" "$APP/Contents/Resources/node/bin/"
 cp -R "$NODE_DIR/lib/node_modules" "$APP/Contents/Resources/node/lib/"   # npm and npx, for MCP servers run by command
