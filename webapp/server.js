@@ -1500,11 +1500,22 @@ async function autoEnableNotificationPlatform(userId, platform) {
 // PAGE ROUTES
 // ============================================================
 
+// Setup is complete when the required pieces run and the personal URL is
+// claimed. The one way past without a URL is closedhand.com being unable to
+// give one out, so an outage never locks anyone out of their own ClosedHand.
+async function setupComplete(state) {
+  if (!state.ready) return false;
+  if (await getRuntimeConf("PHONE_PERMANENT_URL") || await getRuntimeConf("PHONE_ADDRESS_NAME")) return true;
+  const registration = require("./phone-registration");
+  if (registration.status().ownershipConfirmed) return true;
+  return !(await registration.serviceAvailable());
+}
+
 app.get("/", async (req, res) => {
-  // A fresh install lands in the wizard until the required pieces (db + model) run.
+  // A fresh install lands in setup until every required step is done.
   try {
     const state = await require("./setup-state").getSetupState();
-    if (!state.ready) return res.redirect("/setup" + (req.originalUrl !== "/" ? "?next=" + encodeURIComponent(req.originalUrl) : ""));
+    if (!(await setupComplete(state))) return res.redirect("/setup" + (req.originalUrl !== "/" ? "?next=" + encodeURIComponent(req.originalUrl) : ""));
   } catch (e) { /* status failure never blocks the homepage */ }
   assets.sendPage(res, "index.html");
 });
@@ -1673,6 +1684,9 @@ app.get("/dashboard", async (req, res) => {
   }
 
   if (!userId) return res.redirect("/");
+  try {
+    if (!(await setupComplete(await require("./setup-state").getSetupState()))) return res.redirect("/setup");
+  } catch (e) { /* status failure never blocks the dashboard */ }
   // The page carries its own JS inline, so a cached copy means shipped fixes
   // never reach the user until they happen to hard reload.
   res.set("Cache-Control", "no-cache, must-revalidate");

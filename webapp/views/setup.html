@@ -824,7 +824,7 @@
 
   <footer>
     <span><em>ClosedHand</em> · self-host edition</span>
-    <a href="/">Open ClosedHand</a>
+    <a href="/" id="footer-open" hidden>Open ClosedHand</a>
   </footer>
 </div>
 
@@ -1044,7 +1044,7 @@
     $("#total-count").textContent = String(state.steps.length);
     var claimNext = next && next.key === "accounts" && accountDone && (state.googleConnected || state.microsoftConnected);
     $("#next-chip").textContent = next ? (claimNext ? "next: claim your personal URL" : "next: " + next.label.toLowerCase()) : "";
-    $("#summary-note").textContent = state.ready
+    $("#summary-note").textContent = requiredDone
       ? (doneCount === state.steps.length ? "everything is connected" : "ready, with more to unlock")
       : "";
 
@@ -1084,7 +1084,10 @@
         }
       }
     }
-    $("#ready-banner").classList.toggle("is-on", !!state.ready);
+    // Open only once every required step is done, the personal URL included:
+    // the dashboard sends anyone back here until then.
+    $("#ready-banner").classList.toggle("is-on", requiredDone);
+    $("#footer-open").hidden = !requiredDone;
 
     // Every required step done: tell the assistant, which holds a chat app's
     // welcome until then.

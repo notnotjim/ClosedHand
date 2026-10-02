@@ -60,6 +60,9 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   as searching every app or everything connected; that is what it replaces. Don't claim it
   stores links between items (it doesn't), or that no model is involved in indexing (a
   background model summarises items): no language model decides what to fetch or look up.
+- The personal URL is required, and enforced: the home page and dashboard send people back to
+  setup until it is claimed. The only way past without one is closedhand.com being unable to
+  give one out right now, so an outage never locks anyone out of their own ClosedHand.
 - It's chat-based. Don't call anything "voice control".
 - Key positioning phrase: "recalls by meaning, not just keywords" (Context Brain / File
   Search copy). Reuse it, don't invent variants. The "just" is load-bearing: retrieval
