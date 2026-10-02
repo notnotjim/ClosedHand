@@ -1515,7 +1515,13 @@ app.get("/", async (req, res) => {
   // A fresh install lands in setup until every required step is done.
   try {
     const state = await require("./setup-state").getSetupState();
-    if (!(await setupComplete(state))) return res.redirect("/setup" + (req.originalUrl !== "/" ? "?next=" + encodeURIComponent(req.originalUrl) : ""));
+    // Held back only for the personal URL: setup says so and points at it.
+    if (!(await setupComplete(state))) {
+      const params = new URLSearchParams();
+      if (state.ready) params.set("claim", "1");
+      if (req.originalUrl !== "/") params.set("next", req.originalUrl);
+      return res.redirect("/setup" + (params.toString() ? "?" + params : ""));
+    }
   } catch (e) { /* status failure never blocks the homepage */ }
   assets.sendPage(res, "index.html");
 });
@@ -1685,7 +1691,8 @@ app.get("/dashboard", async (req, res) => {
 
   if (!userId) return res.redirect("/");
   try {
-    if (!(await setupComplete(await require("./setup-state").getSetupState()))) return res.redirect("/setup");
+    const state = await require("./setup-state").getSetupState();
+    if (!(await setupComplete(state))) return res.redirect(state.ready ? "/setup?claim=1" : "/setup");
   } catch (e) { /* status failure never blocks the dashboard */ }
   // The page carries its own JS inline, so a cached copy means shipped fixes
   // never reach the user until they happen to hard reload.

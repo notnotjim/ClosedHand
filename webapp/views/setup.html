@@ -222,6 +222,12 @@
     #url-copy:hover { color: var(--text-primary); background: var(--accent-faint); }
     #url-copy:focus-visible, #url-value:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
     #url-copy-status { margin: 8px 0 0; font-size: 13px; color: var(--text-secondary); }
+    #setup-personal-url p.url-why { color: var(--text-primary); font-weight: 500; }
+    /* One shake and a glow when setup was where the dashboard sent them. */
+    #url-start.nudge { animation: claimShake 0.6s ease 0.5s, claimGlow 1.6s ease 0.5s; }
+    @keyframes claimShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+    @keyframes claimGlow { 0% { box-shadow: 0 0 0 0 rgba(208,86,63,0.55); } 70% { box-shadow: 0 0 0 12px rgba(208,86,63,0); } 100% { box-shadow: 0 0 0 0 rgba(208,86,63,0); } }
+    @media (prefers-reduced-motion: reduce) { #url-start.nudge { animation: claimGlow 1.6s ease 0.5s; } }
     #url-continue, #url-start.is-quiet { background: transparent; color: var(--text-primary); border: 1px solid var(--border-default); }
     #url-code-form { margin-top: 24px; }
     #url-password-note { color: var(--text-primary); font-weight: 500; }
@@ -686,6 +692,7 @@
             <p id="url-auto" hidden>Your Microsoft sign-in above claimed it.</p>
             <div id="url-controls" hidden>
               <form id="url-form">
+                <p class="url-why" id="url-why" hidden>Claim your personal URL to open ClosedHand.</p>
                 <p>You claim it by signing in on closedhand.com.</p>
                 <button class="save-btn" id="url-start" type="submit">Claim your personal URL</button>
               </form>
@@ -1568,11 +1575,20 @@
     else if (st.microsoftConnected) openChooser("microsoft");
   }
   // Fold the account choosers and scroll to the claim, once the page has drawn it.
+  // Sent here from the dashboard or home page because the personal URL is
+  // the one thing left: say so once, and draw the eye to the button.
+  var _claimAsked = /(?:^|[?&])claim=1(?:&|$)/.test(location.search);
   function revealClaim() {
     $all("#step-accounts .chooser").forEach(function (el) { el.classList.remove("is-open"); });
     setTimeout(function () {
       var url = $("#setup-personal-url");
       if (url && !url.hidden) url.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (_claimAsked && url && !url.hidden) {
+        _claimAsked = false;
+        $("#url-why").hidden = false;
+        var btn = $("#url-start");
+        btn.classList.remove("nudge"); void btn.offsetWidth; btn.classList.add("nudge");
+      }
     }, 120);
   }
   var _mailWasConnected = null;
