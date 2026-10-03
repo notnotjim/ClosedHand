@@ -3463,11 +3463,11 @@ app.get("/api/chat/activity", async (req, res) => {
         const latestPulse = pulseVectors[0];
         activities.push({
           type: "pulse",
-          text: pulseNotes.length === 1
+          text: pulseVectors.length === 1
             ? "1 pulse check"
-            : pulseNotes.length + " pulse checks",
+            : pulseVectors.length + " pulse checks",
           time: latestPulse.updated_at,
-          count: pulseNotes.length,
+          count: pulseVectors.length,
         });
       }
     }

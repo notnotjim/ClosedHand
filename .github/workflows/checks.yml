@@ -115,6 +115,14 @@ jobs:
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
 
+      # A name that was never defined only fails when its line runs, so a
+      # rarely used path ships broken: removing a schedule crashed every
+      # time for this reason.
+      - name: No undefined names in server code
+        run: |
+          npm install --prefix "$RUNNER_TEMP/lint" --ignore-scripts --no-audit --no-fund eslint@8.57.1
+          "$RUNNER_TEMP/lint/node_modules/.bin/eslint" --no-eslintrc --env node,es2022 --parser-options=ecmaVersion:2022 --rule '{"no-undef":"error"}' --ignore-pattern lib/flight-time.js lib index.js user-store.js crypto-tokens.js webapp/server.js webapp/*.js sandbox-image/agent/server.js
+
       - name: Vendored copies have not drifted
         run: node scripts/check-vendored-identical.js
 
