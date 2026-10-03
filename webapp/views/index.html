@@ -4158,7 +4158,7 @@
     }
 
     var lastEvent = events[events.length - 1];
-    var isThinking = lastEvent && lastEvent.type === 'thinking' && running.length === 0;
+    var isThinking = lastEvent && (lastEvent.type === 'thinking' || lastEvent.type === 'recall') && running.length === 0;
     var now = Date.now();
     var maxVisible = window.innerWidth < 768 ? 3 : 6;
 
@@ -4206,7 +4206,7 @@
       html += '<div class="tl-thinking">';
       html += '<div class="tl-dot thinking" style="margin-left:0;"></div>';
       html += '<span class="tl-spinner" id="spinnerChar">' + _spinnerChars[_spinnerIdx] + '</span>';
-      html += '<span class="tl-thinking-text">Thinking</span>';
+      html += '<span class="tl-thinking-text">' + escapeHtml(lastEvent && lastEvent.type === 'recall' ? (lastEvent.description || 'Looking for anything relevant') : 'Thinking') + '</span>';
       html += '</div>';
       if (!_spinnerInterval) {
         _spinnerInterval = setInterval(function() {

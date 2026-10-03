@@ -43,3 +43,23 @@ test("the chat page never falls back to an internal name", () => {
   const body = html.slice(start, html.indexOf("\n  }\n", start));
   assert.doesNotMatch(body, /\|\|\s*(item\.end|running\[r\])\.toolName/);
 });
+
+test("recall, before the model reads the message, says what it is doing", () => {
+  const seen = [];
+  const feed = new StatusFeed({ update: (events, latest) => seen.push(latest), clear() {} });
+  feed.emit({ type: "recall" });
+  assert.equal(seen[0].description, "Looking for anything relevant");
+  const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
+  assert.ok(engine.indexOf('opts.onStatusEvent({ type: "recall" })') < engine.indexOf("contextInjection = await fetchRelevantContext("), "signalled before recall runs");
+  const page = fs.readFileSync(path.join(__dirname, "..", "webapp", "views", "index.html"), "utf8");
+  assert.match(page, /lastEvent\.type === 'recall' \? \(lastEvent\.description \|\| 'Looking for anything relevant'\)/);
+  // A chat app shows no step for it, as for thinking.
+  const status = fs.readFileSync(path.join(__dirname, "..", "lib", "status-feed.js"), "utf8");
+  assert.match(status, /if \(\(latest\.type === "thinking" \|\| latest\.type === "recall"\) && events\.every/);
+});
+
+test("the web chat greets people by the name they asked for", () => {
+  const server = fs.readFileSync(path.join(__dirname, "..", "webapp", "server.js"), "utf8");
+  assert.match(server, /name: profile\?\.settings\?\.preferred_name \|\| profile\?\.display_name \|\| null,/, "chat status");
+  assert.match(server, /name: profile\?\.settings\?\.preferred_name \|\| profile\?\.display_name \|\| "User",/, "dashboard status");
+});

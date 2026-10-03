@@ -3534,7 +3534,7 @@ app.get("/api/chat/status", async (req, res) => {
 
     const { data: rows } = await supabase
       .from("profiles")
-      .select("id, display_name, email, is_anonymous")
+      .select("id, display_name, email, is_anonymous, settings")
       .eq("id", userId)
       .limit(1);
     const profile = rows && rows.length > 0 ? rows[0] : null;
@@ -3542,7 +3542,9 @@ app.get("/api/chat/status", async (req, res) => {
     res.json({
       authenticated: true,
       isAnonymous: profile?.is_anonymous || false,
-      name: profile?.display_name || null,
+      // The name they asked to be called, as the assistant uses it; the
+      // account's own name only until they have said.
+      name: profile?.settings?.preferred_name || profile?.display_name || null,
       email: profile?.email || null,
     });
   } catch (e) {
@@ -3721,7 +3723,7 @@ app.get("/api/status", async (req, res) => {
 
     res.json({
       selfHost: true,
-      name: profile?.display_name || "User",
+      name: profile?.settings?.preferred_name || profile?.display_name || "User",
       email: profile?.email || "",
       settings: require("./model-policy").publicSettings(profile?.settings),
       services: health.working,
