@@ -50,7 +50,7 @@ test("recall, before the model reads the message, says what it is doing", () => 
   feed.emit({ type: "recall" });
   assert.equal(seen[0].description, "Looking for anything relevant");
   const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
-  assert.ok(engine.indexOf('opts.onStatusEvent({ type: "recall" })') < engine.indexOf("contextInjection = await fetchRelevantContext("), "signalled before recall runs");
+  assert.ok(engine.indexOf('opts.onStatusEvent({ type: "recall" })') < engine.indexOf("const recalled = fetchRelevantContext("), "signalled before recall runs");
   const page = fs.readFileSync(path.join(__dirname, "..", "webapp", "views", "index.html"), "utf8");
   assert.match(page, /lastEvent\.type === 'recall' \? \(lastEvent\.description \|\| 'Looking for anything relevant'\)/);
   // A chat app shows no step for it, as for thinking.
@@ -72,6 +72,8 @@ test("a progress line quotes words a person would say, never search syntax, iden
   assert.equal(d("search_calendar", { start: "2026-10-04T00:00:00+07:00", end: "2026-10-14T00:00:00+07:00" }), "Checking your calendar, 4 Oct to 14 Oct");
   assert.equal(d("web_search", { query: '"coworking" da nang' }), 'Searching the web for "coworking da nang"');
   assert.equal(d("pin_fact", { key: "profile-name-certainty" }), "Pinning a fact");
+  assert.equal(d("web_search", { query: "icloud-storage-reminder" }), 'Searching the web for "icloud storage reminder"', "a name made for code reads as words");
+  assert.equal(d("web_search", { query: "sam@my-mail.com" }), 'Searching the web for "sam@my-mail.com"', "an address keeps its dashes");
   for (const t of INTERNAL_TOOLS.filter((x) => typeof x.activityDescription === "function")) {
     const line = t.activityDescription({ file_id: "1AbCdEfGhIjKlMnOp", key: "some-key_slug", query: "a OR b" }) || "";
     assert.doesNotMatch(line, /1AbCdEf|some-key_slug|\bOR\b/, `${t.name}: ${line}`);

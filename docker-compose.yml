@@ -46,6 +46,10 @@ services:
       - "127.0.0.1:${BOT_PORT:-3001}:3000" # bot service and health endpoint, this computer only
     volumes:
       - storage:/data/storage # shared with the webapp (attachments + logos)
+    # The bot is what the person is waiting on. When memory runs short, the
+    # sandbox's browser gives way first, so the local search models that every
+    # reply needs are never swapped out (that once made a reply take minutes).
+    mem_reservation: 1536m
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s
@@ -97,6 +101,9 @@ services:
       - "127.0.0.1:${SANDBOX_VNC_PORT:-6080}:6080"
     volumes:
       - sandbox-workspace:/workspace # files + browser profile survive restarts
+    # Background work. When the processor is busy, the bot answering someone
+    # comes first; the sandbox gets a quarter of the usual share.
+    cpu_shares: 256
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/health',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s

@@ -62,7 +62,7 @@ jobs:
             -print0 | xargs -0 -n1 node -c
 
       - name: Assistant email and connection catalogue
-        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-google-quick-setup.js scripts/test-confirmation-answer.js scripts/test-progress-text.js scripts/test-new-connection-sync.js scripts/test-likely-tools.js scripts/test-event-attachments.js scripts/test-sign-in-again.js scripts/test-calendar-dates.js scripts/test-local-model-priority.js scripts/test-read-ceiling.js scripts/test-reply-format.js scripts/test-setup-feedback.js scripts/test-onedrive.js scripts/test-closedhand-com.js scripts/test-address-workers.js scripts/test-installer-fist.js
+        run: node --test scripts/test-assistant-email.js scripts/test-connection-catalogue.js scripts/test-microsoft-sign-in.js scripts/test-google-quick-setup.js scripts/test-confirmation-answer.js scripts/test-progress-text.js scripts/test-new-connection-sync.js scripts/test-likely-tools.js scripts/test-event-attachments.js scripts/test-sign-in-again.js scripts/test-calendar-dates.js scripts/test-local-model-priority.js scripts/test-read-ceiling.js scripts/test-recall-budget.js scripts/test-reply-format.js scripts/test-setup-feedback.js scripts/test-onedrive.js scripts/test-closedhand-com.js scripts/test-address-workers.js scripts/test-installer-fist.js
 
       - name: Shopify connection and renewal
         run: node --test scripts/test-shopify-connection.js

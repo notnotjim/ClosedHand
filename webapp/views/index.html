@@ -4007,6 +4007,7 @@
     var inline = function (t) {
       return esc(t)
         .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=$|[\s).,:;!?])/g, '$1<em>$2</em>')
         .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
     };
     var out = [], list = null;

@@ -21,6 +21,8 @@ test("bold, lists and line breaks render", () => {
   assert.equal(formatReply("1. First\n2. Second"), "<ol class=\"reply-list\"><li>First</li><li>Second</li></ol>");
   assert.equal(formatReply("### Today\nNothing urgent"), "<strong class=\"reply-head\">Today</strong><br>Nothing urgent");
   assert.equal(formatReply("Run `docker compose up`"), "Run <code>docker compose up</code>");
+  assert.equal(formatReply("It's *probably* fine (*not* certain)."), "It's <em>probably</em> fine (<em>not</em> certain).");
+  assert.equal(formatReply("2 * 3 * 4 = 24"), "2 * 3 * 4 = 24", "a lone asterisk is left alone");
 });
 
 test("nothing in a reply becomes markup of its own", () => {
