@@ -7,7 +7,7 @@ A personal AI assistant you actually own. It lives in your messaging apps, reads
 
 ## Why this exists
 
-Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the memory. There is no telemetry. The only ClosedHand account is the Google or Microsoft sign-in that claims your personal URL, and closedhand.com keeps only its name and email.
+Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the memory. There is no telemetry. The only ClosedHand account is the Google or Microsoft sign-in that claims your personal URL, and closedhand.com keeps only its email.
 
 It is strictly single-tenant. One install serves one person, and the first account to message your bot becomes its owner. Everyone else is politely refused.
 
@@ -141,8 +141,8 @@ claim it on closedhand.com by signing in with Google or Microsoft, then paste th
 code closedhand.com shows you back into ClosedHand. Google always takes this
 second sign-in: its mail connection uses your own Google project, and
 closedhand.com can't tell that sign-in from one made by any other app. Either
-way, that sign-in is your ClosedHand account: closedhand.com keeps only its name
-and email, linked to your personal URL. The code, or the Microsoft sign-in, means
+way, that sign-in is your ClosedHand account: closedhand.com keeps only its
+email, linked to your personal URL. The code, or the Microsoft sign-in, means
 a confirmation link sent by somebody else can never point your address at their
 computer. Bookmark your address, pin it in your chat,
 or add it to your phone's home screen (in Safari on iPhone, **Share → Add to Home

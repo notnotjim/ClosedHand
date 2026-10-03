@@ -114,6 +114,16 @@ test('a Microsoft account claiming someone else\'s email becomes its own owner, 
   assert.equal(bad.cookie, '');
 });
 
+test('signing in keeps only the email: names and pictures the provider sends are never saved', async () => {
+  const start = await fetch(base + '/auth/google?return_to=%2Fopen', { redirect: 'manual' });
+  assert.equal(new URL(start.headers.get('location')).searchParams.get('scope'), 'openid email');
+  await signIn('google', { ...google('g-named', 'named@example.com'), name: 'Pat Example', picture: 'https://example.com/pat.png' });
+  await signIn('microsoft', { ...microsoft('22222222-2222-4333-8444-555555555555', '77777777-7777-4888-9999-000000000000', 'ms-named@example.com'), name: 'Sam Example' });
+  const columns = (await db.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'owners' ORDER BY 1")).rows.map(r => r.column_name);
+  assert.deepEqual(columns, ['created_at', 'email', 'id', 'provider', 'subject', 'updated_at']);
+  assert.doesNotMatch(JSON.stringify((await db.query('SELECT * FROM owners')).rows), /Pat Example|Sam Example|pat\.png/);
+});
+
 test('an owner carried over from the old service is claimed only by the same verified Google address', async () => {
   await db.query("INSERT INTO owners (provider, subject, email) VALUES ('google', NULL, 'carried@example.com')");
   const unverified = await signIn('google', google('g-other', 'carried@example.com', false));

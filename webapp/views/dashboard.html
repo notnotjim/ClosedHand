@@ -2478,7 +2478,7 @@
               </div>
             </div>
             <div id="phone-setup" hidden>
-              <p>ClosedHand gives your dashboard an address, like amber-fox-42.closedhand.ai, so you can open it from any device. To claim the address, you sign in once with Google or Microsoft on closedhand.com, and that becomes your ClosedHand account. closedhand.com keeps only that account’s name and email, linked to your address. Connecting your mail is separate: that access goes to ClosedHand on your computer, not to closedhand.com. You can change the name afterwards. This is separate from connecting your mail and calendar and from your dashboard password.</p>
+              <p>ClosedHand gives your dashboard an address, like amber-fox-42.closedhand.ai, so you can open it from any device. To claim the address, you sign in once with Google or Microsoft on closedhand.com, and that becomes your ClosedHand account. closedhand.com keeps only that account’s email, linked to your address. Connecting your mail is separate: that access goes to ClosedHand on your computer, not to closedhand.com. You can change the name afterwards. This is separate from connecting your mail and calendar and from your dashboard password.</p>
               <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Get your personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Claim your personal URL</a>
@@ -2677,7 +2677,7 @@
 
             <!-- The ClosedHand account: the Google or Microsoft sign-in that
                  owns this computer's personal URL. closedhand.com keeps only its
-                 name and email; everything below is on this computer. -->
+                 email; everything below is on this computer. -->
             <div class="account-summary" id="account-summary" hidden>
               <p id="account-summary-text"></p>
             </div>
@@ -4471,7 +4471,7 @@
       if (account) {
         const host = new URL(account.url).hostname;
         const who = (account.provider === "microsoft" ? "Microsoft" : "Google") + (account.email ? ": " + account.email : "");
-        text.append("Your ClosedHand account is ", strong(who), ". closedhand.com keeps only its name and email, linked to your personal URL, ", strong(host), ". Everything else here is on this computer.");
+        text.append("Your ClosedHand account is ", strong(who), ". closedhand.com keeps only its email, linked to your personal URL, ", strong(host), ". Everything else here is on this computer.");
         confirmText.textContent = "This deletes your ClosedHand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
         text.textContent = "You don’t have a ClosedHand account. Getting a personal URL makes one: the Google or Microsoft account you claim it with. Everything here is on this computer.";

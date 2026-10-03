@@ -3,37 +3,38 @@
 // account; an email address never joins accounts together, because a work
 // account's email is whatever its organisation typed in.
 
-// identity: { provider, subject, email, emailVerified, name }
+// identity: { provider, subject, email, emailVerified }. Only the email is
+// kept about the person: no name, picture or anything else the sign-in gives.
 async function ownerFor(db, identity) {
-  const { provider, subject, email = null, name = null } = identity;
+  const { provider, subject, email = null } = identity;
   if (!['google', 'microsoft'].includes(provider) || typeof subject !== 'string' || !subject) throw new Error('Unknown identity');
   const known = await db.query(
-    'UPDATE owners SET email = $3, name = COALESCE($4, name), updated_at = now() WHERE provider = $1 AND subject = $2 RETURNING id',
-    [provider, subject, email, name]);
+    'UPDATE owners SET email = $3, updated_at = now() WHERE provider = $1 AND subject = $2 RETURNING id',
+    [provider, subject, email]);
   if (known.rows[0]) return known.rows[0].id;
   // Owners carried over from the old service are known only by the Google
   // address they used there. A verified sign-in with that same Google address
   // claims the row once; after that the Google ID alone finds it.
   if (provider === 'google' && identity.emailVerified === true && email) {
     const claimed = await db.query(
-      `UPDATE owners SET subject = $1, name = COALESCE($3, name), updated_at = now()
+      `UPDATE owners SET subject = $1, updated_at = now()
        WHERE id = (SELECT id FROM owners WHERE provider = 'google' AND subject IS NULL AND lower(email) = lower($2)
                    ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
        RETURNING id`,
-      [subject, email, name]);
+      [subject, email]);
     if (claimed.rows[0]) return claimed.rows[0].id;
   }
   const created = await db.query(
-    `INSERT INTO owners (provider, subject, email, name) VALUES ($1, $2, $3, $4)
+    `INSERT INTO owners (provider, subject, email) VALUES ($1, $2, $3)
      ON CONFLICT (provider, subject) WHERE subject IS NOT NULL DO UPDATE SET updated_at = now()
      RETURNING id`,
-    [provider, subject, email, name]);
+    [provider, subject, email]);
   return created.rows[0].id;
 }
 
 async function describe(db, ownerId) {
   if (!ownerId) return null;
-  const { rows } = await db.query('SELECT id, provider, email, name FROM owners WHERE id = $1', [ownerId]);
+  const { rows } = await db.query('SELECT id, provider, email FROM owners WHERE id = $1', [ownerId]);
   return rows[0] || null;
 }
 

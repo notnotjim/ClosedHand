@@ -33,8 +33,22 @@ test('Google and Microsoft identities come from their permanent IDs, never the e
   assert.equal(m.emailVerified, false, 'a Microsoft email is never treated as proof');
   assert.equal(PROVIDERS.microsoft.identity({ iss: 'https://login.microsoftonline.com/99999999-2222-4333-8444-555555555555/v2.0', aud: 'c', tid, oid }, 'c'), null, 'issuer must match the directory');
   assert.equal(PROVIDERS.microsoft.identity({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: 'c', tid }, 'c'), null, 'no ID, no owner');
-  assert.equal(PROVIDERS.microsoft.scope, 'openid profile email');
-  assert.equal(PROVIDERS.google.scope, 'openid email profile');
+  assert.equal(PROVIDERS.microsoft.scope, 'openid profile email', 'profile carries the address of Microsoft accounts with no email claim');
+  assert.equal(PROVIDERS.google.scope, 'openid email', 'Google is asked for the email only');
+});
+
+test('a ClosedHand account keeps only the email: no name from the sign-in, and no page says otherwise', () => {
+  const tid = '11111111-2222-4333-8444-555555555555', oid = '66666666-7777-4888-9999-000000000000';
+  const g = PROVIDERS.google.identity({ iss: 'https://accounts.google.com', aud: 'c', sub: '1', email: 'a@b.c', email_verified: true, name: 'Pat Example', picture: 'https://p' }, 'c');
+  const m = PROVIDERS.microsoft.identity({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: 'c', tid, oid, email: 'a@b.c', name: 'Pat Example' }, 'c');
+  for (const who of [g, m]) assert.ok(!JSON.stringify(who).includes('Pat Example') && !('picture' in who), 'only the ID and email leave the sign-in');
+  const owners = fs.readFileSync(path.join(__dirname, '../closedhand-com/lib/owners.js'), 'utf8').replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(owners, /\bname\b\s*(=|,|\))/, 'owners.js never writes a name');
+  const pages = ['closedhand-com/views', 'webapp/views'].flatMap(dir => fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.html')).map(f => path.join(dir, f)));
+  for (const page of [...pages, 'README.md']) {
+    const text = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
+    assert.doesNotMatch(text, /keeps\s+only\s+(its|that\s+account.s|that\s+sign-in.s)\s+name|name\s+and\s+e-?mail/i, page);
+  }
 });
 
 test('personal URL tickets carry one request, signed, for thirty minutes', () => {

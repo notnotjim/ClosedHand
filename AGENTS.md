@@ -34,14 +34,14 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   "copy" as a noun for it in anything people read: website, app, chat replies, error messages,
   release notes, README. Code, comments and contributor docs may use them.
 - The ClosedHand account is the Google or Microsoft sign-in that claims a personal URL.
-  closedhand.com keeps only that account's name and email, linked to the personal URL; it
+  closedhand.com keeps only that account's email, linked to the personal URL; it
   never keeps the password, the mail or anything from the person's computer. Setup has two
   Google or Microsoft sign-ins and the copy always says which one it is: claiming the personal
   URL happens on closedhand.com, while connecting mail and calendar gives access to ClosedHand
   on the person's computer, not to closedhand.com. Never write "closedhand.com never sees your
   mail": remote dashboard pages pass through ClosedHand's relay on Cloudflare. Wherever the
   account is named, the copy says what it keeps in those words, never "nothing else" (it
-  does keep the name and email). Signing in to take a personal URL is "claim", never
+  does keep the email). Signing in to take a personal URL is "claim", never
   "confirm it with Google or Microsoft". Connecting Microsoft through ClosedHand's own app
   claims the personal URL with that same sign-in (closedhand.com checks it against
   Microsoft's keys); Google always needs the second sign-in on closedhand.com, because its
@@ -54,6 +54,11 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   keeps on that computer; the confirmation names both. Setup creates the account, so never "no account", "nothing to sign up for" or "no
   sign up required". "Anonymous" only for what truly is (the download), never for
   ClosedHand or the account: say what closedhand.com holds instead.
+- Where people use ClosedHand has three names, used exactly: the chat in a browser is the
+  "web chat" (its own tab can say "Chat"); WhatsApp, Telegram and the like are "chat apps";
+  the control panel (connections, agents, settings, Context Brain, usage) is the "dashboard".
+  The personal URL opens the web chat and the dashboard. Never bare "chat" where it could
+  mean either kind.
 - The recall design is the "Preemptive Context Layer" (PCL), defined at closedhand.com/pcl, first
   published there on 2026-09-29. It is free for anyone to use: no trademark sign. Describe it as
   one live picture of the person's world searched once before the model reads a message, never

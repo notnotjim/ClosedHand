@@ -11,7 +11,7 @@
 // on that sign-in, which is checked against Microsoft's keys.
 //
 // The sign-in that claims a personal URL is the owner's ClosedHand account.
-// Only its name and email are kept, with the address, and deleting it
+// Only its email is kept, with the address, and deleting it
 // forgets the sign-in and takes the route down (deleteAccount).
 const crypto = require('node:crypto');
 const { encryptString, decryptString } = require('./crypto-tokens');

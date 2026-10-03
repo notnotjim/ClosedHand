@@ -236,7 +236,7 @@ test("Settings > Account says what the ClosedHand account holds, and Delete acco
   await withAccount.state.loadAccountSummary();
   assert.equal(withAccount.el("account-summary").hidden, false);
   assert.equal(withAccount.el("account-summary-text").textContent,
-    "Your ClosedHand account is Google: a@example.com. closedhand.com keeps only its name and email, linked to your personal URL, amber-fox-42.closedhand.ai. Everything else here is on this computer.");
+    "Your ClosedHand account is Google: a@example.com. closedhand.com keeps only its email, linked to your personal URL, amber-fox-42.closedhand.ai. Everything else here is on this computer.");
   assert.match(withAccount.el("delete-account-text").textContent, /^This deletes your ClosedHand account: amber-fox-42\.closedhand\.ai stops working and closedhand\.com forgets your sign-in\. It also permanently deletes everything ClosedHand keeps for you on this computer/);
   const without = accountPage(() => ({ body: { account: null } }));
   await without.state.loadAccountSummary();

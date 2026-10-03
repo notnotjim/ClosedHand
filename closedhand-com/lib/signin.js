@@ -1,4 +1,6 @@
-// Sign in with Google or Microsoft, asking only for name and email.
+// Sign in with Google or Microsoft, keeping only the account's email.
+// (Microsoft also needs "profile": it carries the address of accounts
+// that have no email claim. The name it brings is never kept.)
 // The provider's permanent account ID decides who someone is (owners.js).
 const crypto = require('node:crypto');
 const navigation = require('../public/entry-navigation');
@@ -11,14 +13,14 @@ const PROVIDERS = {
   google: {
     authorize: 'https://accounts.google.com/o/oauth2/v2/auth',
     token: 'https://oauth2.googleapis.com/token',
-    scope: 'openid email profile',
+    scope: 'openid email',
     extra: { prompt: 'select_account', access_type: 'online', include_granted_scopes: 'false' },
     // Google's ID never changes; its verified address may claim an owner
     // carried over from the old service (owners.js).
     identity(claims, clientId) {
       if (!['https://accounts.google.com', 'accounts.google.com'].includes(claims.iss) || claims.aud !== clientId) return null;
       if (typeof claims.sub !== 'string' || !claims.sub) return null;
-      return { provider: 'google', subject: claims.sub, email: claims.email || null, emailVerified: claims.email_verified === true, name: claims.name || null };
+      return { provider: 'google', subject: claims.sub, email: claims.email || null, emailVerified: claims.email_verified === true };
     },
   },
   microsoft: {
@@ -33,7 +35,7 @@ const PROVIDERS = {
       if (claims.iss !== `https://login.microsoftonline.com/${claims.tid}/v2.0`) return null;
       const id = uuid.test(claims.oid || '') ? claims.oid : (typeof claims.sub === 'string' && claims.sub ? 'sub:' + claims.sub : null);
       if (!id) return null;
-      return { provider: 'microsoft', subject: claims.tid + ':' + id, email: claims.email || claims.preferred_username || null, emailVerified: false, name: claims.name || null,
+      return { provider: 'microsoft', subject: claims.tid + ':' + id, email: claims.email || claims.preferred_username || null, emailVerified: false,
         personal: claims.tid === PERSONAL_ACCOUNTS_TENANT };
     },
   },

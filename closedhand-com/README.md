@@ -30,7 +30,7 @@ Migrations in `migrations/` apply on start.
 | `SESSION_SECRET` | 32+ random characters; signs sessions and personal URL tickets |
 | `TOKEN_ENCRYPTION_KEY` | 32 random bytes, base64; encrypts connection credentials at rest |
 | `BASE_URL` | `https://closedhand.com` |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, asking only for name and email |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, asking only for the email |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Microsoft sign-in, same |
 | `MICROSOFT_ASSOCIATED_APP_IDS` | Microsoft app IDs published at `/.well-known/microsoft-identity-association.json`, so their permission screens name closedhand.com (defaults to `MICROSOFT_CLIENT_ID`) |
 | `PHONE_ENROLLMENT_ENABLED` | `1` to accept new personal URLs |
