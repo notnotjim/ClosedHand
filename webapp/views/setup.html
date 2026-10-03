@@ -564,14 +564,17 @@
               <h3>Create your project</h3>
               <p class="note">Google keeps the access in your free Google Cloud project, which only you can use and
                  can delete later.</p>
-              <p class="g-do">Click the button below and name the project anything you like.
-                 Leave the second field as <strong>No Organization</strong>.</p>
-              <p class="note warn"><strong>Important:</strong> before you click Create on the project
-                 screen, copy the Project ID shown under the name you chose (often it's similar to the name
-                 you chose). This is what goes in the box below. If you forget, Google Cloud's project menu lists it.</p>
+              <p class="g-do">Open the New Project screen below and fill it in like this:</p>
+              <div class="gform">
+                <div><span class="gf-label">Project name</span><p class="gf-how">Anything you like.</p></div>
+                <div><span class="gf-label">Project ID</span><p class="gf-how">Shown under the name. Copy it into the box below.</p>
+                  <a class="peek" href="/setup-google-project-id.png" id="g-peek"><img src="/setup-google-project-id.png" alt="The New Project screen, with the Project ID line marked"><span>Where the ID is</span></a></div>
+                <div><span class="gf-label">Location</span><p class="gf-how">Leave it as <strong>No organization</strong>.</p></div>
+                <div><span class="gf-label">Finish</span><p class="gf-how">Click <strong>Create</strong>.</p></div>
+              </div>
               <a class="deep" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Open the New Project screen</a>
-              <a class="peek" href="/setup-google-project-id.png" id="g-peek"><img src="/setup-google-project-id.png" alt="The New Project screen, with the Project ID line marked"><span>Where the ID is</span></a>
               <div class="field"><input type="text" id="g-project" placeholder="project id, e.g. closedhand-4a7f" autocomplete="off" spellcheck="false"></div>
+              <p class="note hint">Missed the Project ID? Google Cloud's project menu lists it.</p>
             </div>
 
             <div class="g-step" data-g="2">
@@ -606,12 +609,13 @@
                 <div><span class="gf-label">Authorized redirect URIs</span><p class="gf-how">Click <strong>+ Add URI</strong>, then paste:</p>
                   <div class="gf-box"><span class="gf-val" id="g-redirect">http://localhost:3000/auth/google/callback</span><button class="copy" type="button">Copy</button></div></div>
                 <div><span class="gf-label">This client will be used by an AI-powered agent</span><p class="gf-how">Leave it unticked.</p></div>
+                <div><span class="gf-label">Finish</span><p class="gf-how">Click <strong>Create</strong>.</p></div>
+                <div><span class="gf-label">OAuth client created</span><p class="gf-how">Click <strong>Download JSON</strong> before closing it.</p>
+                  <a class="peek" href="/setup-google-download-json.png"><img src="/setup-google-download-json.png" alt="The OAuth client created dialog, with Download JSON marked"><span>Where Download JSON is</span></a></div>
               </div>
+              <p class="note warn"><strong>Important:</strong> Google shows that file only once. If you
+                 miss it, create another client.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open the Clients page</a>
-              <p class="note warn"><strong>Important:</strong> press Create, then click Download JSON
-                 before closing the dialog. Google shows that file only once; if you miss it, create
-                 another client.</p>
-              <a class="peek" href="/setup-google-download-json.png"><img src="/setup-google-download-json.png" alt="The OAuth client created dialog, with Download JSON marked"><span>Where Download JSON is</span></a>
               <p class="g-do">Then hand ClosedHand the file you downloaded. Pick it here, or drop it on
                  the box, or open it and paste the contents.</p>
               <div class="g-file">
