@@ -14,6 +14,7 @@ async function getSetupState() {
 
   let settings = {};
   let connections = [];
+  let signInAgain = [];
   let googleAccount = null;
   let microsoftAccount = null;
   let profileCreatedAt = null;
@@ -25,7 +26,8 @@ async function getSetupState() {
     } catch (_) { /* DB not reachable yet */ }
     try {
       const { data } = await supabase.from("connections").select("service, metadata").eq("user_id", getAdminUserId());
-      connections = (data || []).map((r) => r.service).filter(Boolean);
+      // A connection Google or Microsoft stopped accepting is not connected.
+      ({ working: connections, signInAgain } = require("./connection-health").split(data));
       const g = (data || []).find((r) => r.service === "google");
       if (g) googleAccount = { name: g.metadata?.name || null, email: g.metadata?.email || null };
       const m = (data || []).find((r) => r.service === "microsoft");
@@ -76,6 +78,9 @@ async function getSetupState() {
   const google = connections.some((s) => s === "google" || s.startsWith("google"));
   const googleCreds = !!(envOr("GOOGLE_CLIENT_ID") && envOr("GOOGLE_CLIENT_SECRET"));
   const microsoft = connections.some((s) => s === "microsoft" || s.startsWith("microsoft_extra_"));
+  // An account that needs signing in again still finished this step: setup
+  // and the dashboard stay open, and its card asks for the sign-in.
+  const accountSaved = google || microsoft || signInAgain.some((s) => s.startsWith("google") || s === "microsoft" || s.startsWith("microsoft_extra_"));
   // Signing in by code through ClosedHand's app needs no setup of its own;
   // an app of the person's own in .env is used by the dashboard instead.
   // Google through ClosedHand's own app: only in builds that carry one, and
@@ -101,7 +106,7 @@ async function getSetupState() {
     { key: "database", label: "Database", done: db, required: true },
     { key: "model", label: "Model provider", done: model, required: true },
     { key: "admin_password", label: "Admin password", done: adminPassword, required: true },
-    { key: "accounts", label: "Email and calendar", done: google || microsoft, required: true },
+    { key: "accounts", label: "Email and calendar", done: accountSaved, required: true },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
   ];
   const nextUnlock = steps.find((s) => !s.done) || null;
@@ -112,7 +117,7 @@ async function getSetupState() {
     // chat window round a model, so one of them is part of the floor, not an
     // extra. Without a password the dashboard is open to anyone on the same
     // network, so it is part of the floor too. Chat apps can follow.
-    ready: db && model && adminPassword && (google || microsoft),
+    ready: db && model && adminPassword && accountSaved,
     steps,
     connections,
     nextUnlock: nextUnlock ? nextUnlock.key : null,
@@ -154,8 +159,10 @@ async function getSetupState() {
     googleCreds,
     // Who is connected (name and address only), so the card can say so.
     googleConnected: google,
+    googleSignInAgain: !google && signInAgain.some((s) => s === "google" || s.startsWith("google")),
     googleAccount,
     microsoftConnected: microsoft,
+    microsoftSignInAgain: !microsoft && signInAgain.some((s) => s === "microsoft" || s.startsWith("microsoft_extra_")),
     microsoftAccount,
     microsoftCode,
     googleQuick,

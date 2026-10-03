@@ -23,14 +23,14 @@ test('recall is quiet when idle or ready, and only displays progress, errors or 
 test('a successful Google connection on the next status check replaces setup with the connected account', () => {
  const start=html.indexOf('  function reflectGoogle('),end=html.indexOf('  // The chooser:',start);
  const $=nodes();let saved=0;
- const context={$,_gKey:'fixture',gStep:5,_gQuick:false,_gDone:false,gSave:()=>saved++,gRender(){},gApplyProject(){}};
+ const context={$,_gKey:'fixture',gStep:5,_gQuick:false,_gDone:false,gSave:()=>saved++,gRender(){},gApplyProject(){},againNote(){}};
  vm.runInNewContext(html.slice(start,end),context);
  context.reflectGoogle({googleCreds:true,googleRedirectUri:'http://localhost:3000/auth/google/callback',googleConnected:true,googleAccount:{email:'alex@example.com'}});
  assert.equal($('#g-connected').style.display,'');assert.equal($('#g-flow').style.display,'none');
  assert.equal($('#g-account').textContent,'Connected as alex@example.com.');assert.equal(saved,1);
  // A build with ClosedHand's Google app: the quick route shows until connected.
  const $q=nodes();let rendered=0;
- const quick={$:$q,_gKey:'fixture',gStep:0,_gQuick:false,_gDone:false,gSave(){},gRender:()=>rendered++,gApplyProject(){}};
+ const quick={$:$q,_gKey:'fixture',gStep:0,_gQuick:false,_gDone:false,gSave(){},gRender:()=>rendered++,gApplyProject(){},againNote(){}};
  vm.runInNewContext(html.slice(start,end),quick);
  quick.reflectGoogle({googleQuick:true,googleConnected:false});
  assert.equal(quick._gQuick,true);assert.equal(rendered,1);

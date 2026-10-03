@@ -94,8 +94,9 @@ test('Microsoft without an own app goes to the setup page, and setup accepts Goo
  assert.match(server,/serviceKey === "microsoft" && !\(svc\?\.clientId && svc\?\.clientSecret\) && require\("\.\/microsoft-app"\)\.appId\(\)\) \{\n\s+return res\.redirect\("\/setup#step-accounts=microsoft"\)/);
  assert.match(server,/public_client: true, authority: tokens\.authority/);
  const state=fs.readFileSync(path.join(__dirname,'../webapp/setup-state.js'),'utf8');
- assert.match(state,/ready: db && model && adminPassword && \(google \|\| microsoft\)/);
- assert.match(state,/key: "accounts", label: "Email and calendar", done: google \|\| microsoft, required: true/);
+ assert.match(state,/const accountSaved = google \|\| microsoft \|\| signInAgain\.some\(/);
+ assert.match(state,/ready: db && model && adminPassword && accountSaved,/);
+ assert.match(state,/key: "accounts", label: "Email and calendar", done: accountSaved, required: true/);
 });
 
 test('the same Microsoft sign-in claims the personal URL, and a failed claim still connects mail',async()=>{

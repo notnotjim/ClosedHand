@@ -282,6 +282,12 @@
       color: #D8624B;
     }
 
+    /* Saved, but its provider stopped accepting the sign-in. */
+    .conn-again { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: rgba(239,230,214,0.75); }
+    .int-card .int-badge.again {
+      color: #D0A652;
+    }
+
     /* The standing invitation at the end of the integrations row. It points
        at the add box below, which is where every new connection starts. */
     .dashboard-container .int-card.int-more {
@@ -3068,9 +3074,13 @@
       // Apple always renders in Available; loadBridgeStatus hides it when bridge is connected
       const entries = Object.entries(allServices).filter(([k,s]) => !s.isChatPlatform);
 
+      // Saved connections Google or Microsoft stopped accepting: shown with
+      // the others, but asking to sign in again.
+      const signInAgain = data.signInAgain || [];
       let hasConnected = false;
       for (const [key, svc] of entries) {
-        const isConnected = connectedServices.includes(key);
+        const again = signInAgain.includes(key);
+        const isConnected = connectedServices.includes(key) || again;
 
         if (isConnected) {
           hasConnected = true;
@@ -3079,7 +3089,7 @@
               <div class="int-card connected" data-key="${key}" onclick="intCardClick(this)">
                 ${logoImg(svc.logoUrl)}
                 <span class="int-name">${escHtml(svc.name)}</span>
-                <span class="int-badge">Connected &#10003;</span>
+                ${again ? '<span class="int-badge again">Sign in again</span>' : '<span class="int-badge">Connected &#10003;</span>'}
                 <span class="int-chevron"><span class="chevron-down"></span></span>
               </div>
               <div class="int-unfurl" data-key="${key}">
@@ -3394,6 +3404,12 @@
     function connDrawerHtml(c) {
       const m = c.metadata || {};
       const rows = [];
+      // Its provider stopped accepting the sign-in: say so first, with the way back.
+      if (m.reconnect_required) {
+        const provider = escHtml(c.name || c.service);
+        rows.push(`<p class="conn-again">${provider} stopped accepting ClosedHand's sign-in for ${escHtml(m.email || "this account")}. Until you sign in again, ClosedHand can't read or change anything there.</p>`
+          + `<button class="conn-btn conn-btn-manage" onclick="event.stopPropagation();(window.top||window).location.href='/auth/${c.service}'">Sign in again</button>`);
+      }
 
       // Account identity rows
       if (m.name) rows.push(row("Account", escHtml(m.name)));

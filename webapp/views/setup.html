@@ -360,6 +360,7 @@
     /* A quiet fact about the quick route, not a ranking. */
     .fb-quick { font-size: 11px; font-weight: 400; color: var(--text-tertiary); border: 1px solid var(--border-default); border-radius: 99px; padding: 1px 8px; margin-left: 8px; vertical-align: 2px; }
     .fb-done { font-size: 11px; color: #8DBD79; border: 1px solid rgba(141,189,121,0.35); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+    .fb-again { font-size: 11px; color: var(--warn); border: 1px solid var(--warn-dim); border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
     .skip:hover { color: var(--text-secondary); }
     .manual-link {
       display: block; background: none; border: none; cursor: pointer; font-family: inherit;
@@ -533,8 +534,9 @@
         <div class="card-body">
           <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later. This access goes to ClosedHand on your computer, not to closedhand.com.</p>
           <div class="fb-block chooser" id="g-block">
-          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span><span class="fb-again" id="g-again-badge" style="display:none;">sign in again</span></span></h3>
           <div class="choice-body">
+          <p class="note warn" id="g-again" hidden>Google stopped accepting ClosedHand's sign-in for <span id="g-again-who">this account</span>. Sign in again to carry on.</p>
           <div id="g-quick" hidden>
             <p class="note">Google sends your mail, calendar and Drive straight to ClosedHand on your computer.
                Its sign-in page shows ClosedHand's name, but nothing passes through closedhand.com or any other company on the way.</p>
@@ -656,8 +658,9 @@
           </div>
 
           <div class="fb-block chooser" id="m-block">
-          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">connected</span></span></h3>
+          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">connected</span><span class="fb-again" id="m-again-badge" style="display:none;">sign in again</span></span></h3>
           <div class="choice-body">
+            <p class="note warn" id="m-again" hidden>Microsoft stopped accepting ClosedHand's sign-in for <span id="m-again-who">this account</span>. Sign in again to carry on.</p>
             <div id="m-connected" style="display:none;">
               <p><span id="m-account">Connected.</span> ClosedHand reads this account's mail, calendar
                  and OneDrive so it can recall them, and changes nothing unless you ask.</p>
@@ -1407,10 +1410,18 @@
       .catch(function (e) { btn.disabled = false; msg.textContent = e.message || "Could not reach ClosedHand. Try again."; msg.style.display = "block"; });
   });
   var _msCode = true;
+  // A saved account its provider stopped accepting: not connected, and the
+  // card says so above the usual sign-in.
+  function againNote(prefix, again, account) {
+    $("#" + prefix + "-again-badge").style.display = again ? "" : "none";
+    $("#" + prefix + "-again").hidden = !again;
+    if (again) $("#" + prefix + "-again-who").textContent = (account && account.email) || "this account";
+  }
   function reflectMicrosoft(st) {
     _msCode = !!st.microsoftCode;
     var done = !!st.microsoftConnected;
     $("#m-done").style.display = done ? "" : "none";
+    againNote("m", st.microsoftSignInAgain, st.microsoftAccount);
     var acct = st.microsoftAccount || {};
     $("#m-account").textContent = acct.email ? "Connected as " + acct.email + "." : "Connected.";
     // Connected: say who, and keep a way to add another account. A sign-in
@@ -1558,6 +1569,7 @@
     // Connected: the pitch and the steps give way to who is connected and
     // what can be done about it.
     $("#g-done").style.display = done ? "" : "none";
+    againNote("g", st.googleSignInAgain, st.googleAccount);
     $("#g-connected").style.display = done ? "" : "none";
     if (done) {
       var acct = st.googleAccount || {};
@@ -1585,8 +1597,8 @@
     if (_accountsAuto) return;
     _accountsAuto = true;
     if ((st.googleConnected || st.microsoftConnected) && !personalUrl.settled()) { revealClaim(); return; }
-    if (st.googleConnected) openChooser("google");
-    else if (st.microsoftConnected) openChooser("microsoft");
+    if (st.googleConnected || st.googleSignInAgain) openChooser("google");
+    else if (st.microsoftConnected || st.microsoftSignInAgain) openChooser("microsoft");
   }
   // Fold the account choosers and scroll to the claim, once the page has drawn it.
   // Sent here from the dashboard or home page because the personal URL is

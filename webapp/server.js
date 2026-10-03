@@ -2831,7 +2831,7 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
 // Save connection tokens to Supabase
 async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) {
   const { encryptTokens } = require("./crypto-tokens");
-  const { data: previous, error: previousError } = await supabase.from("connections").select("config").eq("user_id", userId).eq("service", serviceKey);
+  const { data: previous, error: previousError } = await supabase.from("connections").select("config, metadata").eq("user_id", userId).eq("service", serviceKey);
   if (previousError) throw previousError;
   const recallApi = require("./recall-settings").apiDescription(serviceKey, svc);
   const row = {
@@ -2853,7 +2853,8 @@ async function saveConnection(userId, serviceKey, tokens, svc, metadata = null) 
     },
     updated_at: new Date().toISOString(),
   };
-  if (metadata) row.metadata = metadata;
+  const kept = metadata || require("./connection-health").cleared(previous?.[0]?.metadata);
+  if (kept) row.metadata = kept;
   await mustWrite("could not save the connection", supabase.from("connections").upsert(row, { onConflict: "user_id,service" }));
   await mustWrite("could not resume source sync", supabase.from("index_progress").delete().eq("user_id", userId).eq("service", `retained:connected:${serviceKey}`));
 }
@@ -3672,8 +3673,9 @@ app.get("/api/status", async (req, res) => {
 
     const { data: connections } = await supabase
       .from("connections")
-      .select("service")
+      .select("service, metadata")
       .eq("user_id", userId);
+    const health = require("./connection-health").split(connections);
 
     const now = new Date();
     const platforms = {};
@@ -3722,7 +3724,8 @@ app.get("/api/status", async (req, res) => {
       name: profile?.display_name || "User",
       email: profile?.email || "",
       settings: require("./model-policy").publicSettings(profile?.settings),
-      services: (connections || []).map((c) => c.service),
+      services: health.working,
+      signInAgain: health.signInAgain,
       platforms,
       availableServices: getAvailableServices(),
     });
