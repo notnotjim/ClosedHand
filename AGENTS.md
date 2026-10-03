@@ -40,8 +40,9 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   URL happens on closedhand.com, while connecting mail and calendar gives access to ClosedHand
   on the person's computer, not to closedhand.com. Never write "closedhand.com never sees your
   mail": remote dashboard pages pass through ClosedHand's relay on Cloudflare. Wherever the
-  account is named, the copy says what it keeps in those words, never "nothing else" (it
-  does keep the email). Signing in to take a personal URL is "claim", never
+  account is named, the copy says what it keeps, the email, in those words: "stores your email
+  and nothing else" is right, a bare "keeps nothing" is not. The privacy page carries the full
+  list (the sign-in's account number and the URL's routing details). Signing in to take a personal URL is "claim", never
   "confirm it with Google or Microsoft". Connecting Microsoft through ClosedHand's own app
   claims the personal URL with that same sign-in (closedhand.com checks it against
   Microsoft's keys); Google always needs the second sign-in on closedhand.com, because its
