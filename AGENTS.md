@@ -54,6 +54,9 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   keeps on that computer; the confirmation names both. Setup creates the account, so never "no account", "nothing to sign up for" or "no
   sign up required". "Anonymous" only for what truly is (the download), never for
   ClosedHand or the account: say what closedhand.com holds instead.
+- Setup's notes with a side bar are helper notes: one colour, no "Tip:" label, and
+  "Important:" only where missing it means redoing a step. Yellow is only for something wrong
+  with the person's account, like a sign-in to do again.
 - Where people use ClosedHand has three names, used exactly: the chat in a browser is the
   "web chat" (its own tab can say "Chat"); WhatsApp, Telegram and the like are "chat apps";
   the control panel (connections, agents, settings, Context Brain, usage) is the "dashboard".

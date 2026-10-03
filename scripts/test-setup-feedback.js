@@ -42,6 +42,14 @@ test('a successful Google connection on the next status check replaces setup wit
  assert.match(server,/res.redirect\(stateData\?\.returnTo \|\| "\/"\)/);
 });
 
+test('helper notes are one colour, unlabelled unless missing them means redoing a step', () => {
+ // Yellow is kept for one thing: an account that needs signing in again.
+ const warn=[...html.matchAll(/<p class="note warn"[^>]*id="([^"]+)"/g)].map(m=>m[1]);
+ assert.deepEqual(warn,['g-again','m-again']);
+ assert.equal((html.match(/class="note warn"/g)||[]).length,2,'no other yellow note');
+ assert.doesNotMatch(html,/<strong>(Tip|Note|Heads up):<\/strong>/i);
+});
+
 test('Microsoft shows a sign-in code, then who is connected', async () => {
  const start=html.indexOf('  // Microsoft signs in by code'),end=html.indexOf('  // --- Connect to Google, six steps inside the card ---');
  const $=nodes();const listeners={};const polls=[];let replies=[];
