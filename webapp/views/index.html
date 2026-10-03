@@ -2250,6 +2250,10 @@
   @keyframes wxFall { to { stroke-dashoffset: -5; } }
   @keyframes wxFlash { 0%, 86%, 100% { opacity: 1; } 90% { opacity: 0.2; } }
   @media (prefers-reduced-motion: reduce) { .wx-sun, .wx-cloud, .wx-drops, .wx-flakes, .wx-bolt, .wx-fog, .here:disabled .here-needle { animation: none; } }
+  .message.bot .reply-list { margin: 6px 0 6px 20px; padding: 0; }
+  .message.bot .reply-list li { margin: 3px 0; }
+  .message.bot .reply-head { display: inline-block; margin-top: 4px; }
+  .message.bot code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: rgba(239,230,214,0.08); padding: 1px 5px; border-radius: 4px; }
 </style>
   <link rel="stylesheet" href="/welcome.css">
   <link rel="stylesheet" href="/interface.css">
@@ -3995,6 +3999,36 @@
     div.appendChild(tools);
   }
 
+  // The model writes replies with light formatting: **bold**, lists, the odd
+  // heading or `code`. Shown raw, the page was full of asterisks and dashes.
+  // Escaped first, so nothing in a reply can become markup of its own.
+  function formatReply(text) {
+    var esc = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+    var inline = function (t) {
+      return esc(t)
+        .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+    };
+    var out = [], list = null;
+    var close = function () { if (list) { out.push('</' + list + '>'); list = null; } };
+    String(text || '').split('\n').forEach(function (line) {
+      var bullet = line.match(/^\s*[-*\u2022]\s+(.*)$/);
+      var numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+      var heading = line.match(/^\s*#{1,4}\s+(.*)$/);
+      if (bullet || numbered) {
+        var kind = bullet ? 'ul' : 'ol';
+        if (list !== kind) { close(); out.push('<' + kind + ' class="reply-list">'); list = kind; }
+        out.push('<li>' + inline(bullet ? bullet[1] : numbered[2]) + '</li>');
+        return;
+      }
+      close();
+      if (heading) { out.push('<strong class="reply-head">' + inline(heading[1]) + '</strong><br>'); return; }
+      out.push(inline(line) + '<br>');
+    });
+    close();
+    return out.join('').replace(/(<br>)+$/, '').replace(/<br>(<(ul|ol) )/g, '$1').replace(/(<\/(ul|ol)>)<br>/g, '$1');
+  }
+
   function addMessage(text, role, fileInfo, ts) {
     var div = document.createElement('div');
     div.className = 'message ' + role;
@@ -4004,9 +4038,7 @@
       div.style.fontSize = '16px';
       // Linkify URLs and /dashboard references
       var linkStyle = 'color:#D8624B;text-decoration:underline;text-underline-offset:3px';
-      var html = text
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>')
+      var html = formatReply(text)
         .replace(/\/dashboard(#[\w-]+)?/g, function(match, hash) {
           var label = hash === '#workers' ? 'Dashboard (Workers)' : 'Dashboard';
           return '<a href="#" onclick="event.preventDefault();openDashSlide(\'' + (hash || '') + '\')" style="' + linkStyle + '">' + label + '</a>';

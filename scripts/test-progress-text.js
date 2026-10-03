@@ -63,3 +63,17 @@ test("the web chat greets people by the name they asked for", () => {
   assert.match(server, /name: profile\?\.settings\?\.preferred_name \|\| profile\?\.display_name \|\| null,/, "chat status");
   assert.match(server, /name: profile\?\.settings\?\.preferred_name \|\| profile\?\.display_name \|\| "User",/, "dashboard status");
 });
+
+test("a progress line quotes words a person would say, never search syntax, identifiers or raw dates", () => {
+  const d = (n, i) => INTERNAL_TOOLS.find((t) => t.name === n).activityDescription(i);
+  assert.equal(d("search_cache", { query: "booking OR confirmation OR reservation OR flight OR hotel", type: "email" }), 'Searching emails for "booking confirmation reservation flight hotel"');
+  assert.equal(d("search_cache", { query: "*" }), "Searching your data");
+  assert.equal(d("search_cache", { query: "from:sam@example.com newer_than:7d" }), "Searching your data");
+  assert.equal(d("search_calendar", { start: "2026-10-04T00:00:00+07:00", end: "2026-10-14T00:00:00+07:00" }), "Checking your calendar, 4 Oct to 14 Oct");
+  assert.equal(d("web_search", { query: '"coworking" da nang' }), 'Searching the web for "coworking da nang"');
+  assert.equal(d("pin_fact", { key: "profile-name-certainty" }), "Pinning a fact");
+  for (const t of INTERNAL_TOOLS.filter((x) => typeof x.activityDescription === "function")) {
+    const line = t.activityDescription({ file_id: "1AbCdEfGhIjKlMnOp", key: "some-key_slug", query: "a OR b" }) || "";
+    assert.doesNotMatch(line, /1AbCdEf|some-key_slug|\bOR\b/, `${t.name}: ${line}`);
+  }
+});
