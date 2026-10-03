@@ -171,3 +171,19 @@ test("an external stop aborts even a provider adapter that ignores the signal", 
   const p=withTaskRun({signal:controller.signal},()=>modelCall({messages:{create:()=>new Promise(()=>{})}},{messages:[],max_tokens:10},{timeoutMs:1000}));
   controller.abort();await assert.rejects(p,/stopped/);
 });
+
+test("an answer sent back by the quality check is rewritten as the only answer", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "lib", "verification.js"), "utf8");
+  const start = src.indexOf("function retryNote");
+  const box = {};
+  vm.runInNewContext(src.slice(start, src.indexOf("\n}\n", start) + 2) + "\nthis.f = retryNote;", box);
+  const note = box.f(1, 2, "Prices are weekly totals, not nightly.");
+  assert.match(note, /Prices are weekly totals/);
+  assert.match(note, /has not seen your previous answer/);
+  assert.match(note, /do not mention a correction, an earlier version or this check/);
+  for (const f of ["lib/agents.js", "lib/automations.js"]) {
+    const caller = fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+    assert.match(caller, /text: retryNote\(/, `${f} uses the shared note`);
+    assert.doesNotMatch(caller, /improved response/, `${f} has no wording of its own`);
+  }
+});

@@ -2253,6 +2253,10 @@
   .message.bot .reply-list { margin: 6px 0 6px 20px; padding: 0; }
   .message.bot .reply-list li { margin: 3px 0; }
   .message.bot .reply-head { display: inline-block; margin-top: 4px; }
+  .message.bot .reply-table { overflow-x: auto; margin: 8px 0 10px; }
+  .message.bot .reply-table table { border-collapse: collapse; font-size: 14px; line-height: 1.4; }
+  .message.bot .reply-table th, .message.bot .reply-table td { padding: 6px 12px 6px 0; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(239,230,214,0.1); }
+  .message.bot .reply-table th { font-weight: 600; color: rgba(239,230,214,0.6); white-space: nowrap; }
   .message.bot code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: rgba(239,230,214,0.08); padding: 1px 5px; border-radius: 4px; }
 </style>
   <link rel="stylesheet" href="/welcome.css">
@@ -3994,10 +3998,18 @@
     when.className = 'msg-time';
     var label = msgTime(ts);
     when.textContent = label;
-    if (ts && !isNaN(Date.parse(ts))) when.title = new Date(ts).toLocaleString('en-GB');
+    if (ts && !isNaN(Date.parse(ts))) { when.title = new Date(ts).toLocaleString('en-GB'); when.setAttribute('data-ts', ts); }
     if (label) tools.appendChild(when);
     div.appendChild(tools);
   }
+  // A label written once said "just now" for ever; keep them current.
+  setInterval(function() {
+    if (document.hidden) return;
+    document.querySelectorAll('.msg-time[data-ts]').forEach(function(el) {
+      var label = msgTime(el.getAttribute('data-ts'));
+      if (label && el.textContent !== label) el.textContent = label;
+    });
+  }, 60000);
 
   // The model writes replies with light formatting: **bold**, lists, the odd
   // heading or `code`. Shown raw, the page was full of asterisks and dashes.
@@ -4012,7 +4024,26 @@
     };
     var out = [], list = null;
     var close = function () { if (list) { out.push('</' + list + '>'); list = null; } };
-    String(text || '').split('\n').forEach(function (line) {
+    // A table is a header row, a |---| rule, then rows. The prompt tells the
+    // model the web chat shows tables, so they must not arrive as pipes.
+    var row = /^\s*\|.*\|\s*$/;
+    var rule = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+    var cells = function (tag, line) {
+      return '<tr>' + line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (c) {
+        return '<' + tag + '>' + inline(c.trim()) + '</' + tag + '>';
+      }).join('') + '</tr>';
+    };
+    var lines = String(text || '').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (row.test(line) && rule.test(lines[i + 1] || '')) {
+        close();
+        var body = [];
+        for (i += 2; i < lines.length && row.test(lines[i]); i++) body.push(cells('td', lines[i]));
+        i--;
+        out.push('<div class="reply-table"><table><thead>' + cells('th', line) + '</thead><tbody>' + body.join('') + '</tbody></table></div>');
+        continue;
+      }
       var bullet = line.match(/^\s*[-*\u2022]\s+(.*)$/);
       var numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
       var heading = line.match(/^\s*#{1,4}\s+(.*)$/);
@@ -4020,14 +4051,15 @@
         var kind = bullet ? 'ul' : 'ol';
         if (list !== kind) { close(); out.push('<' + kind + ' class="reply-list">'); list = kind; }
         out.push('<li>' + inline(bullet ? bullet[1] : numbered[2]) + '</li>');
-        return;
+        continue;
       }
       close();
-      if (heading) { out.push('<strong class="reply-head">' + inline(heading[1]) + '</strong><br>'); return; }
+      if (heading) { out.push('<strong class="reply-head">' + inline(heading[1]) + '</strong><br>'); continue; }
       out.push(inline(line) + '<br>');
-    });
+    }
     close();
-    return out.join('').replace(/(<br>)+$/, '').replace(/<br>(<(ul|ol) )/g, '$1').replace(/(<\/(ul|ol)>)<br>/g, '$1');
+    return out.join('').replace(/(<br>)+$/, '')
+      .replace(/<br>(<(ul|ol) |<div class="reply-table">)/g, '$1').replace(/(<\/(ul|ol)>|<\/table><\/div>)<br>/g, '$1');
   }
 
   function addMessage(text, role, fileInfo, ts) {

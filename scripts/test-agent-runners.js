@@ -53,7 +53,7 @@ function harness(options = {}) {
     "mcp":{getMcpToolDefsFor:()=>[],warmUserMcp:async()=>{},callMCPTool:async()=>({})},
     "tools/definitions":{INTERNAL_TOOLS:tools,usable:()=>true},"messaging":{sendToPlatform:async(...args)=>sends.push(args)},
     "skills":{getSkillsForPrompt:()=>""},"llm":llm,"spend-guard":{spendIntent:()=>null},"outbound-guard":{outboundIntent:()=>null},"claims-check":{},
-    "verification":{prepareTask:async(...args)=> options.prepare ? options.prepare(...args) : {tier:"default",criteria:["Correct time"]},verifyCompletion:async()=> options.verdict || {passed:true,status:"passed"}},
+    "verification":{prepareTask:async(...args)=> options.prepare ? options.prepare(...args) : {tier:"default",criteria:["Correct time"]},verifyCompletion:async()=> options.verdict || {passed:true,status:"passed"},retryNote:(a,m,f)=>`VERIFICATION (attempt ${a}/${m}): ${f}`},
     "task-delivery":{deliverFinished:async()=>{}},"response-presentation":{responsePresentation:()=>""},
     "token-tracker":{getContextWindow:()=>200000,estimateContextTokens:(m,s,t)=>({total:JSON.stringify([m,s,t]).length/4})},
     "config":{getConf:async()=>null},"dashboard-links":{agentLinkNotice:async()=>"Report: https://fixture.test/dashboard#agents"}

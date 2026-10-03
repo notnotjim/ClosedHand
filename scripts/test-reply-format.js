@@ -25,6 +25,16 @@ test("bold, lists and line breaks render", () => {
   assert.equal(formatReply("2 * 3 * 4 = 24"), "2 * 3 * 4 = 24", "a lone asterisk is left alone");
 });
 
+test("a table shows as a table, not pipes", () => {
+  const reply = "**Private rooms**\n\n| Hotel | Per night |\n|---|---:|\n| Random Alley | £9.14 |\n| **Bohemia** | £17.43 |\n\nMy pick: Bohemia.";
+  assert.equal(formatReply(reply),
+    "<strong>Private rooms</strong><br><div class=\"reply-table\"><table><thead><tr><th>Hotel</th><th>Per night</th></tr></thead>"
+    + "<tbody><tr><td>Random Alley</td><td>£9.14</td></tr><tr><td><strong>Bohemia</strong></td><td>£17.43</td></tr></tbody></table></div>My pick: Bohemia.");
+  assert.equal(formatReply("a | b | c"), "a | b | c", "pipes in a sentence are left alone");
+  assert.equal(formatReply("| just one row |"), "| just one row |", "no rule line, no table");
+  assert.doesNotMatch(formatReply("| <b>x</b> |\n|---|\n| y |"), /<b>/, "cells are escaped too");
+});
+
 test("nothing in a reply becomes markup of its own", () => {
   const out = formatReply("<img src=x onerror=alert(1)> **<b>hi</b>**\n- <script>x</script>");
   assert.doesNotMatch(out, /<img|<b>|<script/);
@@ -34,4 +44,9 @@ test("nothing in a reply becomes markup of its own", () => {
 
 test("the chat page formats bot replies through it", () => {
   assert.match(page, /var html = formatReply\(text\)\n\s*\.replace\(\/\\\/dashboard/);
+});
+
+test("message times stay current instead of saying just now for ever", () => {
+  assert.match(page, /when\.setAttribute\('data-ts', ts\)/);
+  assert.match(page, /querySelectorAll\('\.msg-time\[data-ts\]'\)[\s\S]{0,200}msgTime\(el\.getAttribute\('data-ts'\)\)/);
 });
