@@ -30,6 +30,8 @@ test('first chat link awaits phone config, including a cold cache', async () => 
 test('web stays relative and disabled phone access never emits localhost or stale URLs', async () => {
   const client = links(config({ PHONE_ACCESS_URL: phone }, { BASE_URL: 'http://localhost:3000' }));
   assert.equal(await client.dashboardUrl('web'), '/dashboard#agents');
+  assert.equal(await client.agentLinkNotice('web'), 'You can watch it run on your [dashboard](/dashboard#agents).', 'the link sits on the word');
+  assert.equal(await client.agentLinkNotice('web', 'Full result'), '[Full result](/dashboard#agents)');
   assert.equal(await client.dashboardUrl('whatsapp'), null);
   assert.match(await client.agentLinkNotice('whatsapp'), /Your phone/);
 });

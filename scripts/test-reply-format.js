@@ -42,8 +42,28 @@ test("nothing in a reply becomes markup of its own", () => {
   assert.match(out, /<strong>&lt;b&gt;hi&lt;\/b&gt;<\/strong>/);
 });
 
+test("links go on their words; dashboard links open the dashboard panel", () => {
+  const style = 'style="color:#D8624B;text-decoration:underline;text-underline-offset:3px"';
+  assert.equal(formatReply("You can watch it run on your [dashboard](/dashboard#agents)."),
+    `You can watch it run on your <a href="#" onclick="event.preventDefault();openDashSlide('#agents')" ${style}>dashboard</a>.`);
+  assert.equal(formatReply("See [the **listing**](https://example.com/a?b=1&c=2)"),
+    `See <a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener" ${style}>the <strong>listing</strong></a>`);
+  assert.equal(formatReply("Open https://example.com/x or /dashboard#workers"),
+    `Open <a href="https://example.com/x" target="_blank" rel="noopener" ${style}>https://example.com/x</a> or <a href="#" onclick="event.preventDefault();openDashSlide('#workers')" ${style}>Dashboard (Workers)</a>`);
+  assert.match(formatReply("[chart](/canvas/abc)"), /<a href="\/canvas\/abc" target="_blank"/);
+  assert.equal(formatReply("[x](javascript:alert(1))"), "[x](javascript:alert(1))", "only web and ClosedHand addresses become links");
+});
+
+test("an address cannot break out of its link", () => {
+  for (const reply of ['https://a.example/"onmouseover="alert(1)', '[x](https://a.example/"onmouseover="alert(1))']) {
+    const out = formatReply(reply);
+    assert.doesNotMatch(out, /"onmouseover/, reply);
+    assert.match(out, /&quot;onmouseover=&quot;/);
+  }
+});
+
 test("the chat page formats bot replies through it", () => {
-  assert.match(page, /var html = formatReply\(text\)\n\s*\.replace\(\/\\\/dashboard/);
+  assert.match(page, /div\.innerHTML = formatReply\(text\);/);
 });
 
 test("message times stay current instead of saying just now for ever", () => {

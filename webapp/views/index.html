@@ -4015,12 +4015,34 @@
   // heading or `code`. Shown raw, the page was full of asterisks and dashes.
   // Escaped first, so nothing in a reply can become markup of its own.
   function formatReply(text) {
-    var esc = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-    var inline = function (t) {
-      return esc(t)
+    var esc = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+    var marks = function (t) {
+      return t
         .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
         .replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=$|[\s).,:;!?])/g, '$1<em>$2</em>')
         .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+    };
+    // Links: [words](address) puts the link on the words, so a note can say
+    // "watch it on your dashboard" without a bare "Dashboard" tacked on.
+    // Dashboard addresses open the dashboard panel; web addresses a new tab.
+    var linkStyle = 'color:#D8624B;text-decoration:underline;text-underline-offset:3px';
+    var link = function (href, label) {
+      var dash = href.match(/^\/dashboard(#[\w-]+)?$/);
+      if (dash) return '<a href="#" onclick="event.preventDefault();openDashSlide(\'' + (dash[1] || '') + '\')" style="' + linkStyle + '">' + label + '</a>';
+      return '<a href="' + href + '" target="_blank" rel="noopener" style="' + linkStyle + '">' + label + '</a>';
+    };
+    var bare = function (t) {
+      return t.replace(/(https?:\/\/[^\s<]+)|\/dashboard(#[\w-]+)?/g, function (m, url, hash) {
+        return url ? link(url, url) : link(m, hash === '#workers' ? 'Dashboard (Workers)' : 'Dashboard');
+      });
+    };
+    var inline = function (t) {
+      var e = esc(t), out = '', last = 0, m, re = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|\/(?:dashboard|canvas)\b[^\s)]*)\)/g;
+      while ((m = re.exec(e))) {
+        out += bare(marks(e.slice(last, m.index))) + link(m[2], marks(m[1]));
+        last = re.lastIndex;
+      }
+      return out + bare(marks(e.slice(last)));
     };
     var out = [], list = null;
     var close = function () { if (list) { out.push('</' + list + '>'); list = null; } };
@@ -4069,15 +4091,7 @@
     if (role === 'bot') {
       div.style.color = '#EFE6D6';
       div.style.fontSize = '16px';
-      // Linkify URLs and /dashboard references
-      var linkStyle = 'color:#D8624B;text-decoration:underline;text-underline-offset:3px';
-      var html = formatReply(text)
-        .replace(/\/dashboard(#[\w-]+)?/g, function(match, hash) {
-          var label = hash === '#workers' ? 'Dashboard (Workers)' : 'Dashboard';
-          return '<a href="#" onclick="event.preventDefault();openDashSlide(\'' + (hash || '') + '\')" style="' + linkStyle + '">' + label + '</a>';
-        })
-        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="' + linkStyle + '">$1</a>');
-      div.innerHTML = html;
+      div.innerHTML = formatReply(text);
     } else {
       div.style.color = '#EFE6D6';
       div.style.fontSize = '16px';
