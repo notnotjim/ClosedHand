@@ -168,6 +168,50 @@ function cdpScreenshot() {
     ws.on("error", (e) => { clearTimeout(timer); reject(e); });
   });
 }
+// One command to a page over the debugging protocol.
+function cdpCall(wsUrl, method, params = {}) {
+  return new Promise((resolve, reject) => {
+    const WebSocket = require("ws");
+    const ws = new WebSocket(wsUrl, { perMessageDeflate: false });
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error(`${method} timed out`)); }, 8000);
+    ws.on("open", () => ws.send(JSON.stringify({ id: 1, method, params })));
+    ws.on("message", (raw) => {
+      let msg; try { msg = JSON.parse(raw.toString()); } catch { return; }
+      if (msg.id !== 1) return;
+      clearTimeout(timer); ws.close();
+      if (msg.error) reject(new Error(msg.error.message)); else resolve(msg.result);
+    });
+    ws.on("error", (e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
+// The bot drives one tab (browser_helper.py marks it) and leaves it wherever
+// the last call did. A finished job's page kept running for hours: a booking
+// site's trackers held a core and over a gigabyte. After a quiet spell the
+// bot's tab goes blank, still marked so the next call reuses it. Tabs the
+// person opened are never touched.
+const TAB_MARKER = "closedhand-bot"; // the same as browser_helper.py's
+const PARK_AFTER_MS = 10 * 60 * 1000;
+let lastExecAt = Date.now();
+let parked = false;
+async function parkIdleTab() {
+  if (parked || Date.now() - lastExecAt < PARK_AFTER_MS) return;
+  parked = true;
+  for (const t of (await cdpTargets()) || []) {
+    if (t.type !== "page" || !t.webSocketDebuggerUrl || t.url === "about:blank") continue;
+    try {
+      const named = await cdpCall(t.webSocketDebuggerUrl, "Runtime.evaluate", { expression: "window.name", returnByValue: true });
+      if (named?.result?.value !== TAB_MARKER) continue;
+      await cdpCall(t.webSocketDebuggerUrl, "Page.navigate", { url: "about:blank" });
+      // Leaving a site clears window.name, so the mark goes back on.
+      await new Promise((r) => setTimeout(r, 500));
+      await cdpCall(t.webSocketDebuggerUrl, "Runtime.evaluate", { expression: `window.name = ${JSON.stringify(TAB_MARKER)}` });
+      console.log(`[browser] blanked the bot's tab after ${PARK_AFTER_MS / 60000} quiet minutes`);
+    } catch { parked = false; /* a page mid-load or gone; the next round tries again */ }
+  }
+}
+setInterval(() => { parkIdleTab().catch(() => {}); }, 60 * 1000).unref();
+
 // The browser was started by this agent; it goes when the agent goes.
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } process.exit(0); });
 
@@ -282,6 +326,7 @@ app.post("/desktop/browser", auth, async (req, res) => {
 // --- Code execution ---
 app.post("/exec", (req, res) => {
   const { language, code, timeout_ms } = req.body;
+  lastExecAt = Date.now(); parked = false;
   if (!language || !code) {
     return res.status(400).json({ error: "language and code are required" });
   }

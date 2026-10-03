@@ -110,7 +110,7 @@ jobs:
         run: node --test scripts/test-mac-access.js
 
       - name: Workspace file boundaries
-        run: node --test scripts/test-workspace-paths.js scripts/test-workspace-network.js scripts/test-workspace-host.js scripts/test-workspace-ui.js
+        run: node --test scripts/test-browser-park.js scripts/test-workspace-paths.js scripts/test-workspace-network.js scripts/test-workspace-host.js scripts/test-workspace-ui.js
 
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
