@@ -161,6 +161,9 @@ test("a message outside a reply is saved for the web chat and shown live when a 
 
   const messaging = read("lib/messaging.js");
   assert.doesNotMatch(messaging, /sendWebChatMessage/, "nothing pushes to the web chat without saving");
+  for (const f of ["lib/engine.js", "lib/resume.js"]) {
+    assert.doesNotMatch(read(f), /from\("web_messages"\)\.insert/, `${f}: nothing is saved for the web chat without being shown`);
+  }
   const status = messaging.slice(messaging.indexOf("async function sendStatusMessage"), messaging.indexOf('if (ctx.activePlatform === "telegram")', messaging.indexOf("async function sendStatusMessage")));
   assert.match(status, /if \(!hasWebChatConnection\(chatId\)\) return null;/, "a status with no one watching is dropped, not saved as a message");
   assert.doesNotMatch(status, /sendWebMessage/);

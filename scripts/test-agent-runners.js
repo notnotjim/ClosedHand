@@ -42,7 +42,7 @@ function database(initial = {}) {
 }
 function harness(options = {}) {
   const db=database(options.tables), calls=[], sends=[], modules=new Map(), intervals=[];
-  const store={ profile:{ settings:{llm_provider:"custom"},display_name:"Fixture" }, notes:{},connections:[], save:async()=>{}, markDirty(){} };
+  const store={ profile:{ settings:{llm_provider:"custom"},display_name:"Fixture" }, notes:{},connections:[], conversations:[], save:async()=>{}, markDirty(){} };
   const ctx={ store:{}, runWithInheritedContext:fn=>fn(), activeUserId:"user", pendingConfirmations:{} };
   const tools=["get_tool_details","search_cache","sandbox_file_download","web_search"].map(name=>({name,description:name,input_schema:{type:"object",properties:{}}}));
   const llm={ getUserLLMClient:()=>({client:{messages:{create:async p=>{calls.push(p);return options.model ? options.model(p,calls.length,db) : {stop_reason:"end_turn",content:[{type:"text",text:"The confirmed time is 20:00."}],usage:{input_tokens:100,output_tokens:20}};}}},model:"fixture"}),
@@ -74,7 +74,7 @@ function harness(options = {}) {
         return require(request);
       }},{filename:file});return module.exports;
   }
-  return {db,calls,sends,ctx,load,intervals};
+  return {db,calls,sends,ctx,load,intervals,store};
 }
 async function until(predicate){for(let i=0;i<200;i++){if(predicate())return;await new Promise(r=>setTimeout(r,2));}throw Error("Fixture did not finish");}
 const row=(extra={})=>({id:"task",user_id:"user",platform:"dashboard",chat_id:"dashboard",goal:"Read departure",status:"pending",model:"fixture",runtime:{},messages:[],tools_used:[],pending_notes:[],created_at:new Date().toISOString(),...extra});
@@ -179,4 +179,6 @@ test("completed task delivery leads with the answer and remains idempotent", asy
   assert.equal(h.sends.length, 1);
   assert.equal(h.sends[0][2], "The flight leaves at 20:00.");
   assert.equal(h.calls.length, 0);
+  assert.equal(h.db.tables.agent_tasks[0].delivery_status, "sent");
+  assert.equal(JSON.stringify(h.store.conversations), JSON.stringify([{ role: "assistant", content: "The flight leaves at 20:00." }]), "the conversation holds what was sent, once");
 });

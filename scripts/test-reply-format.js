@@ -79,3 +79,21 @@ test("the web chat prompt puts dashboard links on words and names memory as the 
   const dashboard = fs.readFileSync(path.join(__dirname, "..", "webapp", "views", "dashboard.html"), "utf8");
   for (const name of ["Pinned facts", "Context Notes", "Your Preferences"]) assert.ok(dashboard.includes(name), `the dashboard still says ${name}`);
 });
+
+test("a reopened conversation shows what was said, not ClosedHand's bookkeeping", () => {
+  const start = page.indexOf("  function shownInThread(messages) {");
+  const box = {};
+  vm.runInNewContext(page.slice(start, page.indexOf("\n  }\n", start) + 4) + "\nthis.f = shownInThread;", box);
+  const shown = box.f([
+    { role: "assistant", content: "Just to confirm: send email?" },
+    { role: "user", content: "[User moved on, action cancelled]" },
+    { role: "assistant", content: "OK, cancelled." },
+    { role: "user", content: "no, just pin the address here" },
+    { role: "assistant", content: [{ type: "tool_use" }] },
+    { role: "assistant", content: "Cubicity De Tham, 232 Đề Thám" },
+    { role: "user", content: "[The question lapsed unanswered, action cancelled]" },
+    { role: "assistant", content: "OK, cancelled." },
+  ]);
+  assert.deepEqual([...shown].map((m) => m.content), ["Just to confirm: send email?", "no, just pin the address here", "Cubicity De Tham, 232 Đề Thám"]);
+  assert.match(page, /shownInThread\(thread\.messages\)\.forEach/);
+});
