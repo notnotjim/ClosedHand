@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@googleworkspace/cli": "^0.22.3",
     "@huggingface/transformers": "^4.2.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@supabase/supabase-js": "^2.97.0",
@@ -34,5 +33,8 @@
     "tsdav": "^2.1.8",
     "ws": "^8.19.0",
     "xlsx": "^0.18.5"
+  },
+  "optionalDependencies": {
+    "@googleworkspace/cli": "^0.22.3"
   }
 }
