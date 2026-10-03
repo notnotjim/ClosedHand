@@ -70,3 +70,12 @@ test("message times stay current instead of saying just now for ever", () => {
   assert.match(page, /when\.setAttribute\('data-ts', ts\)/);
   assert.match(page, /querySelectorAll\('\.msg-time\[data-ts\]'\)[\s\S]{0,200}msgTime\(el\.getAttribute\('data-ts'\)\)/);
 });
+
+test("the web chat prompt puts dashboard links on words and names memory as the dashboard does", () => {
+  const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
+  assert.match(engine, /A link goes on its words, written \[words\]\(\/dashboard#section\)/);
+  assert.doesNotMatch(engine, /Check it out here: \/dashboard|make them curious|want to explore it/, "no bare path, no pitch");
+  assert.match(engine, /"pinned facts", "preferences" \(what save_rule stores\) and "Context Notes"/);
+  const dashboard = fs.readFileSync(path.join(__dirname, "..", "webapp", "views", "dashboard.html"), "utf8");
+  for (const name of ["Pinned facts", "Context Notes", "Your Preferences"]) assert.ok(dashboard.includes(name), `the dashboard still says ${name}`);
+});
