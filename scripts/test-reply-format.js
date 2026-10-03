@@ -95,5 +95,6 @@ test("a reopened conversation shows what was said, not ClosedHand's bookkeeping"
     { role: "assistant", content: "OK, cancelled." },
   ]);
   assert.deepEqual([...shown].map((m) => m.content), ["Just to confirm: send email?", "no, just pin the address here", "Cubicity De Tham, 232 Đề Thám"]);
-  assert.match(page, /shownInThread\(thread\.messages\)\.forEach/);
+  assert.equal((page.match(/shownInThread\(thread\.messages\)\.forEach/g) || []).length, 2, "both ways of opening a conversation");
+  assert.doesNotMatch(page, /thread\.messages\.forEach/, "nothing draws a thread unfiltered");
 });

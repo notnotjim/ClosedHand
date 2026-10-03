@@ -5086,8 +5086,8 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(thread) {
         if (thread && thread.messages) {
-          thread.messages.forEach(function(msg) {
-            if (typeof msg.content === 'string' && msg.content.trim()) addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
+          shownInThread(thread.messages).forEach(function(msg) {
+            addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
           });
         }
         [300, 600, 1000, 1500].forEach(function(ms) { setTimeout(scrollToBottom, ms); });
