@@ -300,8 +300,36 @@ ui_draw() {
   _il=$(images_line "$SPIN")
   ui_centred "$_il" "$(printf '%s' "$_il" | sed "s|\[ x \]|[ ${GREEN}x${RESET} ]|g")"
   ui_line ""
-  ui_centred "Your data stays with you."
+  ui_note
   UIDRAWN=1
+}
+
+# Whether the end of the install opens setup in a browser on this computer:
+# not over SSH, and on Linux only with a desktop. The opening below asks this
+# same question.
+browser_here() {
+  [ -z "${SSH_CONNECTION:-}" ] || return 1
+  [ "$(uname -s 2>/dev/null)" = "Darwin" ] && return 0
+  command -v xdg-open >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]
+}
+
+# The closing line says what ClosedHand is and, where a browser will open,
+# alternates every 8 seconds with what happens when installing ends. Around
+# each change the line is faint for a frame, so it fades across instead of
+# jumping. Faint rather than grey: greys are the fist's own colours.
+NOTE_LAST=""
+ui_note() {
+  _nt="Your data stays with you."
+  _faint=0
+  if browser_here; then
+    _now=$(date +%s 2>/dev/null) || _now=0
+    case "$_now" in ''|*[!0-9]*) _now=0 ;; esac
+    if [ $(( _now / 8 % 2 )) -eq 1 ]; then _nt="Setup opens in your browser when installation is done."; fi
+    if [ -n "$NOTE_LAST" ] && [ "$_nt" != "$NOTE_LAST" ]; then _faint=1; fi
+    if [ $(( _now % 8 )) -eq 7 ]; then _faint=1; fi
+  fi
+  NOTE_LAST=$_nt
+  if [ "$_faint" = "1" ]; then ui_centred "$_nt" "$(printf '\033[2m')$_nt"; else ui_centred "$_nt"; fi
 }
 
 # One step of the install finished. Redraw, or say so, depending on the mode.
@@ -574,14 +602,11 @@ done
 
 step 100 "Ready"
 
+# Over SSH the browser belongs on the connecting computer, not this host.
 OPENED=0
-if [ -n "${SSH_CONNECTION:-}" ]; then
-  # The browser belongs on the connecting computer, not this SSH host.
-  OPENED=0
-elif command -v open >/dev/null 2>&1; then
-  open "$DASH_URL" 2>/dev/null && OPENED=1
-elif command -v xdg-open >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-  xdg-open "$DASH_URL" 2>/dev/null && OPENED=1
+if browser_here; then
+  if [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then open "$DASH_URL" 2>/dev/null && OPENED=1
+  else xdg-open "$DASH_URL" 2>/dev/null && OPENED=1; fi
 fi
 
 say ""
