@@ -11,7 +11,7 @@ function fixture(respond = () => ({ state: 'off' }), at = {}) {
     if (!nodes.has(selector)) nodes.set(selector, { value: '', hidden: false, handlers: {}, classList: { toggle() {} }, addEventListener(name, fn) { this.handlers[name] = fn; }, removeAttribute(name) { delete this[name]; }, focus() {}, select() {} });
     return nodes.get(selector);
   }
-  const context = { window: { open() {
+  const context = { window: { closed: 0, close() { this.closed++; }, open() {
     const tab = { closed: false, close() { this.closed = true; }, location: { replace(url) { opened.push(url); } } };
     popups.push(tab); return tab;
   }, location: { assign(url) { opened.push(url); }, origin: 'http://localhost:3000', hostname: at.hostname || 'localhost', pathname: '/setup', search: '', hash: at.hash || '' },
@@ -73,14 +73,18 @@ test('unsafe returned URLs are never rendered as navigation targets', async () =
   const f = fixture(() => ({ savedUrl: 'https://evil.example', pairingUrl: 'javascript:alert(1)' })); await f.update();
   assert.equal(f.opened.length, 0); assert.equal(f.node('url-saved').hidden, true);
 });
-test('the personal URL lives in the email and calendar step, which stays pending until it settles', () => {
+test('the personal URL is a step of its own after email and calendar, with the URL on its folded card', () => {
   const html = fs.readFileSync(require.resolve('../webapp/views/setup.html'), 'utf8');
   const step = name => { const at = html.indexOf(`id="step-${name}"`); return html.slice(at, html.indexOf('<li class="step"', at + 1)); };
-  assert.match(step('accounts'), /id="setup-personal-url"/); assert.doesNotMatch(step('admin_password'), /setup-personal-url|url-saved/);
-  assert.match(step('admin_password'), /<h2>Password<\/h2>/);
-  assert.match(html, /if \(s.key === "accounts"\) \{[^}]*s.done = s.done && personalUrl.settled\(\)/);
+  assert.match(step('personal_url'), /id="setup-personal-url"/);
+  assert.doesNotMatch(step('accounts'), /setup-personal-url|url-saved/, 'nothing about the URL in the email card');
+  // The URL and its Copy button sit between the head and the body, so they show while folded.
+  assert.match(step('personal_url'), /<\/button>\n\s*<div id="url-saved" hidden>[\s\S]*<div class="card-body">/);
+  assert.ok(html.indexOf('id="step-accounts"') < html.indexOf('id="step-personal_url"') && html.indexOf('id="step-personal_url"') < html.indexOf('id="step-chat"'));
+  assert.match(step('personal_url'), /<span class="num">05<\/span>/); assert.match(step('chat'), /<span class="num">06<\/span>/);
+  assert.match(html, /if \(s.key === "accounts"\) steps.push\(\{ key: "personal_url", label: "Personal URL", required: true, done: !!\(s.done && personalUrl.settled\(\)\) \}\);/);
   assert.match(html, /personalUrl.update\(state.installId, passwordDone && accountDone, connected\)/);
-  assert.match(html, /ClosedHandSetupUrl.mount\(document.getElementById\("step-accounts"\)/);
+  assert.match(html, /ClosedHandSetupUrl.mount\(document.getElementById\("step-personal_url"\)/);
   assert.match(require('../webapp/assets').stamp(html), /setup-personal-url.js\?v=[a-f0-9]+/);
 });
 test('enrollment errors remain readable across background status checks', async () => {
@@ -160,8 +164,9 @@ test('approved setup replaces the confirmation form while the URL connects, then
   assert.equal(f.node('url-code-form').hidden, true, 'and goes once the code is accepted');
   assert.match(f.node('url-status').textContent, /claimed/);
   assert.equal(f.node('url-value').value, 'https://example.closedhand.ai/');
-  assert.equal(f.node('url-copy').hidden, true);
-  assert.equal(f.node('url-continue').textContent, 'Continue setup');
+  assert.equal(f.node('url-copy').hidden, false, 'copyable as soon as it is claimed');
+  assert.equal(f.node('url-continue').hidden, true, 'claimed folds the step by itself');
+  assert.equal(f.api.settled(), true);
   state.registrationState = 'error'; await f.update();
   assert.match(f.node('url-status').textContent, /retry automatically/);
   state = { ...state, permanent: true, state: 'on', url: 'https://example.closedhand.ai' }; await f.update();
@@ -169,12 +174,13 @@ test('approved setup replaces the confirmation form while the URL connects, then
   assert.match(f.node('url-status').textContent, /ready/);
 });
 
-test('a verified URL completes setup once; pending, offline and unsafe URLs do not', async () => {
-  let state = {enabled:true,ownershipConfirmed:true,registrationState:'pending',state:'provisioning',addressName:'example'};
+test('a claimed URL completes the step once, while it connects; unclaimed, offline and unsafe URLs do not', async () => {
+  let state = {savedUrl:'https://example.closedhand.ai',state:'off'};
   const f=fixture(()=>state); await f.update(); assert.equal(f.api.settled(),false);
-  state={savedUrl:'https://example.closedhand.ai',state:'off'};await f.update();assert.equal(f.api.settled(),false);
   state={savedUrl:'https://evil.example',state:'on'};await f.update();assert.equal(f.api.settled(),false);
-  state={savedUrl:'https://example.closedhand.ai',state:'on'};await f.update();assert.equal(f.api.settled(),true);assert.equal(f.changes(),1);
+  state={enabled:true,ownershipConfirmed:true,addressName:'Not A Name!',state:'provisioning'};await f.update();assert.equal(f.api.settled(),false);
+  state={enabled:true,ownershipConfirmed:true,registrationState:'pending',state:'provisioning',addressName:'example'};await f.update();assert.equal(f.api.settled(),true);assert.equal(f.changes(),1);
+  state={savedUrl:'https://example.closedhand.ai',state:'on'};
   await f.update();assert.equal(f.changes(),1);
   await f.event('url-copy','click');assert.deepEqual(f.copied,['https://example.closedhand.ai/']);
   assert.equal(f.node('url-copy-status').textContent,'Copied.');assert.equal(f.node('url-copy-status').hidden,false);
@@ -217,8 +223,7 @@ test('carrying on without a personal URL is offered only when closedhand.com can
   state = { enabled: true, state: 'pairing', serviceAvailable: true, pairingUrl: 'https://closedhand.com/phone-access/pair#t' }; await f.update();
   assert.equal(f.node('url-continue').hidden, true, 'not while waiting for the owner to confirm');
   state = { enabled: true, state: 'provisioning', serviceAvailable: true, ownershipConfirmed: true, addressName: 'amber-fox-42' }; await f.update();
-  assert.equal(f.node('url-continue').hidden, false);
-  assert.equal(f.node('url-continue').textContent, 'Continue setup');
+  assert.equal(f.node('url-continue').hidden, true, 'claimed: nothing to press, the step folds by itself');
 });
 
 test('the code box is ready to paste into, and a pasted code finishes by itself', async () => {
@@ -247,7 +252,12 @@ test('a link that can come back by itself tells closedhand.com where setup is; a
   const f = fixture(o => o.method === 'POST' ? { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#t=tk&state=' + state } : { state: 'off' });
   await f.update();
   await f.event('url-form', 'submit');
-  assert.deepEqual(f.opened, ['https://closedhand.com/phone-access/pair#t=tk&state=' + state + '&back=' + encodeURIComponent('http://localhost:3000/setup')]);
+  assert.deepEqual(f.opened, ['https://closedhand.com/phone-access/pair#t=tk&state=' + state + '&back=' + encodeURIComponent('http://localhost:3000/setup') + '&popup=1']);
+  // A blocked window falls back to this tab, which has nothing to close.
+  const blocked = fixture(o => o.method === 'POST' ? { state: 'pairing', enabled: true, pairingUrl: 'https://closedhand.com/phone-access/pair#t=tk&state=' + state } : { state: 'off' });
+  await blocked.update(); blocked.context.window.open = () => null;
+  await blocked.event('url-form', 'submit');
+  assert.deepEqual(blocked.opened, ['https://closedhand.com/phone-access/pair#t=tk&state=' + state + '&back=' + encodeURIComponent('http://localhost:3000/setup')]);
 });
 test('a code closedhand.com hands back is sent with its state once there is a password, and leaves the address bar', async () => {
   const state = 'b'.repeat(32);
@@ -276,7 +286,25 @@ test('with an account just connected, the claim signs in with that same account:
   await f.update(); f.api.update('first', true, { via: 'google', hint: 'sam@example.com' });
   assert.equal(f.node('url-start').textContent, 'Claim your personal URL', 'the button names what it does');
   await f.event('url-form', 'submit');
-  assert.equal(f.opened.at(-1), 'https://closedhand.com/phone-access/pair#t=tk&state=' + state + '&back=' + encodeURIComponent('http://localhost:3000/setup') + '&via=google&hint=' + encodeURIComponent('sam@example.com'));
+  assert.equal(f.opened.at(-1), 'https://closedhand.com/phone-access/pair#t=tk&state=' + state + '&back=' + encodeURIComponent('http://localhost:3000/setup') + '&popup=1&via=google&hint=' + encodeURIComponent('sam@example.com'));
+  // The sign-in is in a window of its own; this page says where to look.
+  assert.match(f.node('url-status').textContent, /window that opened/);
+  assert.equal(f.node('url-start').textContent, 'Open the sign-in again');
+});
+
+test('the sign-in window closes itself once the claim is in, and stays open to show a refusal', async () => {
+  const state = 'e'.repeat(32);
+  const ok = fixture(o => o.method === 'POST' ? { state: 'pairing', enabled: true, ownershipConfirmed: true, addressName: 'amber-fox-42' } : { state: 'off' }, { hash: '#claim=ABC123&state=' + state + '&close=1' });
+  await ok.update(); await tick();
+  assert.equal(ok.context.window.closed, 1);
+  const refused = fixture(o => o.method === 'POST' ? { error: 'That code has expired.' } : { state: 'off' }, { hash: '#claim=ABC123&state=' + state + '&close=1' });
+  await refused.update(); await tick();
+  assert.equal(refused.context.window.closed, 0);
+  assert.match(refused.node('url-status').textContent, /expired/);
+  // Setup reached in the same tab, with no window to close, never tries.
+  const sameTab = fixture(o => o.method === 'POST' ? { state: 'pairing', enabled: true, ownershipConfirmed: true } : { state: 'off' }, { hash: '#claim=ABC123&state=' + state });
+  await sameTab.update(); await tick();
+  assert.equal(sameTab.context.window.closed, 0);
 });
 
 test('the paste-a-code box shows only where the code cannot come back by itself', async () => {

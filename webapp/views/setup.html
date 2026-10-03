@@ -211,7 +211,7 @@
     .card-body ol.mini li::marker { color: var(--text-tertiary); }
 
     /* Forms: the wizard writes config itself; nobody edits files. */
-    #step-admin_password [hidden], #step-accounts [hidden] { display: none !important; }
+    #step-admin_password [hidden], #step-accounts [hidden], #step-personal_url [hidden] { display: none !important; }
     #setup-personal-url h3 { margin-bottom: 12px; }
     #setup-personal-url .field label { color: var(--text-primary); }
     #setup-personal-url .save-btn { min-height: 44px; white-space: normal; }
@@ -522,15 +522,6 @@
           </span>
           <span class="state-chip">Recommended</span>
         </button>
-        <div id="url-saved" hidden>
-          <div class="personal-url-row">
-            <input id="url-value" aria-label="Your personal URL" readonly>
-            <button id="url-copy" type="button" aria-label="Copy personal URL" title="Copy personal URL">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
-            </button>
-          </div>
-          <p id="url-copy-status" role="status" aria-live="polite" hidden></p>
-        </div>
         <div class="card-body">
           <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later.</p>
           <p class="note hint">This access goes to ClosedHand on your computer, not to closedhand.com.</p>
@@ -700,48 +691,70 @@
             </div>
           </div>
           </div>
-          <section id="setup-personal-url" aria-labelledby="personal-url-heading" style="margin-top:32px" hidden>
-            <h3 id="personal-url-heading">Personal URL <span class="fb-quick" id="url-required">Required</span></h3>
-            <p id="url-password-note">Connect Google or Microsoft above first.</p>
-            <p>Use ClosedHand’s web chat and dashboard from any device at a personal URL like amber-fox-42.closedhand.ai, while this computer is on. Claiming one creates your ClosedHand account, which stores your email and nothing else.</p>
-            <p id="url-auto" hidden>Your Microsoft sign-in above claimed it.</p>
-            <div id="url-controls" hidden>
-              <form id="url-form">
-                <p class="url-why" id="url-why" hidden>Claim your personal URL to open ClosedHand.</p>
-                <p>You claim it by signing in on closedhand.com below.</p>
-                <button class="save-btn" id="url-start" type="submit">Claim your personal URL</button>
-              </form>
-              <div id="url-ready" hidden>
-                <p class="url-where-line">Your ClosedHand is at <strong id="url-where"></strong> <a href="#" id="url-change">Change</a></p>
-                <form id="url-rename-form" hidden>
-                  <div class="field">
-                    <label for="url-new-name">New name</label>
-                    <input id="url-new-name" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40" aria-describedby="url-new-preview url-new-help">
-                    <p id="url-new-preview" aria-live="polite" style="overflow-wrap:anywhere"></p>
-                    <p id="url-new-help">The old address sends people to the new one for 30 days.</p>
-                  </div>
-                  <button class="save-btn" id="url-rename-submit" type="submit">Save</button>
-                  <button class="save-btn" id="url-rename-cancel" type="button">Cancel</button>
+        </div>
+      </article>
+    </li>
+
+    <li class="step" data-step="personal_url" id="step-personal_url">
+      <div class="rail"><span class="node"></span><span class="num">05</span></div>
+      <article class="card">
+        <button class="card-head" aria-expanded="false">
+          <span>
+            <h2 id="personal-url-heading">Personal URL</h2>
+          </span>
+          <span class="state-chip">Required</span>
+        </button>
+        <div id="url-saved" hidden>
+          <div class="personal-url-row">
+            <input id="url-value" aria-label="Your personal URL" readonly>
+            <button id="url-copy" type="button" aria-label="Copy personal URL" title="Copy personal URL">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+          </div>
+          <p id="url-copy-status" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="card-body">
+            <section id="setup-personal-url" aria-labelledby="personal-url-heading">
+              <p id="url-password-note">Connect Google or Microsoft above first.</p>
+              <p>Use ClosedHand’s web chat and dashboard from any device at a personal URL like amber-fox-42.closedhand.ai, while this computer is on. Claiming one creates your ClosedHand account, which stores your email and nothing else.</p>
+              <p id="url-auto" hidden>Your Microsoft sign-in above claimed it.</p>
+              <div id="url-controls" hidden>
+                <form id="url-form">
+                  <p class="url-why" id="url-why" hidden>Claim your personal URL to finish setup.</p>
+                  <p>You claim it by signing in on closedhand.com below.</p>
+                  <button class="save-btn" id="url-start" type="submit">Claim your personal URL</button>
                 </form>
-              </div>
-              <form id="url-code-form" hidden>
-                <div class="field">
-                  <label for="url-code">Paste the code from closedhand.com</label>
-                  <input id="url-code" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234" aria-describedby="url-code-help">
-                  <p id="url-code-help">Confirm on closedhand.com and it shows you a code with a Copy button. Paste it here and it finishes by itself. The code means the address can only ever open this ClosedHand.</p>
+                <div id="url-ready" hidden>
+                  <p class="url-where-line">Your ClosedHand is at <strong id="url-where"></strong> <a href="#" id="url-change">Change</a></p>
+                  <form id="url-rename-form" hidden>
+                    <div class="field">
+                      <label for="url-new-name">New name</label>
+                      <input id="url-new-name" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40" aria-describedby="url-new-preview url-new-help">
+                      <p id="url-new-preview" aria-live="polite" style="overflow-wrap:anywhere"></p>
+                      <p id="url-new-help">The old address sends people to the new one for 30 days.</p>
+                    </div>
+                    <button class="save-btn" id="url-rename-submit" type="submit">Save</button>
+                    <button class="save-btn" id="url-rename-cancel" type="button">Cancel</button>
+                  </form>
                 </div>
-                <button class="save-btn" id="url-code-submit" type="submit">Finish</button>
-              </form>
-              <p id="url-status" role="status" aria-live="polite"></p>
-              <p><button class="save-btn" id="url-continue" type="button">Continue without a personal URL</button></p>
-            </div>
-          </section>
+                <form id="url-code-form" hidden>
+                  <div class="field">
+                    <label for="url-code">Paste the code from closedhand.com</label>
+                    <input id="url-code" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234" aria-describedby="url-code-help">
+                    <p id="url-code-help">Confirm on closedhand.com and it shows you a code with a Copy button. Paste it here and it finishes by itself. The code means the address can only ever open this ClosedHand.</p>
+                  </div>
+                  <button class="save-btn" id="url-code-submit" type="submit">Finish</button>
+                </form>
+                <p id="url-status" role="status" aria-live="polite"></p>
+                <p><button class="save-btn" id="url-continue" type="button">Continue without a personal URL</button></p>
+              </div>
+            </section>
         </div>
       </article>
     </li>
 
     <li class="step" data-step="chat" id="step-chat">
-      <div class="rail"><span class="node"></span><span class="num">05</span></div>
+      <div class="rail"><span class="node"></span><span class="num">06</span></div>
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
@@ -931,8 +944,8 @@
   // --- Model provider form -------------------------------------------------
   window.ClosedHandModels.mount(document.getElementById("model-configuration"));
 
-  var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("step-accounts"), function () {
-    document.getElementById("step-accounts").classList.remove("is-open");
+  var personalUrl = window.ClosedHandSetupUrl.mount(document.getElementById("step-personal_url"), function () {
+    document.getElementById("step-personal_url").classList.remove("is-open");
     if (lastState) render(lastState);
   });
 
@@ -969,24 +982,24 @@
     // The personal URL is claimed once mail is connected: with Microsoft, by
     // that same sign-in; otherwise by one button, signing in on closedhand.com
     // with the account just connected.
-    $("#setup-personal-url").hidden = !(passwordDone && accountDone);
     var connected = state.googleConnected && state.googleAccount && state.googleAccount.email ? { via: "google", hint: state.googleAccount.email }
       : state.microsoftConnected && state.microsoftAccount && state.microsoftAccount.email ? { via: "microsoft", hint: state.microsoftAccount.email } : null;
     personalUrl.update(state.installId, passwordDone && accountDone, connected);
-    $("#url-required").hidden = personalUrl.settled();
     $("#password-form").hidden = passwordDone;
     $("#password-saved").hidden = !passwordDone;
     var doneCount = 0, requiredDone = true;
     var next = null;
 
-    state.steps.forEach(function (serverStep) {
+    // The personal URL is a step of its own, right after mail: every
+    // ClosedHand gets one, claimed with the account just connected.
+    var steps = [];
+    state.steps.forEach(function (s) {
+      steps.push(s);
+      if (s.key === "accounts") steps.push({ key: "personal_url", label: "Personal URL", required: true, done: !!(s.done && personalUrl.settled()) });
+    });
+    steps.forEach(function (serverStep) {
       var s = Object.assign({}, serverStep);
       if (s.key === "admin_password") s.label = "Password";
-      if (s.key === "accounts") {
-        // Done once mail is connected and the personal URL is settled: every
-        // ClosedHand gets its personal URL here.
-        s.done = s.done && personalUrl.settled();
-      }
       var li = $("#step-" + s.key);
       if (!li) return;
       var chip = $(".state-chip", li);
@@ -1006,7 +1019,7 @@
       }
 
       if (s.done) {
-        chip.textContent = s.key === "accounts" ? "Connected" : "Done";
+        chip.textContent = s.key === "accounts" ? "Connected" : s.key === "personal_url" ? "Claimed" : "Done";
       } else if (skips[s.key]) {
         chip.textContent = "Skipped, show it";
         chip.style.cursor = "pointer";
@@ -1063,11 +1076,10 @@
     $("#memory-note").classList.toggle("is-on", !!(downloading || failed || missing));
 
     $("#done-count").textContent = String(doneCount);
-    $("#total-count").textContent = String(state.steps.length);
-    var claimNext = next && next.key === "accounts" && accountDone && (state.googleConnected || state.microsoftConnected);
-    $("#next-chip").textContent = next ? (claimNext ? "next: claim your personal URL" : "next: " + next.label.toLowerCase()) : "";
+    $("#total-count").textContent = String(steps.length);
+    $("#next-chip").textContent = next ? (next.key === "personal_url" ? "next: claim your personal URL" : "next: " + next.label.toLowerCase()) : "";
     $("#summary-note").textContent = requiredDone
-      ? (doneCount === state.steps.length ? "everything is connected" : "ready, with more to unlock")
+      ? (doneCount === steps.length ? "everything is connected" : "ready, with more to unlock")
       : "";
 
     var chatStep = (state.steps || []).find(function (s) { return s.key === "chat"; });
@@ -1119,7 +1131,7 @@
     }
     // Everything done: the finish card appears at the foot of the spine, and
     // the page brings it into view once, so the end is not a small footer link.
-    var allDone = doneCount === state.steps.length;
+    var allDone = doneCount === steps.length;
     var fin = $("#finish");
     if (allDone) {
       // One chat link, for the app that is actually linked: WhatsApp on your
@@ -1612,9 +1624,9 @@
   function revealClaim() {
     $all("#step-accounts .chooser").forEach(function (el) { el.classList.remove("is-open"); });
     setTimeout(function () {
-      var url = $("#setup-personal-url");
-      if (url && !url.hidden) url.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (_claimAsked && url && !url.hidden) {
+      var url = $("#step-personal_url");
+      if (url) url.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (_claimAsked && url) {
         _claimAsked = false;
         $("#url-why").hidden = false;
         var btn = $("#url-start");

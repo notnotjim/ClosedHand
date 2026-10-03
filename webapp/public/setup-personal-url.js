@@ -1,20 +1,21 @@
-/* The personal URL in setup, under email and calendar. Connecting Microsoft
+/* The personal URL, setup's step after email and calendar. Connecting Microsoft
    through ClosedHand's app claims it with that same sign-in; otherwise one
    click claims it on closedhand.com (which picks the name). Then "Your
-   ClosedHand is at name.closedhand.ai", with Change to rename. */
+   ClosedHand is at name.closedhand.ai", with Change to rename. Claimed, the
+   step folds by itself: connecting carries on in the background. */
 (function (root) {
   'use strict';
   function mount(container, changed) {
     var $ = function (id) { return container.querySelector('#' + id); };
     var key = null, password = false, settled = false, state = {}, busy = false, checking = false;
-    var lastCheck = 0, generation = 0, actionError = null, completedReady = false, claiming = false, renaming = false, renamed = null, wasWaiting = false;
+    var lastCheck = 0, generation = 0, actionError = null, completedReady = false, claiming = false, renaming = false, renamed = null, wasWaiting = false, signingIn = false;
     // closedhand.com hands the code straight back here, with the state from
     // this ClosedHand's link, after its sign-in (closedhand-com/public/pair.js).
     var handed = null, signin = null;
     try {
       var back = new URLSearchParams((root.location.hash || '').slice(1));
       if (/^[A-Za-z0-9]{6}$/.test(back.get('claim') || '') && /^[a-f0-9]{32}$/.test(back.get('state') || '')) {
-        handed = { code: back.get('claim'), state: back.get('state') };
+        handed = { code: back.get('claim'), state: back.get('state'), close: back.get('close') === '1' };
         root.history.replaceState(null, '', root.location.pathname + root.location.search);
       }
     } catch (_) {}
@@ -36,7 +37,7 @@
           && !u.username && !u.password && !u.port ? u.origin + '/' : null;
       } catch (_) { return null; }
     }
-    function pairingUrl(value) {
+    function pairingUrl(value, popup) {
       try {
         var u = new URL(value);
         if (u.origin !== 'https://closedhand.com' || u.pathname !== '/phone-access/pair') return null;
@@ -44,7 +45,7 @@
         // Setup on this computer takes the code back by itself, instead of it
         // being typed; with an account just connected, closedhand.com signs in
         // with that same one, so the claim is one click.
-        var extra = '&back=' + encodeURIComponent(root.location.origin + '/setup');
+        var extra = '&back=' + encodeURIComponent(root.location.origin + '/setup') + (popup ? '&popup=1' : '');
         if (signin && /^(google|microsoft)$/.test(signin.via) && signin.hint) extra += '&via=' + signin.via + '&hint=' + encodeURIComponent(signin.hint);
         return u.href + extra;
       } catch (_) { return null; }
@@ -72,14 +73,14 @@
       $('url-code-submit').textContent = claiming ? 'Checking…' : 'Finish';
       $('url-saved').hidden = !password || !(saved || reserved);
       $('url-value').value = saved || reserved || '';
-      $('url-copy').hidden = !saved;
+      $('url-copy').hidden = !(saved || reserved);
       // Where ClosedHand is, once its address is confirmed, with Change.
       $('url-ready').hidden = !password || !(saved || reserved);
       $('url-where').textContent = saved || reserved ? new URL(saved || reserved).hostname : '';
       $('url-rename-submit').disabled = renaming;
       $('url-rename-submit').textContent = renaming ? 'Saving…' : 'Save';
       $('url-start').disabled = busy || !password;
-      $('url-start').textContent = busy ? 'Opening…' : waiting ? 'Open closedhand.com again' : 'Claim your personal URL';
+      $('url-start').textContent = busy ? 'Opening…' : waiting ? 'Open closedhand.com again' : signingIn && confirm ? 'Open the sign-in again' : 'Claim your personal URL';
       $('url-start').classList.toggle('is-quiet', waiting);
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (renamed ? renamed : saved
@@ -88,14 +89,15 @@
           ? 'Your personal URL is claimed, but its connection is delayed. ClosedHand will retry automatically.'
           : 'Your personal URL is claimed. Connecting it now. You can continue setup.')
         : state.serviceAvailable === false ? 'closedhand.com can’t give out personal URLs right now. Carry on, and get yours from the dashboard later.'
-        : confirm ? ''
+        : confirm ? (signingIn && handsBack ? 'Sign in in the window that opened. It closes by itself when you’re done.' : '')
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
       // Every ClosedHand gets a personal URL here. Carrying on without one is
       // offered only when closedhand.com can't give one out right now (or
       // getting one failed); the dashboard offers it again later.
       var cantGet = state.serviceAvailable === false || !!(actionError || state.error);
-      $('url-continue').hidden = !(saved || confirmed || cantGet);
-      $('url-continue').textContent = saved || confirmed ? 'Continue setup' : 'Continue without a personal URL';
+      // Claimed: the step folds by itself, so there is nothing to press.
+      $('url-continue').hidden = !!confirmed || !(saved || cantGet);
+      $('url-continue').textContent = saved ? 'Continue setup' : 'Continue without a personal URL';
     }
     async function request(method, body) {
       var response = await fetch('/api/phone', { method: method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(20000) });
@@ -121,7 +123,10 @@
           if (renamed && state.state === 'on') renamed = null;
           display();
           // Not while a new name is being typed: finishing folds the step away.
-          if (password && !completedReady && $('url-rename-form').hidden && state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl)) {
+          // Claimed is finished: connecting is ClosedHand's part, not the person's.
+          var claimed = state.enabled && state.ownershipConfirmed && personalUrl('https://' + state.addressName + '.closedhand.ai');
+          var working = state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl);
+          if (password && !completedReady && $('url-rename-form').hidden && (claimed || working)) {
             completedReady = true;
             remember();
           }
@@ -132,15 +137,18 @@
       event.preventDefault();
       if (!password || busy) return;
       // Open during the click, before awaiting the fresh ticket, so browsers
-      // do not mistake the confirmation tab for an unsolicited popup.
-      var confirmationTab = window.open('about:blank', '_blank');
+      // do not mistake it for an unsolicited popup. A small window of its own,
+      // like any "Sign in with Google": it closes itself once the claim is in,
+      // and this page notices on its next check.
+      var confirmationTab = window.open('about:blank', 'closedhand-claim', 'popup,width=520,height=720');
       if (confirmationTab) confirmationTab.opener = null;
       busy = true; actionError = null; var run = ++generation; display();
       try {
         var result = await request('POST', { enabled: true, mode: 'managed' });
         if (run !== generation) { if (confirmationTab) confirmationTab.close(); return; }
         state = result;
-        var destination = pairingUrl(state.pairingUrl);
+        var destination = pairingUrl(state.pairingUrl, !!confirmationTab);
+        signingIn = !!confirmationTab;
         if (!destination) throw new Error('Could not open the confirmation on closedhand.com. Please try again.');
         if (confirmationTab && !confirmationTab.closed) confirmationTab.location.replace(destination);
         else window.location.assign(destination);
@@ -165,6 +173,9 @@
         var result = await response.json().catch(function () { return {}; });
         if (!response.ok) throw new Error(result.error || 'Could not check the code. Please try again.');
         $('url-code').value = '';
+        // The sign-in window's job is done: setup behind it picks the claim up.
+        // A refused code keeps the window open, showing why.
+        if (given && given.close) { try { root.close(); } catch (_) {} }
       } catch (e) { actionError = e.message; }
       finally { claiming = false; lastCheck = 0; display(); check(); }
     }

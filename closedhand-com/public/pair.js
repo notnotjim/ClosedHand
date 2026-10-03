@@ -3,7 +3,9 @@
   //   state  a one-time value the ClosedHand made, handed back with the code;
   //   back   where setup is, on the computer this browser is on;
   //   via    google or microsoft: the mail sign-in setup just did, to repeat
-  //          here without the choice; hint names its account.
+  //          here without the choice; hint names its account;
+  //   popup  1 when setup opened this in a window of its own, which closes
+  //          once setup has the code.
   // The code only ever goes back to this computer's own setup (localhost), so
   // a link from somebody else can never carry it off: that is what lets
   // the code travel by itself instead of being typed.
@@ -23,6 +25,7 @@
       const state = /^[a-f0-9]{32}$/.test(p.get('state') || '') ? p.get('state') : null;
       const back = state && loopback(p.get('back'));
       if (back) auto = { state, back, tried: p.has('tried'),
+        popup: p.get('popup') === '1',
         via: ['google', 'microsoft'].includes(p.get('via')) ? p.get('via') : null,
         hint: /^[^\s@<>"']{1,200}@[^\s@<>"']{1,200}$/.test(p.get('hint') || '') ? p.get('hint') : null };
     } else ticket = decodeURIComponent(raw);
@@ -31,7 +34,7 @@
   // Back here after signing in: the same link, marked as tried so a sign-in
   // that didn't finish shows the choice instead of looping.
   const here = '/phone-access/pair#' + (auto.back
-    ? new URLSearchParams({ t: ticket, state: auto.state, back: auto.back, ...(auto.via ? { via: auto.via } : {}), ...(auto.hint ? { hint: auto.hint } : {}), tried: '1' })
+    ? new URLSearchParams({ t: ticket, state: auto.state, back: auto.back, ...(auto.popup ? { popup: '1' } : {}), ...(auto.via ? { via: auto.via } : {}), ...(auto.hint ? { hint: auto.hint } : {}), tried: '1' })
     : encodeURIComponent(ticket));
   const hintFor = p => auto.hint && auto.via === p ? '&login_hint=' + encodeURIComponent(auto.hint) : '';
   $('login-google').href = '/auth/google?return_to=' + encodeURIComponent(here) + hintFor('google');
@@ -79,8 +82,8 @@
   function handBack(code) {
     clearTimeout(timer); leaving = true;
     show(null);
-    say('Taking you back to ClosedHand…');
-    location.replace(auto.back + '#' + new URLSearchParams({ claim: code, state: auto.state }));
+    say('Taking you back to setup…');
+    location.replace(auto.back + '#' + new URLSearchParams({ claim: code, state: auto.state, ...(auto.popup ? { close: '1' } : {}) }));
   }
 
   // Confirmed here; finished by typing the code into the ClosedHand that
@@ -144,11 +147,16 @@
       }
       show('confirm');
       $('approve').disabled = false;
-      // The owner's address opens another computer now: say what confirming does.
-      $('approve').textContent = (address.move ? 'Move ' : 'Confirm ') + name;
-      $('confirm-note').textContent = address.move
-        ? name + ' opens ClosedHand on another computer now. Confirming moves it to the computer you’re setting up, and the other computer stops being reachable there.'
-        : 'Only confirm if you’re setting up ClosedHand on your own computer.';
+      // The account's address already opens a ClosedHand set up before: a
+      // plain question, which only switches it when the answer is yes. Never
+      // put as "computer": the address is for opening ClosedHand on any device.
+      if (address.move) {
+        $('heading').textContent = 'You already have a personal URL linked to this email';
+        $('lede').textContent = 'It opens a ClosedHand you set up before. Want to switch it to the one you’re setting up now? The earlier one stops opening there.';
+      }
+      $('approve').textContent = address.move ? 'Switch it to this ClosedHand' : 'Confirm ' + name;
+      $('confirm-note').textContent = address.move ? '' : 'Only confirm if you’re setting up ClosedHand on your own computer.';
+      $('confirm-note').hidden = !!address.move;
       say('');
     } catch (e) {
       say(e.message, true);
