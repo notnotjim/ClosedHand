@@ -54,3 +54,17 @@ test("place lookups ask OpenStreetMap for English names", () => {
   }
   assert.match(read("lib/maps-fallback.js"), /"Accept-Language": "en"/);
 });
+
+test("an event time without an offset is where the user is, never the calendar's zone or the server's clock", () => {
+  const tz = require("../lib/timezone");
+  assert.deepEqual(tz.googleEventTime("2026-10-09T19:00:00", "Asia/Ho_Chi_Minh"), { dateTime: "2026-10-09T19:00:00", timeZone: "Asia/Ho_Chi_Minh" });
+  assert.deepEqual(tz.googleEventTime("2026-10-09T19:00:00+08:00", "Asia/Ho_Chi_Minh"), { dateTime: "2026-10-09T19:00:00+08:00" }, "an offset given is kept");
+  assert.deepEqual(tz.googleEventTime("2026-10-09T11:00:00Z", "Asia/Ho_Chi_Minh"), { dateTime: "2026-10-09T11:00:00Z" });
+  assert.equal(tz.eventInstant("2026-10-09T19:00", "Asia/Ho_Chi_Minh").toISOString(), "2026-10-09T12:00:00.000Z");
+  assert.equal(tz.eventInstant("2026-07-01T09:00:00", "Europe/London").toISOString(), "2026-07-01T08:00:00.000Z", "summer time");
+  assert.equal(tz.eventInstant("2026-01-15T09:00:00", "Europe/London").toISOString(), "2026-01-15T09:00:00.000Z");
+  const handlers = read("lib/tools/handlers.js");
+  assert.equal((handlers.match(/googleEventTime\(toolInput\.(start|end), tz\)/g) || []).length, 4, "Google create and update");
+  assert.equal((handlers.match(/eventInstant\(toolInput\.(start|end)/g) || []).length, 4, "Outlook create and update");
+  assert.doesNotMatch(handlers, /new Date\(toolInput\.(start|end)\)\.toISOString\(\)/, "no event time read by the server's clock");
+});
