@@ -138,3 +138,30 @@ test("WhatsApp prose converts Markdown while preserving code and native formatti
   assert.ok(output.includes("```js\n# a comment\n**literal**\n```"));
   assert.equal(formatWhatsApp(output), output);
 });
+
+test("a message outside a reply is saved for the web chat and shown live when a tab is open", async () => {
+  const src = read("lib/platforms/web.js");
+  const start = src.indexOf("async function sendWebMessage");
+  const inserted = [], pushed = [];
+  let open = true;
+  const box = {
+    console: { error() {} },
+    supabase: { from: (t) => ({ insert: async (row) => { inserted.push({ t, row }); return {}; } }) },
+    require: (n) => { assert.equal(n, "../web-chat-ws"); return { hasWebChatConnection: () => open, sendWebChatMessage: (u, text) => pushed.push(text) }; },
+  };
+  vm.runInNewContext(src.slice(start, src.indexOf("\n}\n", start) + 2) + "\nthis.send = sendWebMessage;", box);
+  await box.send("user-a", "Your hotel picks are ready.");
+  assert.equal(inserted.length, 1, "saved, so a reload still shows it");
+  assert.equal(inserted[0].row.direction, "outbound");
+  assert.deepEqual(pushed, ["Your hotel picks are ready."], "and shown at once");
+  open = false;
+  await box.send("user-a", "Reminder: iCloud storage.");
+  assert.equal(inserted.length, 2);
+  assert.equal(pushed.length, 1, "no tab, nothing to push");
+
+  const messaging = read("lib/messaging.js");
+  assert.doesNotMatch(messaging, /sendWebChatMessage/, "nothing pushes to the web chat without saving");
+  const status = messaging.slice(messaging.indexOf("async function sendStatusMessage"), messaging.indexOf('if (ctx.activePlatform === "telegram")', messaging.indexOf("async function sendStatusMessage")));
+  assert.match(status, /if \(!hasWebChatConnection\(chatId\)\) return null;/, "a status with no one watching is dropped, not saved as a message");
+  assert.doesNotMatch(status, /sendWebMessage/);
+});
