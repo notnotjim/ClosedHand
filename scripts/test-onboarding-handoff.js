@@ -163,6 +163,13 @@ test("a plan of theirs the scan found is mentioned once, in passing", async () =
   assert.equal(flow.sent.at(-1).text, "No problem, tell me any time. Looks like your trip to Lisbon on 12 October is coming up, so I'll keep an eye on that.\n\nAsk me anything, or send me something to remember.");
 });
 
+test("a plan already under way is not called coming up", async () => {
+  const flow = onboarding({ settings: { welcome_highlight: "your stay in Da Nang until 7 October", welcome_highlight_when: "now" } });
+  await flow.message(null);
+  await finish(flow);
+  assert.equal(flow.sent.at(-1).text, "No problem, tell me any time. I see you're in the middle of your stay in Da Nang until 7 October, so I'll keep an eye on that.\n\nAsk me anything, or send me something to remember.");
+});
+
 test("a failed completion write keeps onboarding open and the request pending", async () => {
   const flow = onboarding({ saveFails: settings => settings.onboarding_step === "done" });
   await flow.message("Find my train booking");

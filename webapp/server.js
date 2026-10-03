@@ -3107,7 +3107,7 @@ app.post("/api/here", async (req, res) => {
   try {
     let name = null;
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`,
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&accept-language=en`,
         { headers: { "User-Agent": "ClosedHand/1.0 (https://closedhand.com)" }, signal: AbortSignal.timeout(8000) });
       const a = (await r.json()).address || {};
       name = a.city || a.town || a.village || a.municipality || a.county || a.state || null;

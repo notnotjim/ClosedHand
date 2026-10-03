@@ -5527,7 +5527,7 @@
           // If name looks like coordinates or is missing, reverse geocode
           if (!displayName || /^-?\d+\.?\d*\s*,\s*-?\d+\.?\d*$/.test(displayName)) {
             try {
-              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${locData.location.latitude}&lon=${locData.location.longitude}&format=json`);
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${locData.location.latitude}&lon=${locData.location.longitude}&format=json&accept-language=en`);
               const geo = await geoRes.json();
               displayName = geo.address?.city || geo.address?.town || geo.address?.village || geo.display_name?.split(',')[0] || displayName;
             } catch {}
@@ -5587,7 +5587,7 @@
         const { latitude, longitude } = pos.coords;
 
         // Reverse geocode with Nominatim
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`);
         const geo = await geoRes.json();
         const name = geo.address?.city || geo.address?.town || geo.address?.village || geo.display_name?.split(',')[0] || 'Unknown';
 
@@ -5618,7 +5618,7 @@
 
       input.disabled = true;
       try {
-        var geoRes = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&limit=1');
+        var geoRes = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&limit=1&accept-language=en');
         var results = await geoRes.json();
         if (!results || results.length === 0) {
           showToast('Location not found', true);
