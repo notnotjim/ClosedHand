@@ -849,8 +849,6 @@
         <p class="ch-welcome-status" id="done-status" role="status"></p>
         <div class="ch-welcome-actions">
           <a class="ch-welcome-primary" href="/">Open ClosedHand</a>
-          <a class="ch-welcome-secondary" href="/dashboard#dashboard-link">Manage your personal URL</a>
-          <button class="ch-welcome-secondary" id="done-close" type="button">Back to setup</button>
         </div>
       </div>
     </div>
@@ -1310,7 +1308,6 @@
     readWelcome();
   }
   $("#welcome-replay").addEventListener("click", celebrate);
-  $("#done-close").addEventListener("click", function () { $("#done-screen").close(); });
   $("#done-screen").addEventListener("close", function () { ++_welcomeRequest; clearTimeout(_welcomeTimer); });
 
   // Microsoft signs in by code: this page shows the code, the person enters
