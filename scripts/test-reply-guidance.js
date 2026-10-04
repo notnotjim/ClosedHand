@@ -53,3 +53,10 @@ test("prices come in the local currency and the person's own", () => {
   const { responsePresentation } = require("../lib/response-presentation");
   assert.match(responsePresentation("web"), /in the local currency and in the person's own/);
 });
+
+test("the sandbox computer is for answers words cannot give, not a default", () => {
+  const engine = read("lib/engine.js");
+  assert.doesNotMatch(engine, /SHOW, DON'T TELL|do not wait to be asked\):\n- Numbers/);
+  assert.match(engine, /USE IT WHEN IT MAKES THE ANSWER BETTER THAN WORDS CAN \(and only then: every run costs the person time\)/);
+  assert.match(engine, /Not for what a sentence already answers: which of a few nearby places is closer, a couple of options near somewhere, one simple sum\./);
+});

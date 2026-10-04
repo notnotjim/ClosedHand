@@ -173,3 +173,10 @@ test("a long conversation carries on quietly: no note about its length", () => {
   const engine = read("lib/engine.js");
   assert.doesNotMatch(engine, /thread-size|Thread note|longThreadNotice/, "older history is condensed into memory without telling anyone");
 });
+
+test("a message sent just after a restart is not mistaken for one the restart interrupted", () => {
+  const src = read("lib/resume.js");
+  assert.match(src, /const processStartedAt = \(\) => Date\.now\(\) - process\.uptime\(\) \* 1000;/);
+  assert.match(src, /if \(new Date\(info\.startedAt\)\.getTime\(\) >= processStartedAt\(\)\) continue;/, "skipped, and its marker left for the process answering it");
+  assert.ok(src.indexOf("processStartedAt()) continue;") < src.indexOf("Heads up: a system update interrupted me"), "checked before telling anyone it was interrupted");
+});
