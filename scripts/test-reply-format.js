@@ -115,3 +115,22 @@ test("coming back to the tab shows what arrived while away", () => {
   assert.match(page, /div\._raw = raw;/, "each message keeps the text as sent");
   assert.match(page, /missedSince\(data\.messages \|\| \[\], last\)/);
 });
+
+test("the conversation uses the app's scale, set once, larger on touch screens", () => {
+  const root = page.slice(page.indexOf("  :root {"), page.indexOf("  * { margin: 0; padding: 0; box-sizing: border-box; }"));
+  for (const token of ["--chat-text: 16px;", "--chat-input-min: 48px;"]) assert.ok(root.includes(token), `touch default ${token}`);
+  assert.match(root, /@media \(hover: hover\) and \(pointer: fine\) \{\n\s*:root \{\n\s*--chat-text: 15px;\n\s*--chat-text-sm: 13px;\n\s*--chat-meta: 11px;/, "computers get the dashboard's scale");
+  assert.doesNotMatch(page, /font-size: 17px !important/, "no hero-sized messages");
+  assert.doesNotMatch(page, /div\.style\.fontSize = '16px'/, "no inline sizes overriding the scale");
+  assert.match(page, /\.message \{\n\s*max-width: 85%;\n\s*padding: var\(--chat-pad\);\n\s*border-radius: 18px;\n\s*font-size: var\(--chat-text\);/);
+  assert.match(page, /\.docked-input \.input-textarea-wrap textarea \{\n\s*font-size: var\(--chat-text\);/);
+  assert.match(page, /\.docked-input \.input-box-wrap:focus-within \{ transform: none; \}/, "the chat input does not zoom on focus");
+  assert.match(page, /\.docked-input \.toolbar-btn \{ width: var\(--chat-control\); height: var\(--chat-control\);/);
+  assert.match(page, /docked-input textarea \{[^}]*font-size: 16px !important/, "phones keep 16px in the input so the page does not zoom");
+});
+
+test("only a tab waiting for its own reply can call it stalled", () => {
+  assert.match(page, /else if \(_awaitingReply\) armResponseWatchdog\(\);/);
+  assert.match(page, /_awaitingReply = false; disarmResponseWatchdog\(\);/);
+  assert.match(page, /_awaitingReply = true;\n\s*armResponseWatchdog\(\);/);
+});

@@ -21,6 +21,36 @@
     /* Headlines speak in the wordmark's face; everything else is the interface family. */
     --font-body: 'IBM Plex Sans', system-ui, sans-serif;
     --font-display: var(--font-brand);
+
+    /* The web chat's sizes. The conversation is part of the app, so it uses
+       the app's scale: the sidebar and the dashboard set text at 13 to 14px
+       on a computer. It used to keep the home page's hero sizes (17px
+       messages, an 18px input, 40px buttons) and read larger than
+       everything beside it. Touch screens keep larger values, and the input
+       stays at 16px there, because a phone zooms the page into any smaller
+       text field. */
+    --chat-text: 16px;          /* messages and what you type */
+    --chat-text-sm: 14px;       /* tables, code and the live progress line */
+    --chat-meta: 12px;          /* times under a message */
+    --chat-nav: 15px;           /* the header's links while chatting */
+    --chat-control: 40px;       /* the input's square buttons */
+    --chat-pad: 12px 16px;      /* inside a message */
+    --chat-input-pad: 18px 20px 12px;
+    --chat-input-min: 48px;
+    --chat-input-focus: 96px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :root {
+      --chat-text: 15px;
+      --chat-text-sm: 13px;
+      --chat-meta: 11px;
+      --chat-nav: 13px;
+      --chat-control: 34px;
+      --chat-pad: 10px 14px;
+      --chat-input-pad: 14px 18px 10px;
+      --chat-input-min: 40px;
+      --chat-input-focus: 84px;
+    }
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -386,12 +416,20 @@
     transition: min-height 0.4s cubic-bezier(0.16,1,0.3,1);
     overscroll-behavior: contain;
   }
+  .docked-input .input-textarea-wrap { padding: var(--chat-input-pad); }
+  /* The home page's hero box grows 3% when focused; the chat's input stays put. */
+  .docked-input .input-box-wrap:focus-within { transform: none; }
   .docked-input .input-textarea-wrap textarea {
-    min-height: 52px;
+    font-size: var(--chat-text);
+    font-weight: 400;
+    min-height: var(--chat-input-min);
   }
-  .docked-input:focus-within .input-textarea-wrap textarea {
-    min-height: 120px;
+  .docked-input:focus-within .input-box-wrap .input-textarea-wrap textarea {
+    min-height: var(--chat-input-focus);
   }
+  .docked-input .input-toolbar { padding: 8px 14px 12px; }
+  .docked-input .toolbar-btn { width: var(--chat-control); height: var(--chat-control); border-radius: 10px; }
+  .docked-input .send-btn { font-size: var(--chat-text-sm); padding: 8px 18px; border-radius: 10px; }
   .input-box-wrap:focus-within .input-textarea-wrap textarea {
     min-height: 120px;
   }
@@ -980,17 +1018,17 @@
   .voice-status { font-size: 14px; color: #B6AFA4; }
   .voice-status:empty { display: none; }
   @media (pointer: coarse), (max-width: 600px) { .message.bot .msg-tool { width: 44px; height: 44px; } }
-  .msg-time { font-size: 11px; color: rgba(239,230,214,0.4); white-space: nowrap; }
+  .msg-time { font-size: var(--chat-meta); color: rgba(239,230,214,0.4); white-space: nowrap; }
   /* Back to the latest message, when the reader has scrolled up. */
   .scroll-latest { position: fixed; right: 28px; z-index: 12; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(239,230,214,0.14); background: rgba(26,24,23,0.92); color: rgba(239,230,214,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
   .scroll-latest.show { opacity: 1; transform: none; pointer-events: auto; }
   .scroll-latest:hover { color: #EFE6D6; border-color: rgba(239,230,214,0.3); }
   .message {
     max-width: 85%;
-    padding: 12px 16px;
+    padding: var(--chat-pad);
     border-radius: 18px;
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: var(--chat-text);
+    line-height: 1.6;
     animation: msgIn 0.25s cubic-bezier(0.16,1,0.3,1);
     word-wrap: break-word;
     white-space: pre-wrap;
@@ -1001,19 +1039,14 @@
     color: #EFE6D6 !important;
     border: 1px solid rgba(208,86,63,0.15);
     max-width: 70%;
-    font-size: 17px !important;
     border-radius: 14px 14px 4px 14px;
     margin-top: 16px;
-    padding: 14px 16px;
   }
   .message.bot {
     background: rgba(239,230,214,0.03);
     color: #EFE6D6 !important;
     border: 1px solid rgba(239,230,214,0.06);
     max-width: 100%;
-    padding: 14px 16px;
-    font-size: 17px !important;
-    line-height: 1.7;
     border-radius: 14px 14px 14px 4px;
   }
   /* Subtle separator between conversation turns */
@@ -1025,10 +1058,10 @@
   .message.bot img { max-width: 100%; border-radius: 12px; margin: 8px 0; }
   .message.bot pre {
     background: rgba(239,230,214,0.06); border-radius: 10px; padding: 14px;
-    overflow-x: auto; font-size: 13px; margin: 8px 0;
+    overflow-x: auto; font-size: var(--chat-text-sm); margin: 8px 0;
     border: 1px solid rgba(239,230,214,0.08);
   }
-  .message.bot code { background: rgba(239,230,214,0.08); padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+  .message.bot code { background: rgba(239,230,214,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
 
   .typing-indicator {
     align-self: flex-start;
@@ -1871,6 +1904,7 @@
   .computers-view.active { display:block !important; }
   .computers-view.active .mon-area { opacity:1 !important; animation:none !important; }
   body.chat-active .page-tabs { display:none; }
+  @media (hover: hover) and (pointer: fine) { body.chat-active .header-right a { font-size: var(--chat-nav); } }
   body.chat-active .computers-view { display:none !important; }
   /* The list is exactly the space between its top and the floating input's
      top edge. --list-h is measured by the page and follows the box as it
@@ -2253,12 +2287,12 @@
   .message.bot .reply-list { margin: 6px 0 6px 20px; padding: 0; }
   .message.bot .reply-list li { margin: 3px 0; }
   .message.bot .reply-head { display: inline-block; margin-top: 4px; }
-  .agent-live { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px 4px; font-size: 13px; color: rgba(239,230,214,0.55); }
+  .agent-live { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px 4px; font-size: var(--chat-text-sm); color: rgba(239,230,214,0.55); }
   .agent-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #D8624B; flex: none; animation: agentLivePulse 1.6s ease-in-out infinite; }
   @keyframes agentLivePulse { 50% { opacity: 0.3; } }
   @media (prefers-reduced-motion: reduce) { .agent-live-dot { animation: none; } }
   .message.bot .reply-table { overflow-x: auto; margin: 8px 0 10px; }
-  .message.bot .reply-table table { border-collapse: collapse; font-size: 14px; line-height: 1.4; }
+  .message.bot .reply-table table { border-collapse: collapse; font-size: var(--chat-text-sm); line-height: 1.4; }
   .message.bot .reply-table th, .message.bot .reply-table td { padding: 6px 12px 6px 0; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(239,230,214,0.1); }
   .message.bot .reply-table th { font-weight: 600; color: rgba(239,230,214,0.6); white-space: nowrap; }
   .message.bot code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: rgba(239,230,214,0.08); padding: 1px 5px; border-radius: 4px; }
@@ -3765,9 +3799,9 @@
           if (window.ClosedHandSpeech && window.ClosedHandSpeech.receive(msg)) return;
           // Background progress is not a reply, so it never touches the reply watchdog.
           if (msg.type === 'agent_progress') { agentLiveLine(msg); return; }
-          // Final responses disarm the stall watchdog; progress events re-arm it
-          if (msg.type === 'message' || msg.type === 'canvas' || msg.type === 'stream_end' || msg.type === 'file') disarmResponseWatchdog();
-          else armResponseWatchdog();
+          // A reply ends the wait; progress while this tab waits restarts the timer.
+          if (msg.type === 'message' || msg.type === 'canvas' || msg.type === 'stream_end' || msg.type === 'file') { _awaitingReply = false; disarmResponseWatchdog(); }
+          else if (_awaitingReply) armResponseWatchdog();
           if (msg.type === 'message') { hideTyping(); addMessage(msg.content, 'bot'); }
           else if (msg.type === 'canvas') { hideTyping(); openCanvas(msg.id, msg.filename, msg.mime_type, msg.content); addCanvasMessage(msg); }
           else if (msg.type === 'file') { hideTyping(); addFileMessage(msg); }
@@ -3830,10 +3864,16 @@
   // request), stop the eternal "Thinking" spinner and tell the user to retry.
   // Rolling 6 min: the server's own wrap-up timeout is 5, so silence beyond that = dead.
   var _responseWatchdog = null;
+  // Only a tab that sent a message and is still waiting for its reply can
+  // call it stalled. Status events also arrive after a reply, and for
+  // messages sent from another tab or device on the same account; letting
+  // those restart the timer showed "stalled" for requests that had finished.
+  var _awaitingReply = false;
   function armResponseWatchdog() {
     clearTimeout(_responseWatchdog);
     _responseWatchdog = setTimeout(function() {
       _responseWatchdog = null;
+      _awaitingReply = false;
       hideTyping();
       var streamEl = document.getElementById('streamingMsg');
       if (streamEl) streamEl.remove();
@@ -3907,6 +3947,7 @@
       pendingMessages.push(payload);
       connectChat();
     }
+    _awaitingReply = true;
     armResponseWatchdog();
   }
 
@@ -4115,14 +4156,10 @@
     div.className = 'message ' + role;
     // The text as sent, whole: what catching up after a tab switch matches on.
     div._raw = raw;
-    // Force bright text inline to override any cached CSS
+    // Colour and size come from the stylesheet (.message and the chat scale).
     if (role === 'bot') {
-      div.style.color = '#EFE6D6';
-      div.style.fontSize = '16px';
       div.innerHTML = formatReply(text);
     } else {
-      div.style.color = '#EFE6D6';
-      div.style.fontSize = '16px';
       // Show file indicators in user message if attached
       var files = Array.isArray(fileInfo) ? fileInfo : (fileInfo ? [fileInfo] : []);
       files.forEach(function(f) {
