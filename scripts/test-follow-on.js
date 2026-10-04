@@ -33,7 +33,7 @@ test("Telegram's sender splits too, wherever it is called from", async () => {
   await bot.sendMessage(7, "A\n[[next]]\nB");
   assert.deepEqual(sent.map((s) => s[1]), ["Hello [[next]] stays whole", "A", "B"]);
   assert.equal(splitTelegram(bot), bot, "wrapped once");
-  assert.equal((read("index.js").match(/splitTelegram\(new TelegramBot\(/g) || []).length, 2, "both places the bot is made");
+  assert.equal((read("index.js").match(/splitTelegram\(require\("\.\/lib\/telegram-in-app"\)\.telegramInApp\(new TelegramBot\(/g) || []).length, 2, "both places the bot is made");
 });
 
 test("every chat app sender and every non-chat output handles breaks", () => {

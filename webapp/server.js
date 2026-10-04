@@ -531,8 +531,9 @@ function readCookie(req, name) {
   }
   return null;
 }
-function setAdminSessionCookie(res) {
-  res.append("Set-Cookie", `${browserAccess.sessionName(res.req)}=${encodeURIComponent(signUserId(ADMIN_SESSION_VALUE))}; ${browserAccess.sessionAttributes(res.req)}`);
+function setAdminSessionCookie(res, maxAgeSec) {
+  const attributes = browserAccess.sessionAttributes(res.req);
+  res.append("Set-Cookie", `${browserAccess.sessionName(res.req)}=${encodeURIComponent(signUserId(ADMIN_SESSION_VALUE))}; ${maxAgeSec ? attributes.replace(/Max-Age=\d+/, `Max-Age=${maxAgeSec}`) : attributes}`);
 }
 function hasAdminSession(req) {
   return verifySignedCookie(readCookie(req, browserAccess.sessionName(req))) === ADMIN_SESSION_VALUE;
@@ -1292,6 +1293,57 @@ for (const hook of ["line"]) {
   });
 }
 
+// --- Pages opened inside Telegram -------------------------------------------
+// A page ClosedHand sends on Telegram (a report, a canvas, a dashboard view)
+// opens inside Telegram through /tg/open, which hands Telegram's signed proof
+// of who opened it to /api/telegram/session. When that proof is fresh and is
+// the Telegram account linked to this ClosedHand, Telegram's own browser gets
+// a session, so no password is asked there; Telegram itself is locked. The
+// session lives only in Telegram's browser: it is a cookie set there, never
+// in a link that could be copied out, and it lasts 12 hours, renewed each
+// time a page is opened from Telegram.
+const TELEGRAM_SESSION_SEC = 12 * 60 * 60;
+const TELEGRAM_PROOF_MAX_AGE_SEC = 60 * 60;
+// Only pages ClosedHand itself sends, and never another site.
+function telegramTarget(to) {
+  const path = String(to || "");
+  return /^\/(report\/[0-9a-f-]{36}|canvas\/[^\s/?#]+|dashboard)([?#][^\s]*)?$/.test(path) ? path : "/";
+}
+app.get("/tg/open", (req, res) => {
+  const to = telegramTarget(req.query.to);
+  res.set("Cache-Control", "no-store");
+  res.set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline' https://telegram.org; connect-src 'self'; frame-ancestors 'self' https://web.telegram.org");
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Opening in ClosedHand</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script></head>
+<body style="margin:0;background:#141010"><script>
+(function () {
+  var to = ${JSON.stringify(to)};
+  var app = window.Telegram && window.Telegram.WebApp;
+  var proof = app && app.initData;
+  if (!proof) { location.replace(to); return; }
+  try { app.ready(); app.expand(); } catch (e) {}
+  fetch('/api/telegram/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData: proof }) })
+    .then(function () { location.replace(to); }, function () { location.replace(to); });
+})();
+</script></body></html>`);
+});
+app.post("/api/telegram/session", async (req, res) => {
+  try {
+    const tgUser = validateTelegramInitData((req.body || {}).initData, await telegramBotToken(), TELEGRAM_PROOF_MAX_AGE_SEC);
+    if (!tgUser || !tgUser.id) return res.status(403).json({ error: "Telegram could not confirm who opened this." });
+    const { data: link, error } = await supabase.from("chat_links").select("user_id")
+      .eq("platform", "telegram").eq("platform_user_id", String(tgUser.id)).limit(1);
+    if (error) throw error;
+    const { getAdminUserId } = require("./admin");
+    if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account is not the one linked to this ClosedHand." });
+    setAdminSessionCookie(res, TELEGRAM_SESSION_SEC);
+    res.status(204).end();
+  } catch (e) {
+    console.error("[telegram] in-app sign-in failed:", e.message);
+    res.status(500).json({ error: "Could not sign in from Telegram. Try again." });
+  }
+});
+
 // --- The gate: everything registered below needs the session (or Basic auth
 // --- for scripts) once a password exists. Pre-password, everything is open,
 // --- which is the localhost first-run expectation.
@@ -1394,8 +1446,13 @@ function setUserCookie(res, userId) {
 // TELEGRAM MINI APP — initData validation
 // ============================================================
 
-function validateTelegramInitData(initData) {
-  if (!initData || !TELEGRAM_BOT_TOKEN) return null;
+// The bot's key: the setup page saves it to runtime config, an env file may set it.
+async function telegramBotToken() {
+  return TELEGRAM_BOT_TOKEN || (await getRuntimeConf("TELEGRAM_BOT_TOKEN")) || null;
+}
+
+function validateTelegramInitData(initData, token, maxAgeSec = 86400) {
+  if (!initData || !token) return null;
 
   try {
     const params = new URLSearchParams(initData);
@@ -1406,13 +1463,14 @@ function validateTelegramInitData(initData) {
     const entries = [...params.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     const dataCheckString = entries.map(([k, v]) => `${k}=${v}`).join("\n");
 
-    const secretKey = crypto.createHmac("sha256", "WebAppData").update(TELEGRAM_BOT_TOKEN).digest();
+    const secretKey = crypto.createHmac("sha256", "WebAppData").update(token).digest();
     const computedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
 
-    if (computedHash !== hash) return null;
+    const given = Buffer.from(String(hash), "utf8"), expected = Buffer.from(computedHash, "utf8");
+    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return null;
 
     const authDate = parseInt(params.get("auth_date"), 10);
-    if (Date.now() / 1000 - authDate > 86400) return null;
+    if (!Number.isFinite(authDate) || Date.now() / 1000 - authDate > maxAgeSec) return null;
 
     const userStr = params.get("user");
     if (!userStr) return null;
@@ -1871,7 +1929,7 @@ app.get("/auth/:service", async (req, res) => {
   if (queryFlow === "chat_popup") {
     flow = "chat_popup";
   } else if (initData) {
-    tgUser = validateTelegramInitData(initData);
+    tgUser = validateTelegramInitData(initData, await telegramBotToken());
     if (!tgUser) return res.status(400).send("Invalid Telegram session");
     flow = "telegram";
   } else if (lineAccessToken) {
@@ -3566,7 +3624,7 @@ app.get("/api/services", (req, res) => {
 // Telegram Mini App status
 app.post("/api/telegram/status", async (req, res) => {
   const { initData } = req.body;
-  const tgUser = validateTelegramInitData(initData);
+  const tgUser = validateTelegramInitData(initData, await telegramBotToken());
 
   if (!tgUser) {
     return res.status(400).json({ error: "Invalid Telegram session" });
