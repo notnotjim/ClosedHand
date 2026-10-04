@@ -25,7 +25,7 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
       saved = structuredClone(value.settings);
       return { error: null };
     } }) }) } },
-    "./flights": {}, "./flights-scheduler": {}, "./llm": {},
+    "./flights": {}, "./flights-scheduler": {}, "./llm": {}, "./telegram-name": { showName: async () => {} },
     "./services/fact-vectors": { factVectors: () => ({ mirrorFact: async () => {} }) },
     "./engine": { queuedAsk: async (...args) => {
       calls.push(args);
