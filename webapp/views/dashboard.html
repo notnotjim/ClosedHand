@@ -5312,7 +5312,7 @@
     }
 
     // ---- Bookings picked out of mail: same card shape as a flight ----
-    var BOOKING_ICON = { train: '&#128646;', hotel: '&#127976;', event: '&#127915;', restaurant: '&#127869;&#65039;', car: '&#128663;', ferry: '&#9973;', bus: '&#128652;', other: '&#128203;' };
+    var BOOKING_ICON = { flight: '&#9992;&#65039;', train: '&#128646;', hotel: '&#127976;', event: '&#127915;', restaurant: '&#127869;&#65039;', car: '&#128663;', ferry: '&#9973;', bus: '&#128652;', other: '&#128203;' };
     function fmtBookingTime(iso, tz) {
       if (!iso) return '';
       var d = new Date(iso); if (isNaN(d)) return '';

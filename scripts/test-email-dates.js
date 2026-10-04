@@ -52,3 +52,21 @@ test("both readers are told to anchor on the email, and stored records heal", ()
   assert.match(bookings, /if \(b\.reference && flightRefs\.has\(String\(b\.reference\)/, "a flight is never also kept as a booking");
   assert.match(bookings, /let drop = !!ref && flightRefs\.has\(ref\);/);
 });
+
+test("a flight is labelled a flight: never a train or other, and never kept twice", () => {
+  const vm = require("node:vm");
+  const src = read("lib/bookings.js");
+  const box = {};
+  vm.runInNewContext(src.slice(src.indexOf("const KINDS"), src.indexOf("\n}\n", src.indexOf("function kindOf")) + 3) + "\nthis.kindOf = kindOf;", box);
+  assert.equal(box.kindOf({ kind: "train", provider: "Vietnam Airlines" }), "flight");
+  assert.equal(box.kindOf({ kind: "other", provider: "Vietnam Airlines" }), "flight");
+  assert.equal(box.kindOf({ kind: "bus", provider: "Qatar Airways" }), "flight");
+  assert.equal(box.kindOf({ kind: "flight", provider: "Trip.com" }), "flight", "the reader may now say flight itself");
+  assert.equal(box.kindOf({ kind: "other", provider: "Airbnb" }), "other");
+  assert.equal(box.kindOf({ kind: "train", provider: "Avanti West Coast" }), "train");
+  assert.equal(box.kindOf({ kind: "hotel", provider: "Air Hotel Bangkok" }), "hotel", "only travel kinds are re-labelled");
+  assert.match(src, /A flight is kind "flight", never train, bus or other\./);
+  assert.doesNotMatch(src, /Skip flights entirely/);
+  assert.match(src, /const kind = drop \? r\.kind : kindOf\(r\);/, "stored flights filed as trains are re-labelled on the next scan");
+  assert.match(read("webapp/views/dashboard.html"), /var BOOKING_ICON = \{ flight: '&#9992;&#65039;',/);
+});
