@@ -91,3 +91,30 @@ test("background progress: one live line on the web, one plain message on a chat
   assert.match(page, /if \(msg\.type === 'agent_progress'\) \{ agentLiveLine\(msg\); return; \}/);
   assert.ok(page.indexOf("if (msg.type === 'agent_progress')") < page.indexOf("armResponseWatchdog();\n"), "progress never arms the reply watchdog");
 });
+
+test("a long reply without marks is split anyway: the answer, then the rest in one or two parts", () => {
+  const { withBreaks } = require("../lib/follow-on");
+  const answer = "**Grab is the answer.** About £4 to £7 and 25 to 45 minutes door to door, less at your 13:25 landing.";
+  const table = "| Option | Cost |\n|---|---|\n" + Array.from({ length: 8 }, (_, i) => `| Option ${i} with a fairly long description of what it is | £${i} |`).join("\n");
+  const tips = "**Two things that catch people out.** " + "Terminal 3 has its own pickup zone for app cars, away from the taxi rank. ".repeat(5);
+  const close = "Ignore anyone offering a taxi inside the terminal.";
+  const long = [answer, table, tips, close].join("\n\n");
+  const split = parts(withBreaks(long));
+  assert.equal(split.length, 3);
+  assert.equal(split[0], answer, "the answer stands alone first");
+  assert.ok(split[1].startsWith("| Option"));
+  assert.ok(split[2].startsWith("**Two things"), "the rest splits at the paragraph nearest the middle");
+
+  assert.equal(withBreaks("Short reply."), "Short reply.");
+  const marked = "A long one.\n[[next]]\n" + "x".repeat(1200);
+  assert.equal(withBreaks(marked), marked, "the model's own breaks are kept");
+  const leadIn = ["Here is what I found:", table, tips, close].join("\n\n");
+  assert.equal(withBreaks(leadIn), leadIn, "a lead-in is not an answer to stand alone");
+  const headed = [answer, "### Options", table, tips].join("\n\n");
+  assert.ok(!parts(withBreaks(headed)).some((p) => /^### Options$/.test(p.trim())), "a heading never ends a part");
+});
+
+test("replies and delivered results get the fallback before they are saved or sent", () => {
+  assert.match(read("lib/engine.js"), /finalText = require\("\.\/follow-on"\)\.withBreaks\(finalText\);\n\s*conversation\.push/);
+  assert.match(read("lib/task-delivery.js"), /message: require\("\.\/follow-on"\)\.withBreaks\(message\)/);
+});
