@@ -48,3 +48,8 @@ test("new mail is indexed newest first", () => {
   assert.equal(JSON.stringify(box.f(rows).map((r) => r.data.date || "none")), JSON.stringify(["Sat, 3 Oct 2026 09:00:00 +0000", "Mon, 28 Sep 2026 10:00:00 +0000", "none"]));
   assert.match(usi, /const items = \(type === "email" \? newestFirst\(rows \|\| \[\]\) : \(rows \|\| \[\]\)\)/);
 });
+
+test("prices come in the local currency and the person's own", () => {
+  const { responsePresentation } = require("../lib/response-presentation");
+  assert.match(responsePresentation("web"), /in the local currency and in the person's own/);
+});

@@ -211,3 +211,18 @@ test("a background job that failed with nothing to show says what and why, and h
   assert.match(failedNote({ goal: "x", error: "This task reached its work allowance." }), /work allowance/);
   assert.doesNotMatch(failedNote({ goal: "x" }), /dashboard/);
 });
+
+test("a background job gets a short name, and until then its first sentence cut at a word", () => {
+  const verification = fs.readFileSync(path.join(__dirname, "..", "lib", "verification.js"), "utf8");
+  assert.match(verification, /The title names the result as a document would be named, 3 to 7 words/);
+  const agents = fs.readFileSync(path.join(__dirname, "..", "lib", "agents.js"), "utf8");
+  assert.match(agents, /\.\.\.\(prepared\.title \? \{ title: prepared\.title \} : \{\}\)/);
+  const start = agents.indexOf("  // Until preparation names it");
+  const body = agents.slice(start, agents.indexOf("\n  const task = await createTask", start));
+  const box = { goal: "I need somewhere to stay in Saigon from the 7th for a week. Can you find me a few good options?" };
+  vm.runInNewContext(body + "\nthis.out = title;", box);
+  assert.equal(box.out, "I need somewhere to stay in Saigon from the 7th for a week");
+  const long = { goal: "can you find me a couple of good coworking spaces in District 1 with day passes for the week" };
+  vm.runInNewContext(body + "\nthis.out = title;", long);
+  assert.equal(long.out, "can you find me a couple of good coworking spaces in District 1 with…");
+});
