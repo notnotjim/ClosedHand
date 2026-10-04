@@ -43,5 +43,10 @@ test("a week of runs on the list, older ones archived and loaded on request", ()
   assert.doesNotMatch(dashboard, /6 \* 3600 \* 1000/, "finished runs no longer vanish after six hours");
   assert.match(dashboard, /group\('Running now', live\) \+ group\('Waiting for your answer', waiting\) \+ group\('This week', finished\)/);
   assert.match(dashboard, /fetch\('\/api\/agents\?archived=1'\)/);
-  assert.match(dashboard, /Nothing archived yet\. Finished runs move here a week after they ran\./);
+  assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "the Archived row shows only when something is archived");
+  assert.match(dashboard, /'Archived <span class="count">\\u00b7 ' \+ count \+ '<\/span><span class="chevron-down"><\/span><\/button>'/, "a heading row like the list's own, with its count");
+  assert.match(dashboard, /_archivedRunCount = await archivedCount\('\/api\/agents\?archived=1&count=1'\);/);
+  assert.match(read("webapp/server.js"), /if \(req\.query\.archived === "1" && req\.query\.count === "1"\) \{/);
+  assert.doesNotMatch(dashboard, /Show archived runs|Nothing archived yet/);
+  assert.match(dashboard, /ClosedHand spins up agent teams automatically when a task needs research, or an agent on each part\. You can also create your own agents that run on a schedule/);
 });

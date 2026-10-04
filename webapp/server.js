@@ -4282,6 +4282,13 @@ app.get("/api/agents", async (req, res) => {
 
   try {
     const cutoff = new Date(Date.now() - ARCHIVE_AFTER_MS).toISOString();
+    // How many are archived, for the list's Archived row (?archived=1&count=1).
+    if (req.query.archived === "1" && req.query.count === "1") {
+      const { count, error } = await supabase.from("agent_tasks").select("id", { count: "exact", head: true })
+        .eq("user_id", userId).in("status", DONE_RUN_STATUSES).lt("created_at", cutoff);
+      if (error) throw error;
+      return res.json({ count: count || 0 });
+    }
     const runs = () => supabase
       .from("agent_tasks")
       .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at, runtime")
@@ -4503,6 +4510,11 @@ app.get("/api/pages", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const cutoff = new Date(Date.now() - ARCHIVE_AFTER_MS).toISOString();
+    if (req.query.archived === "1" && req.query.count === "1") {
+      const { count, error } = await supabase.from("reports").select("id", { count: "exact", head: true }).eq("user_id", userId).lt("created_at", cutoff);
+      if (error) throw error;
+      return res.json({ count: count || 0 });
+    }
     let query = supabase.from("reports").select("id, title, created_at, updated_at").eq("user_id", userId);
     query = req.query.archived === "1" ? query.lt("created_at", cutoff) : query.gte("created_at", cutoff);
     const { data, error } = await query.order("created_at", { ascending: false }).limit(100);

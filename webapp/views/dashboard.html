@@ -1545,9 +1545,14 @@
     .auto-status-pill.active { background: rgba(141,189,121,0.12); color: #8DBD79; }
     .auto-status-pill.paused { background: rgba(208,166,82,0.12); color: #D0A652; }
     .auto-status-pill.idle { background: rgba(26,24,23,0.12); color: #B6AFA4; }
-    .agent-archive-toggle { font-size: 12px; margin: 2px 0 12px; }
-    .agent-archive-toggle a { color: #B6AFA4; }
-    .agent-archive-empty { font-size: 12px; color: rgba(239,230,214,0.6); margin: -6px 0 12px; }
+    /* Archived: a heading row like the list's own, closed until wanted. */
+    /* Specific enough to beat the dashboard's general button padding and size,
+       so it lines up with the headings above it exactly. */
+    #auto-active-list .archive-row, #pages-list .archive-row { width: 100%; background: none; border: 0; padding: 0 4px; font-size: 13px; cursor: pointer; font-family: inherit; text-align: left; }
+    .archive-row:hover, .archive-row:focus-visible { color: #EFE6D6; }
+    .archive-row .count { font-weight: 500; letter-spacing: 0; }
+    .archive-row .chevron-down { width: 6px; height: 6px; margin: -3px 2px 0; }
+    .archive-row[aria-expanded="true"] .chevron-down { transform: rotate(225deg); margin-top: 3px; }
     .auto-card-meta {
       font-size: 13px;
       color: rgba(239,230,214,0.6);
@@ -2270,7 +2275,7 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand spins up agents automatically when a task needs research or multiple steps. You can also create your own agents that run on a schedule, like daily briefings or monitoring.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand spins up agent teams automatically when a task needs research, or an agent on each part. You can also create your own agents that run on a schedule, like daily briefings or monitoring.</p>
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
@@ -6145,6 +6150,7 @@
         var res = await fetch('/api/agents');
         if (!res.ok) throw new Error('Tasks unavailable');
         var agents = await res.json();
+        _archivedRunCount = await archivedCount('/api/agents?archived=1&count=1');
         document.getElementById('auto-active-error').hidden = true;
         // The list holds this week's runs; the server folds older finished
         // ones into Archived, which loads only when it is opened.
@@ -6156,10 +6162,8 @@
         };
         activeLabel.style.display = 'none';
         var html = group('Running now', live) + group('Waiting for your answer', waiting) + group('This week', finished) +
-          '<div class="agent-archive-toggle"><a href="#" onclick="toggleArchivedRuns();return false;">' +
-          (_archivedRuns ? 'Hide archived runs' : 'Show archived runs') + '</a></div>' +
-          (_archivedRuns ? (_archivedRuns.length ? group('Archived', _archivedRuns)
-            : '<p class="agent-archive-empty">Nothing archived yet. Finished runs move here a week after they ran.</p>') : '');
+          archiveRow('toggleArchivedRuns()', _archivedRunCount, !!_archivedRuns) +
+          (_archivedRuns ? _archivedRuns.map(renderAgentCard).join('') : '');
         if (activeList.innerHTML !== html) activeList.innerHTML = html;
 
       } catch (e) {
@@ -6168,8 +6172,18 @@
       }
     }
 
+    // Archived: a heading row like the list's own ("ARCHIVED · 3"), shown only
+    // when something is archived, opening the older entries beneath it.
+    function archiveRow(toggle, count, open) {
+      if (!count) return '';
+      return '<button type="button" class="mc-section-label archive-row" aria-expanded="' + open + '" onclick="' + toggle + '">' +
+        'Archived <span class="count">\u00b7 ' + count + '</span><span class="chevron-down"></span></button>';
+    }
+    async function archivedCount(url) {
+      try { var r = await fetch(url); return r.ok ? ((await r.json()).count || 0) : 0; } catch (e) { return 0; }
+    }
     // Runs from more than a week ago, loaded when the person opens Archived.
-    var _archivedRuns = null;
+    var _archivedRuns = null, _archivedRunCount = 0;
     async function toggleArchivedRuns() {
       if (_archivedRuns) { _archivedRuns = null; loadRunningAgents(); return; }
       try {
@@ -6239,12 +6253,11 @@
         if (!res.ok) throw new Error('Pages unavailable');
         var pages = await res.json();
         document.getElementById('pages-error').hidden = true;
+        var archived = await archivedCount('/api/pages?archived=1&count=1');
         list.innerHTML = (pages.length ? pages.map(renderPageCard).join('')
-          : '<p class="agent-archive-empty">No pages yet. When an answer is worth keeping or sharing, ClosedHand makes a page of it and it shows here.</p>') +
-          '<div class="agent-archive-toggle"><a href="#" onclick="toggleArchivedPages();return false;">' +
-          (_archivedPages ? 'Hide archived pages' : 'Show archived pages') + '</a></div>' +
-          (_archivedPages ? (_archivedPages.length ? '<div class="mc-section-label">Archived</div>' + _archivedPages.map(renderPageCard).join('')
-            : '<p class="agent-archive-empty">Nothing archived yet. Pages move here a week after they were made.</p>') : '');
+          : (archived ? '' : '<p class="auto-card-meta" style="padding:0 4px;">No pages yet. When an answer is worth keeping or sharing, ClosedHand makes a page of it and it shows here.</p>')) +
+          archiveRow('toggleArchivedPages()', archived, !!_archivedPages) +
+          (_archivedPages ? _archivedPages.map(renderPageCard).join('') : '');
       } catch (e) {
         document.getElementById('pages-error').hidden = false;
       }
