@@ -2499,7 +2499,7 @@
       <!-- Settings Tab Content -->
       <div class="tab-content" id="tab-pages">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">When an answer is worth keeping or sharing, ClosedHand also makes it a page. Every page is here, whichever chat or agent it came from. Each opens on its own and downloads as PDF or Word, and the answer is always in your chat too.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here, or download it as PDF or Word.</p>
           <div id="pages-list"></div>
           <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
         </div>
@@ -6255,7 +6255,7 @@
         document.getElementById('pages-error').hidden = true;
         var archived = await archivedCount('/api/pages?archived=1&count=1');
         list.innerHTML = (pages.length ? pages.map(renderPageCard).join('')
-          : (archived ? '' : '<p class="auto-card-meta" style="padding:0 4px;">No pages yet. When an answer is worth keeping or sharing, ClosedHand makes a page of it and it shows here.</p>')) +
+          : (archived ? '' : '<p class="auto-card-meta" style="padding:0 4px;">No pages yet.</p>')) +
           archiveRow('toggleArchivedPages()', archived, !!_archivedPages) +
           (_archivedPages ? _archivedPages.map(renderPageCard).join('') : '');
       } catch (e) {

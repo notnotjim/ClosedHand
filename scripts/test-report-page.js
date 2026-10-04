@@ -76,13 +76,13 @@ test("a report is made by judgement, only when it helps beyond the chat answer",
   const defs = read("lib/tools/definitions.js");
   const tool = defs.slice(defs.indexOf('name: "save_report"'), defs.indexOf('name: "agent_report_read"'));
   assert.match(tool, /core: true,/, "available in chat without a lookup");
-  assert.match(tool, /Make one ONLY when it helps them beyond the chat answer: they asked for a document, report, PDF or spreadsheet; or the result is something to keep, share or come back to/);
+  assert.match(tool, /Make one ONLY when it serves them better than a chat reply can: they asked for a document, report, PDF or spreadsheet; or the result is something to keep, share or come back to/);
   assert.match(tool, /An ordinary answer, however useful, is never a page/);
   assert.match(tool, /When you mention it, call it a page, never a report or a document\./);
   assert.match(tool, /The chat answer must still be complete on its own/);
   assert.match(read("lib/task-tools.js"), /"save_report"\]\);/, "background runs start with it");
   const { responsePresentation } = require("../lib/response-presentation");
-  assert.match(responsePresentation("web"), /if it does, write it with save_report as the fuller version/);
+  assert.match(responsePresentation("web"), /if it helps, write it with save_report for what it is/);
   const delivery = read("lib/task-delivery.js");
   assert.doesNotMatch(delivery, /isReportWorthy|report\|write-\?up\|document/, "no length or keyword test decides it");
   assert.match(delivery, /from\("reports"\)\.select\("id"\)\.eq\(table === "automation_runs" \? "automation_run_id" : "task_id", row\.id\)/, "delivery links the page the run made, if it made one");
@@ -152,6 +152,7 @@ test("every page is under Pages, a week on the list then Archived, whichever cha
   assert.match(dashboard, /<button class="tab" data-tab="pages" onclick="switchTab\('pages'\)">Pages<\/button>/);
   assert.match(dashboard, /fetch\('\/api\/pages\?archived=1'\)/);
   assert.match(dashboard, /Delete this page for good\? The answer in your chat stays\./);
+  assert.match(dashboard, />A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing\. Open it here, or download it as PDF or Word\.</, "says what a page is, plainly");
 });
 
 test("a saved agent's page is linked in its message, and removing a run keeps its page", () => {
