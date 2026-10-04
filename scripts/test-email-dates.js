@@ -26,12 +26,12 @@ test("a date without its year is the first such day after the email was sent", (
 
 test("a flight from an old email is dated by that email, so a past trip never shows as upcoming", () => {
   const emails = [
-    { id: "old", date: "Wed, 21 Dec 2022 06:48:44 +0000", subject: "Super Wi-Fi access confirmation", body: "QR1563 DPS-DOH 21 Dec 19:00. QR0009 DOH-LHR 22 Dec 01:50. Booking N44OQXBA" },
-    { id: "new", date: "2026-10-01T06:31:40Z", subject: "Your order", body: "VN123 DAD-SGN 7 Oct 11:55 FLCZQ4" },
+    { id: "old", date: "Wed, 21 Dec 2022 06:48:44 +0000", subject: "Your booking", body: "QR1563 DPS-DOH 21 Dec 19:00. QR0009 DOH-LHR 22 Dec 01:50. Booking ZR5LMT2A" },
+    { id: "new", date: "2026-10-01T06:31:40Z", subject: "Your order", body: "VN123 DAD-SGN 7 Oct 11:55 KQ7P2X" },
   ];
   const parsed = [
-    { emailIndex: 0, airline: "Qatar Airways", flightNumber: "QR1563", yearStated: false, departure: { airport: "DPS", dateTime: "2026-12-21T19:00:00+08:00" }, arrival: { airport: "DOH", dateTime: "2026-12-22T00:00:00+03:00" }, confirmationCode: "N44OQXBA" },
-    { emailIndex: 1, airline: "Vietnam Airlines", flightNumber: "VN123", yearStated: false, departure: { airport: "DAD", dateTime: "2026-10-07T11:55:00+07:00" }, arrival: { airport: "SGN", dateTime: "2026-10-07T13:25:00+07:00" }, confirmationCode: "FLCZQ4" },
+    { emailIndex: 0, airline: "Qatar Airways", flightNumber: "QR1563", yearStated: false, departure: { airport: "DPS", dateTime: "2026-12-21T19:00:00+08:00" }, arrival: { airport: "DOH", dateTime: "2026-12-22T00:00:00+03:00" }, confirmationCode: "ZR5LMT2A" },
+    { emailIndex: 1, airline: "Vietnam Airlines", flightNumber: "VN123", yearStated: false, departure: { airport: "DAD", dateTime: "2026-10-07T11:55:00+07:00" }, arrival: { airport: "SGN", dateTime: "2026-10-07T13:25:00+07:00" }, confirmationCode: "KQ7P2X" },
   ];
   const result = reconcileFlights({}, parsed, emails, Date.parse("2026-10-05T00:00:00Z"));
   const keys = result.patches.map(([key]) => key);

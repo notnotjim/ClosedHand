@@ -14,9 +14,9 @@ vm.runInNewContext(page.slice(start, end) + "\nthis.formatReply = formatReply;",
 const { formatReply } = box;
 
 test("bold, lists and line breaks render", () => {
-  const reply = "**Wednesday 7 October, 11:55** Vietnam time.\n\n- VN123, DAD → SGN\n- Ref FLCZQ4, seat 17E\n\nThree days from now.";
+  const reply = "**Wednesday 7 October, 11:55** Vietnam time.\n\n- VN123, DAD → SGN\n- Ref KQ7P2X, seat 12A\n\nThree days from now.";
   assert.equal(formatReply(reply),
-    "<strong>Wednesday 7 October, 11:55</strong> Vietnam time.<br><ul class=\"reply-list\"><li>VN123, DAD → SGN</li><li>Ref FLCZQ4, seat 17E</li></ul>Three days from now.",
+    "<strong>Wednesday 7 October, 11:55</strong> Vietnam time.<br><ul class=\"reply-list\"><li>VN123, DAD → SGN</li><li>Ref KQ7P2X, seat 12A</li></ul>Three days from now.",
     "a list's own margins space it, so the blank lines around it go");
   assert.equal(formatReply("1. First\n2. Second"), "<ol class=\"reply-list\"><li>First</li><li>Second</li></ol>");
   assert.equal(formatReply("### Today\nNothing urgent"), "<strong class=\"reply-head\">Today</strong><br>Nothing urgent");
@@ -90,11 +90,11 @@ test("a reopened conversation shows what was said, not ClosedHand's bookkeeping"
     { role: "assistant", content: "OK, cancelled." },
     { role: "user", content: "no, just pin the address here" },
     { role: "assistant", content: [{ type: "tool_use" }] },
-    { role: "assistant", content: "Cubicity De Tham, 232 Đề Thám" },
+    { role: "assistant", content: "Harbour House, 14 Quay Street" },
     { role: "user", content: "[The question lapsed unanswered, action cancelled]" },
     { role: "assistant", content: "OK, cancelled." },
   ]);
-  assert.deepEqual([...shown].map((m) => m.content), ["Just to confirm: send email?", "no, just pin the address here", "Cubicity De Tham, 232 Đề Thám"]);
+  assert.deepEqual([...shown].map((m) => m.content), ["Just to confirm: send email?", "no, just pin the address here", "Harbour House, 14 Quay Street"]);
   assert.equal((page.match(/shownInThread\(thread\.messages\)\.forEach/g) || []).length, 2, "both ways of opening a conversation");
   assert.doesNotMatch(page, /thread\.messages\.forEach/, "nothing draws a thread unfiltered");
 });

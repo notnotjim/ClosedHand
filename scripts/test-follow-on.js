@@ -9,10 +9,10 @@ const vm = require("node:vm");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 const { parts, joined, sendParts, splitTelegram } = require("../lib/follow-on");
 
-const reply = "Three good ones for 7 to 14 Oct:\n- Cubicity, £14\n\n[[next]]\n\n| Hotel | Per night |\n|---|---|\n| Cubicity | £14 |\n[[next]]\nPrices move; check Agoda too.";
+const reply = "Three good ones for 7 to 14 Oct:\n- Harbour House, £14\n\n[[next]]\n\n| Hotel | Per night |\n|---|---|\n| Harbour House | £14 |\n[[next]]\nPrices move; check Agoda too.";
 
 test("a reply splits at each break line, and only there", () => {
-  assert.deepEqual(parts(reply), ["Three good ones for 7 to 14 Oct:\n- Cubicity, £14", "| Hotel | Per night |\n|---|---|\n| Cubicity | £14 |", "Prices move; check Agoda too."]);
+  assert.deepEqual(parts(reply), ["Three good ones for 7 to 14 Oct:\n- Harbour House, £14", "| Hotel | Per night |\n|---|---|\n| Harbour House | £14 |", "Prices move; check Agoda too."]);
   assert.deepEqual(parts("Just one line."), ["Just one line."]);
   assert.deepEqual(parts("Talking about [[next]] inline stays whole."), ["Talking about [[next]] inline stays whole."]);
   assert.equal(joined(reply).includes("[[next]]"), false);

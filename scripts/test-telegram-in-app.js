@@ -38,8 +38,8 @@ test("a proof counts only when Telegram signed it with this bot's key, recently"
 test("only ClosedHand's own pages open this way, never another site", () => {
   const box = {};
   vm.runInNewContext(fn("telegramTarget") + "\nthis.f = telegramTarget;", box);
-  assert.equal(box.f("/page/236bf8e1-b53d-4d8e-a9d8-2791e0a99615"), "/page/236bf8e1-b53d-4d8e-a9d8-2791e0a99615");
-  assert.equal(box.f("/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615"), "/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615", "buttons sent before pages had their name");
+  assert.equal(box.f("/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07");
+  assert.equal(box.f("/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07", "buttons sent before pages had their name");
   assert.equal(box.f("/dashboard#schedules"), "/dashboard#schedules");
   assert.equal(box.f("/canvas/abc123"), "/canvas/abc123");
   for (const bad of ["//evil.example/x", "https://evil.example", "/report/../../x", "/api/agents", "javascript:alert(1)", ""]) {
@@ -85,8 +85,8 @@ function fakeBot(sent) {
 }
 
 const BASE = "https://sam.closedhand.ai";
-const SAIGON = "236bf8e1-b53d-4d8e-a9d8-2791e0a99615";
-const NEWCASTLE = "61c0eae2-5248-4acd-832d-460391d764c6";
+const SAIGON = "4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07";
+const NEWCASTLE = "9d3e6b1a-2c4f-4a7e-8b5d-0f1c2e3a4b5c";
 const open = (path) => `${BASE}/tg/open?to=${encodeURIComponent(path)}`;
 
 test("a page link becomes an Open page button, and in-app buttons go through the sign-in", async () => {
@@ -110,15 +110,15 @@ test("a page link becomes an Open page button, and in-app buttons go through the
 });
 
 test("links written for the web chat open in Telegram, as buttons named after each page", async () => {
-  const { telegramInApp } = loadInApp(BASE, { [SAIGON]: "Saigon move, Wednesday 7 October", [NEWCASTLE]: "Newcastle and the Champions League" });
+  const { telegramInApp } = loadInApp(BASE, { [SAIGON]: "Lisbon move, Wednesday 7 October", [NEWCASTLE]: "Newcastle and the Champions League" });
   const sent = [];
   const bot = telegramInApp(fakeBot(sent));
-  await bot.sendMessage(7, `Two to pick from:\n\n**Saigon move document** (flight, airport transfer): /report/${SAIGON}\n\n**Newcastle Champions League chances**: /report/${NEWCASTLE}\n\nWhich one were you after?`);
+  await bot.sendMessage(7, `Two to pick from:\n\n**Lisbon move document** (flight, airport transfer): /report/${SAIGON}\n\n**Newcastle Champions League chances**: /report/${NEWCASTLE}\n\nWhich one were you after?`);
   const { text, options } = sent[0];
-  assert.equal(text, "Two to pick from:\n\n<b>Saigon move document</b> (flight, airport transfer)\n\n<b>Newcastle Champions League chances</b>\n\nWhich one were you after?");
+  assert.equal(text, "Two to pick from:\n\n<b>Lisbon move document</b> (flight, airport transfer)\n\n<b>Newcastle Champions League chances</b>\n\nWhich one were you after?");
   assert.equal(options.parse_mode, "HTML");
   assert.deepEqual(options.reply_markup.inline_keyboard, [
-    [{ text: "Saigon move, Wednesday 7 October", web_app: { url: open(`/page/${SAIGON}`) } }],
+    [{ text: "Lisbon move, Wednesday 7 October", web_app: { url: open(`/page/${SAIGON}`) } }],
     [{ text: "Newcastle and the Champions League", web_app: { url: open(`/page/${NEWCASTLE}`) } }],
   ]);
 
@@ -132,7 +132,7 @@ test("links written for the web chat open in Telegram, as buttons named after ea
 
   await bot.editMessageText(`Done: /page/${SAIGON}`, { chat_id: 7, message_id: 3 });
   assert.equal(sent.at(-1).edit, true);
-  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Saigon move, Wednesday 7 October", "a reply edited into place gets it too");
+  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Lisbon move, Wednesday 7 October", "a reply edited into place gets it too");
 });
 
 test("Markdown shows as Telegram formatting, and plain text when Telegram refuses it", async () => {

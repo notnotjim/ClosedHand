@@ -14,7 +14,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 
 const report = {
   id: "a1b2c3",
-  title: "Saigon hotels, 7 to 14 October",
+  title: "Lisbon hotels, 7 to 14 October",
   created_at: "2026-10-04T05:00:00Z",
   updated_at: "2026-10-04T05:00:00Z",
   content: [
@@ -23,7 +23,7 @@ const report = {
     "## Private rooms",
     "| Hotel | Per night |",
     "|---|---:|",
-    "| Cubicity De Tham | £14.00 |",
+    "| Harbour House | £14.00 |",
     "| <script>alert(1)</script> | £15.71 |",
     "",
     "- Free cancellation on all three",
@@ -39,7 +39,7 @@ test("the report reads as headings, paragraphs, lists and tables", () => {
 
 test("the page shows the report safely, with downloads that say so and a delete that asks", () => {
   const html = page.pageHtml(report);
-  assert.match(html, /<title>Saigon hotels, 7 to 14 October<\/title>/);
+  assert.match(html, /<title>Lisbon hotels, 7 to 14 October<\/title>/);
   assert.match(html, /<h3>Private rooms<\/h3>/);
   assert.match(html, /<a href="https:\/\/example\.com\/cubicity" target="_blank" rel="noopener">the listing<\/a>/);
   assert.doesNotMatch(html, /<script>alert/, "nothing in a report becomes markup");
@@ -56,9 +56,9 @@ test("the page shows the report safely, with downloads that say so and a delete 
 test("the Word document opens and says what the page says", async () => {
   const mammoth = require("mammoth");
   const { value } = await mammoth.extractRawText({ buffer: page.docxBuffer(report) });
-  assert.match(value, /Saigon hotels, 7 to 14 October/);
+  assert.match(value, /Lisbon hotels, 7 to 14 October/);
   assert.match(value, /Three good ones for 7 to 14 October/);
-  assert.match(value, /Cubicity De Tham/);
+  assert.match(value, /Harbour House/);
   assert.match(value, /the listing \(https:\/\/example\.com\/cubicity\)/);
   assert.doesNotMatch(value, /\[\[next\]\]|\*\*/);
 });
@@ -69,7 +69,7 @@ test("the spreadsheet holds each table on a sheet named after its heading", () =
   assert.deepEqual(book.SheetNames, ["Private rooms"]);
   const rows = XLSX.utils.sheet_to_json(book.Sheets["Private rooms"], { header: 1 });
   assert.deepEqual(rows[0], ["Hotel", "Per night"]);
-  assert.equal(rows[1][0], "Cubicity De Tham");
+  assert.equal(rows[1][0], "Harbour House");
 });
 
 test("a report is made by judgement, only when it helps beyond the chat answer", () => {
@@ -129,13 +129,13 @@ test("older titles cut mid-word read as untitled and are cut at a word", () => {
   vm.runInNewContext(src.slice(start, src.indexOf("\n}\n", start) + 2) + "\nthis.f = runTitle;", box);
   assert.equal(box.f({ title: "Can you find me a couple of good coworking spaces in District 1 with d", goal: "Can you find me a couple of good coworking spaces in District 1 with day passes, for next week?" }),
     "Can you find me a couple of good coworking spaces in District 1 with day passes, for next…");
-  assert.equal(box.f({ title: "Saigon hotels, 7 to 14 October", goal: "whatever" }), "Saigon hotels, 7 to 14 October", "a real name is kept");
+  assert.equal(box.f({ title: "Lisbon hotels, 7 to 14 October", goal: "whatever" }), "Lisbon hotels, 7 to 14 October", "a real name is kept");
 });
 
 test("dividers render, the title is not repeated, empty headers and unedited reports stay quiet", () => {
-  const doc = { ...report, title: "Saigon move, Wednesday 7 October", content: "# Saigon move — Wednesday 7 October 2026\nEverything in one place.\n\n---\n\n| | |\n|---|---|\n| Flight | VN123 |", created_at: new Date("2026-10-04T05:00:00.000Z"), updated_at: new Date("2026-10-04T05:00:00.004Z") };
+  const doc = { ...report, title: "Lisbon move, Wednesday 7 October", content: "# Lisbon move — Wednesday 7 October 2026\nEverything in one place.\n\n---\n\n| | |\n|---|---|\n| Flight | VN123 |", created_at: new Date("2026-10-04T05:00:00.000Z"), updated_at: new Date("2026-10-04T05:00:00.004Z") };
   const html = page.pageHtml(doc);
-  assert.equal((html.match(/Saigon move/g) || []).length, 2, "the title tag and the page heading only, not the document's own repeat");
+  assert.equal((html.match(/Lisbon move/g) || []).length, 2, "the title tag and the page heading only, not the document's own repeat");
   assert.match(html, /<hr>/);
   assert.doesNotMatch(html, /<p>---<\/p>/);
   assert.doesNotMatch(html, /<thead>/, "a blank header row is left out");
