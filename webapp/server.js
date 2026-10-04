@@ -4361,7 +4361,8 @@ app.get("/api/agents/:id/pdf", async (req, res) => {
     const disposition = req.query.view === "1" ? "inline" : "attachment";
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `${disposition}; filename="ClosedHand - ${safe}${date ? ` - ${date}` : ""}.pdf"`);
-    runPdf(run).pipe(res);
+    // A follow-on break (lib/follow-on.js) is a paragraph in a document.
+    runPdf({ ...run, result: String(run.result).replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, "") }).pipe(res);
   } catch (err) {
     console.error("Agent PDF error:", err.message);
     res.status(500).json({ error: "Could not build the PDF" });

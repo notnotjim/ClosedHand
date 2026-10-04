@@ -6130,6 +6130,8 @@
     // reports lean on do not line up in a proportional font and read as a mess,
     // so tables become real tables and everything else keeps its own line breaks.
     function renderReport(md) {
+      // A follow-on break (lib/follow-on.js) is a paragraph in a report.
+      md = String(md).replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, '');
       var lines = escapeHtml(md).split(/\r?\n/);
       var out = [], text = [], i = 0;
       var inline = function(s) {
@@ -6454,7 +6456,7 @@
 
         overlay.innerHTML = '<div class="modal" style="max-width:650px;"><h3 style="margin-bottom:8px;">Run Report</h3>' +
           '<div style="font-size:13px;color:#B6AFA4;margin-bottom:10px;">Model: ' + esc(run.model || '') + ' | Duration: ' + (run.duration_secs ? formatDuration(run.duration_secs) : 'n/a') + ' | ' + esc(run.triggered_by || '') + ' | Status: <span style="color:' + (run.status === 'success' ? '#8DBD79' : run.status === 'failed' ? '#D8624B' : '#D0A652') + '">' + esc(run.status) + '</span></div>' +
-          '<div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:8px;padding:14px;max-height:40vh;overflow-y:auto;font-size:13px;color:#EFE6D6;line-height:1.6;white-space:pre-wrap;">' + esc(run.full_report || run.output_summary || '(No output)') + '</div>' +
+          '<div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:8px;padding:14px;max-height:40vh;overflow-y:auto;font-size:13px;color:#EFE6D6;line-height:1.6;white-space:pre-wrap;">' + esc(String(run.full_report || run.output_summary || '(No output)').replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, '')) + '</div>' +
           (run.tools_used && run.tools_used.length ? '<div class="mc-tools" style="margin-top:10px;">' + run.tools_used.map(function(t) { return '<span class="mc-tool-pill">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
           traceHtml +
           '<div class="modal-actions" style="margin-top:14px;"><button class="btn-modal btn-modal-secondary" onclick="this.closest(\'.modal-overlay\').remove()">Close</button></div></div>';

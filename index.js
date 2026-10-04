@@ -41,7 +41,7 @@ if (xaiApiKey) {
 }
 
 if (TELEGRAM_TOKEN) {
-  ctx.bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+  ctx.bot = require("./lib/follow-on").splitTelegram(new TelegramBot(TELEGRAM_TOKEN, { polling: true }));
 } else {
   console.log("[setup] No Telegram token yet. Watching runtime config; the wizard's save starts it live.");
   // The wizard saves the token into runtime config; start polling the moment it
@@ -52,7 +52,7 @@ if (TELEGRAM_TOKEN) {
       const token = await require("./lib/config").getConf("TELEGRAM_BOT_TOKEN");
       if (!token) return;
       clearInterval(tgWatcher);
-      ctx.bot = new TelegramBot(token, { polling: true });
+      ctx.bot = require("./lib/follow-on").splitTelegram(new TelegramBot(token, { polling: true }));
       require("./lib/platforms/telegram").setup();
       console.log("[setup] Telegram token saved in the wizard — polling started.");
     } catch (e) {

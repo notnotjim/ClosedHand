@@ -112,6 +112,6 @@ test("coming back to the tab shows what arrived while away", () => {
   assert.deepEqual([...box.f(history, "On it, back in about ten minutes.")].map((m) => m.content), ["Three good ones: …", "Reminder: iCloud storage"]);
   assert.deepEqual([...box.f(history, "Reminder: iCloud storage")], [], "nothing new");
   assert.deepEqual([...box.f(history, "")], [], "an empty page has nothing to anchor on");
-  assert.match(page, /div\._raw = text;/, "each message keeps the text as sent");
+  assert.match(page, /div\._raw = raw;/, "each message keeps the text as sent");
   assert.match(page, /missedSince\(data\.messages \|\| \[\], last\)/);
 });
