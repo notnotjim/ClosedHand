@@ -187,3 +187,27 @@ test("an answer sent back by the quality check is rewritten as the only answer",
     assert.doesNotMatch(caller, /improved response/, `${f} has no wording of its own`);
   }
 });
+
+test("a background model call survives a dropped connection; a stopped task is not retried", async () => {
+  let calls = 0;
+  const client = { messages: { create: async () => { calls++; if (calls === 1) throw new Error("fetch failed"); return { content: [{ type: "text", text: "ok" }], usage: {} }; } } };
+  const src = fs.readFileSync(path.join(__dirname, "..", "lib", "task-model.js"), "utf8");
+  assert.match(src, /retryNetwork\(error, \(\) => client\.messages\.create\(params, \{ signal: controller\.signal \}\), \{ pauses: \[3000, 10000\] \}\)/);
+  assert.match(src, /if \(active\?\.signal\?\.aborted \|\| error\.code === "TASK_STOPPED" \|\| error\.code === "MODEL_TIMEOUT"\) \{ failed = true; throw error; \}/);
+  const sw = require("../lib/sleep-watch");
+  const original = sw.retryNetwork;
+  sw.retryNetwork = (e, fn) => original(e, fn, { pauses: [1] });
+  try {
+    const res = await modelCall(client, { model: "m", max_tokens: 10, messages: [] }, { timeoutMs: 5000 });
+    assert.equal(res.content[0].text, "ok");
+    assert.equal(calls, 2);
+  } finally { sw.retryNetwork = original; }
+});
+
+test("a background job that failed with nothing to show says what and why, and how to restart", () => {
+  const { failedNote } = require("../lib/task-delivery");
+  assert.equal(failedNote({ goal: "can you find me a couple of good coworking spaces in District 1 with day passes, for next week?", error: "fetch failed" }),
+    'I couldn\'t finish "can you find me a couple of good coworking spaces in District 1 with day passes, for next…": the connection to the AI provider kept dropping. Say "try again" and I\'ll start it fresh.');
+  assert.match(failedNote({ goal: "x", error: "This task reached its work allowance." }), /work allowance/);
+  assert.doesNotMatch(failedNote({ goal: "x" }), /dashboard/);
+});

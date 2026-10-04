@@ -83,3 +83,8 @@ test("a progress line quotes words a person would say, never search syntax, iden
     assert.doesNotMatch(line, /1AbCdEf|some-key_slug|\bOR\b/, `${t.name}: ${line}`);
   }
 });
+
+test("a send's progress line fits both a send and a send that waits for a yes", () => {
+  const d = (n, i) => INTERNAL_TOOLS.find((t) => t.name === n).activityDescription(i);
+  assert.equal(d("gmail_send", { to: "sam@example.com" }), "Writing an email to sam@example.com");
+});

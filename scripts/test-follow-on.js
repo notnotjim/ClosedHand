@@ -118,3 +118,10 @@ test("replies and delivered results get the fallback before they are saved or se
   assert.match(read("lib/engine.js"), /finalText = require\("\.\/follow-on"\)\.withBreaks\(finalText\);\n\s*conversation\.push/);
   assert.match(read("lib/task-delivery.js"), /message: require\("\.\/follow-on"\)\.withBreaks\(message\)/);
 });
+
+test("web research in the foreground moves to the background after 40 seconds, other work after 100", () => {
+  const engine = read("lib/engine.js");
+  assert.match(engine, /const RESEARCH_HANDOVER_MS = 40 \* 1000;/);
+  assert.match(engine, /const RESEARCH_TOOLS = \/\^\(web_search\|web_fetch\|sandbox_browse\)\$\/;/);
+  assert.match(engine, /\[\.\.\.toolsUsed\]\.some\(t => RESEARCH_TOOLS\.test\(t\)\) \? RESEARCH_HANDOVER_MS : HANDOVER_MS/);
+});

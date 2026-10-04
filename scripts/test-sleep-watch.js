@@ -20,3 +20,13 @@ test('a request that died on wake is tried once more; other failures are not', a
   await assert.rejects(sw.retryAfterWake(new Error('The model provider returned HTTP 400.'), again, { pause: 1 }), /HTTP 400/);
   assert.equal(calls, 1, 'a provider refusal is not retried');
 });
+test('a network failure is retried after short pauses, awake or not; a refusal is not', async () => {
+  let calls = 0;
+  const flaky = async () => { calls++; if (calls < 2) throw new Error('fetch failed'); return 'ok'; };
+  assert.equal(await sw.retryNetwork(new Error('fetch failed'), flaky, { pauses: [1, 1] }), 'ok');
+  assert.equal(calls, 2, 'stopped retrying once it worked');
+  await assert.rejects(sw.retryNetwork(new Error('The model provider returned HTTP 400.'), flaky, { pauses: [1] }), /HTTP 400/);
+  let tries = 0;
+  await assert.rejects(sw.retryNetwork(new Error('fetch failed'), async () => { tries++; throw new Error('socket hang up'); }, { pauses: [1, 1] }), /socket hang up/);
+  assert.equal(tries, 2, 'every pause gets one try, then it gives up');
+});
