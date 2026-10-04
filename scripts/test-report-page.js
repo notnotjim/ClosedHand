@@ -5,6 +5,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 const page = require("../webapp/report-page");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 
@@ -81,4 +82,36 @@ test("deleting a run says it deletes the report too, and asks first", () => {
   assert.match(dashboard, /Delete this run and its report for good\?/);
   const server = read("webapp/server.js");
   assert.equal((server.match(/app\.delete\("\/api\/agents\/:id"/g) || []).length, 1, "one delete route");
+});
+
+test("only a run that earned a report is offered as one", () => {
+  const { isReportWorthy } = require("../lib/task-delivery");
+  const coworking = { goal: "can you find me a couple of good coworking spaces in District 1 with day passes, for next week?" };
+  assert.equal(isReportWorthy(coworking, "Two I'd go for: cirCO and XÓM. ".repeat(40)), false, "an answer that fits in chat is an answer");
+  assert.equal(isReportWorthy(coworking, "x".repeat(3600)), true, "too long for chat to carry whole");
+  assert.equal(isReportWorthy({ goal: "write me a report on Saigon coworking" }, "short"), true, "asked for a document");
+  assert.equal(isReportWorthy({ goal: "put the options in a spreadsheet" }, "short"), true);
+  const delivery = read("lib/task-delivery.js");
+  assert.match(delivery, /reportDigest\(report, dest\.platform, row\.user_id, store, asReport \? row\.id : null\)/);
+  assert.match(delivery, /update\(\{ runtime: \{ \.\.\.\(row\.runtime \|\| \{\}\), report: true \} \}\)/);
+  assert.match(read("webapp/views/dashboard.html"), /a\.result && a\.runtime && a\.runtime\.report\)/, "the dashboard offers report buttons only for reports");
+});
+
+test("each file button shows it downloads, and says so", () => {
+  const html = page.pageHtml(run, "Saigon hotels");
+  for (const label of ["PDF", "Word", "Excel"]) {
+    assert.match(html, new RegExp(`download aria-label="Download as ${label}" title="Download as ${label}"><svg[^>]*aria-hidden="true"`));
+  }
+});
+
+test("older titles cut mid-word read as untitled and are cut at a word", () => {
+  const src = read("webapp/run-pdf.js");
+  const start = src.indexOf("function runTitle");
+  const box = {};
+  vm.runInNewContext(src.slice(start, src.indexOf("\n}\n", start) + 2) + "\nthis.f = runTitle;", box);
+  assert.equal(box.f({ title: "Can you find me a couple of good coworking spaces in District 1 with d", goal: "Can you find me a couple of good coworking spaces in District 1 with day passes, for next week?" }),
+    "Can you find me a couple of good coworking spaces in District 1 with day passes, for next…");
+  assert.equal(box.f({ title: "I need somewhere to stay in Saigon from the 7th for a week. Can you fi", goal: "I need somewhere to stay in Saigon from the 7th for a week. Can you find me a few good options?" }),
+    "I need somewhere to stay in Saigon from the 7th for a week");
+  assert.equal(box.f({ title: "Saigon hotels, 7 to 14 October", goal: "whatever" }), "Saigon hotels, 7 to 14 October", "a real name is kept");
 });

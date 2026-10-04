@@ -89,10 +89,14 @@ function pageHtml(run, title) {
   const id = encodeURIComponent(run.id);
   const date = run.completed_at || run.created_at;
   const when = date ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+  // Each button downloads the report in that format, and says so: an arrow
+  // into a tray, and a label that names the download for screen readers.
+  const icon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
+  const file = (kind, label) => `<a class="file" href="/api/agents/${id}/${kind}" download aria-label="Download as ${label}" title="Download as ${label}">${icon}${label}</a>`;
   const files = [
-    `<a class="file" href="/api/agents/${id}/pdf">PDF</a>`,
-    `<a class="file" href="/api/agents/${id}/docx">Word</a>`,
-    hasTables(run.result) ? `<a class="file" href="/api/agents/${id}/xlsx">Excel</a>` : "",
+    file("pdf", "PDF"),
+    file("docx", "Word"),
+    hasTables(run.result) ? file("xlsx", "Excel") : "",
   ].join("");
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -109,7 +113,9 @@ main { max-width: 760px; margin: 0 auto; }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; text-decoration: none; }
 .brand img { width: 18px; height: 18px; }
 .files { display: flex; gap: 8px; }
-.file { font-size: 13px; font-weight: 500; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
+.file { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px 5px 11px; }
+.file svg { flex: none; color: var(--muted); }
+.file:hover svg, .file:focus-visible svg { color: var(--accent); }
 .file:hover, .file:focus-visible { border-color: var(--accent); color: var(--accent); }
 h1 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
 .when { color: var(--muted); font-size: 14px; margin: 0 0 28px; }

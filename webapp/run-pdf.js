@@ -51,14 +51,16 @@ const ACCENT = "#16a34a";
 // Same title derivation as the dashboard card: the run's own title, else the
 // first real sentence of what the user asked.
 function runTitle(run) {
-  let goal = run.title
-    ? String(run.title)
-    : String(run.goal || "Agent run").split(/\n\[Picking up work/)[0].replace(/\s+/g, " ").trim();
-  if (!run.title) {
+  const asked = String(run.goal || "Agent run").split(/\n\[Picking up work/)[0].replace(/\s+/g, " ").trim();
+  // Older runs were titled with the request's first 70 characters, cut
+  // wherever they fell; those read as untitled and get cut at a word.
+  const titled = run.title && !(String(run.title).length >= 60 && asked.startsWith(String(run.title)));
+  let goal = titled ? String(run.title) : asked;
+  if (!titled) {
     const stop = goal.search(/[.!?](\s|$)/);
     if (stop > 25) goal = goal.slice(0, stop);
   }
-  if (goal.length > 90) goal = goal.slice(0, 90) + "…";
+  if (goal.length > 90) goal = goal.slice(0, 90).replace(/\s+\S*$/, "") + "…";
   return goal.charAt(0).toUpperCase() + goal.slice(1);
 }
 
