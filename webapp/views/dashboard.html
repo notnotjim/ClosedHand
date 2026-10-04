@@ -1608,6 +1608,9 @@
       transition: all 0.12s;
     }
     .auto-dest-btn:hover { border-color: rgba(239,230,214,0.28); color: #EFE6D6; }
+    .auto-dest-btn.unavailable { opacity: 0.55; }
+    .auto-email-hint { font-size: 13px; color: rgba(239,230,214,0.6); margin: -4px 0 8px; }
+    .auto-email-hint a { color: #B6AFA4; }
     .auto-dest-btn.active { background: rgba(141,189,121,0.12); border-color: rgba(141,189,121,0.4); color: #8DBD79; }
     .auto-trigger-btn, .auto-model-btn {
       padding: 6px 14px;
@@ -5753,7 +5756,33 @@
     var _selectedModel = 'sonnet';
     var _selectedDest = 'chat_platforms';
 
+    // Email results come from the assistant's own address, so the option
+    // works only while that address is on; otherwise it says where to turn it on.
+    var _assistantEmail = null;
+    async function loadAssistantEmailState() {
+      try {
+        var r = await fetch('/api/assistant-email');
+        var d = r.ok ? await r.json() : {};
+        _assistantEmail = { on: !!(d.available && d.enabled && d.address), name: d.name || 'ClosedHand' };
+      } catch (e) { _assistantEmail = { on: false, name: 'ClosedHand' }; }
+      var btn = document.querySelector('.auto-dest-btn[data-dest="email"]');
+      if (!btn) return;
+      btn.classList.toggle('unavailable', !_assistantEmail.on);
+      btn.title = _assistantEmail.on ? 'Sent to you from ' + _assistantEmail.name + '\u2019s own email address' : 'Turn on ' + _assistantEmail.name + '\u2019s email address in Settings to use this';
+    }
+    function openEmailSettings() {
+      closeCreateAutomationModal();
+      switchTab('settings');
+      setTimeout(function () { var h = document.getElementById('assistant-email-heading'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+    }
     function selectDest(dest) {
+      var hint = document.getElementById('auto-email-hint');
+      if (dest === 'email' && _assistantEmail && !_assistantEmail.on) {
+        hint.innerHTML = 'Turn on ' + escapeHtml(_assistantEmail.name) + '\u2019s email address in <a href="#" onclick="openEmailSettings();return false;">Settings</a> to use this.';
+        hint.hidden = false;
+        return;
+      }
+      if (hint) hint.hidden = true;
       _selectedDest = dest;
       document.querySelectorAll('.auto-dest-btn').forEach(function(b) {
         b.classList.toggle('active', b.dataset.dest === dest);
@@ -6690,6 +6719,9 @@
     }
 
     function openCreateAutomationModal() {
+      loadAssistantEmailState();
+      var emailHint = document.getElementById('auto-email-hint');
+      if (emailHint) emailHint.hidden = true;
       document.getElementById('auto-template-select').value = '';
       document.getElementById('auto-name-input').value = '';
       document.getElementById('auto-prompt-input').value = '';
@@ -6749,6 +6781,7 @@
 
       if (!name) { errEl.textContent = 'Give it a name.'; errEl.style.display = 'block'; return; }
       if (!prompt) { errEl.textContent = 'Describe what it should do.'; errEl.style.display = 'block'; return; }
+      if (_selectedDest === 'email' && _assistantEmail && !_assistantEmail.on) { errEl.textContent = 'Turn on ' + _assistantEmail.name + '\u2019s email address in Settings first, or choose another place to send results.'; errEl.style.display = 'block'; return; }
 
       // Build schedule
       var triggerCron = null;
@@ -8385,8 +8418,9 @@
       <div id="auto-output-dest" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
         <button type="button" class="auto-dest-btn active" data-dest="chat_platforms" onclick="selectDest('chat_platforms')">Chat apps</button>
         <button type="button" class="auto-dest-btn" data-dest="dashboard" onclick="selectDest('dashboard')">Dashboard only</button>
-        <button type="button" class="auto-dest-btn" data-dest="email" onclick="selectDest('email')" title="Sent to you, from your own connected Google or Microsoft account">Email</button>
+        <button type="button" class="auto-dest-btn" data-dest="email" onclick="selectDest('email')">Email</button>
       </div>
+      <p id="auto-email-hint" class="auto-email-hint" role="status" hidden></p>
       <!-- Under the destinations, where the row has room, rather than a row of its own. -->
       <a href="#" onclick="event.preventDefault();toggleAdvanced()" id="auto-advanced-toggle" style="font-size: 14px;color:#B6AFA4;text-decoration:none;">Advanced settings <span class="chevron-down" style="margin-left:4px;"></span></a>
       </div>

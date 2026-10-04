@@ -44,29 +44,57 @@ test("the box fits a laptop screen: room for the select's arrow, one row of adva
   assert.doesNotMatch(dashboard, /id="auto-model-desc"/, "the speed descriptions are on the buttons, not a line of their own");
 });
 
-test("Email sends the results to the person's own inbox, from their own account", async () => {
-  const sent = [];
+test("Email sends the results from the assistant's own address to its owner, as a new conversation", async () => {
+  const inserts = [];
+  const account = { user_id: "u1", address: "pete-1a2b3c4d@assist.closedhand.ai", owner_email: "sam@example.com", enabled: true };
+  const fakeDb = { from(table) {
+    let op = "select";
+    const q = { select: () => q, eq: () => q, maybeSingle: () => q, single: () => q,
+      insert(row) { op = "insert"; inserts.push({ table, row }); return q; },
+      then(done) {
+        if (op === "insert") return done({ data: null, error: null });
+        if (table === "assistant_email_accounts") return done({ data: account, error: null });
+        if (table === "profiles") return done({ data: { settings: { bot_name: "Pete", preferred_name: "Sam" }, display_name: null }, error: null });
+        return done({ data: null, error: null });
+      } };
+    return q;
+  } };
   const load = Module._load;
   Module._load = function (request, parent, ...rest) {
-    if (parent && /own-email\.js$/.test(parent.filename)) {
-      if (request === "./context") return { activeUserStore: {} };
-      if (request === "./services/google") return { listGoogleAccounts: () => [{ email: "sam@example.com", primary: true }] };
-      if (request === "./services/microsoft") return { listMicrosoftAccounts: () => [] };
-      if (request === "./tools/handlers") return { handleInternalTool: async (name, input) => { sent.push({ name, input }); return { success: true, messageId: "m1" }; } };
+    if (parent && /lib\/(assistant-email|own-email)\.js$/.test(parent.filename)) {
+      if (request === "./db") return { supabase: fakeDb };
+      if (request === "./context") return { activeUserId: "u1" };
     }
     return load.call(this, request, parent, ...rest);
   };
   try {
-    delete require.cache[require.resolve("../lib/own-email")];
-    const { sendToSelf } = require("../lib/own-email");
-    assert.equal(await sendToSelf("Oil monitor", "## Today\n**Brent is up 2%.**\n[[next]]\nSee [the page](https://sam.closedhand.ai/page/x)."), "m1");
+    for (const m of ["../lib/assistant-email", "../lib/own-email"]) delete require.cache[require.resolve(m)];
+    const id = await require("../lib/own-email").sendToSelf("Oil monitor", "Brent is up 2%.\n[[next]]\nSee the page.");
+    assert.match(id, /^[0-9a-f-]{36}$/);
+    account.enabled = false; account.address = null;
+    await assert.rejects(require("../lib/own-email").sendToSelf("Oil monitor", "x"), /Turn on your assistant’s email address in Settings/);
   } finally { Module._load = load; }
-  assert.deepEqual(sent, [{ name: "gmail_send", input: { to: "sam@example.com", account: "sam@example.com", subject: "Oil monitor",
-    body: "Today\nBrent is up 2%.\n\nSee the page: https://sam.closedhand.ai/page/x." } }]);
+  const thread = inserts.find((i) => i.table === "assistant_email_threads").row;
+  assert.deepEqual(thread.participants, ["sam@example.com"]);
+  const message = inserts.find((i) => i.table === "assistant_email_messages").row;
+  assert.equal(message.state, "outbox");
+  assert.equal(message.direction, "out");
+  assert.deepEqual(message.envelope.to, ["sam@example.com"], "to the owner only");
+  assert.equal(message.envelope.replyToDelivery, null, "a new email, not a reply");
+  assert.equal(message.envelope.displayName, "Pete, Sam’s assistant");
+  assert.equal(message.envelope.text, "Brent is up 2%.\n\nSee the page.\n\nPete, Sam’s assistant");
 
   const { destinationsFor } = require("../lib/task-delivery");
   const row = (dests) => ({ user_id: "u", platform: "web", chat_id: "u", runtime: { config: { name: "Oil monitor", output_destinations: dests } } });
   assert.deepEqual(await destinationsFor(null, "automation_runs", row(["email"])), [{ platform: "own_email", chatId: "Oil monitor" }]);
   assert.deepEqual(await destinationsFor(null, "automation_runs", row(["dashboard"])), [], "dashboard only sends nothing to any chat");
   assert.match(read("lib/messaging.js"), /if \(platform === "own_email"\) return require\("\.\/own-email"\)\.sendToSelf\(chatId, message\);/);
+});
+
+test("with the assistant's address off, Email says where to turn it on and cannot be saved", () => {
+  assert.match(dashboard, /_assistantEmail = \{ on: !!\(d\.available && d\.enabled && d\.address\), name: d\.name \|\| 'ClosedHand' \};/);
+  assert.match(dashboard, /hint\.innerHTML = 'Turn on ' \+ escapeHtml\(_assistantEmail\.name\) \+ '\\u2019s email address in <a href="#" onclick="openEmailSettings\(\);return false;">Settings<\/a> to use this\.';/);
+  assert.match(dashboard, /if \(_selectedDest === 'email' && _assistantEmail && !_assistantEmail\.on\) \{ errEl\.textContent = 'Turn on '/);
+  assert.match(dashboard, /function openCreateAutomationModal\(\) \{\n\s*loadAssistantEmailState\(\);/);
+  assert.doesNotMatch(read("lib/own-email.js"), /gmail_send|outlook_send/, "one meaning for Email: from the assistant's address");
 });
