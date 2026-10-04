@@ -4453,34 +4453,6 @@ app.post("/api/agents/:id/cancel", async (req, res) => {
   }
 });
 
-// DELETE /api/agents/:id — delete an agent record
-app.delete("/api/agents/:id", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-
-  try {
-    const { data: task, error: fetchErr } = await supabase
-      .from("agent_tasks")
-      .select("user_id")
-      .eq("id", req.params.id)
-      .single();
-
-    if (fetchErr || !task) return res.status(404).json({ error: "Agent not found" });
-    if (task.user_id !== userId) return res.status(403).json({ error: "Not authorized" });
-
-    const { error } = await supabase
-      .from("agent_tasks")
-      .delete()
-      .eq("id", req.params.id);
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Agent delete error:", err.message);
-    res.status(500).json({ error: "Failed to delete agent" });
-  }
-});
-
 // POST /api/agents — create a new agent task from the dashboard
 app.post("/api/agents", async (req, res) => {
   try {

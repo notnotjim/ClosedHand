@@ -73,3 +73,12 @@ test("the page sits behind the login gate, and chats link to it", () => {
   assert.match(read("lib/dashboard-links.js"), /const path = `\/report\/\$\{encodeURIComponent\(id\)\}`;/);
   assert.match(read("webapp/views/index.html"), /\\\/\(\?:dashboard\|canvas\|report\)/, "the web chat links it");
 });
+
+test("deleting a run says it deletes the report too, and asks first", () => {
+  const dashboard = read("webapp/views/dashboard.html");
+  assert.match(dashboard, /title="Delete this run and its report" aria-label="Delete this run and its report" onclick="event\.stopPropagation\(\);confirmAgentDelete\(this,/);
+  assert.doesNotMatch(dashboard, /title="Remove from list"/, "a permanent delete is not called removing from a list");
+  assert.match(dashboard, /Delete this run and its report for good\?/);
+  const server = read("webapp/server.js");
+  assert.equal((server.match(/app\.delete\("\/api\/agents\/:id"/g) || []).length, 1, "one delete route");
+});

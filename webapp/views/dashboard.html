@@ -1491,6 +1491,9 @@
     .agent-card { cursor: pointer; }
     .agent-del { background: none; border: 1px solid rgba(239,230,214,0.16); color: #B6AFA4; cursor: pointer; font-size: 13px; padding: 3px 10px; border-radius: 6px; margin-left: 8px; transition: all 0.12s; }
     .agent-del:hover { color: #D8624B; border-color: rgba(239,230,214,0.4); }
+    .agent-del-confirm { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 12px; color: #B6AFA4; }
+    .agent-del-confirm .agent-del { margin-left: 0; }
+    .agent-del-confirm .agent-del-yes { color: #D8624B; border-color: rgba(216,98,75,0.45); }
     .agent-card .agent-detail { display: none; margin-top: 10px; border-top: 1px solid #1A1817; padding-top: 8px; }
     .agent-card.open .agent-detail { display: block; }
     @media (max-width: 600px) {
@@ -6119,6 +6122,22 @@
       }
     }
 
+    // Deleting a run deletes its report page and its PDF, Word and Excel
+    // versions with it, for good, so the bin asks first, in place.
+    function confirmAgentDelete(btn, id) {
+      var wrap = document.createElement('span');
+      wrap.className = 'agent-del-confirm';
+      wrap.innerHTML = '<span>Delete this run and its report for good?</span>'
+        + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
+        + '<button class="agent-del" type="button">Keep</button>';
+      wrap.addEventListener('click', function (e) { e.stopPropagation(); });
+      var buttons = wrap.querySelectorAll('button');
+      buttons[0].addEventListener('click', function () { deleteAgentRun(id); });
+      buttons[1].addEventListener('click', function () { wrap.replaceWith(btn); });
+      btn.replaceWith(wrap);
+      buttons[1].focus();
+    }
+
     async function deleteAgentRun(id) {
       try {
         await fetch('/api/agents/' + id, { method: 'DELETE' });
@@ -6264,7 +6283,7 @@
 
       var binHtml = running
         ? '<button class="agent-del" title="Stop this agent" style="color:#D0563F;border-color:rgba(239,230,214,0.1);" onclick="event.stopPropagation();stopAgentRun(\'' + a.id + '\', this)">&#9632; Stop</button>'
-        : '<button class="agent-del" title="Remove from list" onclick="event.stopPropagation();deleteAgentRun(\'' + a.id + '\')">&#128465;</button>';
+        : '<button class="agent-del" title="Delete this run and its report" aria-label="Delete this run and its report" onclick="event.stopPropagation();confirmAgentDelete(this, \'' + a.id + '\')">&#128465;</button>';
 
       // The finished work, as a file. Same content as the expanded card,
       // typeset server-side, so what leaves the dashboard looks as considered
