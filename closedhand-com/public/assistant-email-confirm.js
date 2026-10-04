@@ -33,7 +33,7 @@
     // an older sign-in, or a work account. Sign in again, or with another.
     if (account.signedIn && !account.emailVerified) {
       $('signin-heading').textContent = 'Sign in again to confirm it';
-      $('signin-note').textContent = (account.email ? account.email + ' needs' : 'Your account needs') + ' a fresh sign-in, so Google or Microsoft can confirm it is your address. Work Microsoft accounts can’t be used here; a personal one or Google can.';
+      $('signin-note').textContent = account.provider === 'microsoft' ? 'Use Google or a personal Microsoft account.' : 'Sign in again so Google can confirm the address is yours.';
     }
     if (!account.signedIn || !account.emailVerified) {
       $('signin').hidden = false;
