@@ -128,3 +128,14 @@ test("older titles cut mid-word read as untitled and are cut at a word", () => {
     "Can you find me a couple of good coworking spaces in District 1 with day passes, for next…");
   assert.equal(box.f({ title: "Saigon hotels, 7 to 14 October", goal: "whatever" }), "Saigon hotels, 7 to 14 October", "a real name is kept");
 });
+
+test("dividers render, the title is not repeated, empty headers and unedited reports stay quiet", () => {
+  const doc = { ...report, title: "Saigon move, Wednesday 7 October", content: "# Saigon move — Wednesday 7 October 2026\nEverything in one place.\n\n---\n\n| | |\n|---|---|\n| Flight | VN123 |", created_at: new Date("2026-10-04T05:00:00.000Z"), updated_at: new Date("2026-10-04T05:00:00.004Z") };
+  const html = page.pageHtml(doc);
+  assert.equal((html.match(/Saigon move/g) || []).length, 2, "the title tag and the page heading only, not the document's own repeat");
+  assert.match(html, /<hr>/);
+  assert.doesNotMatch(html, /<p>---<\/p>/);
+  assert.doesNotMatch(html, /<thead>/, "a blank header row is left out");
+  assert.doesNotMatch(html, /edited/, "created and saved a moment apart is not an edit");
+  assert.match(page.pageHtml({ ...doc, updated_at: new Date("2026-10-05T09:00:00Z") }), /, edited 5 October 2026/);
+});

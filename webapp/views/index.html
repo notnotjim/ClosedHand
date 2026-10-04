@@ -2291,6 +2291,7 @@
   .agent-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #D8624B; flex: none; animation: agentLivePulse 1.6s ease-in-out infinite; }
   @keyframes agentLivePulse { 50% { opacity: 0.3; } }
   @media (prefers-reduced-motion: reduce) { .agent-live-dot { animation: none; } }
+  .message.bot .reply-rule { border: 0; border-top: 1px solid rgba(239,230,214,0.1); margin: 12px 0; }
   .message.bot .reply-table { overflow-x: auto; margin: 8px 0 10px; }
   .message.bot .reply-table table { border-collapse: collapse; font-size: var(--chat-text-sm); line-height: 1.4; }
   .message.bot .reply-table th, .message.bot .reply-table td { padding: 6px 12px 6px 0; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(239,230,214,0.1); }
@@ -4114,6 +4115,8 @@
         out.push('<div class="reply-table"><table><thead>' + cells('th', line) + '</thead><tbody>' + body.join('') + '</tbody></table></div>');
         continue;
       }
+      // A line of dashes is a divider, not a list item or stray punctuation.
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { close(); out.push('<hr class="reply-rule">'); continue; }
       var bullet = line.match(/^\s*[-*\u2022]\s+(.*)$/);
       var numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
       var heading = line.match(/^\s*#{1,4}\s+(.*)$/);
@@ -4129,7 +4132,7 @@
     }
     close();
     return out.join('').replace(/(<br>)+$/, '')
-      .replace(/<br>(<(ul|ol) |<div class="reply-table">)/g, '$1').replace(/(<\/(ul|ol)>|<\/table><\/div>)<br>/g, '$1');
+      .replace(/<br>(<(ul|ol) |<div class="reply-table">|<hr )/g, '$1').replace(/(<\/(ul|ol)>|<\/table><\/div>)<br>/g, '$1');
   }
 
   // A reply marked into follow-on parts (a line holding only [[next]], see

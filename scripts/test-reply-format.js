@@ -134,3 +134,7 @@ test("only a tab waiting for its own reply can call it stalled", () => {
   assert.match(page, /_awaitingReply = false; disarmResponseWatchdog\(\);/);
   assert.match(page, /_awaitingReply = true;\n\s*armResponseWatchdog\(\);/);
 });
+
+test("a line of dashes in a reply is a divider", () => {
+  assert.equal(formatReply("Above\n---\nBelow"), 'Above<hr class="reply-rule">Below');
+});

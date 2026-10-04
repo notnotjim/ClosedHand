@@ -34,6 +34,7 @@ function blocks(md) {
       out.push({ type: "table", header: cells(line), rows });
       continue;
     }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { endPara(); out.push({ type: "rule" }); continue; }
     const heading = line.match(/^\s*(#{1,6})\s+(.*)$/);
     if (heading) { endPara(); out.push({ type: "heading", level: Math.min(heading[1].length, 3), text: heading[2] }); continue; }
     const item = line.match(/^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/);
@@ -50,6 +51,17 @@ function blocks(md) {
   }
   endPara();
   return out;
+}
+
+// The page shows the report's title; a document that opens with its own
+// heading saying the same thing would show it twice.
+const words = (t) => String(t || "").toLowerCase().replace(/[*_`#]/g, "").match(/[\p{L}\p{N}]+/gu) || [];
+function withoutTitle(list, title) {
+  const first = list[0];
+  if (!first || first.type !== "heading") return list;
+  const t = new Set(words(title)), h = words(first.text);
+  const shared = h.filter((w) => t.has(w)).length;
+  return shared >= Math.max(2, Math.ceil(t.size * 0.6)) ? list.slice(1) : list;
 }
 
 function hasTables(md) {
@@ -76,12 +88,14 @@ function inline(text) {
   return out + marks(e.slice(last));
 }
 
-function bodyHtml(md) {
-  return blocks(md).map((b) => {
+function bodyHtml(md, title) {
+  return withoutTitle(blocks(md), title).map((b) => {
+    if (b.type === "rule") return "<hr>";
     if (b.type === "heading") return `<h${b.level + 1}>${inline(b.text)}</h${b.level + 1}>`;
     if (b.type === "para") return `<p>${b.lines.map(inline).join("<br>")}</p>`;
     if (b.type === "list") return `<${b.ordered ? "ol" : "ul"}>${b.items.map((t) => `<li>${inline(t)}</li>`).join("")}</${b.ordered ? "ol" : "ul"}>`;
-    return `<div class="table"><table><thead><tr>${b.header.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead>`
+    const head = b.header.some((c) => c.trim()) ? `<thead><tr>${b.header.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead>` : "";
+    return `<div class="table"><table>${head}`
       + `<tbody>${b.rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }).join("\n");
 }
@@ -120,6 +134,7 @@ table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-
 th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: 0; }
 th { background: var(--head); font-weight: 600; white-space: nowrap; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
 .end { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .end summary { cursor: pointer; display: inline-block; list-style: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; color: var(--muted); }
 .end summary::-webkit-details-marker { display: none; }
@@ -137,7 +152,8 @@ const dated = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "n
 
 function pageHtml(report) {
   const id = encodeURIComponent(report.id);
-  const edited = report.updated_at && report.updated_at !== report.created_at ? `, edited ${dated(report.updated_at)}` : "";
+  // Dates arrive as Date objects from the database, so compare the times.
+  const edited = report.updated_at && new Date(report.updated_at) - new Date(report.created_at) > 60000 ? `, edited ${dated(report.updated_at)}` : "";
   // Each button downloads the report in that format, and says so: an arrow
   // into a tray, and a label that names the download for screen readers.
   const icon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -152,7 +168,7 @@ function pageHtml(report) {
   return shell(report.title, `<div class="bar">${brand}<div class="files">${files}</div></div>
 <h1>${esc(report.title)}</h1>
 <p class="when">${esc(dated(report.created_at) + edited)}</p>
-${bodyHtml(report.content)}
+${bodyHtml(report.content, report.title)}
 ${remove}`);
 }
 
@@ -181,13 +197,15 @@ function docxBuffer(report) {
   const title = report.title;
   const para = (inner, style) => `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ""}${inner}</w:p>`;
   const body = [para(runs(title), "Title")];
-  for (const b of blocks(report.content)) {
+  for (const b of withoutTitle(blocks(report.content), title)) {
+    if (b.type === "rule") { body.push(para("")); continue; }
     if (b.type === "heading") body.push(para(runs(b.text), `Heading${b.level}`));
     else if (b.type === "para") body.push(para(b.lines.map(runs).join('<w:r><w:br/></w:r>')));
     else if (b.type === "list") b.items.forEach((t, i) => body.push(para(`<w:r><w:t xml:space="preserve">${b.ordered ? `${i + 1}. ` : "• "}</w:t></w:r>${runs(t)}`, "ListParagraph")));
     else {
       const row = (cellsIn, head) => `<w:tr>${cellsIn.map((c) => `<w:tc><w:p>${head ? runs(`**${c}**`) : runs(c)}</w:p></w:tc>`).join("")}</w:tr>`;
-      body.push(`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>${row(b.header, true)}${b.rows.map((r) => row(r)).join("")}</w:tbl>`);
+      const headRow = b.header.some((c) => c.trim()) ? row(b.header, true) : "";
+      body.push(`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>${headRow}${b.rows.map((r) => row(r)).join("")}</w:tbl>`);
       body.push(para(""));
     }
   }
@@ -232,7 +250,8 @@ function xlsxBuffer(report) {
     let name = (heading || `Table ${n}`).replace(/[\\/?*[\]:]/g, " ").slice(0, 31).trim() || `Table ${n}`;
     while (used.has(name)) name = `${name.slice(0, 27)} ${n++}`;
     used.add(name);
-    const sheet = XLSX.utils.aoa_to_sheet([b.header.map(clean), ...b.rows.map((r) => r.map(clean))]);
+    const header = b.header.some((c) => c.trim()) ? [b.header.map(clean)] : [];
+    const sheet = XLSX.utils.aoa_to_sheet([...header, ...b.rows.map((r) => r.map(clean))]);
     sheet["!cols"] = b.header.map((_, i) => ({ wch: Math.min(48, Math.max(10, ...[b.header, ...b.rows].map((r) => clean(r[i] || "").length))) }));
     XLSX.utils.book_append_sheet(book, sheet, name);
   }
