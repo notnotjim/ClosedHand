@@ -541,7 +541,7 @@ test('deleting a ClosedHand account on closedhand.com: signed in, from the site 
   const gone = await json('POST', '/api/account/delete', {}, signedIn(owner.cookie));
   assert.deepEqual(await gone.json(), { deleted: true });
   assert.ok((gone.headers.getSetCookie?.() || []).some(c => /Max-Age=0/i.test(c)), 'signed out');
-  assert.deepEqual(await account(owner.cookie), { signedIn: false, provider: null, email: null, url: null, address: null, available: true });
+  assert.deepEqual(await account(owner.cookie), { signedIn: false, provider: null, email: null, emailVerified: false, url: null, address: null, available: true });
   assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: copy.auth })).json(), { state: 'unconfirmed' }, 'the computer finds out when it next asks');
   const held = (await db.query('SELECT owner_id FROM held_names WHERE hostname = $1', [new URL(url).hostname])).rows[0];
   assert.deepEqual(held, { owner_id: null });

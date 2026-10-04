@@ -20,13 +20,14 @@
     <p class="lede" id="lede">Your ClosedHand assistant is getting its own email address, so you can email it, forward things to it and copy it in. Sign in with the account you’ll email it from: its private replies go there.</p>
 
     <section class="card">
-      <p class="address" id="address">&nbsp;</p>
-      <p class="address-note" id="address-note">Your assistant’s email address</p>
+      <!-- Made when you confirm, so shown only then. -->
+      <p class="address" id="address" hidden></p>
+      <p class="address-note" id="address-note" hidden>Your assistant’s email address</p>
 
       <!-- Step 1: sign in. Replies go to this account's address. -->
       <div id="signin" hidden>
-        <h2>Sign in to confirm it</h2>
-        <p>Use Google, or a personal Microsoft account: they confirm the address is yours. closedhand.com keeps only its email, never your password or your mail.</p>
+        <h2 id="signin-heading">Sign in to confirm it</h2>
+        <p id="signin-note">Use Google, or a personal Microsoft account: they confirm the address is yours. closedhand.com keeps only its email, never your password or your mail.</p>
         <div class="stack">
           <a class="btn btn-primary" id="login-google"><img src="/logos/google-color.svg" alt="">Continue with Google</a>
           <a class="btn" id="login-microsoft"><img src="/logos/microsoft-color.svg" alt="">Continue with Microsoft</a>
@@ -34,9 +35,12 @@
       </div>
 
       <!-- Step 2: confirm, as the signed-in account. -->
+      <!-- The signed-in account is where replies go, not the assistant's
+           own address, which is made when this is confirmed. -->
       <div id="confirm" hidden>
+        <p class="fine" id="who-label">Your assistant’s private replies go to</p>
         <div class="who"><span id="who"></span><a id="switch">Use a different account</a></div>
-        <button class="btn btn-primary" id="approve" type="button">Confirm</button>
+        <button class="btn btn-primary" id="approve" type="button">Create your assistant’s email address</button>
         <p class="fine">Only confirm if you started this in your own ClosedHand.</p>
       </div>
 

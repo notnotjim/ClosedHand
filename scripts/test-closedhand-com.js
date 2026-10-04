@@ -84,6 +84,16 @@ test('bug receipts and sign-in return paths stay narrow', () => {
   assert.equal(navigation.signInReturn('/assistant-email/confirm#ticket.sig'), '/assistant-email/confirm#ticket.sig', "the assistant email confirmation comes back with its ticket");
 });
 
+test("the confirmation page never presents the owner's own address as the assistant's", () => {
+  const view = fs.readFileSync(path.join(__dirname, '../closedhand-com/views/assistant-email-confirm.html'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '../closedhand-com/public/assistant-email-confirm.js'), 'utf8');
+  assert.match(view, /<p class="address" id="address" hidden><\/p>\s*<p class="address-note" id="address-note" hidden>/, 'the assistant address appears only once it exists');
+  assert.match(view, /<p class="fine" id="who-label">Your assistant’s private replies go to<\/p>\s*<div class="who">/, 'the signed-in account is labelled as where replies go');
+  assert.match(view, />Create your assistant’s email address<\/button>/);
+  assert.match(script, /\$\('approve'\)\.textContent = 'Create ' \+ whose \+ ' email address';/);
+  assert.match(script, /if \(!account\.signedIn \|\| !account\.emailVerified\) \{/, 'an older or unverified sign-in is asked to sign in again before confirming');
+});
+
 test('the service keeps the retired flow out and runs the real assistant email relay', () => {
   const server = fs.readFileSync(path.join(__dirname, '../closedhand-com/server.js'), 'utf8');
   assert.doesNotMatch(server, /phone-links/);

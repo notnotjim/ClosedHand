@@ -521,16 +521,16 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     res.set('Cache-Control', 'no-store');
     try {
       const owner = sessions.owner(req);
-      let url = null, address = null, email = null, provider = null, person = null;
+      let url = null, address = null, email = null, provider = null, person = null, emailVerified = false;
       if (owner) {
-        person = (await db.query('SELECT provider, email FROM owners WHERE id = $1', [owner])).rows[0];
-        if (person) ({ provider, email } = person);
+        person = (await db.query('SELECT provider, email, email_verified FROM owners WHERE id = $1', [owner])).rows[0];
+        if (person) ({ provider, email } = person), emailVerified = person.email_verified === true;
         const row = person && (await db.query('SELECT hostname, state, reprovision FROM addresses WHERE owner_id = $1', [owner])).rows[0];
         if (row && shown(row) !== 'revoked' && validHostname(row.hostname)) address = row.hostname;
         if (row?.state === 'active' && validHostname(row.hostname)) url = 'https://' + row.hostname;
       }
       // A sign-in whose account was deleted is no sign-in at all.
-      res.json({ signedIn: !!person, provider, email, url, address, available: enabled() });
+      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled() });
     } catch (e) {
       console.error('[addresses] account:', e.message);
       res.status(503).json({ error: 'Could not look up your account. Please try again.' });
