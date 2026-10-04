@@ -1,0 +1,48 @@
+// Confirming a ClosedHand assistant's email address. The ClosedHand that
+// asked opened this page with a signed ticket after the #; the owner signs in
+// with the account they will email the assistant from, then confirms. Only a
+// Google address Google has verified, or a personal Microsoft account, is
+// accepted, since the assistant's private replies go there.
+(() => {
+  const $ = id => document.getElementById(id);
+  const ticket = location.hash.slice(1);
+  const here = '/assistant-email/confirm' + location.hash;
+  const status = $('status');
+  $('login-google').href = '/auth/google?return_to=' + encodeURIComponent(here);
+  $('login-microsoft').href = '/auth/microsoft?return_to=' + encodeURIComponent(here);
+  async function request(path, body) {
+    const response = await fetch(path, { method: body ? 'POST' : 'GET', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(25000) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Could not confirm this address. Please try again.');
+    return data;
+  }
+  if (!ticket) { status.textContent = 'Turn on your assistant’s email address in your ClosedHand’s Settings first.'; return; }
+  request('/api/account').then(account => {
+    if (!account.signedIn) {
+      $('signin').hidden = false;
+      status.textContent = '';
+      return;
+    }
+    $('who').textContent = account.email || '';
+    $('switch').href = '/auth/' + (account.provider === 'microsoft' ? 'microsoft' : 'google') + '?return_to=' + encodeURIComponent(here);
+    $('confirm').hidden = false;
+    status.textContent = '';
+  }).catch(e => { status.textContent = e.message; });
+  $('approve').onclick = async () => {
+    $('approve').disabled = true;
+    status.textContent = 'Confirming…';
+    try {
+      const data = await request('/api/assistant-mail-relay/approve', { ticket });
+      $('heading').textContent = 'Email address confirmed';
+      $('lede').hidden = true;
+      $('address').textContent = data.address;
+      $('confirm').hidden = true;
+      $('done-note').textContent = 'Its private replies go to ' + data.email + '. The ClosedHand tab where you started updates by itself, so you can close this one.';
+      $('done').hidden = false;
+      status.textContent = '';
+    } catch (e) {
+      status.textContent = e.message;
+      $('approve').disabled = false;
+    }
+  };
+})();

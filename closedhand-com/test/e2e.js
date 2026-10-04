@@ -120,7 +120,7 @@ test('signing in keeps only the email: names and pictures the provider sends are
   await signIn('google', { ...google('g-named', 'named@example.com'), name: 'Pat Example', picture: 'https://example.com/pat.png' });
   await signIn('microsoft', { ...microsoft('22222222-2222-4333-8444-555555555555', '77777777-7777-4888-9999-000000000000', 'ms-named@example.com'), name: 'Sam Example' });
   const columns = (await db.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'owners' ORDER BY 1")).rows.map(r => r.column_name);
-  assert.deepEqual(columns, ['created_at', 'email', 'id', 'provider', 'subject', 'updated_at']);
+  assert.deepEqual(columns, ['created_at', 'email', 'email_verified', 'id', 'provider', 'subject', 'updated_at'], 'the email, and whether the provider vouches for it');
   assert.doesNotMatch(JSON.stringify((await db.query('SELECT * FROM owners')).rows), /Pat Example|Sam Example|pat\.png/);
 });
 

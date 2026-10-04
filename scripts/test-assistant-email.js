@@ -64,7 +64,8 @@ test('outgoing mail rejects header injection and unbounded recipients or files',
   assert.throws(() => p.outgoing({ ...base, to: ['owner@example.com\r\nBcc: stranger@example.com'] }));
   assert.throws(() => p.outgoing({ ...base, to: new Array(9).fill('owner@example.com') }));
   assert.throws(() => p.outgoing({ ...base, attachments: [{ content: Buffer.alloc(p.LIMITS.attachmentBytes + 1).toString('base64') }] }));
-  assert.throws(() => p.outgoing({ ...base, replyToDelivery: null }));
+  assert.equal(p.outgoing({ ...base, replyToDelivery: null }).replyToDelivery, null, 'a new email names no delivery; the relay sends it only to the owner');
+  assert.throws(() => p.outgoing({ ...base, replyToDelivery: 'not-a-delivery' }));
   assert.equal(p.isAutomated(new Map([['auto-submitted', 'auto-replied']])), true);
   assert.equal(p.isAutomated({ 'list-id': 'news.example' }), true);
   const id = crypto.randomUUID(); assert.equal(responseId(id), responseId(id)); assert.notEqual(responseId(id), responseId(crypto.randomUUID()));

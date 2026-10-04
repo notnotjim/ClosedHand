@@ -45,6 +45,11 @@ jobs:
         run: node --test closedhand-com/test/e2e.js closedhand-com/test/download-link.js
         env:
           DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
+      # Its own step: it rebuilds the same database, so it must not run alongside.
+      - name: Assistant email relay against a real database
+        run: node --test closedhand-com/test/assistant-email.js
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
   checks:
     runs-on: ubuntu-latest
     steps:

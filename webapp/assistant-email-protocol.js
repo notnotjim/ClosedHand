@@ -79,11 +79,13 @@ function attachments(list = []) {
     return { filename: header(file.filename || 'attachment', 150).replace(/[\\/]/g, '_'), contentType: header(file.contentType || 'application/octet-stream', 100), content: file.content };
   });
 }
+// A reply names the delivery it answers. A new email names none, and the
+// relay sends one only to the owner.
 function outgoing(input) {
-  if (!uuid(input?.id) || !uuid(input?.replyToDelivery) || typeof input.text !== 'string' || !input.text.trim() || input.text.length > LIMITS.text) throw new Error('Invalid outgoing email.');
+  if (!uuid(input?.id) || (input?.replyToDelivery != null && !uuid(input.replyToDelivery)) || typeof input.text !== 'string' || !input.text.trim() || input.text.length > LIMITS.text) throw new Error('Invalid outgoing email.');
   const to = addresses(input.to);
   if (!to.length) throw new Error('Choose an email recipient.');
-  return { id: input.id, replyToDelivery: input.replyToDelivery, to, subject: header(input.subject), text: input.text, attachments: attachments(input.attachments), inReplyTo: messageId(input.inReplyTo), references: references(input.references), displayName: header(input.displayName || 'ClosedHand', 100) };
+  return { id: input.id, replyToDelivery: input.replyToDelivery || null, to, subject: header(input.subject), text: input.text, attachments: attachments(input.attachments), inReplyTo: messageId(input.inReplyTo), references: references(input.references), displayName: header(input.displayName || 'ClosedHand', 100) };
 }
 // Only provider-authenticated mailbox identities count, never arbitrary contact
 // addresses, MCP metadata or aliases supplied in an incoming message.

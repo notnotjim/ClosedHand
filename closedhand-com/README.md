@@ -9,10 +9,19 @@ the three things a copy of ClosedHand asks it for:
   answers at the new address before the address is marked ready.
 - **Bug reports** that a person chose to send, with a receipt that can check
   only that report's outcome.
-- **Assistant email relay**: not offered yet. `/api/assistant-mail-relay/availability`
-  answers `{ "available": false }`.
+- **Assistant email relay**: a copy that turns on its own email address
+  (`name-xxxxxxxx@assist.closedhand.ai`) collects its mail here and hands over
+  its replies (`lib/assistant-mail-relay.js`). The owner confirms the address
+  at `/assistant-email/confirm`, signed in with Google or a personal Microsoft
+  account, since replies go to that address. `lib/assistant-mail-worker.js`
+  moves mail through Amazon SES: incoming mail arrives on an SQS queue as an
+  S3 object and is sealed to the copy's own key; replies are sent one at a
+  time and never resent when the outcome is unknown. A new email (not a
+  reply) may only go to the owner. Allowances are per owner (migration 008),
+  and a spending guard pauses everything at the monthly reserve.
 
-It holds no one's mail, calendar, files or conversations. Owners are known by
+It holds no one's calendar, files or conversations, and mail only on its
+way: sealed to a copy's own key, and deleted once collected or after 14 days. Owners are known by
 the permanent ID Google or Microsoft gives them, never by email address.
 
 ## Running it
@@ -38,6 +47,12 @@ Migrations in `migrations/` apply on start.
 | `BUG_RECEIPT_SECRET` | Signs bug report receipts (defaults to `SESSION_SECRET`) |
 | `ADDRESS_LIMIT` | How many personal URLs may exist (default 100) |
 | `TRUSTED_PROXY_HOPS` | Proxies in front that add X-Forwarded-For (default 2: Cloudflare, then Railway) |
+| `ASSISTANT_EMAIL_ENABLED`, `ASSISTANT_EMAIL_RELEASED`, `ASSISTANT_EMAIL_PRODUCTION` | All `1` to offer assistant email; any other value keeps it off |
+| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | The mail transport's AWS user: send through SES, read the mail queues and bucket, invoke the guard |
+| `ASSISTANT_EMAIL_INBOUND_QUEUE`, `ASSISTANT_EMAIL_INBOUND_TOPIC` | Where SES announces incoming mail |
+| `ASSISTANT_EMAIL_FEEDBACK_QUEUE`, `ASSISTANT_EMAIL_FEEDBACK_TOPIC` | Where bounces and complaints arrive |
+| `ASSISTANT_EMAIL_BUCKET` | Where SES stores incoming mail until it is collected |
+| `ASSISTANT_EMAIL_GUARD_FUNCTION`, `ASSISTANT_EMAIL_OPERATOR` | The stop-only AWS function the spending guard calls, and who gets its alerts |
 
 Sign-in callbacks are `BASE_URL/auth/google/callback` and
 `BASE_URL/auth/microsoft/callback`.

@@ -9,7 +9,7 @@
       return url.origin === origin && allowed.includes(url.pathname) ? url.pathname + url.search + url.hash : fallback;
     } catch (_) { return fallback; }
   }
-  function signInReturn(value) { return localPath(value, ['/open', '/phone-access/pair', '/account'], '/open'); }
+  function signInReturn(value) { return localPath(value, ['/open', '/phone-access/pair', '/account', '/assistant-email/confirm'], '/open'); }
   function signInError(value) {
     const url = new URL(signInReturn(value), origin);
     url.searchParams.set('sign_in_error', '1');

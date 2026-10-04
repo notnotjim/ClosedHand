@@ -364,7 +364,8 @@ class PgQueryBuilder {
     if (m.kind === "upsert" && m.opts && m.opts.onConflict) {
       const confCols = String(m.opts.onConflict).split(",").map((s) => s.trim());
       const conflictSql = confCols.map(quoteIdent).join(", ");
-      const updateCols = cols.filter((c) => !confCols.includes(c));
+      // ignoreDuplicates keeps the row already there, as PostgREST does.
+      const updateCols = m.opts.ignoreDuplicates ? [] : cols.filter((c) => !confCols.includes(c));
       sql += updateCols.length
         ? ` ON CONFLICT (${conflictSql}) DO UPDATE SET ${updateCols.map((c) => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`).join(", ")}`
         : ` ON CONFLICT (${conflictSql}) DO NOTHING`;

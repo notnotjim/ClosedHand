@@ -36,8 +36,10 @@ function page(name) {
 }
 
 // request is the fetch used to reach Google, Microsoft and copies of
-// ClosedHand; tests pass a stand-in.
-function createApp({ db, env = process.env, request = fetch }) {
+// ClosedHand; tests pass a stand-in. startMailWorker starts the assistant
+// email worker (it does nothing unless email is switched on); tests pass a
+// stand-in too.
+function createApp({ db, env = process.env, request = fetch, startMailWorker = require('./lib/assistant-mail-worker').start }) {
   const baseUrl = (env.BASE_URL || 'https://closedhand.com').replace(/\/$/, '');
   const secret = env.SESSION_SECRET;
   if (!env.TOKEN_ENCRYPTION_KEY) throw new Error('TOKEN_ENCRYPTION_KEY is not set');
@@ -64,8 +66,10 @@ function createApp({ db, env = process.env, request = fetch }) {
       res.status(403).type('text/plain').send('Please open https://closedhand.com');
     });
   }
-  // Only bug reports carry screenshots; every other request is small.
+  // Only bug reports and assistant email replies (which may carry
+  // attachments) are large; every other request is small.
   app.use('/api/bug-intake', express.json({ limit: '8mb' }));
+  app.use('/api/assistant-mail-relay/outbox', express.json({ limit: '8mb' }));
   app.use(express.json({ limit: '32kb' }));
   app.use(express.static(PUBLIC, {
     index: false,
@@ -109,10 +113,15 @@ function createApp({ db, env = process.env, request = fetch }) {
   require('./lib/bugs').register(app, { db, secret: env.BUG_RECEIPT_SECRET || secret });
   require('./lib/download-link').register(app, { env, request });
 
-  // The assistant email relay is not offered yet. Copies ask before showing
-  // anything, so "not available" is the whole answer for now.
-  app.get('/api/assistant-mail-relay/availability', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ available: false }); });
-  app.all('/api/assistant-mail-relay/*', (req, res) => res.status(503).json({ error: 'Email delivery is not available yet.' }));
+  // The assistant email relay and the worker that moves its mail through
+  // Amazon SES (lib/assistant-mail-*.js). A worker that cannot start leaves
+  // the website up and the relay reporting itself unavailable.
+  const mailDb = require('./lib/db-driver-pg').createPgClient({ pool: db });
+  let mailWorker = null;
+  try { mailWorker = startMailWorker(mailDb, env) || null; }
+  catch (e) { console.error('[assistant email] The mail worker did not start:', e.message); }
+  require('./lib/assistant-mail-relay').createRelay({ db: mailDb, owner: req => sessions.owner(req), secret, env, baseUrl, ready: () => !!mailWorker }).register(app);
+  app.get('/assistant-email/confirm', (req, res) => { res.set('Cache-Control', 'no-store').type('html').send(render('assistant-email-confirm.html')); });
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
   app.use((req, res) => res.status(404).set('Cache-Control', 'no-cache').type('html').send(render('not-found.html')));
@@ -123,7 +132,7 @@ function createApp({ db, env = process.env, request = fetch }) {
     if (res.headersSent) return next(err);
     res.status(status).json({ error: status === 413 ? 'That request is too large.' : status < 500 ? 'That request could not be read.' : 'Something went wrong. Please try again.' });
   });
-  return { app, sessions };
+  return { app, sessions, stopMail: () => typeof mailWorker === 'function' && mailWorker() };
 }
 
 if (require.main === module) {

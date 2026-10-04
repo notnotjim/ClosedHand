@@ -81,13 +81,14 @@ test('bug receipts and sign-in return paths stay narrow', () => {
   assert.equal(navigation.signInReturn(auto), auto);
   assert.equal(navigation.signInReturn('https://evil.example/open'), '/open');
   assert.equal(navigation.signInReturn('//evil.example/open'), '/open');
-  assert.equal(navigation.signInReturn('/assistant-email/confirm'), '/open');
+  assert.equal(navigation.signInReturn('/assistant-email/confirm#ticket.sig'), '/assistant-email/confirm#ticket.sig', "the assistant email confirmation comes back with its ticket");
 });
 
-test('the service keeps only the retired flow out and the relay switched off', () => {
+test('the service keeps the retired flow out and runs the real assistant email relay', () => {
   const server = fs.readFileSync(path.join(__dirname, '../closedhand-com/server.js'), 'utf8');
   assert.doesNotMatch(server, /phone-links/);
-  assert.match(server, /assistant-mail-relay\/availability'.*available: false/);
+  assert.doesNotMatch(server, /available: false/, "the relay is the real one, not a placeholder");
+  assert.match(server, /require\('\.\/lib\/assistant-mail-relay'\)\.createRelay\(\{ db: mailDb, owner: req => sessions\.owner\(req\), secret, env, baseUrl, ready: \(\) => !!mailWorker \}\)\.register\(app\);/);
   const migration = fs.readFileSync(path.join(__dirname, '../closedhand-com/migrations/001_initial.sql'), 'utf8');
   assert.match(migration, /CREATE UNIQUE INDEX owners_identity ON owners \(provider, subject\)/);
   assert.doesNotMatch(migration, /profiles/);
