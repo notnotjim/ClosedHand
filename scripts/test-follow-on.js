@@ -60,13 +60,14 @@ test("the web chat shows the parts as separate messages", () => {
   assert.match(page, /else setTimeout\(function \(\) \{ addOneMessage\(part, role, null, ts, text\); \}, i \* 900\);/, "a beat apart when live");
 });
 
-test("the model is told: complete in chat, answer first, parts past a screen, reports only as an extra", () => {
+test("the model is told: complete in chat, answer first, parts past a screen, pages only as an extra", () => {
   const { responsePresentation } = require("../lib/response-presentation");
   const guide = responsePresentation("web");
   assert.match(guide, /Answer in chat, completely/);
   assert.match(guide, /Lead with the answer/);
   assert.match(guide, /Put a line holding only \[\[next\]\] between them\. Never split a short reply, and never more than three parts\./);
-  assert.match(guide, /A report \(a document to open, download and share\) is an extra, never the answer/);
+  assert.match(guide, /A page \(a fuller version to open, download and share\) is an extra, never the answer/);
+  assert.match(guide, /Call it a page, never a report or a document: documents are the files the person keeps in Context Brain\./);
 });
 
 test("research goes to the background at the start, with a note written from the request", () => {

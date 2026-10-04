@@ -4086,7 +4086,7 @@
       });
     };
     var inline = function (t) {
-      var e = esc(t), out = '', last = 0, m, re = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|\/(?:dashboard|canvas|report)\b[^\s)]*)\)/g;
+      var e = esc(t), out = '', last = 0, m, re = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|\/(?:dashboard|canvas|page|report)\b[^\s)]*)\)/g;
       while ((m = re.exec(e))) {
         out += bare(marks(e.slice(last, m.index))) + link(m[2], marks(m[1]));
         last = re.lastIndex;

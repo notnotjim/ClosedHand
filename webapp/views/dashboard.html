@@ -2066,6 +2066,7 @@
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
         <button class="tab" data-tab="automations" onclick="switchTab('automations')">Agents</button>
+        <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
         <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
         <button class="tab" data-tab="brain" onclick="switchTab('brain')">Context Brain</button>
         <button class="tab" data-tab="usage" onclick="switchTab('usage')">Usage</button>
@@ -2466,6 +2467,14 @@
       </div>
 
       <!-- Settings Tab Content -->
+      <div class="tab-content" id="tab-pages">
+        <div style="padding-top:16px;">
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">When an answer is worth keeping or sharing, ClosedHand also makes it a page. Every page is here, whichever chat or agent it came from. Each opens on its own and downloads as PDF or Word, and the answer is always in your chat too.</p>
+          <div id="pages-list"></div>
+          <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-settings">
         <div style="padding-top:16px;">
 
@@ -4589,6 +4598,9 @@
       if (tabName === 'usage') {
         loadUsage();
       }
+      if (tabName === 'pages') {
+        loadPages();
+      }
     }
 
     function loadSettingsExtras() {
@@ -6143,12 +6155,76 @@
     function confirmAgentDelete(btn, id, hasReport) {
       var wrap = document.createElement('span');
       wrap.className = 'agent-del-confirm';
-      wrap.innerHTML = '<span>' + (hasReport ? 'Delete this run and its report for good?' : 'Delete this run for good?') + '</span>'
+      wrap.innerHTML = '<span>' + (hasReport ? 'Delete this run for good? Its page stays under Pages.' : 'Delete this run for good?') + '</span>'
         + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
         + '<button class="agent-del" type="button">Keep</button>';
       wrap.addEventListener('click', function (e) { e.stopPropagation(); });
       var buttons = wrap.querySelectorAll('button');
       buttons[0].addEventListener('click', function () { deleteAgentRun(id); });
+      buttons[1].addEventListener('click', function () { wrap.replaceWith(btn); });
+      btn.replaceWith(wrap);
+      buttons[1].focus();
+    }
+
+    // Pages: every page ClosedHand made, whichever chat or agent made it. A
+    // week on the list, then Archived, loaded when it is opened.
+    var _archivedPages = null;
+    function renderPageCard(p) {
+      var made = new Date(p.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+      return '<div class="auto-card">' +
+        '<div class="auto-card-header">' +
+          '<div class="auto-card-name">' + escapeHtml(p.title || 'Untitled page') + '</div>' +
+          '<button class="agent-del" title="Open the page, with PDF, Word and Excel downloads" onclick="window.open(\'/page/' + p.id + '\', \'_blank\')">Open page</button>' +
+          '<button class="agent-del" title="Delete this page" aria-label="Delete this page" onclick="confirmPageDelete(this, \'' + p.id + '\')">&#128465;</button>' +
+        '</div>' +
+        '<div class="auto-card-meta">' + escapeHtml('Made ' + made) + '</div>' +
+      '</div>';
+    }
+    async function loadPages() {
+      var list = document.getElementById('pages-list');
+      if (!list) return;
+      try {
+        var res = await fetch('/api/pages');
+        if (!res.ok) throw new Error('Pages unavailable');
+        var pages = await res.json();
+        document.getElementById('pages-error').hidden = true;
+        list.innerHTML = (pages.length ? pages.map(renderPageCard).join('')
+          : '<p class="agent-archive-empty">No pages yet. When an answer is worth keeping or sharing, ClosedHand makes a page of it and it shows here.</p>') +
+          '<div class="agent-archive-toggle"><a href="#" onclick="toggleArchivedPages();return false;">' +
+          (_archivedPages ? 'Hide archived pages' : 'Show archived pages') + '</a></div>' +
+          (_archivedPages ? (_archivedPages.length ? '<div class="mc-section-label">Archived</div>' + _archivedPages.map(renderPageCard).join('')
+            : '<p class="agent-archive-empty">Nothing archived yet. Pages move here a week after they were made.</p>') : '');
+      } catch (e) {
+        document.getElementById('pages-error').hidden = false;
+      }
+    }
+    async function toggleArchivedPages() {
+      if (_archivedPages) { _archivedPages = null; loadPages(); return; }
+      try {
+        var res = await fetch('/api/pages?archived=1');
+        if (!res.ok) throw new Error('Archived pages unavailable');
+        _archivedPages = await res.json();
+      } catch (e) {
+        showToast('Could not load archived pages. Try again shortly.', true);
+        return;
+      }
+      loadPages();
+    }
+    function confirmPageDelete(btn, id) {
+      var wrap = document.createElement('span');
+      wrap.className = 'agent-del-confirm';
+      wrap.innerHTML = '<span>Delete this page for good? The answer in your chat stays.</span>'
+        + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
+        + '<button class="agent-del" type="button">Keep</button>';
+      var buttons = wrap.querySelectorAll('button');
+      buttons[0].addEventListener('click', async function () {
+        try {
+          var res = await fetch('/api/pages/' + id, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Delete failed');
+          if (_archivedPages) _archivedPages = _archivedPages.filter(function (p) { return p.id !== id; });
+          loadPages();
+        } catch (e) { showToast('Could not delete this page. Try again.', true); wrap.replaceWith(btn); }
+      });
       buttons[1].addEventListener('click', function () { wrap.replaceWith(btn); });
       btn.replaceWith(wrap);
       buttons[1].focus();
@@ -6345,7 +6421,7 @@
 
       var binHtml = running
         ? '<button class="agent-del" title="Stop this agent" style="color:#D0563F;border-color:rgba(239,230,214,0.1);" onclick="event.stopPropagation();stopAgentRun(\'' + a.id + '\', this)">&#9632; Stop</button>'
-        : '<button class="agent-del" title="' + (a.report_id ? 'Delete this run and its report' : 'Delete this run') + '" aria-label="' + (a.report_id ? 'Delete this run and its report' : 'Delete this run') + '" onclick="event.stopPropagation();confirmAgentDelete(this, \'' + a.id + '\', ' + !!a.report_id + ')">&#128465;</button>';
+        : '<button class="agent-del" title="Delete this run" aria-label="Delete this run" onclick="event.stopPropagation();confirmAgentDelete(this, \'' + a.id + '\', ' + !!a.report_id + ')">&#128465;</button>';
 
       // The finished work, as a file. Same content as the expanded card,
       // typeset server-side, so what leaves the dashboard looks as considered
@@ -6354,8 +6430,8 @@
       // Only a run that made a report (save_report, when one helped beyond the
       // chat answer) offers one; an ordinary answer stays in the card above.
       var pdfHtml = (!running && a.report_id)
-        ? '<button class="agent-del" title="Open the report as a page, with PDF, Word and Excel downloads" onclick="event.stopPropagation();window.open(\'/report/' + a.report_id + '\', \'_blank\')">Open report</button>' +
-          '<button class="agent-del" title="Download the report as a PDF" onclick="event.stopPropagation();location.href=\'/api/reports/' + a.report_id + '/pdf\'">&#8595; PDF</button>'
+        ? '<button class="agent-del" title="Open the page, with PDF, Word and Excel downloads" onclick="event.stopPropagation();window.open(\'/page/' + a.report_id + '\', \'_blank\')">Open page</button>' +
+          '<button class="agent-del" title="Download the page as a PDF" onclick="event.stopPropagation();location.href=\'/api/pages/' + a.report_id + '/pdf\'">&#8595; PDF</button>'
         : '';
 
       return '<div class="auto-card agent-card' + (_openAgents[a.id] ? ' open' : '') + '" onclick="toggleAgentCard(this, \'' + a.id + '\')" title="Click for detail">' +
@@ -7994,7 +8070,7 @@
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-      } else if (['connections', 'automations', 'settings', 'brain'].includes(resolved)) {
+      } else if (['connections', 'automations', 'pages', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'skills') {
         openSkillsLibrary();

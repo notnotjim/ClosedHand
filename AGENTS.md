@@ -115,9 +115,11 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   the same way in a year, to a stranger, with no story around it.
 - Replies answer completely in chat, the answer first, so nobody has to open anything to get
   it. A reply past about one phone screen goes as two or three follow-on messages (a line holding
-  only [[next]], lib/follow-on.js; unmarked long replies are split there too). A report is a page
-  of its own (/report/<id>, with PDF, Word and Excel), linked as an extra, never instead of the
-  answer. Background progress is one live line in the web chat and one plain message elsewhere.
+  only [[next]], lib/follow-on.js; unmarked long replies are split there too). What ClosedHand
+  makes beyond the chat answer, when one helps, is a "page" (/page/<id>, with PDF, Word and Excel),
+  linked as an extra, never instead of the answer, and kept under Pages on the dashboard whichever
+  chat or agent made it. Never "report" or "document" for it: documents are the files in Context
+  Brain. The code and its table still say report. Background progress is one live line in the web chat and one plain message elsewhere.
 - Questions mid-task go to the chat the task came from. The dashboard only shows
   that ClosedHand is waiting, where it asked and when, and repeats the question.
   It never expects the answer there.

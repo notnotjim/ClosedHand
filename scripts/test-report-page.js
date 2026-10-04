@@ -1,7 +1,8 @@
-// A report is its own record, made only when ClosedHand judged one helps
-// beyond the chat answer (save_report). It is a page of its own, with the same
-// report as a PDF, a Word document and its tables as a spreadsheet, and it can
-// be deleted from the page. Needs adm-zip, xlsx and mammoth on NODE_PATH (the
+// A page is its own record, made only when ClosedHand judged one helps beyond
+// the chat answer (save_report; the code still says report). It opens on its
+// own, with the same content as a PDF, a Word document and its tables as a
+// spreadsheet, it is listed under Pages on the dashboard whoever made it, and
+// it can be deleted from the page or the list. Needs adm-zip, xlsx and mammoth on NODE_PATH (the
 // checks workflow installs them for this test).
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -44,11 +45,11 @@ test("the page shows the report safely, with downloads that say so and a delete 
   assert.doesNotMatch(html, /<script>alert/, "nothing in a report becomes markup");
   assert.doesNotMatch(html, /\[\[next\]\]/);
   for (const [kind, label] of [["pdf", "PDF"], ["docx", "Word"], ["xlsx", "Excel"]]) {
-    assert.match(html, new RegExp(`href="/api/reports/a1b2c3/${kind}" download aria-label="Download as ${label}" title="Download as ${label}"><svg[^>]*aria-hidden="true"`));
+    assert.match(html, new RegExp(`href="/api/pages/a1b2c3/${kind}" download aria-label="Download as ${label}" title="Download as ${label}"><svg[^>]*aria-hidden="true"`));
   }
   assert.doesNotMatch(page.pageHtml({ ...report, content: "No tables here." }), /xlsx/, "a spreadsheet only when there are tables");
-  assert.match(html, /<details class="end"><summary>Delete report<\/summary><form method="post" action="\/api\/reports\/a1b2c3\/delete">/);
-  assert.match(html, /Delete this report for good\? The answer in your chat stays where it is\./);
+  assert.match(html, /<details class="end"><summary>Delete page<\/summary><form method="post" action="\/api\/pages\/a1b2c3\/delete">/);
+  assert.match(html, /Delete this page for good\? The answer in your chat stays where it is\./);
   assert.match(page.deletedHtml(report), /is gone, with its PDF, Word and Excel versions\. The answer in your chat is still there\./);
 });
 
@@ -76,15 +77,16 @@ test("a report is made by judgement, only when it helps beyond the chat answer",
   const tool = defs.slice(defs.indexOf('name: "save_report"'), defs.indexOf('name: "agent_report_read"'));
   assert.match(tool, /core: true,/, "available in chat without a lookup");
   assert.match(tool, /Make one ONLY when it helps them beyond the chat answer: they asked for a document, report, PDF or spreadsheet; or the result is something to keep, share or come back to/);
-  assert.match(tool, /An ordinary answer, however useful, is never a report/);
+  assert.match(tool, /An ordinary answer, however useful, is never a page/);
+  assert.match(tool, /When you mention it, call it a page, never a report or a document\./);
   assert.match(tool, /The chat answer must still be complete on its own/);
   assert.match(read("lib/task-tools.js"), /"save_report"\]\);/, "background runs start with it");
   const { responsePresentation } = require("../lib/response-presentation");
   assert.match(responsePresentation("web"), /if it does, write it with save_report as the fuller version/);
   const delivery = read("lib/task-delivery.js");
   assert.doesNotMatch(delivery, /isReportWorthy|report\|write-\?up\|document/, "no length or keyword test decides it");
-  assert.match(delivery, /from\("reports"\)\.select\("id"\)\.eq\("task_id", row\.id\)/, "delivery links the report the run made, if it made one");
-  assert.match(delivery, /String\(text\)\.includes\(`\/report\/\$\{reportId\}`\)/, "never linked twice");
+  assert.match(delivery, /from\("reports"\)\.select\("id"\)\.eq\(table === "automation_runs" \? "automation_run_id" : "task_id", row\.id\)/, "delivery links the page the run made, if it made one");
+  assert.match(delivery, /new RegExp\(`\/\(\?:page\|report\)\/\$\{reportId\}`\)\.test\(String\(text\)\)/, "never linked twice");
 });
 
 test("save_report records the reason and the run, and answers with the link", () => {
@@ -99,13 +101,14 @@ test("save_report records the reason and the run, and answers with the link", ()
 test("the page and its files sit behind the login gate and are the report's own", () => {
   const server = read("webapp/server.js");
   const gate = server.indexOf("// --- The gate: everything registered below needs the session");
-  for (const route of ['app.get("/report/:id"', 'app.post("/api/reports/:id/delete"', "app.get(`/api/reports/:id/${kind}`"]) {
+  for (const route of ['app.get("/page/:id"', 'app.post("/api/pages/:id/delete"', "app.get(`/api/pages/:id/${kind}`", 'app.get("/api/pages"', 'app.delete("/api/pages/:id"']) {
     assert.ok(server.indexOf(route) > gate, `${route} registered after the gate`);
   }
   assert.match(server, /\.from\("reports"\)\n\s*\.select\("id, user_id, task_id, title, content, reason, created_at, updated_at"\)/);
   assert.doesNotMatch(server, /\/api\/agents\/:id\/\$\{kind\}/, "runs have no report files of their own");
-  assert.match(read("lib/dashboard-links.js"), /const path = `\/report\/\$\{encodeURIComponent\(id\)\}`;/);
-  assert.match(read("webapp/views/index.html"), /\\\/\(\?:dashboard\|canvas\|report\)/, "the web chat links it");
+  assert.match(server, /app\.get\("\/report\/:id", \(req, res\) => res\.redirect\(301, `\/page\/\$\{encodeURIComponent\(req\.params\.id\)\}`\)\);/, "links sent before pages had their name still open");
+  assert.match(read("lib/dashboard-links.js"), /const path = `\/page\/\$\{encodeURIComponent\(id\)\}`;/);
+  assert.match(read("webapp/views/index.html"), /\\\/\(\?:dashboard\|canvas\|page\|report\)/, "the web chat links it");
 });
 
 test("the dashboard offers a report only for a run that made one, and deleting says what goes", () => {
@@ -113,8 +116,8 @@ test("the dashboard offers a report only for a run that made one, and deleting s
   assert.match(server, /report_id: reportOf\.get\(task\.id\) \|\| null,/);
   const dashboard = read("webapp/views/dashboard.html");
   assert.match(dashboard, /var pdfHtml = \(!running && a\.report_id\)/);
-  assert.match(dashboard, /window\.open\(\\'\/report\/' \+ a\.report_id/);
-  assert.match(dashboard, /hasReport \? 'Delete this run and its report for good\?' : 'Delete this run for good\?'/);
+  assert.match(dashboard, /window\.open\(\\'\/page\/' \+ a\.report_id/);
+  assert.match(dashboard, /hasReport \? 'Delete this run for good\? Its page stays under Pages\.' : 'Delete this run for good\?'/);
   assert.doesNotMatch(dashboard, /title="Remove from list"/);
   assert.equal((server.match(/app\.delete\("\/api\/agents\/:id"/g) || []).length, 1, "one delete route");
 });
@@ -138,4 +141,27 @@ test("dividers render, the title is not repeated, empty headers and unedited rep
   assert.doesNotMatch(html, /<thead>/, "a blank header row is left out");
   assert.doesNotMatch(html, /edited/, "created and saved a moment apart is not an edit");
   assert.match(page.pageHtml({ ...doc, updated_at: new Date("2026-10-05T09:00:00Z") }), /, edited 5 October 2026/);
+});
+
+test("every page is under Pages, a week on the list then Archived, whichever chat or agent made it", () => {
+  const server = read("webapp/server.js");
+  const list = server.slice(server.indexOf('app.get("/api/pages"'), server.indexOf('app.delete("/api/pages/:id"'));
+  assert.match(list, /query = req\.query\.archived === "1" \? query\.lt\("created_at", cutoff\) : query\.gte\("created_at", cutoff\);/);
+  assert.doesNotMatch(list, /task_id/, "no filter on what made it");
+  const dashboard = read("webapp/views/dashboard.html");
+  assert.match(dashboard, /<button class="tab" data-tab="pages" onclick="switchTab\('pages'\)">Pages<\/button>/);
+  assert.match(dashboard, /fetch\('\/api\/pages\?archived=1'\)/);
+  assert.match(dashboard, /Delete this page for good\? The answer in your chat stays\./);
+});
+
+test("a saved agent's page is linked in its message, and removing a run keeps its page", () => {
+  const handlers = read("lib/tools/handlers.js");
+  assert.match(handlers, /automation_run_id: run\?\.kind === "automation" \? run\.taskId : null/);
+  assert.match(handlers, /note: run\?\.kind === "agent" \|\| run\?\.kind === "automation"/);
+  const delivery = read("lib/task-delivery.js");
+  assert.match(delivery, /\.eq\(table === "automation_runs" \? "automation_run_id" : "task_id", row\.id\)/);
+  assert.match(delivery, /const reportId = await reportFor\(db, row, table\);/);
+  const sql = read("migrations/052_pages.sql");
+  assert.match(sql, /FOREIGN KEY \(task_id\) REFERENCES agent_tasks\(id\) ON DELETE SET NULL;/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS automation_run_id uuid REFERENCES automation_runs\(id\) ON DELETE SET NULL;/);
 });

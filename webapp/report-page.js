@@ -1,11 +1,12 @@
-// A report as a page of its own, at /report/<id>: one link that opens from
-// any chat through the personal URL, readable on a phone, with the same report
-// as a PDF, Word document or spreadsheet when a file is wanted. A report exists
-// only when ClosedHand judged one helps beyond the chat answer (save_report);
+// A page, at /page/<id>: what ClosedHand makes when an answer is worth
+// keeping or sharing. One link that opens from any chat through the personal
+// URL, readable on a phone, with the same content as a PDF, Word document or
+// spreadsheet when a file is wanted. A page exists only when ClosedHand judged
+// one helps beyond the chat answer (save_report; the code still says report);
 // the chat always carries the answer, and this is the fuller version.
 //
-// One reading of the report's Markdown feeds the page, the Word document and
-// the spreadsheet, so the three never disagree about what the report says.
+// One reading of the page's Markdown feeds the page, the Word document and
+// the spreadsheet, so the three never disagree about what the page says.
 
 const AdmZip = require("adm-zip");
 
@@ -154,17 +155,17 @@ function pageHtml(report) {
   const id = encodeURIComponent(report.id);
   // Dates arrive as Date objects from the database, so compare the times.
   const edited = report.updated_at && new Date(report.updated_at) - new Date(report.created_at) > 60000 ? `, edited ${dated(report.updated_at)}` : "";
-  // Each button downloads the report in that format, and says so: an arrow
+  // Each button downloads the page in that format, and says so: an arrow
   // into a tray, and a label that names the download for screen readers.
   const icon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
-  const file = (kind, label) => `<a class="file" href="/api/reports/${id}/${kind}" download aria-label="Download as ${label}" title="Download as ${label}">${icon}${label}</a>`;
+  const file = (kind, label) => `<a class="file" href="/api/pages/${id}/${kind}" download aria-label="Download as ${label}" title="Download as ${label}">${icon}${label}</a>`;
   const files = [
     file("pdf", "PDF"),
     file("docx", "Word"),
     hasTables(report.content) ? file("xlsx", "Excel") : "",
   ].join("");
   // Deleting asks first, in place, with no script: the page has none.
-  const remove = `<details class="end"><summary>Delete report</summary><form method="post" action="/api/reports/${id}/delete"><span>Delete this report for good? The answer in your chat stays where it is.</span><button type="submit">Delete</button></form></details>`;
+  const remove = `<details class="end"><summary>Delete page</summary><form method="post" action="/api/pages/${id}/delete"><span>Delete this page for good? The answer in your chat stays where it is.</span><button type="submit">Delete</button></form></details>`;
   return shell(report.title, `<div class="bar">${brand}<div class="files">${files}</div></div>
 <h1>${esc(report.title)}</h1>
 <p class="when">${esc(dated(report.created_at) + edited)}</p>
@@ -173,10 +174,10 @@ ${remove}`);
 }
 
 function deletedHtml(report) {
-  return shell("Report deleted", `<div class="bar">${brand}</div>
-<h1>Report deleted</h1>
+  return shell("Page deleted", `<div class="bar">${brand}</div>
+<h1>Page deleted</h1>
 <p>"${esc(report.title)}" is gone, with its PDF, Word and Excel versions. The answer in your chat is still there.</p>
-<p><a href="/">Back to ClosedHand</a></p>`);
+<p><a href="/dashboard#pages">Your other pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
 }
 
 // --- Word -------------------------------------------------------------------

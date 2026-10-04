@@ -1307,7 +1307,7 @@ const TELEGRAM_PROOF_MAX_AGE_SEC = 60 * 60;
 // Only pages ClosedHand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
-  return /^\/(report\/[0-9a-f-]{36}|canvas\/[^\s/?#]+|dashboard)([?#][^\s]*)?$/.test(path) ? path : "/";
+  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[^\s/?#]+|dashboard)([?#][^\s]*)?$/.test(path) ? path : "/";
 }
 app.get("/tg/open", (req, res) => {
   const to = telegramTarget(req.query.to);
@@ -4413,9 +4413,10 @@ app.get("/api/agents/:id", async (req, res) => {
   }
 });
 
-// A report (lib/tools: save_report), looked up for its owner. Reports are
-// their own records, made only when one helps beyond the chat answer; an
-// ordinary run's answer is not one and has no page.
+// A page (lib/tools: save_report; the table is still called reports), looked
+// up for its owner. Pages are their own records, made only when one helps
+// beyond the chat answer, and live under Pages on the dashboard whoever made
+// them: the chat, a background agent or a saved agent.
 async function ownReport(req, res) {
   const userId = getUserIdFromRequest(req);
   if (!userId) { res.status(401).json({ error: "Not logged in" }); return null; }
@@ -4425,7 +4426,7 @@ async function ownReport(req, res) {
     .eq("id", req.params.id)
     .limit(1);
   const report = data?.[0];
-  if (error || !report) { res.status(404).send("This report was not found. It may have been deleted."); return null; }
+  if (error || !report) { res.status(404).send("This page was not found. It may have been deleted."); return null; }
   if (report.user_id !== userId) { res.status(403).send("Not authorized"); return null; }
   return report;
 }
@@ -4433,34 +4434,36 @@ async function ownReport(req, res) {
 const reportAsRun = (r) => ({ title: r.title, goal: r.title, result: r.content, created_at: r.created_at, completed_at: r.created_at,
   result_edited_at: r.updated_at && r.updated_at !== r.created_at ? r.updated_at : null });
 const reportFileName = (r, kind) => {
-  const safe = String(r.title || "report").replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "report";
+  const safe = String(r.title || "page").replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "page";
   const date = String(r.created_at || "").substring(0, 10);
   return `ClosedHand - ${safe}${date ? ` - ${date}` : ""}.${kind}`;
 };
 
-// GET /report/:id — the report as a page of its own (webapp/report-page.js),
-// with its downloads and a way to delete it.
-app.get("/report/:id", async (req, res) => {
+// GET /page/:id: the page (webapp/report-page.js), with its downloads and a
+// way to delete it. /report/:id was its address before pages had their name,
+// and is in chats already sent, so it still leads here.
+app.get("/report/:id", (req, res) => res.redirect(301, `/page/${encodeURIComponent(req.params.id)}`));
+app.get("/page/:id", async (req, res) => {
   try {
     const report = await ownReport(req, res);
     if (!report) return;
     res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'");
     res.send(require("./report-page").pageHtml(report));
   } catch (err) {
-    console.error("Report page error:", err.message);
-    res.status(500).send("Could not show this report.");
+    console.error("Page error:", err.message);
+    res.status(500).send("Could not show this page.");
   }
 });
 
-// GET /api/reports/:id/pdf, /docx and /xlsx — the same report as a PDF, a Word
+// GET /api/pages/:id/pdf, /docx and /xlsx: the same page as a PDF, a Word
 // document, or its tables as a spreadsheet.
 for (const kind of ["pdf", "docx", "xlsx"]) {
-  app.get(`/api/reports/:id/${kind}`, async (req, res) => {
+  app.get(`/api/pages/:id/${kind}`, async (req, res) => {
     try {
       const report = await ownReport(req, res);
       if (!report) return;
       const page = require("./report-page");
-      if (kind === "xlsx" && !page.hasTables(report.content)) return res.status(409).send("This report has no tables to put in a spreadsheet.");
+      if (kind === "xlsx" && !page.hasTables(report.content)) return res.status(409).send("This page has no tables to put in a spreadsheet.");
       res.setHeader("Content-Disposition", `attachment; filename="${reportFileName(report, kind)}"`);
       if (kind === "pdf") {
         res.setHeader("Content-Type", "application/pdf");
@@ -4471,15 +4474,15 @@ for (const kind of ["pdf", "docx", "xlsx"]) {
         : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(kind === "docx" ? page.docxBuffer(report) : page.xlsxBuffer(report));
     } catch (err) {
-      console.error(`Report ${kind} error:`, err.message);
+      console.error(`Page ${kind} error:`, err.message);
       res.status(500).json({ error: "Could not build the file" });
     }
   });
 }
 
-// POST /api/reports/:id/delete — from the report page's own Delete, after its
-// confirmation. Deletes the report only; the chat answer stays where it is.
-app.post("/api/reports/:id/delete", async (req, res) => {
+// POST /api/pages/:id/delete: from the page's own Delete, after its
+// confirmation. Deletes the page only; the chat answer stays where it is.
+app.post("/api/pages/:id/delete", async (req, res) => {
   try {
     const report = await ownReport(req, res);
     if (!report) return;
@@ -4487,8 +4490,42 @@ app.post("/api/reports/:id/delete", async (req, res) => {
     if (error) throw error;
     res.send(require("./report-page").deletedHtml(report));
   } catch (err) {
-    console.error("Report delete error:", err.message);
-    res.status(500).send("Could not delete this report. Try again.");
+    console.error("Page delete error:", err.message);
+    res.status(500).send("Could not delete this page. Try again.");
+  }
+});
+
+// GET /api/pages: every page, whoever made it, newest first. A page stays
+// on the list for a week, then folds into Archived (?archived=1), as agent
+// runs do. Nothing is deleted.
+app.get("/api/pages", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const cutoff = new Date(Date.now() - ARCHIVE_AFTER_MS).toISOString();
+    let query = supabase.from("reports").select("id, title, created_at, updated_at").eq("user_id", userId);
+    query = req.query.archived === "1" ? query.lt("created_at", cutoff) : query.gte("created_at", cutoff);
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error("Pages list error:", err.message);
+    res.status(500).json({ error: "Failed to load pages" });
+  }
+});
+
+// DELETE /api/pages/:id: from the Pages list, after its confirmation.
+app.delete("/api/pages/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const { data, error } = await supabase.from("reports").delete().eq("id", req.params.id).eq("user_id", userId).select("id");
+    if (error) throw error;
+    if (!data?.length) return res.status(404).json({ error: "This page was not found. It may have been deleted." });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Page delete error:", err.message);
+    res.status(500).json({ error: "Could not delete this page. Try again." });
   }
 });
 

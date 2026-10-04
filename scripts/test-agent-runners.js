@@ -157,7 +157,7 @@ test("one-off runner answers in the originating chat without creating a schedule
   await until(() => h.db.tables.agent_tasks[0].status === "completed");
   const prompt = h.calls[0].system;
   assert.match(prompt, /Answer the user's question directly in chat/);
-  assert.match(prompt, /Create a full report, document, spreadsheet/);
+  assert.match(prompt, /Make a page with save_report, or another separate deliverable such as a spreadsheet file, when the user asks for a document, report or spreadsheet/);
   assert.doesNotMatch(prompt, /Write a clear, detailed report/);
   assert.equal(h.db.tables.agent_tasks[0].result, "The confirmed time is 20:00.");
   assert.equal(h.db.tables.automations?.length || 0, 0);

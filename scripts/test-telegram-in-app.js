@@ -38,7 +38,8 @@ test("a proof counts only when Telegram signed it with this bot's key, recently"
 test("only ClosedHand's own pages open this way, never another site", () => {
   const box = {};
   vm.runInNewContext(fn("telegramTarget") + "\nthis.f = telegramTarget;", box);
-  assert.equal(box.f("/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615"), "/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615");
+  assert.equal(box.f("/page/236bf8e1-b53d-4d8e-a9d8-2791e0a99615"), "/page/236bf8e1-b53d-4d8e-a9d8-2791e0a99615");
+  assert.equal(box.f("/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615"), "/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615", "buttons sent before pages had their name");
   assert.equal(box.f("/dashboard#schedules"), "/dashboard#schedules");
   assert.equal(box.f("/canvas/abc123"), "/canvas/abc123");
   for (const bad of ["//evil.example/x", "https://evil.example", "/report/../../x", "/api/agents", "javascript:alert(1)", ""]) {
@@ -88,16 +89,18 @@ const SAIGON = "236bf8e1-b53d-4d8e-a9d8-2791e0a99615";
 const NEWCASTLE = "61c0eae2-5248-4acd-832d-460391d764c6";
 const open = (path) => `${BASE}/tg/open?to=${encodeURIComponent(path)}`;
 
-test("a report link becomes an Open report button, and in-app buttons go through the sign-in", async () => {
+test("a page link becomes an Open page button, and in-app buttons go through the sign-in", async () => {
   const { telegramInApp } = loadInApp(BASE);
   const { splitTelegram } = require("../lib/follow-on");
   const sent = [];
   const bot = splitTelegram(telegramInApp(fakeBot(sent)));
-  await bot.sendMessage(7, `Three good ones below.\n[[next]]\nThe full list is in the report.\n\nFull report: ${BASE}/report/${SAIGON}`);
+  await bot.sendMessage(7, `Three good ones below.\n[[next]]\nThe full list is on the page.\n\nOpen the page: ${BASE}/page/${SAIGON}`);
   assert.equal(sent.length, 2);
   assert.equal(sent[0].options.reply_markup, undefined, "no button on the part without the link");
-  assert.equal(sent[1].text, "The full list is in the report.");
-  assert.deepEqual(sent[1].options.reply_markup.inline_keyboard[0][0], { text: "Open report", web_app: { url: open(`/report/${SAIGON}`) } });
+  assert.equal(sent[1].text, "The full list is on the page.");
+  assert.deepEqual(sent[1].options.reply_markup.inline_keyboard[0][0], { text: "Open page", web_app: { url: open(`/page/${SAIGON}`) } });
+  await bot.sendMessage(7, `Full report: ${BASE}/report/${SAIGON}`);
+  assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open page", web_app: { url: open(`/page/${SAIGON}`) } }, "a link from before pages had their name opens the page");
 
   await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${BASE}/dashboard#schedules` } }]] } });
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, open("/dashboard#schedules"));
@@ -106,7 +109,7 @@ test("a report link becomes an Open report button, and in-app buttons go through
   assert.equal((read("index.js").match(/splitTelegram\(require\("\.\/lib\/telegram-in-app"\)\.telegramInApp\(new TelegramBot\(/g) || []).length, 2, "both places the bot is made, parts split before buttons are added");
 });
 
-test("links written for the web chat open in Telegram, as buttons named after each report", async () => {
+test("links written for the web chat open in Telegram, as buttons named after each page", async () => {
   const { telegramInApp } = loadInApp(BASE, { [SAIGON]: "Saigon move, Wednesday 7 October", [NEWCASTLE]: "Newcastle and the Champions League" });
   const sent = [];
   const bot = telegramInApp(fakeBot(sent));
@@ -115,11 +118,11 @@ test("links written for the web chat open in Telegram, as buttons named after ea
   assert.equal(text, "Two to pick from:\n\n<b>Saigon move document</b> (flight, airport transfer)\n\n<b>Newcastle Champions League chances</b>\n\nWhich one were you after?");
   assert.equal(options.parse_mode, "HTML");
   assert.deepEqual(options.reply_markup.inline_keyboard, [
-    [{ text: "Saigon move, Wednesday 7 October", web_app: { url: open(`/report/${SAIGON}`) } }],
-    [{ text: "Newcastle and the Champions League", web_app: { url: open(`/report/${NEWCASTLE}`) } }],
+    [{ text: "Saigon move, Wednesday 7 October", web_app: { url: open(`/page/${SAIGON}`) } }],
+    [{ text: "Newcastle and the Champions League", web_app: { url: open(`/page/${NEWCASTLE}`) } }],
   ]);
 
-  await bot.sendMessage(7, `Here you go: [Newcastle's Champions League chances](/report/${NEWCASTLE})`);
+  await bot.sendMessage(7, `Here you go: [Newcastle's Champions League chances](/page/${NEWCASTLE})`);
   assert.equal(sent.at(-1).text, "Here you go: Newcastle's Champions League chances");
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Newcastle's Champions League chances", "the model's own words for it");
 
@@ -127,7 +130,7 @@ test("links written for the web chat open in Telegram, as buttons named after ea
   assert.equal(sent.at(-1).text, "I'm on it.\n\nYou can watch it run on your dashboard");
   assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open dashboard", web_app: { url: open("/dashboard#agents") } });
 
-  await bot.editMessageText(`Done: /report/${SAIGON}`, { chat_id: 7, message_id: 3 });
+  await bot.editMessageText(`Done: /page/${SAIGON}`, { chat_id: 7, message_id: 3 });
   assert.equal(sent.at(-1).edit, true);
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Saigon move, Wednesday 7 October", "a reply edited into place gets it too");
 });
@@ -150,15 +153,15 @@ test("Markdown shows as Telegram formatting, and plain text when Telegram refuse
 
 test("with no personal URL, the page link says how to reach pages from a phone", async () => {
   const { pageButtons } = loadInApp(null);
-  const shaped = await pageButtons(null, `Full report: /report/${SAIGON}`);
+  const shaped = await pageButtons(null, `Open the page: /page/${SAIGON}`);
   assert.deepEqual(shaped.buttons, []);
   assert.match(shaped.text, /turn on Your phone in the dashboard's Settings/);
 });
 
 test("WhatsApp gets the full personal URL for every ClosedHand page", () => {
   const { absolutePageLinks } = require("../lib/page-links");
-  assert.equal(absolutePageLinks(`See /report/${SAIGON} and [the dashboard](/dashboard#agents), not https://example.com/report/${SAIGON}`, BASE),
-    `See ${BASE}/report/${SAIGON} and [the dashboard](${BASE}/dashboard#agents), not https://example.com/report/${SAIGON}`);
+  assert.equal(absolutePageLinks(`See /page/${SAIGON} and [the dashboard](/dashboard#agents), not https://example.com/page/${SAIGON}`, BASE),
+    `See ${BASE}/page/${SAIGON} and [the dashboard](${BASE}/dashboard#agents), not https://example.com/page/${SAIGON}`);
   assert.match(read("lib/platforms/whatsapp-linked.js"), /formatWhatsApp\(require\("\.\.\/page-links"\)\.absolutePageLinks\(message, base\)\)/);
   assert.match(read("lib/messaging.js"), /formatWhatsApp\(require\("\.\/page-links"\)\.absolutePageLinks\(text, base\)\)/);
 });
