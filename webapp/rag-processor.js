@@ -537,7 +537,7 @@ async function scanFolder(userId, origin, folderPath, opts = {}) {
   const msKey = opts.account || "microsoft";
   if (origin === "cloud") {
     const info = await _getSandboxInfo(userId);
-    if (!info) throw new Error("Cloud Computer not active");
+    if (!info) throw new Error("Sandbox computer not active");
     const result = await _sandboxFetch(info, "POST", "/files/list", { path: folderPath });
     return (result.files || result || []).map(f => ({ name: f.name, type: f.type, size: f.size, modified: f.modified || f.mtime }));
   } else if (origin === "bridge") {
@@ -690,7 +690,7 @@ async function fetchFileContent(userId, origin, filePath, account) {
   const msKey = account || "microsoft";
   if (origin === "cloud") {
     const info = await _getSandboxInfo(userId);
-    if (!info) throw new Error("Cloud Computer not active");
+    if (!info) throw new Error("Sandbox computer not active");
     const result = await _sandboxFetch(info, "POST", "/files/download", { path: filePath });
     return Buffer.from(result.content, result.encoding || "base64");
   } else if (origin === "bridge") {

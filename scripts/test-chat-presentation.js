@@ -168,3 +168,8 @@ test("a message outside a reply is saved for the web chat and shown live when a 
   assert.match(status, /if \(!hasWebChatConnection\(chatId\)\) return null;/, "a status with no one watching is dropped, not saved as a message");
   assert.doesNotMatch(status, /sendWebMessage/);
 });
+
+test("a long conversation carries on quietly: no note about its length", () => {
+  const engine = read("lib/engine.js");
+  assert.doesNotMatch(engine, /thread-size|Thread note|longThreadNotice/, "older history is condensed into memory without telling anyone");
+});

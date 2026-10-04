@@ -4087,6 +4087,7 @@
   function addMessage(text, role, fileInfo, ts) {
     var div = document.createElement('div');
     div.className = 'message ' + role;
+    div._raw = text;
     // Force bright text inline to override any cached CSS
     if (role === 'bot') {
       div.style.color = '#EFE6D6';
@@ -4463,6 +4464,20 @@
         loadActivityFeed();
       })
       .catch(function(e) { console.error('[Threads] load error:', e); loadActivityFeed(); });
+  }
+
+  // What arrived while this tab was away: everything sent after the last
+  // message shown here, matched on the text as sent. Matching on what the
+  // page displays never worked, since that also holds the time label and the
+  // formatting, so nothing missed was ever caught up.
+  function missedSince(history, lastShown) {
+    if (!lastShown) return [];
+    for (var i = history.length - 1; i >= 0; i--) {
+      if (history[i].content === lastShown) {
+        return history.slice(i + 1).filter(function (m) { return m.direction === 'outbound'; });
+      }
+    }
+    return [];
   }
 
   // A reopened conversation shows what was said. A note wholly in brackets
@@ -4968,19 +4983,11 @@
       connectChat();
       // Poll for any missed messages
       fetch('/api/chat/history').then(function(r) { return r.json(); }).then(function(data) {
-        var msgs = data.messages;
-        if (!msgs || !msgs.length) return;
-        // Get last 5 messages
-        var recent = msgs.slice(-5);
         var allShown = messagesEl.querySelectorAll('.message');
-        var lastShownText = allShown.length ? allShown[allShown.length - 1].textContent : '';
-        var foundLast = false;
-        recent.forEach(function(m) {
-          if (m.content === lastShownText) { foundLast = true; return; }
-          if (foundLast && m.direction === 'outbound') {
-            hideTyping();
-            addMessage(m.content, 'bot');
-          }
+        var last = allShown.length ? allShown[allShown.length - 1]._raw : '';
+        missedSince(data.messages || [], last).forEach(function(m) {
+          hideTyping();
+          addMessage(m.content, 'bot', null, m.created_at || null);
         });
       }).catch(function() {});
     }

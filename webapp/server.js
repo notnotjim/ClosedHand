@@ -6569,7 +6569,7 @@ app.post("/api/sync/mark", async (req, res) => {
   const destPath = "/workspace/" + name;
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
 
     // Check if directory or file
     const cleanPath = localPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
@@ -6748,7 +6748,7 @@ async function syncUserFiles(userId) {
           const fname = sync.localPath.split("/").pop();
           await supabase.from("web_messages").insert({
             user_id: userId, direction: "outbound", status: "complete",
-            content: `Heads up: "${fname}" was edited on your computer and on your cloud computer at the same time. Your local version won, so the cloud-side edit was overwritten. If ClosedHand was working on that file, ask it to redo the change.`,
+            content: `Heads up: "${fname}" was edited on your computer and on your sandbox computer at the same time. Your local version won, so the sandbox computer's edit was overwritten. If ClosedHand was working on that file, ask it to redo the change.`,
           });
         } catch (e) { console.log(`[Sync] conflict notice failed: ${e.message}`); }
       }
@@ -6789,7 +6789,7 @@ setInterval(runSyncCycle, 30000);
 // Also run a sync immediately when a file is first marked
 // (the sync/mark endpoint already copies, but this records baseline metadata)
 
-// GET /api/sandbox/activity - recent activity for the cloud computer
+// GET /api/sandbox/activity - recent activity for the sandbox computer
 app.get("/api/sandbox/activity", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json([]);
@@ -6845,7 +6845,7 @@ app.get("/api/sandbox/files", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const dirPath = req.query.path || "/workspace";
     const result = await sandboxFetch(info, "POST", "/files/list", { path: dirPath });
     res.json({ files: result.files || result.entries || [] });
@@ -6861,7 +6861,7 @@ app.post("/api/sandbox/upload", _sandboxUpload.single("file"), async (req, res) 
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const filePath = req.body.path || ("/workspace/" + (req.file?.originalname || "upload"));
     const content = req.file.buffer.toString("base64");
     await sandboxFetch(info, "POST", "/files/write", { path: filePath, content, encoding: "base64" });
@@ -6879,7 +6879,7 @@ app.get("/api/sandbox/download", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: "path required" });
     const result = await sandboxFetch(info, "POST", "/files/download", { path: filePath });
@@ -6908,7 +6908,7 @@ app.delete("/api/sandbox/files", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: "path required" });
     await sandboxFetch(info, "POST", "/files/delete", { path: filePath });
@@ -6941,7 +6941,7 @@ app.post("/api/sandbox/rename", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const { oldPath, newPath } = req.body;
     if (!oldPath || !newPath) return res.status(400).json({ error: "oldPath and newPath required" });
     // Use exec to rename since there's no dedicated rename endpoint
@@ -7005,7 +7005,7 @@ app.post("/api/sandbox/exec", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const { command } = req.body;
     if (!command) return res.status(400).json({ error: "command required" });
     const result = await sandboxFetch(info, "POST", "/exec", { language: "bash", code: command }, 30000);
@@ -7030,7 +7030,7 @@ app.get("/api/sandbox/search", async (req, res) => {
   const safeRoot = searchRoot.replace(/[`"\\$]/g, "");
   try {
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     // Prune dotfiles and node_modules up front instead of filtering after descending.
     const cmd = `find "${safeRoot}" \\( -name '.*' -o -name 'node_modules' \\) -prune -o -iname '*${safe}*' -printf '%y\\t%s\\t%T@\\t%p\\n' 2>/dev/null | head -200`;
     const result = await sandboxFetch(info, "POST", "/exec", { language: "bash", code: cmd }, 15000);
@@ -7185,7 +7185,7 @@ app.post("/api/sandbox/copy-from-local", async (req, res) => {
     }
 
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
 
     if (isDirectory) {
       await bridgeCopyDirToSandbox(userId, sourcePath, destPath, info);
@@ -7210,7 +7210,7 @@ app.post("/api/sandbox/copy-to-local", async (req, res) => {
     if (!sourcePath || !destPath) return res.status(400).json({ error: "sourcePath and destPath required" });
     // Read from sandbox
     const info = await getSandboxInfo(userId);
-    if (!info) return res.status(404).json({ error: "Cloud Computer not enabled" });
+    if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     const fileData = await sandboxFetch(info, "POST", "/files/download", { path: sourcePath });
     const content = fileData.content || fileData.raw || "";
     // Write to local via Bridge
@@ -7836,7 +7836,7 @@ app.post("/api/bridge/request", async (req, res) => {
 });
 
 // ============================================================
-// VNC PROXY (Cloud Computer Desktop)
+// VNC PROXY (Sandbox Computer Desktop)
 // ============================================================
 
 // Token endpoint for VNC connections
@@ -8298,7 +8298,7 @@ setInterval(async () => {
   }
 }, 60000);
 
-// VNC WebSocket Proxy (Cloud Computer Desktop)
+// VNC WebSocket Proxy (Sandbox Computer Desktop)
 // Compression disabled, explicit binary frame handling for VNC protocol.
 const vncWss = new (require("ws").WebSocketServer)({ noServer: true, perMessageDeflate: false });
 

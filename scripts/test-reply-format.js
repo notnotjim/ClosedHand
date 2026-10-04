@@ -98,3 +98,20 @@ test("a reopened conversation shows what was said, not ClosedHand's bookkeeping"
   assert.equal((page.match(/shownInThread\(thread\.messages\)\.forEach/g) || []).length, 2, "both ways of opening a conversation");
   assert.doesNotMatch(page, /thread\.messages\.forEach/, "nothing draws a thread unfiltered");
 });
+
+test("coming back to the tab shows what arrived while away", () => {
+  const start = page.indexOf("  function missedSince(history, lastShown) {");
+  const box = {};
+  vm.runInNewContext(page.slice(start, page.indexOf("\n  }\n", start) + 4) + "\nthis.f = missedSince;", box);
+  const history = [
+    { direction: "inbound", content: "find me a hotel" },
+    { direction: "outbound", content: "On it, back in about ten minutes." },
+    { direction: "outbound", content: "Three good ones: …" },
+    { direction: "outbound", content: "Reminder: iCloud storage" },
+  ];
+  assert.deepEqual([...box.f(history, "On it, back in about ten minutes.")].map((m) => m.content), ["Three good ones: …", "Reminder: iCloud storage"]);
+  assert.deepEqual([...box.f(history, "Reminder: iCloud storage")], [], "nothing new");
+  assert.deepEqual([...box.f(history, "")], [], "an empty page has nothing to anchor on");
+  assert.match(page, /div\._raw = text;/, "each message keeps the text as sent");
+  assert.match(page, /missedSince\(data\.messages \|\| \[\], last\)/);
+});
