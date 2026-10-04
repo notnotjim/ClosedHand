@@ -16,6 +16,6 @@ test('Meta skills follow the saved Meta Ads connection', () => {
 });
 test('browser Instagram instructions require no ads connection', () => {
   const prompt = skills.getSkillsForPrompt({ isConnected: () => false }, 'comment on my instagram post');
-  assert.match(prompt, /--- SKILL: Instagram \(Workspace browser\) ---/);
+  assert.match(prompt, /--- SKILL: Instagram \(sandbox computer\) ---/);
   assert.match(prompt, /sandbox_browse/);
 });

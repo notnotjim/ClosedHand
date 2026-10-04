@@ -4746,10 +4746,10 @@ app.post("/api/automations", async (req, res) => {
 
     if (!name || !task_prompt) return res.status(400).json({ error: "Name and task prompt required" });
 
+    // Rules travel in the instructions as a list, as the dashboard writes them.
     let fullPrompt = task_prompt;
-    if (req.body.quality_check) {
-      fullPrompt += '\n\nQUALITY CHECK: Before delivering results, verify against these criteria: ' + req.body.quality_check + '. If any criteria fail, iterate and improve before reporting.';
-    }
+    const rules = String(req.body.quality_check || "").split("\n").map((r) => r.replace(/^\s*[-*]\s*/, "").trim()).filter(Boolean);
+    if (rules.length) fullPrompt += "\n\nRULES (check the result follows every one of these before sending it, and fix it if not):\n" + rules.map((r) => "- " + r).join("\n");
 
     const { data, error } = await supabase
       .from("automations")

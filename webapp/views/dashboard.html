@@ -477,6 +477,19 @@
       box-sizing: border-box;
     }
 
+    /* The browser's own arrow sits against the right edge; this one keeps
+       the same breathing room as the text on the left. */
+    .modal select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 34px !important;
+      background-color: #1A1817;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23B6AFA4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 11px 8px;
+    }
+
     .modal input::placeholder {
       color: rgba(239,230,214,0.6);
     }
@@ -485,6 +498,15 @@
       outline: none;
       border-color: rgba(239,230,214,0.4);
     }
+
+    /* The New Agent box holds every field at once, so it is set tighter than
+       other boxes and fits a laptop screen without scrolling. */
+    .agent-modal { padding: 14px 24px; }
+    .agent-modal h3 { margin-bottom: 2px; }
+    .agent-modal .modal-desc { margin-bottom: 10px; }
+    .agent-modal label { margin-bottom: 4px; }
+    .agent-modal .skill-choice { min-height: 0; padding: 5px 12px; border-radius: 8px; font-size: 13px; }
+    .agent-modal .modal-actions { margin-top: 10px; }
 
     .modal-steps {
       margin: 14px 0;
@@ -6397,8 +6419,8 @@
         search_cache: 'mail and calendar', search_calendar: 'mail and calendar', semantic_search: 'your history',
         web_search: 'the web', web_fetch: 'the web', drive_search: 'Drive', drive_read: 'Drive', drive_list_recent: 'Drive',
         onedrive_search: 'OneDrive', onedrive_read: 'OneDrive', onedrive_list_recent: 'OneDrive',
-        sandbox_exec: 'the workspace', sandbox_file_read: 'the workspace', sandbox_file_list: 'the workspace',
-        sandbox_file_write: 'the workspace', sandbox_browse: 'the workspace browser', sandbox_gateway: 'connected services',
+        sandbox_exec: 'the sandbox computer', sandbox_file_read: 'the sandbox computer', sandbox_file_list: 'the sandbox computer',
+        sandbox_file_write: 'the sandbox computer', sandbox_browse: "the sandbox computer's browser", sandbox_gateway: 'connected services',
         api_request: 'connected services', fetch_attachment: 'attachments', view_attachment: 'attachments', list_attachments: 'attachments',
         gmail_send: 'email', gmail_reply: 'email', gmail_create_draft: 'email drafts', gmail_draft_update: 'email drafts',
         gcal_create_event: 'the calendar', gcal_update_event: 'the calendar', add_schedule: 'schedules', list_schedules: 'schedules',
@@ -6498,8 +6520,9 @@
         if (!a) return;
         openCreateAutomationModal();
         document.getElementById('auto-name-input').value = a.name || '';
-        document.getElementById('auto-prompt-input').value = a.task_prompt || a.description || '';
-        document.getElementById('auto-quality-input').value = a.task_quality_check || '';
+        var parts = splitRules(a.task_prompt || a.description || '');
+        document.getElementById('auto-prompt-input').value = parts.prompt;
+        document.getElementById('auto-quality-input').value = parts.rules;
         if (a.task_model) selectModel(a.task_model);
         if (a.output_destinations && a.output_destinations[0]) selectDest(a.output_destinations[0]);
         if (a.trigger_type === 'scheduled') {
@@ -6699,6 +6722,24 @@
       }
     }
 
+    // An agent's rules travel in its instructions as a list the agent checks
+    // its result against before sending (lib/automations.js). Editing splits
+    // them back out, so saving again never adds them twice. Older agents
+    // carry a single QUALITY CHECK sentence, which reads back as one rule.
+    var RULES_HEAD = '\n\nRULES (check the result follows every one of these before sending it, and fix it if not):\n';
+    function withRules(prompt, rulesText) {
+      var rules = String(rulesText || '').split('\n').map(function (r) { return r.replace(/^\s*[-*]\s*/, '').trim(); }).filter(Boolean);
+      return rules.length ? prompt + RULES_HEAD + rules.map(function (r) { return '- ' + r; }).join('\n') : prompt;
+    }
+    function splitRules(full) {
+      full = String(full || '');
+      var at = full.indexOf('\n\nRULES (');
+      if (at !== -1) return { prompt: full.slice(0, at), rules: full.slice(at).split('\n').filter(function (l) { return /^- /.test(l); }).map(function (l) { return l.slice(2); }).join('\n') };
+      var old = full.match(/\n\nQUALITY CHECK: Before delivering results, verify against these criteria: ([\s\S]*?)\. If any criteria fail, iterate and improve before reporting\.\s*$/);
+      if (old) return { prompt: full.slice(0, old.index), rules: old[1] };
+      return { prompt: full, rules: '' };
+    }
+
     async function saveAutomation() {
       var name = document.getElementById('auto-name-input').value.trim();
       var prompt = document.getElementById('auto-prompt-input').value.trim();
@@ -6748,7 +6789,7 @@
             trigger_cron: triggerCron,
             trigger_human_schedule: humanSchedule,
             trigger_event_condition: eventCondition,
-            task_prompt: prompt + (document.getElementById('auto-quality-input').value.trim() ? '\n\nQUALITY CHECK: Before delivering results, verify against these criteria: ' + document.getElementById('auto-quality-input').value.trim() + '. If any criteria fail, iterate and improve before reporting.' : ''),
+            task_prompt: withRules(prompt, document.getElementById('auto-quality-input').value),
             task_model: _selectedModel,
             task_tools: taskTools.length > 0 ? taskTools : [],
             task_use_cloud: true,
@@ -8266,7 +8307,7 @@
   </script>
   <!-- Worker Creation Modal -->
   <div class="modal-overlay" id="auto-create-modal" onclick="if(event.target===this)closeCreateAutomationModal()">
-    <div class="modal" style="max-width:680px;max-height:92vh;">
+    <div class="modal agent-modal" style="max-width:760px;max-height:calc(100vh - 16px);">
       <h3>New Agent</h3>
       <p class="modal-desc">Create an agent that handles one job for you.</p>
 
@@ -8275,7 +8316,7 @@
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">
       <label for="auto-template-select">Start from template</label>
-      <select id="auto-template-select" onchange="applyAgentTemplate(this.value)" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;margin-bottom:10px;">
+      <select id="auto-template-select" onchange="applyAgentTemplate(this.value)" style="width:100%;padding:8px 10px;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;margin-bottom:10px;">
         <option value="">Blank agent</option>
         <option value="morning-briefing">Morning Briefing</option>
         <option value="smart-morning">Smart Morning</option>
@@ -8295,20 +8336,20 @@
       </div>
 
       <label for="auto-prompt-input">What should it do?</label>
-      <textarea id="auto-prompt-input" rows="4" style="width:100%;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:10px;color:#EFE6D6;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;" placeholder="Describe what the agent should do..."></textarea>
+      <textarea id="auto-prompt-input" rows="2" style="width:100%;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:10px;color:#EFE6D6;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;" placeholder="Describe what the agent should do..."></textarea>
 
       <label>When should it run?</label>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;" id="auto-trigger-options">
-        <button type="button" class="auto-trigger-btn active" data-trigger="manual" onclick="selectTrigger('manual')" title="Runs when you ask for it in chat, or tap Run here">When I ask</button>
+        <button type="button" class="auto-trigger-btn active" data-trigger="manual" onclick="selectTrigger('manual')">When I ask</button>
         <button type="button" class="auto-trigger-btn" data-trigger="scheduled" onclick="selectTrigger('scheduled')">On a schedule</button>
         <button type="button" class="auto-trigger-btn" data-trigger="event" onclick="selectTrigger('event')">When something happens</button>
       </div>
 
-      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:10px;margin-top:-4px;">Runs when you ask for it in chat, or tap Run here.</div>
+      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:10px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Saved agents.</div>
 
       <!-- Schedule picker (hidden by default) -->
       <div id="auto-schedule-picker" style="display:none;margin-bottom:10px;">
-        <select id="auto-schedule-select" onchange="handleScheduleSelect()" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;">
+        <select id="auto-schedule-select" onchange="handleScheduleSelect()" style="width:100%;padding:8px 10px;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;">
           <option value="0 7 * * 1-5">Weekday mornings at 7am</option>
           <option value="0 8 * * *">Every morning at 8am</option>
           <option value="0 18 * * *">Every evening at 6pm</option>
@@ -8328,7 +8369,7 @@
 
       <!-- Skills preference -->
       <div id="auto-skills-section" style="margin-bottom:10px;">
-        <label>Preferred Skills <span style="color:rgba(239,230,214,0.6);font-weight:400;">(optional, selecting skills here ensures they are used)</span></label>
+        <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional, always used when picked; add or remove skills under Skills on the Agents tab)</span></label>
         <div id="auto-skills-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:28px;">
           <span style="font-size: 13px;color:rgba(239,230,214,0.6);">Loading skills...</span>
         </div>
@@ -8336,37 +8377,34 @@
 
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
       <div style="flex:1;min-width:240px;">
-      <label for="auto-quality-input" style="margin-top:10px;">Quality check <span style="color:rgba(239,230,214,0.6);font-weight:400;">(optional)</span></label>
-      <input type="text" id="auto-quality-input" placeholder="e.g. Must include specific numbers" style="margin-bottom:10px;">
+      <label for="auto-quality-input" style="margin-top:10px;">Rules <span style="color:rgba(239,230,214,0.6);font-weight:400;">(optional, one per line)</span></label>
+      <textarea id="auto-quality-input" rows="2" placeholder="e.g. Always include specific numbers" style="width:100%;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:8px 10px;color:#EFE6D6;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
       </div>
       <div style="flex:1;min-width:240px;">
       <label style="margin-top:10px;">Send results to</label>
       <div id="auto-output-dest" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
         <button type="button" class="auto-dest-btn active" data-dest="chat_platforms" onclick="selectDest('chat_platforms')">Chat apps</button>
         <button type="button" class="auto-dest-btn" data-dest="dashboard" onclick="selectDest('dashboard')">Dashboard only</button>
-        <button type="button" class="auto-dest-btn" data-dest="email" onclick="selectDest('email')">Email</button>
+        <button type="button" class="auto-dest-btn" data-dest="email" onclick="selectDest('email')" title="Sent to you, from your own connected Google or Microsoft account">Email</button>
+      </div>
+      <!-- Under the destinations, where the row has room, rather than a row of its own. -->
+      <a href="#" onclick="event.preventDefault();toggleAdvanced()" id="auto-advanced-toggle" style="font-size: 14px;color:#B6AFA4;text-decoration:none;">Advanced settings <span class="chevron-down" style="margin-left:4px;"></span></a>
       </div>
       </div>
-      </div>
-
-      <!-- Advanced settings toggle -->
-      <div style="margin-bottom:10px;">
-        <a href="#" onclick="event.preventDefault();toggleAdvanced()" id="auto-advanced-toggle" style="font-size: 14px;color:#B6AFA4;text-decoration:none;">Advanced settings <span class="chevron-down" style="margin-left:4px;"></span></a>
-      </div>
-      <div id="auto-advanced" style="display:none;margin-bottom:10px;padding:12px;background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:8px;">
-        <label style="font-size: 14px;margin-bottom:6px;display:block;">Speed vs Quality</label>
-        <div style="display:flex;gap:6px;margin-bottom:4px;">
-          <button type="button" class="auto-model-btn" data-model="haiku" onclick="selectModel('haiku')">Fast</button>
-          <button type="button" class="auto-model-btn active" data-model="sonnet" onclick="selectModel('sonnet')">Balanced</button>
-          <button type="button" class="auto-model-btn" data-model="opus" onclick="selectModel('opus')">Thorough</button>
-        </div>
-        <div id="auto-model-desc" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:10px;min-height:16px;">Good for most tasks. Email summaries, monitoring, reports.</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <input type="checkbox" id="auto-urgent-check" style="width:16px;height:16px;margin:0;accent-color:#D0563F;">
-          <label for="auto-urgent-check" style="font-size: 14px;color:#B6AFA4;margin:0;cursor:pointer;">Urgent</label>
-          <span class="auto-tooltip-wrap" style="display:inline-flex;align-items:center;">
-            <span style="font-size: 13px;color:rgba(239,230,214,0.6);cursor:help;">&#9432;</span>
-            <span class="auto-tooltip">Notifications from this agent will be delivered even during your quiet hours. Use for time-sensitive alerts like price drops or urgent emails.</span>
+      <div id="auto-advanced" style="display:none;margin-bottom:10px;padding:10px 12px;background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:8px;">
+        <!-- One row, so opening these still fits the box without scrolling. -->
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:14px;font-weight:600;color:#B6AFA4;margin-right:4px;">Speed vs quality</span>
+          <button type="button" class="auto-model-btn" data-model="haiku" onclick="selectModel('haiku')" title="Quick lookups, simple checks, basic summaries.">Fast</button>
+          <button type="button" class="auto-model-btn active" data-model="sonnet" onclick="selectModel('sonnet')" title="Good for most tasks: email summaries, monitoring, write-ups.">Balanced</button>
+          <button type="button" class="auto-model-btn" data-model="opus" onclick="selectModel('opus')" title="Deep research, complex analysis, strategy. Slower but more thorough.">Thorough</button>
+          <span style="display:inline-flex;align-items:center;gap:8px;margin-left:auto;">
+            <input type="checkbox" id="auto-urgent-check" style="width:16px;height:16px;margin:0;accent-color:#D0563F;">
+            <label for="auto-urgent-check" style="font-size: 14px;color:#B6AFA4;margin:0;cursor:pointer;">Urgent</label>
+            <span class="auto-tooltip-wrap" style="display:inline-flex;align-items:center;">
+              <span style="font-size: 13px;color:rgba(239,230,214,0.6);cursor:help;">&#9432;</span>
+              <span class="auto-tooltip">Notifications from this agent will be delivered even during your quiet hours.</span>
+            </span>
           </span>
         </div>
         <!-- Sandbox Computer always enabled for all workers -->
