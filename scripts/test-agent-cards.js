@@ -15,18 +15,20 @@ const box = {};
 vm.runInNewContext(["runWord", "runOutcome", "couldNotFinish", "stepText"].map(fn).join("\n") +
   "\nthis.runWord = runWord; this.runOutcome = runOutcome; this.stepText = stepText;", box);
 
-test("a run that answered says Completed and how the answer starts", () => {
+test("a run that answered says Completed, and its line gives how the answer starts", () => {
   const a = { status: "partial", result: "## Newcastle and the top four\n**About a 6% chance** of the top five.\n[[next]]\nDetail." };
-  assert.equal(box.runOutcome(a), "Completed · Newcastle and the top four");
+  assert.equal(box.runOutcome(a), "Newcastle and the top four", "the pill carries the word; the line does not repeat it");
   assert.equal(box.runWord(a), "Completed", "the check's verdict is not the person's business");
   assert.equal(box.runOutcome({ status: "completed", result: "x".repeat(200) }).length < 130, true);
 });
 
 test("a run that could not finish says why in plain words, never the check's note", () => {
-  assert.equal(box.runOutcome({ status: "partial", error: "No answer was produced." }), "Couldn't finish · something went wrong partway through");
-  assert.equal(box.runOutcome({ status: "failed", error: "fetch failed" }), "Couldn't finish · the connection to the AI provider kept dropping");
-  assert.equal(box.runOutcome({ status: "failed", error: "This task reached its work allowance." }), "Couldn't finish · it reached the work allowance for one task");
-  assert.equal(box.runOutcome({ status: "cancelled" }), "Stopped");
+  assert.equal(box.runWord({ status: "partial", error: "No answer was produced." }), "Couldn't finish");
+  assert.equal(box.runOutcome({ status: "partial", error: "No answer was produced." }), "Something went wrong partway through.");
+  assert.equal(box.runOutcome({ status: "failed", error: "fetch failed" }), "The connection to the AI provider kept dropping.");
+  assert.equal(box.runOutcome({ status: "failed", error: "This task reached its work allowance." }), "It reached the work allowance for one task.");
+  assert.equal(box.runWord({ status: "cancelled" }), "Stopped");
+  assert.equal(box.runOutcome({ status: "cancelled" }), "Stopped before it finished.");
   assert.equal(box.stepText("Quality check sent it back for another pass: No answer was produced."), "Improving the answer before sending it");
   assert.equal(box.stepText("Searching the web"), "Searching the web");
   assert.doesNotMatch(dashboard, /escapeHtml\(String\(a\.error\)\)/, "the raw error is never printed");
