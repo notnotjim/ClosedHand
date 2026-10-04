@@ -1,0 +1,54 @@
+// A booking email that gives a date without its year means the first such
+// day after the email was sent, never "this year". Old confirmation emails
+// (a December 2022 Qatar trip, an October 2025 Trip.com order) were dated to
+// 2026 and shown as upcoming; a real flight was also kept twice as a booking.
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+const { yearCorrection, yearsToAnchor, implausiblyLate, shiftYears } = require("../lib/email-dates");
+const { reconcileFlights } = require("../lib/flight-bookings");
+
+test("a date without its year is the first such day after the email was sent", () => {
+  assert.equal(yearCorrection("2026-12-21T19:00:00+08:00", "2022-12-21T06:48:44Z", false), -4, "a 2022 email describes a 2022 trip");
+  assert.equal(yearCorrection("2026-12-03T00:00:00+09:00", "2025-10-25T00:00:00Z", false), -1);
+  assert.equal(yearCorrection("2026-01-15T10:00:00+00:00", "2026-12-20T10:00:00Z", false), 1, "a January trip in a December email is next January");
+  assert.equal(yearCorrection("2026-10-07T11:55:00+07:00", "2026-10-01T06:31:40Z", false), 0);
+  assert.equal(yearCorrection("2026-10-04T09:00:00+07:00", "2026-10-04T08:00:00Z", false), 0, "booked on the day");
+  assert.equal(yearCorrection("2028-06-01T10:00:00+00:00", "2026-06-01T10:00:00Z", true), 0, "a year the email wrote is kept, however far ahead");
+  assert.equal(yearCorrection("2026-12-21T19:00:00+08:00", "2022-12-21T06:48:44Z"), -4, "unsaid, a date years after its email was guessed");
+  assert.equal(yearCorrection("2026-11-01T10:00:00+00:00", "2026-03-01T10:00:00Z"), 0, "unsaid and plausible, left alone");
+  assert.equal(implausiblyLate("2026-12-02T15:00:00Z", "2025-10-25T00:00:00Z"), true);
+  assert.equal(shiftYears("2026-12-22T00:00:00+03:00", -4), "2022-12-22T00:00:00+03:00");
+  assert.equal(yearsToAnchor("not a date", "2022-12-21T00:00:00Z"), 0);
+});
+
+test("a flight from an old email is dated by that email, so a past trip never shows as upcoming", () => {
+  const emails = [
+    { id: "old", date: "Wed, 21 Dec 2022 06:48:44 +0000", subject: "Super Wi-Fi access confirmation", body: "QR1563 DPS-DOH 21 Dec 19:00. QR0009 DOH-LHR 22 Dec 01:50. Booking N44OQXBA" },
+    { id: "new", date: "2026-10-01T06:31:40Z", subject: "Your order", body: "VN123 DAD-SGN 7 Oct 11:55 FLCZQ4" },
+  ];
+  const parsed = [
+    { emailIndex: 0, airline: "Qatar Airways", flightNumber: "QR1563", yearStated: false, departure: { airport: "DPS", dateTime: "2026-12-21T19:00:00+08:00" }, arrival: { airport: "DOH", dateTime: "2026-12-22T00:00:00+03:00" }, confirmationCode: "N44OQXBA" },
+    { emailIndex: 1, airline: "Vietnam Airlines", flightNumber: "VN123", yearStated: false, departure: { airport: "DAD", dateTime: "2026-10-07T11:55:00+07:00" }, arrival: { airport: "SGN", dateTime: "2026-10-07T13:25:00+07:00" }, confirmationCode: "FLCZQ4" },
+  ];
+  const result = reconcileFlights({}, parsed, emails, Date.parse("2026-10-05T00:00:00Z"));
+  const keys = result.patches.map(([key]) => key);
+  assert.deepEqual(keys, ["flight-VN123-2026-10-07"], "the 2022 trip is past, so only the real flight is kept");
+});
+
+test("both readers are told to anchor on the email, and stored records heal", () => {
+  for (const f of ["lib/flights.js", "lib/bookings.js"]) {
+    const src = read(f);
+    assert.doesNotMatch(src, /The current year is/, `${f} no longer dates by the current year`);
+    assert.match(src, /Without a written year, use the year that puts the (flight|booking) first on or after the email's date, never simply the current year/);
+    assert.match(src, /"yearStated": true/);
+  }
+  const flights = read("lib/flights.js");
+  assert.match(flights, /flight\.sourceEmailAt && implausiblyLate\(flight\.departure\?\.dateTime, flight\.sourceEmailAt\)/, "a stored flight long after its email is re-dated, and goes if past");
+  const bookings = read("lib/bookings.js");
+  assert.match(bookings, /const rows = await repairBookings\(userId, data \|\| \[\]\);/, "every scan heals stored bookings first");
+  assert.match(bookings, /if \(b\.reference && flightRefs\.has\(String\(b\.reference\)/, "a flight is never also kept as a booking");
+  assert.match(bookings, /let drop = !!ref && flightRefs\.has\(ref\);/);
+});
