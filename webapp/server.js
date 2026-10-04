@@ -4270,20 +4270,30 @@ app.get("/api/connections/scopes", async (req, res) => {
 });
 
 // GET /api/agents — list user's recent agent tasks
+// A finished run stays on the Agents list for a week, then folds into the
+// list's Archived section, which loads only when it is opened (?archived=1).
+// Nothing is deleted: its links and its report keep working.
+const ARCHIVE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const LIVE_RUN_STATUSES = ["running", "pending", "awaiting_confirmation"];
+const DONE_RUN_STATUSES = ["completed", "failed", "cancelled", "partial", "blocked"];
 app.get("/api/agents", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
-    const { data, error } = await supabase
+    const cutoff = new Date(Date.now() - ARCHIVE_AFTER_MS).toISOString();
+    const runs = () => supabase
       .from("agent_tasks")
       .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at, runtime")
-      .eq("user_id", userId)
-      .in("status", ["running", "pending", "completed", "failed", "cancelled", "partial", "blocked", "awaiting_confirmation"])
-      .order("created_at", { ascending: false })
-      .limit(20);
-
+      .eq("user_id", userId);
+    const lists = req.query.archived === "1"
+      ? [runs().in("status", DONE_RUN_STATUSES).lt("created_at", cutoff)]
+      : [runs().in("status", LIVE_RUN_STATUSES), runs().in("status", DONE_RUN_STATUSES).gte("created_at", cutoff)];
+    const results = await Promise.all(lists.map((q) => q.order("created_at", { ascending: false }).limit(50)));
+    const error = results.find((r) => r.error)?.error;
     if (error) throw error;
+    const data = results.flatMap((r) => r.data || [])
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 50);
     // The report a run made, when it judged one helped (save_report). A run
     // without one is an answer and is shown as one.
     const ids = (data || []).map((t) => t.id);

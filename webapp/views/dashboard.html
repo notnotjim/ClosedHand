@@ -1523,6 +1523,8 @@
     .auto-status-pill.active { background: rgba(141,189,121,0.12); color: #8DBD79; }
     .auto-status-pill.paused { background: rgba(208,166,82,0.12); color: #D0A652; }
     .auto-status-pill.idle { background: rgba(26,24,23,0.12); color: #B6AFA4; }
+    .agent-archive-toggle { font-size: 12px; margin: 2px 0 12px; }
+    .agent-archive-toggle a { color: #B6AFA4; }
     .auto-card-meta {
       font-size: 13px;
       color: rgba(239,230,214,0.6);
@@ -6080,28 +6082,41 @@
         if (!res.ok) throw new Error('Tasks unavailable');
         var agents = await res.json();
         document.getElementById('auto-active-error').hidden = true;
+        // The list holds this week's runs; the server folds older finished
+        // ones into Archived, which loads only when it is opened.
         var live = agents.filter(function(a) { return a.status === 'running' || a.status === 'pending'; });
         var waiting = agents.filter(function(a) { return a.status === 'awaiting_confirmation'; });
-        var recent = agents.filter(function(a) {
-          if (a.status === 'running' || a.status === 'pending' || a.status === 'awaiting_confirmation') return false;
-          return (Date.now() - new Date(a.completed_at || a.created_at).getTime()) < 6 * 3600 * 1000;
-        }).slice(0, 5);
-
-        var show = live.concat(waiting, recent);
-        if (!show.length) {
-          activeList.innerHTML = '';
-          activeLabel.style.display = 'none';
-        } else {
-          activeLabel.style.display = '';
-          activeLabel.textContent = live.length ? 'Running Now' : waiting.length ? 'Waiting for your answer' : 'Recently Run';
-          var html = show.map(renderAgentCard).join('');
-          if (activeList.innerHTML !== html) activeList.innerHTML = html;
-        }
+        var finished = agents.filter(function(a) { return live.indexOf(a) === -1 && waiting.indexOf(a) === -1; });
+        var group = function(label, runs) {
+          return runs.length ? '<div class="mc-section-label">' + label + '</div>' + runs.map(renderAgentCard).join('') : '';
+        };
+        activeLabel.style.display = 'none';
+        var html = group('Running now', live) + group('Waiting for your answer', waiting) + group('This week', finished) +
+          '<div class="agent-archive-toggle"><a href="#" onclick="toggleArchivedRuns();return false;">' +
+          (_archivedRuns ? 'Hide archived runs' : 'Show archived runs') + '</a></div>' +
+          (_archivedRuns ? (_archivedRuns.length ? group('Archived', _archivedRuns)
+            : '<p class="auto-card-meta">Nothing archived yet. Finished runs move here a week after they ran.</p>') : '');
+        if (activeList.innerHTML !== html) activeList.innerHTML = html;
 
       } catch (e) {
         document.getElementById('auto-active-error').hidden = false;
         console.error('Load agents error:', e);
       }
+    }
+
+    // Runs from more than a week ago, loaded when the person opens Archived.
+    var _archivedRuns = null;
+    async function toggleArchivedRuns() {
+      if (_archivedRuns) { _archivedRuns = null; loadRunningAgents(); return; }
+      try {
+        var res = await fetch('/api/agents?archived=1');
+        if (!res.ok) throw new Error('Archived runs unavailable');
+        _archivedRuns = await res.json();
+      } catch (e) {
+        showToast('Could not load archived runs. Try again shortly.', true);
+        return;
+      }
+      loadRunningAgents();
     }
 
     async function stopAgentRun(id, btn) {
@@ -6198,9 +6213,44 @@
       if (open) _openAgents[id] = true; else delete _openAgents[id];
     }
 
+    // How a finished run ended, as the chat told the person: "Completed" with
+    // the first line of the answer it sent, or why it could not finish.
+    function runWord(a) {
+      if (a.status === 'running') return 'Running';
+      if (a.status === 'pending') return 'Queued';
+      if (a.status === 'awaiting_confirmation') return 'Waiting for your answer';
+      if (a.result) return 'Completed';
+      if (a.status === 'cancelled') return 'Stopped';
+      if (a.status === 'blocked') return 'Needs attention';
+      return "Couldn't finish";
+    }
+    function runOutcome(a) {
+      if (a.result) {
+        var first = String(a.result).replace(/\[\[next\]\]/g, '\n').split('\n').map(function(l) {
+          return l.replace(/^[#>*\-\s]+/, '').replace(/[*_`]/g, '').trim();
+        }).filter(Boolean)[0] || '';
+        if (first.length > 110) first = first.slice(0, 110).replace(/\s+\S*$/, '') + '\u2026';
+        return first ? 'Completed \u00b7 ' + first : 'Completed';
+      }
+      if (a.status === 'cancelled' || a.status === 'blocked') return runWord(a);
+      return "Couldn't finish \u00b7 " + couldNotFinish(a.error);
+    }
+    function couldNotFinish(error) {
+      var e = String(error || '');
+      return /fetch failed|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up|network/i.test(e) ? 'the connection to the AI provider kept dropping'
+        : /allowance|budget/i.test(e) ? 'it reached the work allowance for one task'
+        : /timed out|timeout/i.test(e) ? 'it took too long and was stopped'
+        : 'something went wrong partway through';
+    }
+    // Runs from before the check's notes were kept out of sight still carry
+    // them in their trail; they read as the step they were.
+    function stepText(text) {
+      return /^Quality check/i.test(text) ? 'Improving the answer before sending it' : text;
+    }
+
     function renderAgentCard(a) {
       var running = a.status === 'running' || a.status === 'pending';
-      var statusClass = running ? 'active' : a.status === 'failed' ? 'paused' : 'idle';
+      var statusClass = running ? 'active' : runWord(a) === "Couldn't finish" ? 'paused' : 'idle';
 
       // The goal starts with the user's own words and then carries the handover
       // note the engine appends, so neither the raw first line nor the whole
@@ -6235,10 +6285,12 @@
       var mins = Math.max(0, Math.round((Date.now() - new Date(a.created_at).getTime()) / 60000));
       var when = mins < 60 ? mins + 'm' : Math.round(mins / 60) + 'h';
       // Raw statuses read as machine output; say it as a person would.
-      var statusWords = { completed: 'Completed', failed: 'Failed', cancelled: 'Stopped', pending: 'Queued', partial: 'Incomplete', blocked: 'Needs attention', awaiting_confirmation: 'Waiting for your answer' };
+      // A finished card says how it ended in the person's terms: the first line
+      // of the answer it sent, or why it could not finish, in the words the
+      // chat used. The quality check's notes are ClosedHand's own working.
       var detail = running
         ? (last || 'Working on it') + ' \u00b7 running ' + when
-        : (a.error ? String(a.error).substring(0, 120) : (last || statusWords[a.status] || String(a.status)));
+        : runOutcome(a);
       if (!running && a.result_edited_at) detail += ' \u00b7 edited ' + timeAgo(a.result_edited_at);
       // The question went to the chat the task came from. Say where and when, so
       // the answer is given there; this card never takes one.
@@ -6254,9 +6306,10 @@
       var steps = entries.map(function(x) {
         if (typeof x === 'string') { try { x = JSON.parse(x); } catch (err) { x = { text: x }; } }
         var t = x && x.time ? new Date(x.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-        return '<div class="agent-step">' + escapeHtml(t) + '  ' + escapeHtml((x && x.text) || '') + '</div>';
+        return '<div class="agent-step">' + escapeHtml(t) + '  ' + escapeHtml(stepText((x && x.text) || '')) + '</div>';
       }).join('');
-      var errHtml = a.error ? '<div class="agent-step agent-err">' + escapeHtml(String(a.error)) + '</div>' : '';
+      var errHtml = !running && !a.result && a.status !== 'cancelled' && a.status !== 'awaiting_confirmation'
+        ? '<div class="agent-step agent-err">' + escapeHtml(couldNotFinish(a.error)) + '</div>' : '';
       if (asked && asked.question) errHtml += '<div class="agent-step">' + escapeHtml(String(asked.question)).replace(/\n/g, '<br>') + '</div>';
       // Raw tool names ("search_cache, sandbox_exec") are machinery leaking.
       // Say where it looked, in words, deduplicated.
@@ -6304,7 +6357,7 @@
       return '<div class="auto-card agent-card' + (_openAgents[a.id] ? ' open' : '') + '" onclick="toggleAgentCard(this, \'' + a.id + '\')" title="Click for detail">' +
         '<div class="auto-card-header">' +
           '<div class="auto-card-name">' + escapeHtml(goal) + '</div>' +
-          '<div class="auto-status-pill ' + statusClass + '">' + (running ? 'RUNNING' : String(statusWords[a.status] || a.status).toUpperCase()) + '</div>' +
+          '<div class="auto-status-pill ' + statusClass + '">' + runWord(a).toUpperCase() + '</div>' +
           pdfHtml +
           binHtml +
         '</div>' +
