@@ -62,7 +62,9 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   "web chat" (its own tab can say "Chat"); WhatsApp, Telegram and the like are "chat apps";
   the control panel (connections, agents, settings, Context Brain, usage) is the "dashboard".
   The personal URL opens the web chat and the dashboard. Never bare "chat" where it could
-  mean either kind.
+  mean either kind. The sandbox is "ClosedHand's sandbox computer", as on the Computers tab,
+  or "the sandbox computer"; never "cloud computer", since on self-host it runs on the
+  person's own machine.
 - The recall design is the "Preemptive Context Layer" (PCL), defined at closedhand.com/pcl, first
   published there on 2026-09-29. It is free for anyone to use: no trademark sign. Describe it as
   one live picture of the person's world searched once before the model reads a message, never
@@ -111,6 +113,11 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   the thread is condensed. "Mei is Sam's wife; Canadian; saving to buy a house" is a
   fact; "she finds Rome stressful" is context. The test: would you say it
   the same way in a year, to a stranger, with no story around it.
+- Replies answer completely in chat, the answer first, so nobody has to open anything to get
+  it. A reply past about one phone screen goes as two or three follow-on messages (a line holding
+  only [[next]], lib/follow-on.js; unmarked long replies are split there too). A report is a page
+  of its own (/report/<id>, with PDF, Word and Excel), linked as an extra, never instead of the
+  answer. Background progress is one live line in the web chat and one plain message elsewhere.
 - Questions mid-task go to the chat the task came from. The dashboard only shows
   that ClosedHand is waiting, where it asked and when, and repeats the question.
   It never expects the answer there.
