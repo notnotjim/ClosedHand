@@ -4336,6 +4336,61 @@ app.get("/api/agents/:id", async (req, res) => {
   }
 });
 
+// A finished run, looked up for its owner: the report page and its files.
+async function finishedRun(req, res) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) { res.status(401).json({ error: "Not logged in" }); return null; }
+  const { data: run, error } = await supabase
+    .from("agent_tasks")
+    .select("id, user_id, goal, title, status, result, created_at, completed_at, result_edited_at")
+    .eq("id", req.params.id)
+    .single();
+  if (error || !run) { res.status(404).send("This report was not found."); return null; }
+  if (run.user_id !== userId) { res.status(403).send("Not authorized"); return null; }
+  if (!run.result) { res.status(409).send("This report is not ready yet."); return null; }
+  return run;
+}
+
+// GET /report/:id — the report as a page of its own (webapp/report-page.js):
+// the link a chat gets when a report earns its place.
+app.get("/report/:id", async (req, res) => {
+  try {
+    const run = await finishedRun(req, res);
+    if (!run) return;
+    const { runTitle } = require("./run-pdf");
+    res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'self'");
+    res.send(require("./report-page").pageHtml(run, runTitle(run)));
+  } catch (err) {
+    console.error("Report page error:", err.message);
+    res.status(500).send("Could not show this report.");
+  }
+});
+
+// GET /api/agents/:id/docx and /xlsx — the same report as a Word document,
+// or its tables as a spreadsheet.
+for (const kind of ["docx", "xlsx"]) {
+  app.get(`/api/agents/:id/${kind}`, async (req, res) => {
+    try {
+      const run = await finishedRun(req, res);
+      if (!run) return;
+      const { runTitle } = require("./run-pdf");
+      const page = require("./report-page");
+      if (kind === "xlsx" && !page.hasTables(run.result)) return res.status(409).send("This report has no tables to put in a spreadsheet.");
+      const buf = kind === "docx" ? page.docxBuffer(run, runTitle(run)) : page.xlsxBuffer(run);
+      const date = String(run.completed_at || run.created_at || "").substring(0, 10);
+      const safe = runTitle(run).replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "report";
+      res.setHeader("Content-Type", kind === "docx"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="ClosedHand - ${safe}${date ? ` - ${date}` : ""}.${kind}"`);
+      res.send(buf);
+    } catch (err) {
+      console.error(`Report ${kind} error:`, err.message);
+      res.status(500).json({ error: "Could not build the file" });
+    }
+  });
+}
+
 // GET /api/agents/:id/pdf — a finished run's output, typeset for download.
 // The web view renders the same markdown dialect; this is the take-away copy.
 app.get("/api/agents/:id/pdf", async (req, res) => {

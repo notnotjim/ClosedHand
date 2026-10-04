@@ -115,6 +115,11 @@ jobs:
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
 
+      - name: Report page, Word and Excel files
+        run: |
+          npm install --prefix "$RUNNER_TEMP/report-test" --ignore-scripts --no-audit --no-fund adm-zip@0.5.17 xlsx@0.18.5 mammoth@1.12.0
+          NODE_PATH="$RUNNER_TEMP/report-test/node_modules" node --test scripts/test-report-page.js
+
       # A name that was never defined only fails when its line runs, so a
       # rarely used path ships broken: removing a schedule crashed every
       # time for this reason.

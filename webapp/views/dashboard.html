@@ -6271,7 +6271,7 @@
       // as what is shown on it. Preview opens the identical document in the
       // browser's PDF viewer; the download button saves it.
       var pdfHtml = (!running && (a.status === 'completed' || a.status === 'partial') && a.result)
-        ? '<button class="agent-del" title="Preview the PDF without downloading" onclick="event.stopPropagation();window.open(\'/api/agents/' + a.id + '/pdf?view=1\', \'_blank\')">Preview</button>' +
+        ? '<button class="agent-del" title="Open the report as a page, with PDF, Word and Excel downloads" onclick="event.stopPropagation();window.open(\'/report/' + a.id + '\', \'_blank\')">Open report</button>' +
           '<button class="agent-del" title="Download as a PDF" onclick="event.stopPropagation();location.href=\'/api/agents/' + a.id + '/pdf\'">&#8595; PDF</button>'
         : '';
 

@@ -1,0 +1,211 @@
+// A finished run's report as a page of its own, at /report/<id>: one link
+// that opens from any chat through the personal URL, readable on a phone,
+// with the same report as a PDF, Word document or spreadsheet when a file is
+// wanted. The chat always carries the answer; this is the fuller version.
+//
+// One reading of the report's Markdown feeds the page, the Word document and
+// the spreadsheet, so the three never disagree about what the report says.
+
+const AdmZip = require("adm-zip");
+
+// A follow-on break (lib/follow-on.js) is a paragraph in a document.
+const BREAK = /^[ \t]*\[\[next\]\][ \t]*$/gm;
+const ROW = /^\s*\|.*\|\s*$/;
+const RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+
+function cells(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+}
+
+// Headings, paragraphs, lists and tables, in order.
+function blocks(md) {
+  const lines = String(md || "").replace(BREAK, "").split(/\r?\n/);
+  const out = [];
+  let para = [];
+  const endPara = () => { if (para.length) { out.push({ type: "para", lines: para }); para = []; } };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (ROW.test(line) && RULE.test(lines[i + 1] || "")) {
+      endPara();
+      const rows = [];
+      for (i += 2; i < lines.length && ROW.test(lines[i]); i++) rows.push(cells(lines[i]));
+      i--;
+      out.push({ type: "table", header: cells(line), rows });
+      continue;
+    }
+    const heading = line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (heading) { endPara(); out.push({ type: "heading", level: Math.min(heading[1].length, 3), text: heading[2] }); continue; }
+    const item = line.match(/^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/);
+    if (item) {
+      endPara();
+      const ordered = !item[1];
+      const last = out[out.length - 1];
+      if (last && last.type === "list" && last.ordered === ordered) last.items.push(item[3]);
+      else out.push({ type: "list", ordered, items: [item[3]] });
+      continue;
+    }
+    if (!line.trim()) { endPara(); continue; }
+    para.push(line.trim());
+  }
+  endPara();
+  return out;
+}
+
+function hasTables(md) {
+  return blocks(md).some((b) => b.type === "table");
+}
+
+// --- The page -------------------------------------------------------------
+
+const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function inline(text) {
+  const e = esc(text);
+  let out = "", last = 0, m;
+  const link = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/g;
+  const marks = (t) => t
+    .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=$|[\s).,:;!?])/g, "$1<em>$2</em>")
+    .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+  while ((m = link.exec(e))) {
+    out += marks(e.slice(last, m.index));
+    out += m[1] ? `<a href="${m[2]}" target="_blank" rel="noopener">${marks(m[1])}</a>` : `<a href="${m[3]}" target="_blank" rel="noopener">${m[3]}</a>`;
+    last = link.lastIndex;
+  }
+  return out + marks(e.slice(last));
+}
+
+function bodyHtml(md) {
+  return blocks(md).map((b) => {
+    if (b.type === "heading") return `<h${b.level + 1}>${inline(b.text)}</h${b.level + 1}>`;
+    if (b.type === "para") return `<p>${b.lines.map(inline).join("<br>")}</p>`;
+    if (b.type === "list") return `<${b.ordered ? "ol" : "ul"}>${b.items.map((t) => `<li>${inline(t)}</li>`).join("")}</${b.ordered ? "ol" : "ul"}>`;
+    return `<div class="table"><table><thead><tr>${b.header.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead>`
+      + `<tbody>${b.rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }).join("\n");
+}
+
+function pageHtml(run, title) {
+  const id = encodeURIComponent(run.id);
+  const date = run.completed_at || run.created_at;
+  const when = date ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+  const files = [
+    `<a class="file" href="/api/agents/${id}/pdf">PDF</a>`,
+    `<a class="file" href="/api/agents/${id}/docx">Word</a>`,
+    hasTables(run.result) ? `<a class="file" href="/api/agents/${id}/xlsx">Excel</a>` : "",
+  ].join("");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(title)}</title>
+<link rel="icon" href="/fist.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+:root { --bg: #f7f3ee; --fg: #241c18; --muted: #75685f; --line: #e3dbd2; --accent: #b9452f; --head: #efe7de; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 "IBM Plex Sans", system-ui, -apple-system, sans-serif; padding: max(20px, env(safe-area-inset-top)) 16px 64px; }
+main { max-width: 760px; margin: 0 auto; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 18px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; text-decoration: none; }
+.brand img { width: 18px; height: 18px; }
+.files { display: flex; gap: 8px; }
+.file { font-size: 13px; font-weight: 500; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
+.file:hover, .file:focus-visible { border-color: var(--accent); color: var(--accent); }
+h1 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+.when { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+h2, h3, h4 { font-family: Fraunces, Georgia, serif; font-weight: 600; line-height: 1.25; margin: 30px 0 10px; text-wrap: balance; }
+h2 { font-size: 1.35rem; } h3 { font-size: 1.12rem; } h4 { font-size: 1rem; }
+p, ul, ol { margin: 0 0 14px; max-width: 68ch; }
+li { margin: 4px 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+code { font: 0.9em "SF Mono", Menlo, monospace; background: var(--head); padding: 1px 5px; border-radius: 4px; }
+.table { overflow-x: auto; margin: 6px 0 20px; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { background: var(--head); font-weight: 600; white-space: nowrap; }
+</style></head>
+<body><main>
+<div class="bar"><a class="brand" href="/"><img src="/fist.png" alt="">ClosedHand</a><div class="files">${files}</div></div>
+<h1>${esc(title)}</h1>
+<p class="when">${esc(when)}</p>
+${bodyHtml(run.result)}
+</main></body></html>`;
+}
+
+// --- Word -------------------------------------------------------------------
+
+const xml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Text runs with bold kept; links become their words followed by the address.
+function runs(text) {
+  const plain = String(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)").replace(/`([^`\n]+)`/g, "$1").replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=$|[\s).,:;!?])/g, "$1$2");
+  return plain.split(/(\*\*[^*\n]+?\*\*)/).filter(Boolean).map((part) => {
+    const bold = /^\*\*.*\*\*$/.test(part);
+    const t = bold ? part.slice(2, -2) : part;
+    return `<w:r>${bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${xml(t)}</w:t></w:r>`;
+  }).join("");
+}
+
+function docxBuffer(run, title) {
+  const para = (inner, style) => `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ""}${inner}</w:p>`;
+  const body = [para(runs(title), "Title")];
+  for (const b of blocks(run.result)) {
+    if (b.type === "heading") body.push(para(runs(b.text), `Heading${b.level}`));
+    else if (b.type === "para") body.push(para(b.lines.map(runs).join('<w:r><w:br/></w:r>')));
+    else if (b.type === "list") b.items.forEach((t, i) => body.push(para(`<w:r><w:t xml:space="preserve">${b.ordered ? `${i + 1}. ` : "• "}</w:t></w:r>${runs(t)}`, "ListParagraph")));
+    else {
+      const row = (cellsIn, head) => `<w:tr>${cellsIn.map((c) => `<w:tc><w:p>${head ? runs(`**${c}**`) : runs(c)}</w:p></w:tc>`).join("")}</w:tr>`;
+      body.push(`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>${row(b.header, true)}${b.rows.map((r) => row(r)).join("")}</w:tbl>`);
+      body.push(para(""));
+    }
+  }
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="40"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="30"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:pPr><w:spacing w:before="200" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:rPr><w:b/><w:sz w:val="23"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:pPr><w:ind w:left="360"/><w:spacing w:after="60"/></w:pPr></w:style>
+<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/></w:tblBorders><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+</w:styles>`;
+  const zip = new AdmZip();
+  zip.addFile("[Content_Types].xml", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`));
+  zip.addFile("_rels/.rels", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`));
+  zip.addFile("word/_rels/document.xml.rels", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`));
+  zip.addFile("word/styles.xml", Buffer.from(styles));
+  zip.addFile("word/document.xml", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body.join("")}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`));
+  return zip.toBuffer();
+}
+
+// --- Excel ------------------------------------------------------------------
+
+// One sheet per table, named from the heading above it when there is one.
+function xlsxBuffer(run) {
+  const XLSX = require("xlsx");
+  const book = XLSX.utils.book_new();
+  const used = new Set();
+  let heading = "";
+  const clean = (t) => String(t).replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)").replace(/`([^`]+)`/g, "$1");
+  let n = 0;
+  for (const b of blocks(run.result)) {
+    if (b.type === "heading") { heading = clean(b.text); continue; }
+    if (b.type !== "table") continue;
+    n++;
+    let name = (heading || `Table ${n}`).replace(/[\\/?*[\]:]/g, " ").slice(0, 31).trim() || `Table ${n}`;
+    while (used.has(name)) name = `${name.slice(0, 27)} ${n++}`;
+    used.add(name);
+    const sheet = XLSX.utils.aoa_to_sheet([b.header.map(clean), ...b.rows.map((r) => r.map(clean))]);
+    sheet["!cols"] = b.header.map((_, i) => ({ wch: Math.min(48, Math.max(10, ...[b.header, ...b.rows].map((r) => clean(r[i] || "").length))) }));
+    XLSX.utils.book_append_sheet(book, sheet, name);
+  }
+  return XLSX.write(book, { type: "buffer", bookType: "xlsx" });
+}
+
+module.exports = { blocks, hasTables, bodyHtml, pageHtml, docxBuffer, xlsxBuffer };
