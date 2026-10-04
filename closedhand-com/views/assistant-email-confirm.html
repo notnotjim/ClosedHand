@@ -17,14 +17,15 @@
   </header>
   <main class="site-main">
     <h1 class="title" id="heading">Confirm your assistant’s email address</h1>
-    <p class="lede" id="lede">Your ClosedHand assistant is getting its own email address, so you can email it, forward things to it and copy it in. Sign in with the account you’ll email it from: its private replies go there.</p>
+    <p class="lede" id="lede">Your assistant is getting its own email address. You can email it, forward things to it and copy it in from any Google or Microsoft account connected to your ClosedHand.</p>
 
     <section class="card">
       <!-- Made when you confirm, so shown only then. -->
       <p class="address" id="address" hidden></p>
       <p class="address-note" id="address-note" hidden>Your assistant’s email address</p>
 
-      <!-- Step 1: sign in. Replies go to this account's address. -->
+      <!-- Step 1: sign in. This account proves the address is yours, and is
+           where the assistant writes when it emails you first. -->
       <div id="signin" hidden>
         <h2 id="signin-heading">Sign in to confirm it</h2>
         <p id="signin-note">Use Google or a personal Microsoft account. closedhand.com stores your email and nothing else.</p>
@@ -38,7 +39,7 @@
       <!-- The signed-in account is where replies go, not the assistant's
            own address, which is made when this is confirmed. -->
       <div id="confirm" hidden>
-        <p class="fine" id="who-label">Your assistant’s private replies go to</p>
+        <p class="fine" id="who-label">When your assistant emails you first, it writes to</p>
         <div class="who"><span id="who"></span><a id="switch">Use a different account</a></div>
         <button class="btn btn-primary" id="approve" type="button">Create your assistant’s email address</button>
         <p class="fine">Only confirm if you started this in your own ClosedHand.</p>

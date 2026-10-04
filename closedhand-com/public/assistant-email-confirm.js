@@ -1,8 +1,10 @@
 // Confirming a ClosedHand assistant's email address. The ClosedHand that
 // asked opened this page with a signed ticket after the #; the owner signs in
-// with the account they will email the assistant from, then confirms. Only a
-// Google address Google has verified, or a personal Microsoft account, is
-// accepted, since the assistant's private replies go there.
+// with Google or a personal Microsoft account, then confirms. That account
+// proves the address is theirs and is where the assistant writes when it
+// emails them first, so only an address the provider has verified counts.
+// The owner may then email the assistant from that account or any Google or
+// Microsoft account connected to their ClosedHand.
 (() => {
   const $ = id => document.getElementById(id);
   const ticket = location.hash.slice(1);
@@ -14,8 +16,8 @@
   if (name) {
     const whose = name + '’s';
     $('heading').textContent = 'Set up ' + whose + ' email address';
-    $('lede').textContent = name + ' is getting its own email address, so you can email it, forward things to it and copy it in. Sign in with the account you’ll email it from: its private replies go there.';
-    $('who-label').textContent = whose + ' private replies go to';
+    $('lede').textContent = 'Your assistant, ' + name + ', is getting its own email address. You can email it, forward things to it and copy it in from any Google or Microsoft account connected to your ClosedHand.';
+    $('who-label').textContent = 'When ' + name + ' emails you first, it writes to';
     $('approve').textContent = 'Create ' + whose + ' email address';
     $('address-note').textContent = whose + ' email address';
   }
@@ -55,7 +57,7 @@
       $('address').textContent = data.address;
       $('address').hidden = $('address-note').hidden = false;
       $('confirm').hidden = true;
-      $('done-note').textContent = (name || 'Its') + (name ? '’s' : '') + ' private replies go to ' + data.email + '. The ClosedHand tab where you started updates by itself, so you can close this one.';
+      $('done-note').textContent = 'When ' + (name || 'your assistant') + ' emails you first, it writes to ' + data.email + '. You can close this tab: your ClosedHand updates by itself.';
       $('done').hidden = false;
       status.textContent = '';
     } catch (e) {

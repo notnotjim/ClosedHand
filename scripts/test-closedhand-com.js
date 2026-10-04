@@ -88,7 +88,10 @@ test("the confirmation page never presents the owner's own address as the assist
   const view = fs.readFileSync(path.join(__dirname, '../closedhand-com/views/assistant-email-confirm.html'), 'utf8');
   const script = fs.readFileSync(path.join(__dirname, '../closedhand-com/public/assistant-email-confirm.js'), 'utf8');
   assert.match(view, /<p class="address" id="address" hidden><\/p>\s*<p class="address-note" id="address-note" hidden>/, 'the assistant address appears only once it exists');
-  assert.match(view, /<p class="fine" id="who-label">Your assistant’s private replies go to<\/p>\s*<div class="who">/, 'the signed-in account is labelled as where replies go');
+  assert.match(view, /<p class="fine" id="who-label">When your assistant emails you first, it writes to<\/p>\s*<div class="who">/, 'the signed-in account is labelled for what it is');
+  assert.match(view, /from any Google or Microsoft account connected to your ClosedHand\.<\/p>/, 'the owner may write from any connected account, not only the one signed in');
+  assert.doesNotMatch(view + script, /account you’ll email it from|private replies go/);
+  assert.match(script, /'Your assistant, ' \+ name \+ ', is getting its own email address\./);
   assert.match(view, />Create your assistant’s email address<\/button>/);
   assert.match(script, /\$\('approve'\)\.textContent = 'Create ' \+ whose \+ ' email address';/);
   assert.match(script, /if \(!account\.signedIn \|\| !account\.emailVerified\) \{/, 'an older or unverified sign-in is asked to sign in again before confirming');
