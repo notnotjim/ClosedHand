@@ -59,31 +59,106 @@ test("the session needs a fresh proof from the linked account, lasts 12 hours, a
   assert.match(page, /if \(!proof\) \{ location\.replace\(to\); return; \}/, "outside Telegram it is just the normal login");
 });
 
-function loadInApp(base) {
+function loadInApp(base, titles = {}) {
   const load = Module._load;
   Module._load = function (request, parent, ...rest) {
-    if (request === "./config" && parent && /telegram-in-app\.js$/.test(parent.filename)) return { dashboardBase: async () => base };
+    if (parent && /telegram-in-app\.js$/.test(parent.filename)) {
+      if (request === "./config") return { dashboardBase: async () => base };
+      if (request === "../user-store") {
+        const query = { select: () => query, in: async (col, ids) => ({ data: ids.filter((id) => titles[id]).map((id) => ({ id, title: titles[id] })), error: null }) };
+        return { supabase: { from: () => query } };
+      }
+    }
     return load.call(this, request, parent, ...rest);
   };
   try { delete require.cache[require.resolve("../lib/telegram-in-app")]; return require("../lib/telegram-in-app"); }
   finally { Module._load = load; }
 }
 
+function fakeBot(sent) {
+  return {
+    sendMessage: async (chat, text, options) => { sent.push({ text, options }); return { message_id: sent.length }; },
+    editMessageText: async (text, options) => { sent.push({ text, options, edit: true }); return true; },
+    sendPhoto: async () => {},
+  };
+}
+
+const BASE = "https://sam.closedhand.ai";
+const SAIGON = "236bf8e1-b53d-4d8e-a9d8-2791e0a99615";
+const NEWCASTLE = "61c0eae2-5248-4acd-832d-460391d764c6";
+const open = (path) => `${BASE}/tg/open?to=${encodeURIComponent(path)}`;
+
 test("a report link becomes an Open report button, and in-app buttons go through the sign-in", async () => {
-  const base = "https://sam.closedhand.ai";
-  const { telegramInApp } = loadInApp(base);
+  const { telegramInApp } = loadInApp(BASE);
   const { splitTelegram } = require("../lib/follow-on");
   const sent = [];
-  const bot = splitTelegram(telegramInApp({ sendMessage: async (chat, text, options) => { sent.push({ text, options }); return { message_id: sent.length }; }, sendPhoto: async () => {} }));
-  await bot.sendMessage(7, `Three good ones below.\n[[next]]\nThe full list is in the report.\n\nFull report: ${base}/report/236bf8e1-b53d-4d8e-a9d8-2791e0a99615`);
+  const bot = splitTelegram(telegramInApp(fakeBot(sent)));
+  await bot.sendMessage(7, `Three good ones below.\n[[next]]\nThe full list is in the report.\n\nFull report: ${BASE}/report/${SAIGON}`);
   assert.equal(sent.length, 2);
-  assert.equal(sent[0].options, undefined, "no button on the part without the link");
+  assert.equal(sent[0].options.reply_markup, undefined, "no button on the part without the link");
   assert.equal(sent[1].text, "The full list is in the report.");
-  assert.deepEqual(sent[1].options.reply_markup.inline_keyboard[0][0], { text: "Open report", web_app: { url: `${base}/tg/open?to=%2Freport%2F236bf8e1-b53d-4d8e-a9d8-2791e0a99615` } });
+  assert.deepEqual(sent[1].options.reply_markup.inline_keyboard[0][0], { text: "Open report", web_app: { url: open(`/report/${SAIGON}`) } });
 
-  await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${base}/dashboard#schedules` } }]] } });
-  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, `${base}/tg/open?to=%2Fdashboard%23schedules`);
+  await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${BASE}/dashboard#schedules` } }]] } });
+  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, open("/dashboard#schedules"));
   await bot.sendMessage(7, "Elsewhere", { reply_markup: { inline_keyboard: [[{ text: "Site", web_app: { url: "https://example.com/x" } }]] } });
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, "https://example.com/x", "other sites are left alone");
   assert.equal((read("index.js").match(/splitTelegram\(require\("\.\/lib\/telegram-in-app"\)\.telegramInApp\(new TelegramBot\(/g) || []).length, 2, "both places the bot is made, parts split before buttons are added");
+});
+
+test("links written for the web chat open in Telegram, as buttons named after each report", async () => {
+  const { telegramInApp } = loadInApp(BASE, { [SAIGON]: "Saigon move, Wednesday 7 October", [NEWCASTLE]: "Newcastle and the Champions League" });
+  const sent = [];
+  const bot = telegramInApp(fakeBot(sent));
+  await bot.sendMessage(7, `Two to pick from:\n\n**Saigon move document** (flight, airport transfer): /report/${SAIGON}\n\n**Newcastle Champions League chances**: /report/${NEWCASTLE}\n\nWhich one were you after?`);
+  const { text, options } = sent[0];
+  assert.equal(text, "Two to pick from:\n\n<b>Saigon move document</b> (flight, airport transfer)\n\n<b>Newcastle Champions League chances</b>\n\nWhich one were you after?");
+  assert.equal(options.parse_mode, "HTML");
+  assert.deepEqual(options.reply_markup.inline_keyboard, [
+    [{ text: "Saigon move, Wednesday 7 October", web_app: { url: open(`/report/${SAIGON}`) } }],
+    [{ text: "Newcastle and the Champions League", web_app: { url: open(`/report/${NEWCASTLE}`) } }],
+  ]);
+
+  await bot.sendMessage(7, `Here you go: [Newcastle's Champions League chances](/report/${NEWCASTLE})`);
+  assert.equal(sent.at(-1).text, "Here you go: Newcastle's Champions League chances");
+  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Newcastle's Champions League chances", "the model's own words for it");
+
+  await bot.sendMessage(7, `I'm on it.\n\nYou can watch it run on your dashboard: ${BASE}/dashboard#agents`);
+  assert.equal(sent.at(-1).text, "I'm on it.\n\nYou can watch it run on your dashboard");
+  assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open dashboard", web_app: { url: open("/dashboard#agents") } });
+
+  await bot.editMessageText(`Done: /report/${SAIGON}`, { chat_id: 7, message_id: 3 });
+  assert.equal(sent.at(-1).edit, true);
+  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Saigon move, Wednesday 7 October", "a reply edited into place gets it too");
+});
+
+test("Markdown shows as Telegram formatting, and plain text when Telegram refuses it", async () => {
+  const { telegramInApp, telegramHtml } = loadInApp(BASE);
+  assert.equal(telegramHtml("## Odds\n**10/1** for *top four*, 5*3 < 20 & [source](https://example.com/a_b?x=1&y=2) `a<b`"),
+    '<b>Odds</b>\n<b>10/1</b> for <i>top four</i>, 5*3 &lt; 20 &amp; <a href="https://example.com/a_b?x=1&amp;y=2">source</a> <code>a&lt;b</code>');
+  assert.equal(telegramHtml("* one\n* two"), "* one\n* two", "list markers are not italics");
+  const sent = [];
+  const bot = telegramInApp({
+    sendMessage: async (chat, text, options) => {
+      if (options?.parse_mode) throw new Error("ETELEGRAM: 400 Bad Request: can't parse entities: Unsupported start tag");
+      sent.push({ text, options }); return { message_id: 1 };
+    },
+  });
+  await bot.sendMessage(7, "**Bold** words");
+  assert.deepEqual(sent, [{ text: "**Bold** words", options: {} }]);
+});
+
+test("with no personal URL, the page link says how to reach pages from a phone", async () => {
+  const { pageButtons } = loadInApp(null);
+  const shaped = await pageButtons(null, `Full report: /report/${SAIGON}`);
+  assert.deepEqual(shaped.buttons, []);
+  assert.match(shaped.text, /turn on Your phone in the dashboard's Settings/);
+});
+
+test("WhatsApp gets the full personal URL for every ClosedHand page", () => {
+  const { absolutePageLinks } = require("../lib/page-links");
+  assert.equal(absolutePageLinks(`See /report/${SAIGON} and [the dashboard](/dashboard#agents), not https://example.com/report/${SAIGON}`, BASE),
+    `See ${BASE}/report/${SAIGON} and [the dashboard](${BASE}/dashboard#agents), not https://example.com/report/${SAIGON}`);
+  assert.match(read("lib/platforms/whatsapp-linked.js"), /formatWhatsApp\(require\("\.\.\/page-links"\)\.absolutePageLinks\(message, base\)\)/);
+  assert.match(read("lib/messaging.js"), /formatWhatsApp\(require\("\.\/page-links"\)\.absolutePageLinks\(text, base\)\)/);
 });
