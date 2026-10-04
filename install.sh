@@ -540,6 +540,17 @@ else
 fi
 
 # --- Up ----------------------------------------------------------------------
+# Every update replaces ClosedHand's images, and the ones it replaces would stay
+# on disk for good, 3 to 5 GB each time, until the disk fills. Note exactly
+# which images it runs on now; once the new version answers, those go. Nothing
+# else on this computer is touched, and an image a container still uses stays.
+closedhand_images() {
+  for img in $(docker compose config --images 2>/dev/null); do
+    docker image inspect --format '{{.Id}}' "$img" 2>/dev/null || true
+  done
+}
+PREVIOUS_IMAGES=$(closedhand_images)
+
 if [ "${CLOSEDHAND_NO_UP:-0}" = "1" ]; then
   step 100 "Not starting anything"
   exit 0
@@ -599,6 +610,14 @@ while [ "$tries" -lt 45 ]; do
     ui_draw $(( 80 + (tries * 17 / 45) )) "Waiting for the dashboard"
   fi
 done
+
+if [ "$tries" -lt 45 ] && [ -n "$PREVIOUS_IMAGES" ]; then
+  step 98 "Clearing out the old version"
+  CURRENT_IMAGES=$(closedhand_images)
+  for id in $PREVIOUS_IMAGES; do
+    case " $(echo $CURRENT_IMAGES) " in *" $id "*) ;; *) docker image rm "$id" >/dev/null 2>&1 || true ;; esac
+  done
+fi
 
 step 100 "Ready"
 
