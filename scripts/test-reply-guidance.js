@@ -25,3 +25,26 @@ test("a saved location is the city, written in English", () => {
   assert.match(defs, /Save the most specific place you know, the town or city/);
   assert.match(defs, /never the local spelling/);
 });
+
+test("comparisons are checked against their own figures, in chat and by the quality check", () => {
+  const { responsePresentation } = require("../lib/response-presentation");
+  assert.match(responsePresentation("web"), /the one you call closest, cheapest or best must be that in the list you give/);
+  assert.match(read("lib/verification.js"), /every ranking or superlative \(closest, cheapest, best, first\) must agree with the figures the answer gives/);
+});
+
+test("what it already knows comes first; only what can be out of date is looked up", () => {
+  const engine = read("lib/engine.js");
+  assert.match(engine, /Holdings include what you already know \(general knowledge: geography, how things work, well-known facts\)/);
+  assert.match(engine, /Look things up only for what can be out of date or must be exact: prices, availability, opening hours/);
+});
+
+test("new mail is indexed newest first", () => {
+  const usi = read("lib/services/usi.js");
+  const start = usi.indexOf("function newestFirst");
+  const vm = require("node:vm");
+  const box = { Date, Number };
+  vm.runInNewContext(usi.slice(start, usi.indexOf("\n}\n", start) + 2) + "\nthis.f = newestFirst;", box);
+  const rows = [{ data: { date: "Mon, 28 Sep 2026 10:00:00 +0000" } }, { data: { date: "Sat, 3 Oct 2026 09:00:00 +0000" } }, { data: {} }];
+  assert.equal(JSON.stringify(box.f(rows).map((r) => r.data.date || "none")), JSON.stringify(["Sat, 3 Oct 2026 09:00:00 +0000", "Mon, 28 Sep 2026 10:00:00 +0000", "none"]));
+  assert.match(usi, /const items = \(type === "email" \? newestFirst\(rows \|\| \[\]\) : \(rows \|\| \[\]\)\)/);
+});
