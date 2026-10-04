@@ -68,6 +68,9 @@ test("the model is told: complete in chat, answer first, parts past a screen, pa
   assert.match(guide, /Put a line holding only \[\[next\]\] between them\. Never split a short reply, and never more than three parts\./);
   assert.match(guide, /A page \(a fuller version to open, download and share\) is an extra, never the answer/);
   assert.match(guide, /Call it a page, never a report or a document: documents are the files the person keeps in Context Brain\./);
+  assert.match(guide, /No throat-clearing \("Here's…", "Great question"\) and no stock filler phrases/, "the one stop-slop rule that showed an effect, in place of the whole skill");
+  const fs2 = require("node:fs"), path2 = require("node:path");
+  assert.equal(fs2.existsSync(path2.join(__dirname, "../skills/stop-slop")), false, "the always-on skill cost about 600 uncached tokens a call for little change");
 });
 
 test("research goes to the background at the start, with a note written from the request", () => {

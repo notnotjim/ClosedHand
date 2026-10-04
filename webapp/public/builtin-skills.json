@@ -36,12 +36,5 @@
     "description": "Read Slack channels, search messages, and post to channels",
     "requires_service": "slack",
     "always_active": false
-  },
-  {
-    "id": "stop-slop",
-    "name": "stop-slop",
-    "description": "Eliminates AI cliche phrases and Americanisms. Always active.",
-    "requires_service": null,
-    "always_active": true
   }
 ]
