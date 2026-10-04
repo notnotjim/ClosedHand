@@ -1312,8 +1312,8 @@ function telegramTarget(to) {
 app.get("/tg/open", (req, res) => {
   const to = telegramTarget(req.query.to);
   res.set("Cache-Control", "no-store");
-  res.set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline' https://telegram.org; connect-src 'self'; frame-ancestors 'self' https://web.telegram.org");
-  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Opening in ClosedHand</title>
+  res.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; script-src 'unsafe-inline' https://telegram.org; connect-src 'self'; frame-ancestors 'self' https://web.telegram.org");
+  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Opening in ClosedHand</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script></head>
 <body style="margin:0;background:#141010"><script>
 (function () {
@@ -1596,7 +1596,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
     .single();
 
   if (!pending || new Date(pending.expires_at) < new Date()) {
-    return res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:24px;margin-bottom:16px}.desc{color:#888;line-height:1.6}</style></head>
     <body><div class="card"><div class="title">Link expired</div><p class="desc">Send another message on WhatsApp to get a fresh link.</p></div></body></html>`);
@@ -1622,7 +1622,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
     await autoEnableNotificationPlatform(userId, "whatsapp");
     await supabase.from("wa_pending_links").delete().eq("token", token);
 
-    return res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
     .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
@@ -1633,7 +1633,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
   // Not logged in — store token in cookie, show focused sign-in page
   res.setHeader("Set-Cookie", `ch_wa_link=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=1800`);
 
-  res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand — Connect WhatsApp</title>
+  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand — Connect WhatsApp</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
@@ -1681,7 +1681,7 @@ app.get("/canvas/:id", async (req, res) => {
       const html = Buffer.from(data.content, "base64").toString("utf-8");
       // Serve HTML directly with a top bar. CSP restricts to scripts only (no forms, no navigation).
       res.set("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'self'");
-      res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${data.filename.replace(/</g, "&lt;")} - ClosedHand</title>
 <style>*{margin:0;box-sizing:border-box}
 .ch-bar{position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;background:#0a0c12;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.5);font-size:13px;font-family:Outfit,system-ui,sans-serif}
@@ -1776,7 +1776,7 @@ app.get("/line-app", (req, res) => {
 app.get("/line-setup-complete", (req, res) => {
   const name = req.query.name || "";
   res.type("html").send(`<!DOCTYPE html>
-<html><head>
+<html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClosedHand Setup Complete</title>
@@ -2319,7 +2319,7 @@ app.get("/auth/:service/callback", async (req, res) => {
       return res.redirect(`/line-app?error=auth_denied&service=${serviceKey}`);
     }
     if (stateData?.flow === "chat_popup") {
-      return res.send(`<!DOCTYPE html><html><body><script>
+      return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"></head><body><script>
         window.opener && window.opener.postMessage({type:'oauth_error',service:'${serviceKey}'},'*');
         window.close();
       </script><p>Authentication cancelled. You can close this window.</p></body></html>`);
@@ -2356,7 +2356,7 @@ app.get("/auth/:service/callback", async (req, res) => {
       }
       // Override redirect with popup-close HTML (handleSignup already sent response in some cases)
       if (!res.headersSent) {
-        return res.send(`<!DOCTYPE html><html><head><title>Connected</title></head><body><script>
+        return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>Connected</title></head><body><script>
           window.opener && window.opener.postMessage({type:'oauth_complete',service:'${serviceKey}'},'*');
           window.close();
         </script><p>Connected. You can close this window.</p></body></html>`);
@@ -2569,7 +2569,7 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
     }
     // Clear cookie and show success page
     res.setHeader("Set-Cookie", "ch_wa_link=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
-    return res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
     .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
