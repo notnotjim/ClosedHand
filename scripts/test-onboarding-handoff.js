@@ -145,9 +145,27 @@ test("a name two sources agree on is used from the off, over the account's", asy
   assert.equal(flow.sent[0].text, "Hey Sam! Before we start, what would you like to call me?");
   await flow.message("Max", { platformName: "Sam Example" });
   assert.match(flow.sent.at(-1).text, /^Nice to meet you, Sam\. Max it is\./);
-  const signed = onboarding({ displayName: "Sammy Example", facts: { "profile-name": "Sam" }, settings: { name_certainty: "certain" } });
+  const signed = onboarding({ displayName: "Sam Example", facts: { "profile-name": "Sam" }, settings: { name_certainty: "certain" } });
   await signed.message(null);
-  assert.equal(signed.sent[0].text, "Hey Sam! Before we start, what would you like to call me?", "their own mail signs it");
+  assert.equal(signed.sent[0].text, "Hey Sam! Before we start, what would you like to call me?", "their own mail signs it, and nothing says otherwise");
+});
+
+test("a scanned name another source contradicts is checked, never assumed", async () => {
+  // The scan read "Robbie" (from mail greeting the address); the account says Robert.
+  const flow = onboarding({ displayName: "Robert H", facts: { "profile-name": "Robbie Hale" }, settings: { name_certainty: "certain" } });
+  await flow.message(null);
+  assert.equal(flow.sent[0].text, "Hey! Is it Robbie? And what would you like to call me?");
+  await flow.message("Pete");
+  assert.equal(flow.sent.at(-1).text, "And is it Robbie?");
+  await flow.message("no, Robert");
+  assert.match(flow.sent.at(-1).text, /^Nice to meet you, Robert\. Pete it is\./);
+  assert.equal(flow.saved().preferred_name, "Robert");
+});
+
+test("the scan counts only the person's own mail and people writing to them as proof of a name", () => {
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "../lib/onboarding.js"), "utf8");
+  assert.match(src, /certain only if their own sent mail signs off with that name, or people writing to them personally greet them by it/);
+  assert.match(src, /Automated mail \(shops, services, newsletters\) greets people by whatever their address or a sign-up form suggests, so it never makes a name certain\./);
 });
 
 test("with no name to go on, it asks for both", async () => {
