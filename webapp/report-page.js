@@ -1,7 +1,8 @@
-// A finished run's report as a page of its own, at /report/<id>: one link
-// that opens from any chat through the personal URL, readable on a phone,
-// with the same report as a PDF, Word document or spreadsheet when a file is
-// wanted. The chat always carries the answer; this is the fuller version.
+// A report as a page of its own, at /report/<id>: one link that opens from
+// any chat through the personal URL, readable on a phone, with the same report
+// as a PDF, Word document or spreadsheet when a file is wanted. A report exists
+// only when ClosedHand judged one helps beyond the chat answer (save_report);
+// the chat always carries the answer, and this is the fuller version.
 //
 // One reading of the report's Markdown feeds the page, the Word document and
 // the spreadsheet, so the three never disagree about what the report says.
@@ -85,19 +86,8 @@ function bodyHtml(md) {
   }).join("\n");
 }
 
-function pageHtml(run, title) {
-  const id = encodeURIComponent(run.id);
-  const date = run.completed_at || run.created_at;
-  const when = date ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
-  // Each button downloads the report in that format, and says so: an arrow
-  // into a tray, and a label that names the download for screen readers.
-  const icon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
-  const file = (kind, label) => `<a class="file" href="/api/agents/${id}/${kind}" download aria-label="Download as ${label}" title="Download as ${label}">${icon}${label}</a>`;
-  const files = [
-    file("pdf", "PDF"),
-    file("docx", "Word"),
-    hasTables(run.result) ? file("xlsx", "Excel") : "",
-  ].join("");
+// The page around a report, or around the note that one was deleted.
+function shell(title, inner) {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title>
@@ -130,13 +120,47 @@ table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-
 th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: 0; }
 th { background: var(--head); font-weight: 600; white-space: nowrap; }
+.end { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.end summary { cursor: pointer; display: inline-block; list-style: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; color: var(--muted); }
+.end summary::-webkit-details-marker { display: none; }
+.end summary:hover, .end summary:focus-visible { color: var(--accent); border-color: var(--accent); }
+.end form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.end button { font: inherit; font-weight: 500; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 999px; padding: 5px 14px; cursor: pointer; }
 </style></head>
 <body><main>
-<div class="bar"><a class="brand" href="/"><img src="/fist.png" alt="">ClosedHand</a><div class="files">${files}</div></div>
-<h1>${esc(title)}</h1>
-<p class="when">${esc(when)}</p>
-${bodyHtml(run.result)}
+${inner}
 </main></body></html>`;
+}
+
+const brand = '<a class="brand" href="/"><img src="/fist.png" alt="">ClosedHand</a>';
+const dated = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+function pageHtml(report) {
+  const id = encodeURIComponent(report.id);
+  const edited = report.updated_at && report.updated_at !== report.created_at ? `, edited ${dated(report.updated_at)}` : "";
+  // Each button downloads the report in that format, and says so: an arrow
+  // into a tray, and a label that names the download for screen readers.
+  const icon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
+  const file = (kind, label) => `<a class="file" href="/api/reports/${id}/${kind}" download aria-label="Download as ${label}" title="Download as ${label}">${icon}${label}</a>`;
+  const files = [
+    file("pdf", "PDF"),
+    file("docx", "Word"),
+    hasTables(report.content) ? file("xlsx", "Excel") : "",
+  ].join("");
+  // Deleting asks first, in place, with no script: the page has none.
+  const remove = `<details class="end"><summary>Delete report</summary><form method="post" action="/api/reports/${id}/delete"><span>Delete this report for good? The answer in your chat stays where it is.</span><button type="submit">Delete</button></form></details>`;
+  return shell(report.title, `<div class="bar">${brand}<div class="files">${files}</div></div>
+<h1>${esc(report.title)}</h1>
+<p class="when">${esc(dated(report.created_at) + edited)}</p>
+${bodyHtml(report.content)}
+${remove}`);
+}
+
+function deletedHtml(report) {
+  return shell("Report deleted", `<div class="bar">${brand}</div>
+<h1>Report deleted</h1>
+<p>"${esc(report.title)}" is gone, with its PDF, Word and Excel versions. The answer in your chat is still there.</p>
+<p><a href="/">Back to ClosedHand</a></p>`);
 }
 
 // --- Word -------------------------------------------------------------------
@@ -153,10 +177,11 @@ function runs(text) {
   }).join("");
 }
 
-function docxBuffer(run, title) {
+function docxBuffer(report) {
+  const title = report.title;
   const para = (inner, style) => `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ""}${inner}</w:p>`;
   const body = [para(runs(title), "Title")];
-  for (const b of blocks(run.result)) {
+  for (const b of blocks(report.content)) {
     if (b.type === "heading") body.push(para(runs(b.text), `Heading${b.level}`));
     else if (b.type === "para") body.push(para(b.lines.map(runs).join('<w:r><w:br/></w:r>')));
     else if (b.type === "list") b.items.forEach((t, i) => body.push(para(`<w:r><w:t xml:space="preserve">${b.ordered ? `${i + 1}. ` : "• "}</w:t></w:r>${runs(t)}`, "ListParagraph")));
@@ -193,14 +218,14 @@ function docxBuffer(run, title) {
 // --- Excel ------------------------------------------------------------------
 
 // One sheet per table, named from the heading above it when there is one.
-function xlsxBuffer(run) {
+function xlsxBuffer(report) {
   const XLSX = require("xlsx");
   const book = XLSX.utils.book_new();
   const used = new Set();
   let heading = "";
   const clean = (t) => String(t).replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)").replace(/`([^`]+)`/g, "$1");
   let n = 0;
-  for (const b of blocks(run.result)) {
+  for (const b of blocks(report.content)) {
     if (b.type === "heading") { heading = clean(b.text); continue; }
     if (b.type !== "table") continue;
     n++;
@@ -214,4 +239,4 @@ function xlsxBuffer(run) {
   return XLSX.write(book, { type: "buffer", bookType: "xlsx" });
 }
 
-module.exports = { blocks, hasTables, bodyHtml, pageHtml, docxBuffer, xlsxBuffer };
+module.exports = { blocks, hasTables, bodyHtml, pageHtml, deletedHtml, docxBuffer, xlsxBuffer };

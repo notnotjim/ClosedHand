@@ -6124,10 +6124,10 @@
 
     // Deleting a run deletes its report page and its PDF, Word and Excel
     // versions with it, for good, so the bin asks first, in place.
-    function confirmAgentDelete(btn, id) {
+    function confirmAgentDelete(btn, id, hasReport) {
       var wrap = document.createElement('span');
       wrap.className = 'agent-del-confirm';
-      wrap.innerHTML = '<span>Delete this run and its report for good?</span>'
+      wrap.innerHTML = '<span>' + (hasReport ? 'Delete this run and its report for good?' : 'Delete this run for good?') + '</span>'
         + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
         + '<button class="agent-del" type="button">Keep</button>';
       wrap.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -6288,17 +6288,17 @@
 
       var binHtml = running
         ? '<button class="agent-del" title="Stop this agent" style="color:#D0563F;border-color:rgba(239,230,214,0.1);" onclick="event.stopPropagation();stopAgentRun(\'' + a.id + '\', this)">&#9632; Stop</button>'
-        : '<button class="agent-del" title="Delete this run and its report" aria-label="Delete this run and its report" onclick="event.stopPropagation();confirmAgentDelete(this, \'' + a.id + '\')">&#128465;</button>';
+        : '<button class="agent-del" title="' + (a.report_id ? 'Delete this run and its report' : 'Delete this run') + '" aria-label="' + (a.report_id ? 'Delete this run and its report' : 'Delete this run') + '" onclick="event.stopPropagation();confirmAgentDelete(this, \'' + a.id + '\', ' + !!a.report_id + ')">&#128465;</button>';
 
       // The finished work, as a file. Same content as the expanded card,
       // typeset server-side, so what leaves the dashboard looks as considered
       // as what is shown on it. Preview opens the identical document in the
       // browser's PDF viewer; the download button saves it.
-      // Only a run that earned a report offers it (lib/task-delivery.js,
-      // isReportWorthy); an ordinary answer stays in the card above.
-      var pdfHtml = (!running && (a.status === 'completed' || a.status === 'partial') && a.result && a.runtime && a.runtime.report)
-        ? '<button class="agent-del" title="Open the report as a page, with PDF, Word and Excel downloads" onclick="event.stopPropagation();window.open(\'/report/' + a.id + '\', \'_blank\')">Open report</button>' +
-          '<button class="agent-del" title="Download as a PDF" onclick="event.stopPropagation();location.href=\'/api/agents/' + a.id + '/pdf\'">&#8595; PDF</button>'
+      // Only a run that made a report (save_report, when one helped beyond the
+      // chat answer) offers one; an ordinary answer stays in the card above.
+      var pdfHtml = (!running && a.report_id)
+        ? '<button class="agent-del" title="Open the report as a page, with PDF, Word and Excel downloads" onclick="event.stopPropagation();window.open(\'/report/' + a.report_id + '\', \'_blank\')">Open report</button>' +
+          '<button class="agent-del" title="Download the report as a PDF" onclick="event.stopPropagation();location.href=\'/api/reports/' + a.report_id + '/pdf\'">&#8595; PDF</button>'
         : '';
 
       return '<div class="auto-card agent-card' + (_openAgents[a.id] ? ' open' : '') + '" onclick="toggleAgentCard(this, \'' + a.id + '\')" title="Click for detail">' +

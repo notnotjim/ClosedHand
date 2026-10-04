@@ -66,7 +66,7 @@ test("the model is told: complete in chat, answer first, parts past a screen, re
   assert.match(guide, /Answer in chat, completely/);
   assert.match(guide, /Lead with the answer/);
   assert.match(guide, /Put a line holding only \[\[next\]\] between them\. Never split a short reply, and never more than three parts\./);
-  assert.match(guide, /A report \(a document or page to open\) is an extra, never the answer/);
+  assert.match(guide, /A report \(a document to open, download and share\) is an extra, never the answer/);
 });
 
 test("research goes to the background at the start, with a note written from the request", () => {

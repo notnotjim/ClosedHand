@@ -4226,11 +4226,20 @@ app.get("/api/agents", async (req, res) => {
       .limit(20);
 
     if (error) throw error;
+    // The report a run made, when it judged one helped (save_report). A run
+    // without one is an answer and is shown as one.
+    const ids = (data || []).map((t) => t.id);
+    const { data: made, error: reportError } = ids.length
+      ? await supabase.from("reports").select("id, task_id").eq("user_id", userId).in("task_id", ids)
+      : { data: [], error: null };
+    if (reportError) throw reportError;
+    const reportOf = new Map((made || []).map((r) => [r.task_id, r.id]));
     // A paused agent asked its question in chat. The card says where and when,
     // and repeats the question, so the answer is given there, never here.
     res.json((data || []).map(({ runtime, ...task }) => {
       const c = task.status === "awaiting_confirmation" ? runtime?.confirmation : null;
-      return { ...task, waiting: c ? { platform: c.asked?.platform || c.platform || null, since: c.asked?.at || c.pausedAt || null, question: c.asked?.text || null } : null };
+      return { ...task, report_id: reportOf.get(task.id) || null,
+        waiting: c ? { platform: c.asked?.platform || c.platform || null, since: c.asked?.at || c.pausedAt || null, question: c.asked?.text || null } : null };
     }));
   } catch (err) {
     console.error("Agents list error:", err.message);
@@ -4336,60 +4345,84 @@ app.get("/api/agents/:id", async (req, res) => {
   }
 });
 
-// A finished run, looked up for its owner: the report page and its files.
-async function finishedRun(req, res) {
+// A report (lib/tools: save_report), looked up for its owner. Reports are
+// their own records, made only when one helps beyond the chat answer; an
+// ordinary run's answer is not one and has no page.
+async function ownReport(req, res) {
   const userId = getUserIdFromRequest(req);
   if (!userId) { res.status(401).json({ error: "Not logged in" }); return null; }
-  const { data: run, error } = await supabase
-    .from("agent_tasks")
-    .select("id, user_id, goal, title, status, result, created_at, completed_at, result_edited_at")
+  const { data, error } = await supabase
+    .from("reports")
+    .select("id, user_id, task_id, title, content, reason, created_at, updated_at")
     .eq("id", req.params.id)
-    .single();
-  if (error || !run) { res.status(404).send("This report was not found."); return null; }
-  if (run.user_id !== userId) { res.status(403).send("Not authorized"); return null; }
-  if (!run.result) { res.status(409).send("This report is not ready yet."); return null; }
-  return run;
+    .limit(1);
+  const report = data?.[0];
+  if (error || !report) { res.status(404).send("This report was not found. It may have been deleted."); return null; }
+  if (report.user_id !== userId) { res.status(403).send("Not authorized"); return null; }
+  return report;
 }
+// The shape the PDF builder reads (it was written for a run's output).
+const reportAsRun = (r) => ({ title: r.title, goal: r.title, result: r.content, created_at: r.created_at, completed_at: r.created_at,
+  result_edited_at: r.updated_at && r.updated_at !== r.created_at ? r.updated_at : null });
+const reportFileName = (r, kind) => {
+  const safe = String(r.title || "report").replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "report";
+  const date = String(r.created_at || "").substring(0, 10);
+  return `ClosedHand - ${safe}${date ? ` - ${date}` : ""}.${kind}`;
+};
 
-// GET /report/:id — the report as a page of its own (webapp/report-page.js):
-// the link a chat gets when a report earns its place.
+// GET /report/:id — the report as a page of its own (webapp/report-page.js),
+// with its downloads and a way to delete it.
 app.get("/report/:id", async (req, res) => {
   try {
-    const run = await finishedRun(req, res);
-    if (!run) return;
-    const { runTitle } = require("./run-pdf");
-    res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'self'");
-    res.send(require("./report-page").pageHtml(run, runTitle(run)));
+    const report = await ownReport(req, res);
+    if (!report) return;
+    res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'");
+    res.send(require("./report-page").pageHtml(report));
   } catch (err) {
     console.error("Report page error:", err.message);
     res.status(500).send("Could not show this report.");
   }
 });
 
-// GET /api/agents/:id/docx and /xlsx — the same report as a Word document,
-// or its tables as a spreadsheet.
-for (const kind of ["docx", "xlsx"]) {
-  app.get(`/api/agents/:id/${kind}`, async (req, res) => {
+// GET /api/reports/:id/pdf, /docx and /xlsx — the same report as a PDF, a Word
+// document, or its tables as a spreadsheet.
+for (const kind of ["pdf", "docx", "xlsx"]) {
+  app.get(`/api/reports/:id/${kind}`, async (req, res) => {
     try {
-      const run = await finishedRun(req, res);
-      if (!run) return;
-      const { runTitle } = require("./run-pdf");
+      const report = await ownReport(req, res);
+      if (!report) return;
       const page = require("./report-page");
-      if (kind === "xlsx" && !page.hasTables(run.result)) return res.status(409).send("This report has no tables to put in a spreadsheet.");
-      const buf = kind === "docx" ? page.docxBuffer(run, runTitle(run)) : page.xlsxBuffer(run);
-      const date = String(run.completed_at || run.created_at || "").substring(0, 10);
-      const safe = runTitle(run).replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "report";
+      if (kind === "xlsx" && !page.hasTables(report.content)) return res.status(409).send("This report has no tables to put in a spreadsheet.");
+      res.setHeader("Content-Disposition", `attachment; filename="${reportFileName(report, kind)}"`);
+      if (kind === "pdf") {
+        res.setHeader("Content-Type", "application/pdf");
+        return require("./run-pdf").runPdf(reportAsRun(report)).pipe(res);
+      }
       res.setHeader("Content-Type", kind === "docx"
         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename="ClosedHand - ${safe}${date ? ` - ${date}` : ""}.${kind}"`);
-      res.send(buf);
+      res.send(kind === "docx" ? page.docxBuffer(report) : page.xlsxBuffer(report));
     } catch (err) {
       console.error(`Report ${kind} error:`, err.message);
       res.status(500).json({ error: "Could not build the file" });
     }
   });
 }
+
+// POST /api/reports/:id/delete — from the report page's own Delete, after its
+// confirmation. Deletes the report only; the chat answer stays where it is.
+app.post("/api/reports/:id/delete", async (req, res) => {
+  try {
+    const report = await ownReport(req, res);
+    if (!report) return;
+    const { error } = await supabase.from("reports").delete().eq("id", report.id).eq("user_id", report.user_id);
+    if (error) throw error;
+    res.send(require("./report-page").deletedHtml(report));
+  } catch (err) {
+    console.error("Report delete error:", err.message);
+    res.status(500).send("Could not delete this report. Try again.");
+  }
+});
 
 // GET /api/agents/:id/pdf — a finished run's output, typeset for download.
 // The web view renders the same markdown dialect; this is the take-away copy.
