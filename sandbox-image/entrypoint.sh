@@ -15,12 +15,16 @@ XDG_DOCUMENTS_DIR="/workspace"
 XDGEOF
 chown -R sandbox:sandbox /home/sandbox/.config
 
-# 3. Start Xvfb (1920x1080), supervised. Chrome already had a supervisor; the
+# 3. Start Xvfb (1280x800), supervised. Chrome already had a supervisor; the
 # display it depends on did not, so an OOM-killed Xvfb left Chrome
 # crash-looping on "Missing X server" for ever with nothing to heal it.
+# The size is what a person watching over the internet pays for: every
+# redraw crosses the tunnel, and at 1920x1080 a full one was about 290 KB,
+# close to a second on a phone. 1280x800 is a normal laptop screen for the
+# sites and about 45% less to send.
 xvfb_supervisor() {
     while true; do
-        gosu sandbox Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset || true
+        gosu sandbox Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset || true
         echo "[entrypoint] Xvfb exited, restarting" >&2
         sleep 1
     done
@@ -61,11 +65,11 @@ browser_supervisor() {
         started=$(date +%s)
         if [ -n "$url" ]; then
             gosu sandbox env DISPLAY=:99 /usr/local/bin/chromium-launcher \
-                --start-maximized --window-size=1920,1040 --window-position=0,0 \
+                --start-maximized --window-size=1280,760 --window-position=0,0 \
                 --disable-session-crashed-bubble --hide-crash-restore-bubble --no-first-run "$url" || true
         else
             gosu sandbox env DISPLAY=:99 /usr/local/bin/chromium-launcher \
-                --start-maximized --window-size=1920,1040 --window-position=0,0 \
+                --start-maximized --window-size=1280,760 --window-position=0,0 \
                 --disable-session-crashed-bubble --hide-crash-restore-bubble --no-first-run || true
         fi
         ran=$(( $(date +%s) - started ))

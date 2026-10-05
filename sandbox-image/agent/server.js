@@ -279,7 +279,7 @@ app.get("/desktop/status", auth, async (_req, res) => {
     const xvfb = require("child_process").execSync("pgrep -c Xvfb", { timeout: 2000 }).toString().trim();
     const vnc = require("child_process").execSync("pgrep -c x11vnc", { timeout: 2000 }).toString().trim();
     const ws = require("child_process").execSync("pgrep -cf websockify", { timeout: 2000 }).toString().trim();
-    res.json({ status: "running", display: ":99", vnc_ws_port: 6080, resolution: "1920x1080", desktop: "browser", procs: { xvfb, vnc, ws } });
+    res.json({ status: "running", display: ":99", vnc_ws_port: 6080, resolution: "1280x800", desktop: "browser", procs: { xvfb, vnc, ws } });
   } catch (e) {
     res.json({ status: "degraded", error: e.message });
   }
