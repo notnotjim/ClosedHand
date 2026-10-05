@@ -1,4 +1,6 @@
-.add-sub {font-size:15px;font-weight:600;color:#EFE6D6;margin:0 0 12px;}
+/* A label inside a section, the dashboard's own: small grey capitals, so it
+   never reads as level with the section heading above it. */
+.add-sub {font-size:13px;font-weight:600;color:rgba(239,230,214,0.6);text-transform:uppercase;letter-spacing:0.8px;margin:0 0 12px;}
 #apple-local-section {margin:8px 0 20px;}
 #connected-section #apple-local-section {margin:8px 0 0;}
 #mcp-section.setting-up #apple-local-section {display:none!important;}
@@ -57,3 +59,6 @@
 .mcp-setup-choice button {margin-top:16px;min-height:44px;}
 
 #mcp-auth-status > a {color:#E59B89;text-underline-offset:3px;}
+/* The Mac card, while it waits under Add a connection, sits as far from Apps
+   as Apps sits from Connect anything. */
+#mcp-section > #apple-local-section {margin-bottom:32px;}

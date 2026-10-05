@@ -1193,7 +1193,7 @@
     .upcoming-row .upcoming-when { flex: none; font-size: 13px; color: #B6AFA4; white-space: nowrap; }
     .upcoming-row.past { opacity: 0.6; }
     #past-section { margin-top: 24px; }
-    #tab-automations #flights-list .flights-date-header:first-child { margin-top: 14px; }
+    .routines-blurb { margin: 0 0 14px; font-size: 13px; color: rgba(239,230,214,0.6); line-height: 1.5; }
 
     .flight-card {
       background: rgba(26,24,23,0.9);
@@ -2288,12 +2288,12 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">What ClosedHand is working on now, the agents you have set to run on a schedule, like daily briefings or monitoring, and what is coming up.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand sends out agents, on their own or as a team, when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
               <div class="mc-metric-value" id="auto-active">—</div>
-              <div class="mc-metric-label">Running Now</div>
+              <div class="mc-metric-label">Agents at work</div>
             </div>
             <div class="mc-metric blue">
               <div class="mc-metric-value" id="auto-runs-today">—</div>
@@ -2301,7 +2301,7 @@
             </div>
             <div class="mc-metric purple">
               <div class="mc-metric-value" id="auto-agents">—</div>
-              <div class="mc-metric-label">Saved Agents</div>
+              <div class="mc-metric-label">Routines</div>
             </div>
             <div class="mc-metric gray">
               <div class="mc-metric-value" id="auto-last-activity">—</div>
@@ -2316,11 +2316,12 @@
 
           <!-- Workers header with + New Worker button -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
-            <div class="mc-section-label" style="margin:0;">Saved agents</div>
-            <button onclick="openCreateAutomationModal()" style="padding:6px 14px;background:#1A1817;border:1px solid #D0563F;border-radius:8px;color:#D0563F;font-size: 14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,230,214,0.1)';this.style.boxShadow='0 0 8px rgba(208,86,63,0.15)'" onmouseout="this.style.background='#1A1817';this.style.boxShadow='none'">+ New agent</button>
+            <div class="mc-section-label" style="margin:0;">Routines</div>
+            <button onclick="openCreateAutomationModal()" style="padding:6px 14px;background:#1A1817;border:1px solid #D0563F;border-radius:8px;color:#D0563F;font-size: 14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,230,214,0.1)';this.style.boxShadow='0 0 8px rgba(208,86,63,0.15)'" onmouseout="this.style.background='#1A1817';this.style.boxShadow='none'">+ New routine</button>
           </div>
+          <p class="routines-blurb">Agents you set up once that run on a timetable, when something happens, or when you press Run.</p>
           <div id="auto-saved-list"></div>
-          <p id="auto-saved-error" class="auto-card-meta" role="status" hidden>Could not load your saved agents. Please try again shortly.</p>
+          <p id="auto-saved-error" class="auto-card-meta" role="status" hidden>Could not load your routines. Please try again shortly.</p>
 
           <!-- Empty state (only when no saved workers) -->
           <div id="auto-empty" style="display:none;">
@@ -2354,7 +2355,7 @@
                   </text>
                 </svg>
               </div>
-              <p style="font-size:13px;color:#B6AFA4;line-height:1.6;margin-bottom:14px;">No saved agents yet. Pick a template or create your own:</p>
+              <p style="font-size:13px;color:#B6AFA4;line-height:1.6;margin-bottom:14px;">No routines yet. Start from one of these or make your own:</p>
               <div class="agent-tpl-grid">
                 <div class="auto-template" onclick="loadAgentTemplate('morning-briefing')" style="padding:14px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='rgba(239,230,214,0.28)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">
                   <div style="font-size:20px;margin-bottom:6px;">&#9728;&#65039;</div>
@@ -2414,11 +2415,8 @@
 
           <!-- Upcoming: reminders + tracked flights + bookings picked out of mail -->
           <div class="mc-section-label" style="margin-top:24px;">Upcoming</div>
-          <div id="reminders-list"></div>
-          <div id="goal-checkins-list"></div>
           <div class="flights-loading" id="flights-loading" style="display:none;">Checking flights…</div>
-          <div id="flights-list"></div>
-          <div id="bookings-list"></div>
+          <div id="upcoming-list"></div>
           <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, bookings picked out of your mail (trains, hotels, tickets, tables) and goal check-ins appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
 
           <!-- Past: reminders that ran and flights already flown, folded away -->
@@ -3721,7 +3719,6 @@
           if (caps.resources) bits.push(caps.resources + (caps.resources === 1 ? ' resource' : ' resources'));
           if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
           if (m.transport === 'stdio') bits.push('runs alongside ClosedHand');
-          var subtitle = bits.length ? bits.join(' · ') : escHtml(m.transport === 'stdio' ? (m.command || '') : m.server_url);
           var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
             : m.status === 'needs_auth'
@@ -3734,6 +3731,7 @@
           var detailHtml = m.transport === 'stdio'
             ? '<div class="conn-row"><span class="conn-row-label">Runs</span><span class="conn-row-value" style="word-break:break-all;font-family:ui-monospace,monospace;font-size:12px;">' + escHtml([m.command].concat(m.args || []).join(' ')) + '</span></div>'
             : '<div class="conn-row"><span class="conn-row-label">Server URL</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>';
+          if (bits.length) detailHtml += '<div class="conn-row"><span class="conn-row-label">Offers</span><span class="conn-row-value">' + escHtml(bits.join(' · ')) + '</span></div>';
           var authLabel = m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'No server key required';
           detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + authLabel + '</span></div>';
           detailHtml += '<div class="conn-row"><span class="conn-row-label">Status</span><span class="conn-row-value">' + escHtml(m.status || 'unknown') + '</span></div>';
@@ -3775,8 +3773,7 @@
           return '<div class="int-wrap">' +
             '<div class="int-card ' + (m.status === 'connected' ? 'connected' : '') + '" onclick="toggleMcpUnfurl(this)" style="background:' + bgColor + ';border-color:' + borderColor + ';">' +
               logoHtml +
-              '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#EFE6D6;font-weight:500;">' + escHtml(m.name) + '</div>' +
-              '<div style="font-size: 13px;color:rgba(239,230,214,0.6);margin-top:1px;">' + subtitle + '</div></div>' +
+              '<span class="int-name">' + escHtml(m.name) + '</span>' +
               statusBadge +
               '<span class="int-chevron"><span class="chevron-down"></span></span>' +
             '</div>' +
@@ -5334,24 +5331,15 @@
       '</div>';
     }
     async function loadBookings() {
-      var listEl = document.getElementById('bookings-list');
-      if (!listEl) return;
       try {
         var res = await fetch('/api/bookings');
         if (!res.ok) throw new Error('Failed');
         var rows = await res.json();
-        if (!rows.length) { listEl.innerHTML = ''; updateUpcomingEmpty(); return; }
-        var groups = {};
-        rows.forEach(function(b) { var k = fmtBookingDate(b.starts_at, b.timezone); (groups[k] = groups[k] || []).push(b); });
-        var html = '';
-        Object.keys(groups).forEach(function(date) {
-          var n = Math.round((new Date(groups[date][0].starts_at) - new Date()) / 86400000);
-          var away = n < 0 ? 'now' : n === 0 ? 'today' : n === 1 ? 'tomorrow' : 'in ' + n + ' days';
-          html += '<div class="flights-date-header">' + date + '<span class="flights-away"> · ' + away + '</span></div>';
-          groups[date].forEach(function(b) { html += renderBookingCard(b); });
-        });
-        listEl.innerHTML = html;
-        updateUpcomingEmpty();
+        setUpcoming('bookings', rows.map(function(b) {
+          var item = upcomingItem(b.starts_at, { tz: b.timezone || undefined }, renderBookingCard(b));
+          if (item.date === 'Date to be confirmed') item.date = fmtBookingDate(b.starts_at, b.timezone) || item.date;
+          return item;
+        }));
       } catch (e) { console.error('bookings', e); updateUpcomingEmpty(); }
     }
     async function removeBooking(id) {
@@ -5421,7 +5409,7 @@
     }
 
     // A reminder's name says what it is for. Older ones were saved as a slug
-    // ("dentist-clinic-6oct") and read here as words. The note ClosedHand left
+    // ("plumber-visit-14mar") and read here as words. The note ClosedHand left
     // itself for when it fires is its own working, so it is not shown.
     function reminderTitle(name) {
       var t = String(name || '').trim();
@@ -5454,29 +5442,26 @@
     }
 
     async function loadReminders() {
-      var el = document.getElementById('reminders-list');
-      if (!el) return;
       try {
         var res = await fetch('/api/reminders');
         var rows = res.ok ? await res.json() : [];
         // Live one-offs here; the last few that ran go under Past.
         var live = rows.filter(function(r) { return !r.archived; });
         var past = rows.filter(function(r) { return !!r.archived; });
-        el.innerHTML = live.map(function(r) {
-          return upcomingRow({ icon: '\u23F0', title: reminderTitle(r.name), kind: 'Reminder', when: r.next_run || '' });
-        }).join('');
+        setUpcoming('reminders', live.map(function(r) {
+          var where = { tz: r.timezone || undefined };
+          return upcomingItem(r.next_at, where, upcomingRow({ icon: '\u23F0', title: reminderTitle(r.name), kind: r.repeats ? 'Reminder, ' + r.repeats : 'Reminder', when: r.next_at ? FlightTime.time(r.next_at, where) : '' }));
+        }));
         document.getElementById('reminders-past').innerHTML = past.map(function(r) {
           var ran = r.archived_at ? new Date(r.archived_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
           return upcomingRow({ icon: '\u2713', title: reminderTitle(r.name), kind: 'Reminder', when: ran ? 'Ran ' + ran : 'Ran', past: true });
         }).join('');
         _pastReminders = past.length;
         updatePast();
-        updateUpcomingEmpty();
       } catch (e) {}
     }
 
     async function loadFlights() {
-      const listEl = document.getElementById('flights-list');
       const emptyEl = document.getElementById('flights-empty');
       const loadingEl = document.getElementById('flights-loading');
       try {
@@ -5488,10 +5473,9 @@
         loadingEl.style.display = 'none';
 
         if (!flights.length) {
-          listEl.innerHTML = '';
           document.getElementById('recent-flights').innerHTML = '';
           _pastFlights = 0; updatePast();
-          updateUpcomingEmpty();
+          setUpcoming('flights', []);
           return;
         }
 
@@ -5501,27 +5485,10 @@
         _pastFlights = recent.length;
         updatePast();
 
-        // Group current/future flights by departure date at the origin airport.
-        const groups = {};
-        for (const f of flights.filter(f => !getFlightStatusInfo(f).past)) {
-          const key = FlightTime.dateLabel(f.departure?.dateTime, f.departure);
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(f);
-        }
-
-        // How far off the flight is, counted in calendar days between the
-        // boarding-pass date (origin-airport timezone when known) and today in
-        // the viewer's own calendar, so "tomorrow" means what a person looking
-        // at their ticket would say.
-
-        let html = '';
-        for (const [date, fls] of Object.entries(groups)) {
-          const away = FlightTime.daysAway(fls[0].departure?.dateTime, fls[0].departure);
-          html += `<div class="flights-date-header">${date}${away ? `<span class="flights-away"> · ${away}</span>` : ''}</div>`;
-          for (const f of fls) html += renderFlightCard(f);
-        }
-        listEl.innerHTML = html;
-        updateUpcomingEmpty();
+        // Dated by the departure at the origin airport, as on the boarding
+        // pass, so "tomorrow" means what the ticket says.
+        setUpcoming('flights', flights.filter(f => !getFlightStatusInfo(f).past)
+          .map(f => upcomingItem(f.departure?.dateTime, f.departure, renderFlightCard(f))));
       } catch (e) {
         loadingEl.style.display = 'none';
         updateUpcomingEmpty();
@@ -5529,37 +5496,55 @@
       }
     }
 
-    // Upcoming shows one shared empty state, only when BOTH lists are empty
     // Each goal's next check-in. The goal lives on the Goals tab; this row
     // only says when, and opens it there.
     async function loadGoalCheckIns() {
-      var el = document.getElementById('goal-checkins-list');
-      if (!el) return;
       try {
         var res = await fetch('/api/goals');
         var data = res.ok ? await res.json() : { goals: [] };
         var due = (data.goals || []).filter(function(g) { return g.status === 'active' && g.check_in && g.check_in.next_at; })
           .sort(function(a, b) { return new Date(a.check_in.next_at) - new Date(b.check_in.next_at); });
-        el.innerHTML = due.map(function(g) {
-          var at = new Date(g.check_in.next_at);
-          var when = at.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-          return upcomingRow({ icon: '\u{1F3AF}', title: g.title, kind: 'Goal check-in' + (g.check_in_text ? ', every ' + g.check_in_text : ''), when: when, onclick: "openGoal('" + g.id + "')" });
-        }).join('');
-        updateUpcomingEmpty();
+        setUpcoming('checkins', due.map(function(g) {
+          var where = { tz: g.check_in.timezone || data.timezone || undefined };
+          return upcomingItem(g.check_in.next_at, where, upcomingRow({ icon: '\u{1F3AF}', title: g.title, kind: 'Goal check-in' + (g.check_in_text ? ', every ' + g.check_in_text : ''), when: FlightTime.time(g.check_in.next_at, where), onclick: "openGoal('" + g.id + "')" }));
+        }));
       } catch (e) {}
     }
 
+    // Upcoming is one timeline: reminders, goal check-ins, flights and
+    // bookings under the same date headings, soonest first. Each kind loads
+    // on its own and hands its items here, and the list is drawn again when
+    // any arrives. Every heading and time comes from one helper, in the
+    // timezone of the thing itself, so the dates all read the same.
+    var _upcoming = { reminders: [], checkins: [], flights: [], bookings: [] };
+    function upcomingItem(iso, point, html) {
+      var at = Date.parse(iso);
+      return { at: isNaN(at) ? Infinity : at, date: FlightTime.dateLabel(iso, point || {}), away: FlightTime.daysAway(iso, point || {}), html: html };
+    }
+    function setUpcoming(kind, items) { _upcoming[kind] = items; renderUpcoming(); }
+    function renderUpcoming() {
+      var el = document.getElementById('upcoming-list');
+      if (!el) return;
+      var all = [].concat(_upcoming.reminders, _upcoming.checkins, _upcoming.flights, _upcoming.bookings)
+        .sort(function (a, b) { return a.at - b.at; });
+      var html = '', last = null;
+      all.forEach(function (item) {
+        if (item.date !== last) {
+          html += '<div class="flights-date-header">' + esc(item.date) + (item.away ? '<span class="flights-away"> \u00b7 ' + esc(item.away) + '</span>' : '') + '</div>';
+          last = item.date;
+        }
+        html += item.html;
+      });
+      el.innerHTML = html;
+      updateUpcomingEmpty();
+    }
     function updateUpcomingEmpty() {
-      var f = document.getElementById('flights-list');
-      var r = document.getElementById('reminders-list');
-      var b = document.getElementById('bookings-list');
-      var g = document.getElementById('goal-checkins-list');
+      var list = document.getElementById('upcoming-list');
       var e = document.getElementById('flights-empty');
       if (!e) return;
-      var rLive = r ? r.children.length : 0;
-      var empty = (!f || !f.children.length) && !rLive && (!b || !b.children.length) && (!g || !g.children.length);
-      e.style.display = empty ? 'block' : 'none';
+      e.style.display = list && list.children.length ? 'none' : 'block';
     }
+
 
     // === Weather code to emoji ===
     function weatherCodeToIcon(code) {
@@ -5982,9 +5967,8 @@
         return '<div class="int-wrap">' +
           '<div class="int-card connected" onclick="toggleMcpUnfurl(this)" style="background:#1A1817;border-color:rgba(239,230,214,0.16);">' +
             logoHtml +
-            '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#EFE6D6;font-weight:500;">' + escHtml(skill.name) + '</div>' +
-            '<div style="font-size: 13px;color:rgba(239,230,214,0.6);margin-top:1px;">' + (item.builtin ? 'Built in' : 'Added from a link') + '</div></div>' +
-            (item.builtin ? '' : '<span class="int-badge">Added &#10003;</span>') +
+            '<span class="int-name">' + escHtml(skill.name) + '</span>' +
+            (item.builtin ? '<span class="int-tag">Built in</span>' : '<span class="int-tag">Added</span>') +
             '<span class="int-chevron"><span class="chevron-down"></span></span>' +
           '</div>' +
           '<div class="int-unfurl"><div class="int-unfurl-inner">' + detail + '</div></div>' +
@@ -6605,7 +6589,7 @@
       try {
         var res = await fetch('/api/automations/' + id + '/run', { method: 'POST' });
         if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
-        showToast('Agent started');
+        showToast('Routine started');
         loadAutomations(); loadAutomationStats();
       } catch (e) { showToast('Failed to start', true); }
     }
@@ -6623,9 +6607,9 @@
     }
 
     async function deleteAutomation(id) {
-      if (!confirm('Delete this agent? This cannot be undone.')) return;
+      if (!confirm('Delete this routine? This cannot be undone.')) return;
       var res = await fetch('/api/automations/' + id, { method: 'DELETE' });
-      if (res.ok) { showToast('Agent deleted'); loadAutomations(); loadAutomationStats(); }
+      if (res.ok) { showToast('Routine deleted'); loadAutomations(); loadAutomationStats(); }
       else showToast('Failed to delete', true);
     }
 
@@ -6854,7 +6838,7 @@
         var data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Failed to save'; errEl.style.display = 'block'; return; }
         closeCreateAutomationModal();
-        showToast('Agent saved');
+        showToast('Routine saved');
         loadAutomations();
         loadAutomationStats();
       } catch (e) {
@@ -8369,8 +8353,8 @@
   <!-- Worker Creation Modal -->
   <div class="modal-overlay" id="auto-create-modal" onclick="if(event.target===this)closeCreateAutomationModal()">
     <div class="modal agent-modal" style="max-width:760px;max-height:calc(100vh - 16px);">
-      <h3>New Agent</h3>
-      <p class="modal-desc">Create an agent that handles one job for you.</p>
+      <h3>New routine</h3>
+      <p class="modal-desc">An agent you set up once to do one job for you.</p>
 
       <!-- Template and name share a row: two short fields stacked was most of
            why this box needed scrolling. -->
@@ -8378,7 +8362,7 @@
       <div style="flex:1;min-width:220px;">
       <label for="auto-template-select">Start from template</label>
       <select id="auto-template-select" onchange="applyAgentTemplate(this.value)" style="width:100%;padding:8px 10px;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;margin-bottom:10px;">
-        <option value="">Blank agent</option>
+        <option value="">Blank routine</option>
         <option value="morning-briefing">Morning Briefing</option>
         <option value="smart-morning">Smart Morning</option>
         <option value="competitor-monitor">Competitor Monitor</option>
@@ -8406,7 +8390,7 @@
         <button type="button" class="auto-trigger-btn" data-trigger="event" onclick="selectTrigger('event')">When something happens</button>
       </div>
 
-      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Saved agents.</div>
+      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Routines.</div>
 
       <!-- Schedule picker (hidden by default) -->
       <div id="auto-schedule-picker" style="display:none;margin-bottom:10px;">
@@ -8465,7 +8449,7 @@
             <label for="auto-urgent-check" style="font-size: 14px;color:#B6AFA4;margin:0;cursor:pointer;">Urgent</label>
             <span class="auto-tooltip-wrap" style="display:inline-flex;align-items:center;">
               <span style="font-size: 13px;color:rgba(239,230,214,0.6);cursor:help;">&#9432;</span>
-              <span class="auto-tooltip">Notifications from this agent will be delivered even during your quiet hours.</span>
+              <span class="auto-tooltip">Notifications from this routine will be delivered even during your quiet hours.</span>
             </span>
           </span>
         </div>

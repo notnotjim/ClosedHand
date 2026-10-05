@@ -1,4 +1,4 @@
-// The New Agent box: every field fits at once, each says what it does in the
+// The New routine box: every field fits at once, each says what it does in the
 // person's words, an agent can carry several rules, and every destination in
 // "Send results to" actually delivers, Email included.
 const { test } = require("node:test");
@@ -28,9 +28,9 @@ test("several rules go into the instructions as a list, and come back out when e
 });
 
 test("each field says what it does, in the names the person sees elsewhere", () => {
-  assert.match(dashboard, /When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Saved agents\./);
+  assert.match(dashboard, /When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Routines\./);
   assert.match(dashboard, /Preferred skills <span[^>]*>\(optional, always used when picked; add a skill by pasting its link on Connections\)<\/span>/);
-  assert.match(dashboard, /<span class="auto-tooltip">Notifications from this agent will be delivered even during your quiet hours\.<\/span>/);
+  assert.match(dashboard, /<span class="auto-tooltip">Notifications from this routine will be delivered even during your quiet hours\.<\/span>/);
   assert.doesNotMatch(dashboard, /Use for time-sensitive alerts/);
   assert.match(read("webapp/public/builtin-skills.json"), /"name": "Instagram \(sandbox computer\)"/);
   assert.doesNotMatch(dashboard, /'the workspace browser'|'the workspace'/, "the sandbox computer is called that on agent cards too");

@@ -116,3 +116,19 @@ test("a card in any list opens on a click and closes on the next", () => {
   toggle(b.card); assert.ok(b.unfurl.classList.contains("open") && !a.unfurl.classList.contains("open"), "one open at a time");
   toggle(b.card); assert.ok(!b.unfurl.classList.contains("open"), "a second click closes it");
 });
+
+test("everything you have is one card size: chat apps, connected and skills", () => {
+  const css = read("webapp/public/interface.css");
+  const dashboard = read("webapp/views/dashboard.html");
+  assert.match(css, /\.dashboard-container :is\(\.platforms-grid, \.integrations-grid\) \{ gap: 12px; grid-auto-flow: row; grid-template-columns: repeat\(auto-fill, minmax\(min\(100%, 320px\), 1fr\)\);/, "the same columns for every group");
+  assert.match(css, /\.dashboard-container :is\(\.plat-card, \.int-card\) \{ flex-direction: row; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px;/, "the same one-line card");
+  assert.doesNotMatch(css, /platforms-grid \{ grid-template-columns: repeat\(5/, "chat apps no longer squeezed into five columns");
+  assert.match(dashboard, /'<span class="int-name">' \+ escHtml\(skill\.name\) \+ '<\/span>' \+\n\s*\(item\.builtin \? '<span class="int-tag">Built in<\/span>' : '<span class="int-tag">Added<\/span>'\)/, "a skill is one line with a quiet tag");
+  assert.match(dashboard, /'<span class="int-name">' \+ escHtml\(m\.name\) \+ '<\/span>' \+\n\s*statusBadge/, "a pasted server is one line too");
+});
+
+test("a label inside Add a connection never reads as level with its heading", () => {
+  const css = read("webapp/public/connection-catalogue.css");
+  assert.match(css, /\.add-sub \{font-size:13px;font-weight:600;color:rgba\(239,230,214,0\.6\);text-transform:uppercase;letter-spacing:0\.8px;/, "small grey capitals, like the dashboard's other labels");
+  assert.match(css, /#mcp-section > #apple-local-section \{margin-bottom:32px;\}/, "the Mac card sits as far from Apps as Apps from Connect anything");
+});

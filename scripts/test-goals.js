@@ -196,8 +196,8 @@ test("goals have their own tab, after Schedules, that says how it helps", () => 
   assert.match(tab, /\(state\.achieved \|\| \[\]\)\.forEach\(\(g\) => done\.append\(card\(g\)\)\)/, "an achieved goal opens like any other");
   assert.match(tab, /else act\("Not achieved yet"/);
   assert.match(read("webapp/views/index.html"), /var fromHome = !hasMessages;\n    enterChatMode\(\);\n    addMessage\(displayText[^\n]*\n    if \(fromHome\) drawEarlierMessages\(text\);/, "a message sent from home shows the conversation it joins");
-  assert.match(dashboard, /<div id="reminders-list"><\/div>\n\s*<div id="goal-checkins-list"><\/div>/, "a goal's next check-in is listed under Upcoming");
-  assert.match(dashboard, /onclick: "openGoal\('" \+ g\.id \+ "'\)" \}\);/, "and opens the goal itself");
+  assert.match(dashboard, /setUpcoming\('checkins', due\.map\(function\(g\) \{/, "a goal's next check-in is listed under Upcoming");
+  assert.match(dashboard, /onclick: "openGoal\('" \+ g\.id \+ "'\)" \}\)\);/, "and opens the goal itself");
   assert.match(tab, /window\.openGoal = async \(id\) => \{\n\s*state\.open\.add\(id\);/);
   assert.match(read("migrations/055_goal_plans.sql"), /done_when text,[\s\S]*habit jsonb,[\s\S]*reward text,/);
   assert.match(dashboard, /<script defer src="\/goals\.js"><\/script>/);

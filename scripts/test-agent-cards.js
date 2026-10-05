@@ -50,7 +50,7 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached your chat, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
-  assert.match(dashboard, /What ClosedHand is working on now, the agents you have set to run on a schedule, like daily briefings or monitoring, and what is coming up\./);
+  assert.match(dashboard, />ClosedHand sends out agents, on their own or as a team, when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");
 });
 
 test("the Schedules tab holds what is about time; what ClosedHand made is on Pages", () => {
@@ -66,13 +66,51 @@ test("the Schedules tab holds what is about time; what ClosedHand made is on Pag
 
 test("Upcoming says what, what kind and when; what already happened folds under Past", () => {
   const fns = vm.runInNewContext([fn("reminderTitle")].join("\n") + "\n({ reminderTitle })", {});
-  assert.equal(fns.reminderTitle("dentist-clinic-6oct"), "Dentist clinic 6oct", "an old slug reads as words");
-  assert.equal(fns.reminderTitle("Decide on iCloud storage"), "Decide on iCloud storage");
+  assert.equal(fns.reminderTitle("plumber-visit-14mar"), "Plumber visit 14mar", "an old slug reads as words");
+  assert.equal(fns.reminderTitle("Renew the car insurance"), "Renew the car insurance");
   assert.equal(fns.reminderTitle(""), "Reminder");
-  assert.match(dashboard, /return upcomingRow\(\{ icon: '\\u23F0', title: reminderTitle\(r\.name\), kind: 'Reminder', when: r\.next_run \|\| '' \}\);/, "the note ClosedHand left itself is not shown");
+  assert.match(dashboard, /upcomingRow\(\{ icon: '\\u23F0', title: reminderTitle\(r\.name\), kind: r\.repeats \? 'Reminder, ' \+ r\.repeats : 'Reminder', when: r\.next_at \? FlightTime\.time\(r\.next_at, where\) : '' \}\)/, "the note ClosedHand left itself is not shown");
   assert.doesNotMatch(dashboard, /esc\(r\.task/, "no reminder prompt on the dashboard");
   assert.doesNotMatch(dashboard, /_showPastReminders|Show \d+ that already ran|that already ran<\/a>/);
   assert.match(dashboard, /<button type="button" class="mc-section-label archive-row" id="past-toggle" aria-expanded="false" aria-controls="past-body" onclick="togglePast\(\)">Past <span class="count" id="past-count"><\/span><span class="chevron-down"><\/span><\/button>/, "Past is a heading row like Archived");
   assert.match(dashboard, /<div id="past-body" hidden>\n\s*<div id="reminders-past"><\/div>\n\s*<div id="recent-flights"><\/div>/, "reminders that ran and flights flown, folded away");
-  assert.match(read("lib/tools/definitions.js"), /What it is for, in a few plain words, as the person sees it under Upcoming on the dashboard: 'Dentist appointment', 'Decide on iCloud storage'\. Not a slug\./);
+  assert.match(read("lib/tools/definitions.js"), /What it is for, in a few plain words, as the person sees it under Upcoming on the dashboard: 'Plumber visit', 'Renew the car insurance'\. Not a slug\./);
+});
+
+test("saved agents are routines, everywhere a person reads about them; agents stay where agents work", () => {
+  const schedules = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-goals"'));
+  assert.doesNotMatch(schedules, /Saved agents|Saved Agents|New agent/);
+  assert.match(schedules, /<div class="mc-metric-label">Agents at work<\/div>/);
+  assert.match(schedules, /<div class="mc-metric-label">Routines<\/div>/);
+  assert.match(schedules, /<p class="routines-blurb">Agents you set up once that run on a timetable, when something happens, or when you press Run\.<\/p>/);
+  assert.match(dashboard, />New routine<[\s\S]*>An agent you set up once to do one job for you\.</);
+  const defs = read("lib/tools/definitions.js");
+  assert.match(defs, /Create a routine: an agent the person sets up once that runs on a schedule, when something happens, or when they ask\. Call it a routine when you talk about it\./);
+  assert.match(defs, /`Setting up a routine: \$\{q\}` : "Setting up a routine"/, "the web chat's progress line says routine too");
+  assert.match(read("lib/tools/handlers.js"), /"Routine '" \+ auto\.name \+ "' saved\. It shows under Routines on the Schedules tab\."/);
+});
+
+test("a repeating reminder is under Upcoming at its next time, saying how often", () => {
+  const server = read("webapp/server.js");
+  const a = server.indexOf("function reminderRepeats"), b = server.indexOf('\napp.get("/api/reminders"', a);
+  const repeats = new Function(server.slice(a, b) + "; return reminderRepeats;")();
+  const cases = { "0 20 * * 0": "every Sun", "0 8 * * *": "every day", "0 8 * * 1-5": "weekdays", "0 9 * * 1,3": "every Mon, Wed", "30 7 1 * *": "every month on the 1st", "0 9 22 * *": "every month on the 22nd", "0 9 28 7 *": "every year on 28 Jul", "*/30 * * * *": "every 30 minutes", "0 */3 * * *": "every 3 hours", "5 4 * 2 *": "repeats" };
+  for (const [cron, want] of Object.entries(cases)) assert.equal(repeats(cron), want, cron);
+  assert.match(server, /const live = rows\.filter\(\(r\) => r\.enabled\)\.map\(\(r\) => \{/, "repeating ones are no longer left out");
+  assert.match(server, /repeats: oneOff\(r\) \? null : reminderRepeats\(r\.cron_expression\)/);
+});
+
+test("Upcoming is one timeline: every kind under the same date headings, soonest first", () => {
+  const FlightTime = require("../webapp/public/flight-time.js");
+  const start = dashboard.indexOf("    var _upcoming = {"), end = dashboard.indexOf("    function updateUpcomingEmpty() {", start);
+  const el = { innerHTML: "" };
+  const ctx = { FlightTime, esc: (t) => String(t), document: { getElementById: (id) => (id === "upcoming-list" ? el : null) }, updateUpcomingEmpty() {} };
+  vm.runInNewContext(dashboard.slice(start, end) + "\nthis.setUpcoming = setUpcoming; this.upcomingItem = upcomingItem;", ctx);
+  const tz = { tz: "Europe/Lisbon" };
+  ctx.setUpcoming("flights", [ctx.upcomingItem("2027-03-13T14:20:00Z", tz, "[flight]")]);
+  ctx.setUpcoming("reminders", [ctx.upcomingItem("2027-03-12T09:15:00Z", tz, "[reminder]"), ctx.upcomingItem("2027-03-13T08:00:00Z", tz, "[reminder 2]")]);
+  const headings = el.innerHTML.match(/<div class="flights-date-header">[^<]*/g).map((h) => h.replace(/<[^>]*>/, ""));
+  assert.deepEqual(headings, [FlightTime.dateLabel("2027-03-12T09:15:00Z", tz), FlightTime.dateLabel("2027-03-13T14:20:00Z", tz)], "a reminder's date is a heading like a flight's");
+  assert.ok(el.innerHTML.indexOf("[reminder]") < el.innerHTML.indexOf("[reminder 2]") && el.innerHTML.indexOf("[reminder 2]") < el.innerHTML.indexOf("[flight]"), "in time order across kinds, under one heading per day");
+  assert.doesNotMatch(dashboard, /id="reminders-list"|id="flights-list"|id="bookings-list"|id="goal-checkins-list"/, "one list, not four");
 });

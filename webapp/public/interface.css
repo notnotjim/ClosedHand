@@ -42,13 +42,23 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .dashboard-container .tab:hover { color: #EFE6D6; }
 .dashboard-container :is(input, select, textarea) { font-size: var(--ui-body); }
 .dashboard-container .plat-name { font-size: var(--ui-body); }
-.dashboard-container .plat-card { padding: 20px; gap: 16px; background: #1A1817; }
 .dashboard-container .plat-connect-btn { font-size: var(--ui-small); min-height: 32px; }
 .dashboard-container .tab:focus-visible { outline: 2px solid #D8624B; outline-offset: -2px; }
 /* Space within groups stays smaller than space between tasks. */
-.dashboard-container .platforms-grid { gap: 16px; grid-auto-columns: calc(50% - 8px); }
-.dashboard-container .integrations-grid { gap: 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
-.dashboard-container .int-card { padding: 20px; gap: 12px; }
+/* Connections has three card sizes, by what the card is. The Mac card is
+   full width: a device, set up once. Everything you have (chat apps,
+   connected services, pasted servers, skills) is one row card: one line,
+   the same height and columns, its status on the right and its details
+   opening below. Apps you could add are the small tiles. */
+.dashboard-container :is(.platforms-grid, .integrations-grid) { gap: 12px; grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); overflow: visible; }
+.dashboard-container .platforms-wrap::after { display: none; }
+.dashboard-container :is(.plat-card, .int-card) { flex-direction: row; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px; background: #1A1817; }
+.dashboard-container .plat-card .plat-top { flex: 1; min-width: 0; }
+.dashboard-container .plat-card :is(.badge, .plat-connect-btn) { align-self: center; }
+.dashboard-container .plat-card .badge { font-size: 14px; text-transform: none; letter-spacing: normal; }
+.dashboard-container .plat-card .badge-soon { padding: 0; background: none; font-weight: 500; color: #B6AFA4; }
+.dashboard-container .int-card .int-tag { font-size: 13px; color: #B6AFA4; white-space: nowrap; }
+.dashboard-container .int-card > :is(svg, img) { flex: none; }
 .dashboard-container .int-unfurl-inner { padding: var(--space-card); }
 .dashboard-container .settings-group { margin-bottom: 28px; }
 .dashboard-container .settings-group-header { padding: var(--space-card); }
@@ -105,12 +115,6 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .rag-query-box { gap: 12px; margin-bottom: 24px; }
 :is(.rag-source,.rag-doc,.rag-result) { padding: 18px 20px; margin-bottom: 12px; }
 .rag-empty-panel p { margin-bottom: 24px; text-wrap: balance; }
-@media (min-width: 600px) and (max-width: 899px) {
-  .dashboard-container .platforms-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (min-width: 900px) {
-  .dashboard-container .platforms-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
 .setup-page { --font-display: var(--font-ui); --text-secondary: #B6AFA4; --text-tertiary: rgba(239,230,214,0.64); }
 .setup-page .wrap { padding-top: 32px; }
 .setup-page header.top { margin-bottom: 48px; }

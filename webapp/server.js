@@ -5405,6 +5405,33 @@ app.delete("/api/schedules/:name", async (req, res) => {
 });
 
 // GET /api/reminders — the user's scheduled reminders
+// How often a repeating reminder comes round, in words: "every Sun",
+// "every day", "weekdays", "every month on the 1st", "every year on 28 Jul".
+// A pattern it cannot put plainly says "repeats".
+function reminderRepeats(cron) {
+  const [min, hour, dom, mon, dow] = String(cron || "").trim().split(/\s+/);
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const n = (v) => /^\d+$/.test(v || "");
+  const nth = (d) => d + ([, "st", "nd", "rd"][d % 100 > 10 && d % 100 < 14 ? 0 : d % 10] || "th");
+  const every = (v) => (/^\*\/(\d+)$/.exec(v || "") || [])[1];
+  if (dom === "*" && mon === "*" && dow === "*") {
+    if (every(min) && hour === "*") return "every " + every(min) + " minutes";
+    if (n(min) && hour === "*") return "every hour";
+    if (n(min) && every(hour)) return "every " + every(hour) + " hours";
+  }
+  if (!n(min) || !n(hour)) return "repeats";
+  if (dom === "*" && mon === "*") {
+    if (dow === "*") return "every day";
+    if (dow === "1-5") return "weekdays";
+    if (/^[0-7](,[0-7])*$/.test(dow)) return "every " + dow.split(",").map((d) => DAYS[Number(d) % 7]).join(", ");
+    return "repeats";
+  }
+  if (n(dom) && mon === "*" && dow === "*") return "every month on the " + nth(Number(dom));
+  if (n(dom) && n(mon) && dow === "*") return "every year on " + Number(dom) + " " + MONTHS[Number(mon) - 1];
+  return "repeats";
+}
+
 app.get("/api/reminders", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -5418,17 +5445,17 @@ app.get("/api/reminders", async (req, res) => {
     // A cron line means nothing to the user; say when it actually fires, in
     // the timezone the schedule was created in. Fall back to the raw cron
     // only if the expression will not parse.
-    const nextRunOf = (r) => {
+    const nextOf = (r) => {
       try {
         const tz = r.timezone || "Europe/London";
-        const next = require("cron-parser").parseExpression(r.cron_expression, { tz }).next().toDate();
-        return next.toLocaleString("en-GB", { timeZone: tz, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+        return require("cron-parser").parseExpression(r.cron_expression, { tz }).next().toDate();
       } catch (_) { return null; }
     };
-    // Upcoming means things happening once, soon. Anything that repeats is an
-    // agent and belongs in the agents list, or it would sit in both places
-    // saying different things about itself. A cron pinned to one day and one
-    // month is a single date, same rule the scheduler retires them by.
+    const shown = (date, r) => date ? date.toLocaleString("en-GB", { timeZone: r.timezone || "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
+    // Upcoming lists each reminder's next time. One that repeats ("remind me
+    // every Sunday") says how often; a routine is a different thing, a saved
+    // job, and has its own list. A cron pinned to one day and one month is a
+    // single date, same rule the scheduler retires them by.
     const oneOff = (r) => {
       if (r.run_once === true) return true;
       if (r.run_once === false) return false;
@@ -5438,7 +5465,10 @@ app.get("/api/reminders", async (req, res) => {
     const rows = (data || []);
     // Live one-offs, plus the five most recently completed so the user can
     // look back at what ClosedHand did on their behalf.
-    const live = rows.filter((r) => r.enabled && oneOff(r)).map((r) => ({ ...r, next_run: nextRunOf(r) }));
+    const live = rows.filter((r) => r.enabled).map((r) => {
+      const next = nextOf(r);
+      return { ...r, next_run: shown(next, r), next_at: next ? next.toISOString() : null, repeats: oneOff(r) ? null : reminderRepeats(r.cron_expression) };
+    }).sort((a, b) => String(a.next_at || "9").localeCompare(String(b.next_at || "9")));
     const past = rows.filter((r) => !r.enabled && r.archived_at)
       .sort((a, b) => (b.archived_at || "").localeCompare(a.archived_at || ""))
       .slice(0, 5)
