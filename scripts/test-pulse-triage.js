@@ -49,3 +49,27 @@ test('the screen is told the date, so "tomorrow" and "weeks away" can be told ap
   const pulse = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
   assert.match(pulse, /items: triageItems, level, goals,\n\s*now: require\("\.\/timezone"\)\.nowStamp\(/);
 });
+
+// A mailing list can open "Dear Sam" and end "call me". The screen is told
+// which mail went to a list, and that its "call me" is not a request.
+test('mail sent to a list is marked, and the screen knows what that means', async () => {
+  const { fromMailingList, sortedAsBulk } = require('../lib/pulse-triage');
+  assert.equal(sortedAsBulk(['CATEGORY_PROMOTIONS', 'INBOX']), true);
+  assert.equal(sortedAsBulk(['CATEGORY_UPDATES', 'INBOX']), false);
+  assert.equal(sortedAsBulk(undefined), false);
+  assert.equal(fromMailingList({ labels: ['CATEGORY_PROMOTIONS', 'INBOX'] }), true);
+  assert.equal(fromMailingList({ labels: ['CATEGORY_SOCIAL'] }), true);
+  assert.equal(fromMailingList({ labels: ['INBOX'], body: 'Dear Sam, a new flat on Mill Lane. Call me to view. You have been contacted because you registered with us.' }), true);
+  assert.equal(fromMailingList({ labels: ['INBOX'], body: 'Hi, see you at 7. Can you take me off the rota?' }), false);
+  assert.equal(fromMailingList({ labels: ['CATEGORY_PERSONAL', 'INBOX'], body: 'Can you confirm Saturday by tonight?' }), false);
+  assert.equal(fromMailingList({}), false);
+  let system = '';
+  await triage({ items, level: 'medium', fallback: async (s) => { system = s; return '{"pulse":false,"flagged":[]}'; } });
+  assert.match(system, /Mail marked \[mailing list\] went out to many people, however personally it is addressed/);
+  assert.match(system, /A nudge that would only matter if something you do not know is true/);
+  const pulse = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
+  assert.match(pulse, /select\("external_id, data->>from, data->>subject, data->labels, data->>body"\)/);
+  assert.match(pulse, /EMAIL\$\{fromMailingList\(e\) \? " \[mailing list\]" : ""\}/);
+  assert.match(pulse, /its "call me" is not a request waiting on \$\{userName\}/, 'the writer holds the same line');
+  assert.match(pulse, /filter\(e => !JUNK_SENDER\.test\(e\.from \|\| ""\) && !sortedAsBulk\(e\.labels\)\)/, 'what Gmail filed as bulk never reaches the screen');
+});

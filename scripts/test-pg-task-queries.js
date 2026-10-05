@@ -21,6 +21,19 @@ test("mail reconciliation returns separately named JSON fields", () => {
   assert.doesNotMatch(q.text, /"mfrom:data"/);
 });
 
+// Unnamed, Postgres calls every JSON path "?column?": two collided and Pulse
+// read every sender and subject as empty, so its junk filter dropped nothing.
+test("an unnamed JSON field comes back under its own key, as PostgREST does", () => {
+  const db = createPgClient({ pool: {} });
+  const q = db.from("data_cache").select("external_id, data->>from, data->>subject, data->labels, data->meta->>kind").limit(1)._compile();
+  assert.match(q.text, /"data"->>'from' AS "from"/);
+  assert.match(q.text, /"data"->>'subject' AS "subject"/);
+  assert.match(q.text, /"data"->'labels' AS "labels"/);
+  assert.match(q.text, /"data"->'meta'->>'kind' AS "kind"/);
+  const w = db.from("data_cache").select("id").eq("data->>from", "x").limit(1)._compile();
+  assert.doesNotMatch(w.text, /WHERE[^]*AS "from"/, "filters stay plain expressions");
+});
+
 test("returned writes preserve projection aliases and escape JSON keys", () => {
   const db = createPgClient({ pool: {} });
   // Compile only. No database call is made by this assertion.
