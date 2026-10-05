@@ -37,15 +37,15 @@
 .catalogue-copy-btn {flex:none;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:7px;background:none;color:#B6AFA4;cursor:pointer;}
 .catalogue-copy-btn:hover {background:rgba(239,230,214,.08);color:#EFE6D6;}
 .catalogue-copy-btn.done {color:#8DBD79;}
-.connection-catalogue .mcp-hero {padding:0 0 32px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:none!important;overflow:visible!important;}
-.connection-catalogue .mcp-copy {text-align:left;padding:0!important;margin:0 0 12px!important;}
+.connection-catalogue .mcp-hero {padding:24px 0 32px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:none!important;overflow:visible!important;}
+.connection-catalogue .mcp-copy {text-align:center;max-width:none;padding:0!important;margin:0 0 12px!important;}
 .connection-catalogue .mcp-description {font-size:15px!important;color:#B6AFA4!important;}
-.connection-catalogue .mcp-pill {max-width:640px!important;margin:0!important;}
+.connection-catalogue .mcp-pill {max-width:640px!important;margin:0 auto!important;}
 .connection-catalogue #mcp-credentials {max-width:640px!important;margin-left:0!important;}
 .connection-catalogue #mcp-auth-status {text-align:left!important;}
-.connection-catalogue .mcp-scan {display:inline-flex;align-items:center;gap:6px;margin:12px 0 0;padding:4px 10px 4px 8px;border:1px solid rgba(141,189,121,.22);border-radius:999px;background:rgba(141,189,121,.06);color:#B6AFA4;font-size:12.5px;line-height:1.4;}
+.connection-catalogue .mcp-scan {display:flex;width:fit-content;align-items:center;gap:6px;margin:12px auto 0;padding:4px 10px 4px 8px;border:1px solid rgba(141,189,121,.22);border-radius:999px;background:rgba(141,189,121,.06);color:#B6AFA4;font-size:12.5px;line-height:1.4;}
 .connection-catalogue .mcp-scan svg {flex:none;color:#8DBD79;}
-.connection-catalogue .mcp-browse {justify-content:flex-start;}
+.connection-catalogue .mcp-browse {justify-content:center;}
 .connection-catalogue :is(button,input,textarea,summary,a):focus-visible {outline:2px solid #E59B89;outline-offset:4px;}
 .connection-catalogue [hidden] {display:none!important;}
 @media(max-width:480px){.catalogue-tiles{grid-template-columns:1fr 1fr}}

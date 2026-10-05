@@ -1,8 +1,8 @@
 #assistant-email .assistant-email-address { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0; }
 #assistant-email strong { overflow-wrap:anywhere; font-size:var(--ui-body,15px); }
 #assistant-email button { min-height:44px; }
-#assistant-email details { margin:24px 0 12px; }
-#assistant-email summary { cursor:pointer; padding:12px 0; }
+#assistant-email details { margin:12px 0; }
+#assistant-email summary { cursor:pointer; padding:8px 0; }
 #assistant-email .assistant-email-thread { margin-top:24px; padding-top:24px; border-top:1px solid var(--ui-border); }
 #assistant-email h3 { margin:0 0 16px; overflow-wrap:anywhere; }
 #assistant-email label { display:block; margin:16px 0; }

@@ -1288,25 +1288,6 @@
     }
 
     /* === Location & Weather Widget === */
-    .location-weather-widget {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px; gap: 12px;
-    }
-    .lw-content {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0;
-    }
-    .lw-location {
-      font-size: 13px; color: #B6AFA4;
-    }
-    .lw-weather {
-      font-size: 13px; color: #EFE6D6;
-    }
-    .lw-btn {
-      background: rgba(239,230,214,0.08); border: 1px solid rgba(239,230,214,0.1);
-      color: #EFE6D6; padding: 6px 14px; border-radius: 8px; font-size: 14px;
-      cursor: pointer; white-space: nowrap; transition: background 0.15s;
-    }
-    .lw-btn:hover { background: rgba(239,230,214,0.14); }
 
     /* Sandbox / Cloud Workspace */
 
@@ -2242,7 +2223,7 @@
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="2" placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -2525,8 +2506,14 @@
         <div style="padding-top:16px;">
 
           <!-- Personal access and contact addresses -->
-          <section class="dashboard-link-section" id="phone-block" aria-labelledby="phone-heading" style="display:none;">
-            <h2 id="phone-heading">Personal URL</h2>
+          <!-- Addresses: ClosedHand's own addresses, for reaching it from
+               anywhere: its personal URL in a browser and its email address.
+               Each is claimed once through closedhand.com. -->
+          <section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">
+            <h2 id="addresses-heading">ClosedHand Addresses</h2>
+            <div class="address-parts">
+          <div class="address-card" id="phone-block" style="display:none;">
+            <div class="address-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><h3 class="address-title" id="phone-heading">Personal URL</h3></div>
             <p id="phone-desc" role="status">Loading your link…</p>
             <div id="phone-live" hidden>
               <div class="dashboard-copy-box">
@@ -2534,7 +2521,6 @@
                 <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
               </div>
               <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
-              <p id="phone-change-line" hidden><a href="#" id="phone-change" onclick="toggleDashboardRename(event)">Change URL</a></p>
               <div id="phone-rename" hidden>
                 <label for="phone-new-name">New name</label>
                 <input id="phone-new-name" class="settings-input" type="text" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" oninput="previewDashboardRename()" aria-describedby="phone-new-preview phone-new-help">
@@ -2557,6 +2543,8 @@
                 <p id="phone-code-status" role="status"></p>
               </div>
             </div>
+            <div class="address-foot">
+            <p id="phone-change-line" hidden><a href="#" id="phone-change" onclick="toggleDashboardRename(event)">Change URL</a></p>
             <details id="phone-options" hidden>
               <summary>Link options</summary>
               <div class="dashboard-link-options">
@@ -2572,12 +2560,14 @@
                 </div>
               </div>
             </details>
+            </div>
+          </div>
+          <div class="address-card">
+            <div class="address-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><h3 class="address-title" id="assistant-email-heading">Email address</h3></div>
+            <div id="assistant-email"></div>
+          </div>
+            </div>
           </section>
-
-        <section class="settings-group">
-          <div class="settings-group-header"><h2 id="assistant-email-heading">ClosedHand&#39;s email address</h2></div>
-          <div class="settings-group-body" id="assistant-email"></div>
-        </section>
 
           <!-- Notifications -->
           <div class="settings-group">
@@ -2595,9 +2585,9 @@
           <div class="settings-group" style="border-color:rgba(239,230,214,0.16);flex:1;min-width:280px;">
             <div class="settings-group-header">
               <h2>Pulse</h2>
+              <p class="section-desc">ClosedHand monitors your email, calendar, and other connections in the background. When something needs your attention, it reaches out proactively.</p>
             </div>
-            <div style="padding:4px 16px 0;"><p style="font-size: 13px;color:rgba(239,230,214,0.6);margin:0 0 8px;line-height:1.5;">ClosedHand monitors your email, calendar, and other connections in the background. When something needs your attention, it reaches out proactively.</p></div>
-            <div style="padding:8px 16px 14px 16px;">
+            <div class="settings-group-body">
               <div class="segmented-control" id="pulse-level" style="margin-bottom:10px;">
                 <button class="seg-btn" data-level="off">Off<span class="seg-desc">Only when messaged</span></button>
                 <button class="seg-btn" data-level="medium">Normal<span class="seg-desc">Things worth a nudge</span></button>
@@ -2612,27 +2602,6 @@
                 <span style="font-size: 13px;color:rgba(239,230,214,0.6);">to</span>
                 <select id="quiet-end" class="time-select" style="padding:6px 8px;font-size: 14px;min-width:90px;"></select>
               </div>
-            </div>
-          </div>
-
-          <!-- Location -->
-          <div class="settings-group" id="location-section" style="flex:1;min-width:280px;">
-            <div class="settings-group-header">
-              <h2>Location</h2>
-            </div>
-            <div style="padding:12px 16px;">
-              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
-                <span class="lw-location" id="lw-location">No location set</span>
-                <span class="lw-weather" id="lw-weather"></span>
-              </div>
-              <div id="lw-local-time" style="font-size: 13px;color:#B6AFA4;margin-bottom:10px;"></div>
-              <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-                <input type="text" id="location-manual-input" placeholder="Type a location..." style="flex:1;padding:7px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#EFE6D6;font-size: 14px;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
-                <button class="lw-btn" onclick="setLocationManual()" style="font-size: 14px;padding:6px 12px;">&#10148;</button>
-              </div>
-              <button class="lw-btn" id="lw-btn" onclick="setLocation()" style="font-size: 13px;padding:5px 12px;">
-                &#128205; Locate me
-              </button>
             </div>
           </div>
           </div>
@@ -4597,7 +4566,6 @@
       }
       if (tabName === 'settings') {
         if (window._platformsCache) renderPlatformPills(window._platformsCache);
-        loadLocationWeather();
         loadUserRules();
         loadSettingsExtras();
       }
@@ -4619,7 +4587,7 @@
     }
 
     function loadSettingsExtras() {
-      document.getElementById('phone-block').style.display = 'block';
+      document.getElementById('phone-block').style.display = '';
       loadPhoneAccess();
       loadAccountSummary();
       document.getElementById('wallet-block').style.display = 'block';
@@ -4844,7 +4812,7 @@
           : 'Connecting. Your personal URL will appear here when it is ready.';
         _phonePoll = setTimeout(loadPhoneAccess, 2000);
       } else {
-        desc.textContent = 'Open this link from any device, wherever you are, and sign in with your dashboard password. Keep the computer running ClosedHand awake and online.';
+        desc.textContent = 'Open this link from any device and sign in with your dashboard password. Keep the computer running ClosedHand awake and online.';
       }
     }
     // A typed name tidied as closedhand.com tidies it (webapp/phone-registration.js).
@@ -5546,160 +5514,6 @@
     }
 
 
-    // === Weather code to emoji ===
-    function weatherCodeToIcon(code) {
-      const map = {
-        0: '\u2600\uFE0F', 1: '\u{1F324}\uFE0F', 2: '\u26C5', 3: '\u2601\uFE0F',
-        45: '\u{1F32B}\uFE0F', 48: '\u{1F32B}\uFE0F',
-        51: '\u{1F326}\uFE0F', 53: '\u{1F326}\uFE0F', 55: '\u{1F326}\uFE0F',
-        61: '\u{1F327}\uFE0F', 63: '\u{1F327}\uFE0F', 65: '\u{1F327}\uFE0F',
-        71: '\u{1F328}\uFE0F', 73: '\u{1F328}\uFE0F', 75: '\u{1F328}\uFE0F',
-        77: '\u{1F328}\uFE0F', 80: '\u{1F326}\uFE0F', 81: '\u{1F327}\uFE0F',
-        82: '\u{1F327}\uFE0F', 85: '\u{1F328}\uFE0F', 86: '\u{1F328}\uFE0F',
-        95: '\u26C8\uFE0F', 96: '\u26C8\uFE0F', 99: '\u26C8\uFE0F',
-      };
-      return map[code] ?? '\u{1F321}\uFE0F';
-    }
-
-    // === Load location & weather ===
-    async function loadLocationWeather() {
-      try {
-        const [locRes, wxRes] = await Promise.all([
-          fetch('/api/location'),
-          fetch('/api/weather'),
-        ]);
-        const locData = await locRes.json();
-        const wxData = await wxRes.json();
-
-        const locEl = document.getElementById('lw-location');
-        const wxEl = document.getElementById('lw-weather');
-        const btn = document.getElementById('lw-btn');
-
-        const timeEl = document.getElementById('lw-local-time');
-        if (locData.location) {
-          let displayName = locData.location.name;
-          // If name looks like coordinates or is missing, reverse geocode
-          if (!displayName || /^-?\d+\.?\d*\s*,\s*-?\d+\.?\d*$/.test(displayName)) {
-            try {
-              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${locData.location.latitude}&lon=${locData.location.longitude}&format=json&accept-language=en`);
-              const geo = await geoRes.json();
-              displayName = geo.address?.city || geo.address?.town || geo.address?.village || geo.display_name?.split(',')[0] || displayName;
-            } catch {}
-          }
-          locEl.textContent = displayName || 'Unknown location';
-          btn.innerHTML = '&#128205; Locate me';
-
-          // Show local time using timezone lookup
-          try {
-            const tzRes = await fetch('https://timeapi.io/api/timezone/coordinate?latitude=' + locData.location.latitude + '&longitude=' + locData.location.longitude);
-            const tzData = await tzRes.json();
-            if (tzData.timeZone) {
-              var localTime = new Intl.DateTimeFormat('en-GB', { timeZone: tzData.timeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
-              timeEl.textContent = 'Local time: ' + localTime;
-              // Keep updating every minute
-              if (window._locationTimeInterval) clearInterval(window._locationTimeInterval);
-              window._locationTimeInterval = setInterval(function() {
-                var t = new Intl.DateTimeFormat('en-GB', { timeZone: tzData.timeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
-                timeEl.textContent = 'Local time: ' + t;
-              }, 60000);
-            } else if (locData.location.updatedAt) {
-              timeEl.textContent = 'Set ' + new Date(locData.location.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-            }
-          } catch (e) {
-            if (locData.location.updatedAt) {
-              timeEl.textContent = 'Set ' + new Date(locData.location.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-            }
-          }
-        } else {
-          locEl.textContent = 'No location set';
-          btn.innerHTML = '&#128205; Locate me';
-          timeEl.textContent = '';
-        }
-
-        if (wxData.weather) {
-          const w = wxData.weather;
-          wxEl.textContent = `${weatherCodeToIcon(w.weatherCode)} ${w.temperature}${w.unit}, ${w.conditions}`;
-        } else {
-          wxEl.textContent = '';
-        }
-      } catch (e) {
-        console.error('Failed to load location/weather:', e);
-      }
-    }
-
-    // === Set location via browser geolocation ===
-    async function setLocation() {
-      const btn = document.getElementById('lw-btn');
-      btn.innerHTML = 'Locating...';
-      btn.disabled = true;
-
-      try {
-        const pos = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-        });
-
-        const { latitude, longitude } = pos.coords;
-
-        // Reverse geocode with Nominatim
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`);
-        const geo = await geoRes.json();
-        const name = geo.address?.city || geo.address?.town || geo.address?.village || geo.display_name?.split(',')[0] || 'Unknown';
-
-        const saveRes = await fetch('/api/location', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, latitude, longitude }),
-        });
-
-        if (!saveRes.ok) throw new Error('Save failed');
-
-        showToast('Location saved');
-        loadLocationWeather();
-      } catch (e) {
-        const msg = e.code === 1 ? 'Location permission denied' : 'Failed to get location';
-        showToast(msg, true);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '&#128205; Locate me';
-      }
-    }
-
-    // === Set location manually via Nominatim geocoding ===
-    async function setLocationManual() {
-      var input = document.getElementById('location-manual-input');
-      var query = (input.value || '').trim();
-      if (!query) { showToast('Please type a location', true); return; }
-
-      input.disabled = true;
-      try {
-        var geoRes = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&limit=1&accept-language=en');
-        var results = await geoRes.json();
-        if (!results || results.length === 0) {
-          showToast('Location not found', true);
-          return;
-        }
-        var place = results[0];
-        var name = place.display_name.split(',')[0] || query;
-        var latitude = parseFloat(place.lat);
-        var longitude = parseFloat(place.lon);
-
-        var saveRes = await fetch('/api/location', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, latitude: latitude, longitude: longitude }),
-        });
-
-        if (!saveRes.ok) throw new Error('Save failed');
-
-        input.value = '';
-        showToast('Location saved');
-        loadLocationWeather();
-      } catch (e) {
-        showToast('Failed to set location', true);
-      } finally {
-        input.disabled = false;
-      }
-    }
 
     // === Cloud Workspace / Sandbox ===
     function ruleOrigin(rule) {

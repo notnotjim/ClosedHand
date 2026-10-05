@@ -132,3 +132,11 @@ test("a label inside Add a connection never reads as level with its heading", ()
   assert.match(css, /\.add-sub \{font-size:13px;font-weight:600;color:rgba\(239,230,214,0\.6\);text-transform:uppercase;letter-spacing:0\.8px;/, "small grey capitals, like the dashboard's other labels");
   assert.match(css, /#mcp-section > #apple-local-section \{margin-bottom:32px;\}/, "the Mac card sits as far from Apps as Apps from Connect anything");
 });
+
+test("Connect anything sits centred under the apps", () => {
+  const css = read("webapp/public/connection-catalogue.css");
+  assert.match(css, /\.connection-catalogue \.mcp-copy \{text-align:center;/);
+  assert.match(css, /\.connection-catalogue \.mcp-pill \{max-width:640px!important;margin:0 auto!important;\}/);
+  assert.match(css, /\.connection-catalogue \.mcp-scan \{display:flex;width:fit-content;align-items:center;gap:6px;margin:12px auto 0;/);
+  assert.match(css, /\.connection-catalogue \.mcp-browse \{justify-content:center;\}/);
+});

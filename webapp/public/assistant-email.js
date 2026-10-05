@@ -22,7 +22,7 @@
   }
   function render() {
     content.replaceChildren();
-    const heading = document.getElementById('assistant-email-heading'); heading.textContent = "ClosedHand's email address";
+    const heading = document.getElementById('assistant-email-heading'); heading.textContent = 'Email address';
     content.append(el('p', "Send and forward emails to ClosedHand's own secure email address, or CC it into a conversation.", 'section-desc'));
     if (state.available === false) {
       const unavailable = el('button', 'Coming soon', 'conn-btn conn-btn-manage');
@@ -51,7 +51,6 @@
       row.append(title, count(state.address ? sent : 0, sentLimit), count(state.address ? received : 0, receivedLimit)); body.append(row);
     }
     table.append(body); allowance.append(table);
-    content.append(allowance);
     if (state.servicePaused) content.append(el('p', 'Email delivery is temporarily paused. Your address is kept.', 'section-desc'));
     if (!state.address) {
       content.append(button(state.pending ? 'Confirm email address' : 'Enable email address', async () => {
@@ -65,6 +64,8 @@
           clearInterval(polling); polling = setInterval(() => { if (!document.hidden) refresh().catch(e => { status.textContent = e.message; }); }, 4000);
         } catch (e) { if (tab) tab.close(); throw e; }
       }));
+      allowance.classList.add('address-foot');
+      content.append(allowance);
       return;
     }
     const line = el('div', '', 'assistant-email-address');
@@ -75,7 +76,7 @@
     content.append(el('p', (state.enabled ? 'On' : 'Paused') + ' · Private replies return to the address you email from.', 'section-desc'));
     const senders = el('details'); senders.append(el('summary', 'Your email addresses'));
     for (const address of state.ownerAddresses || [state.ownerEmail]) senders.append(el('p', address, 'section-desc'));
-    content.append(senders);
+    content.append(senders, allowance);
     content.append(button(state.enabled ? 'Pause email' : 'Resume email', async () => { await request('/state', { enabled: !state.enabled }); await load(); }));
     if (state.threads.length || state.attention.length) {
       const details = el('details'); details.append(el('summary', 'Email conversations' + (state.attention.length ? ' · ' + state.attention.length + ' need attention' : '')));

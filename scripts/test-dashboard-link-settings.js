@@ -264,3 +264,28 @@ test("Delete account stops when closedhand.com can't be reached, and deletes any
   assert.match(route, /req\.query\.anyway !== "1"/);
   assert.ok(route.indexOf("phoneAccess.disable()") < route.indexOf("WIPE_TABLES"), "the personal URL connection stops too");
 });
+
+test("ClosedHand's two addresses are two matching cards side by side: its personal URL and its email address", () => {
+  assert.match(html, /<section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">\n\s*<h2 id="addresses-heading">ClosedHand Addresses<\/h2>\n\s*<div class="address-parts">\n\s*<div class="address-card" id="phone-block" style="display:none;">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="phone-heading">Personal URL<\/h3><\/div>/);
+  assert.match(html, /<div class="address-card">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="assistant-email-heading">Email address<\/h3><\/div>\n\s*<div id="assistant-email"><\/div>/);
+  assert.match(html, /<div class="address-foot">\n\s*<p id="phone-change-line" hidden>[\s\S]*?<details id="phone-options" hidden>/, "Change URL and Link options share the card's footer");
+  assert.match(html, /getElementById\('phone-block'\)\.style\.display = '';/, "shown as a card, not forced to block");
+  assert.doesNotMatch(html, /settings-group-header"><h2 id="assistant-email-heading"/, "no separate full-width card for email");
+  const css = fs.readFileSync(require.resolve("../webapp/public/interface.css"), "utf8");
+  assert.match(css, /\.address-parts \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 340px\), 1fr\)\); gap: 16px; align-items: stretch;/, "side by side and equal height, stacked on a phone");
+  assert.match(css, /\.address-card \{ display: flex; flex-direction: column;[^}]*background: #1A1817; border: 1px solid rgba\(239,230,214,0\.1\); border-radius: 12px; \}/, "each its own card");
+  assert.match(css, /#addresses \.address-foot \{ margin-top: auto; padding-top: 12px; border-top: 1px solid/, "footers sit at the bottom, divided");
+  assert.match(css, /#addresses \.address-foot > p, #addresses \.address-foot summary \{ padding: 0; min-height: 32px; font-size: 14px; line-height: 32px; \}/, "footer rows match across both cards");
+  const email = fs.readFileSync(require.resolve("../webapp/public/assistant-email.js"), "utf8");
+  assert.match(email, /heading\.textContent = 'Email address';/);
+  assert.match(email, /allowance\.classList\.add\('address-foot'\);/);
+});
+
+test("location is set where it shows, not in a Settings card", () => {
+  assert.doesNotMatch(html, /id="location-section"|Locate me|location-manual-input/, "no Location card in Settings");
+  const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
+  assert.match(chat, /<button class="here" id="hereBtn"/, "the chat page sets it from the browser and shows the weather there");
+  assert.match(chat, /wx\.addEventListener\('click', function\(\) \{ wx\.hidden = true; btn\.hidden = false; btn\.click\(\); \}\);/, "clicking the weather sets it again after a move");
+  const defs = fs.readFileSync(require.resolve("../lib/tools/definitions.js"), "utf8");
+  assert.match(defs, /name: "save_location"/, "and ClosedHand saves it when told in chat");
+});
