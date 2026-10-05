@@ -249,4 +249,4 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .approved-sites-title { font-size: var(--ui-body); color: var(--ui-text); }
 .approved-sites-desc { font-size: var(--ui-body); color: var(--ui-muted); line-height: 1.65; margin: 8px 0 12px; max-width: 65ch; }
 .saved-preferences-title { margin: 24px 0 12px; font-size: var(--ui-body); font-weight: 600; }
-#new-rule-input, #new-goal-input { min-width: 0; min-height: 44px; font-size: var(--ui-body) !important; }
+#new-rule-input { min-width: 0; min-height: 44px; font-size: var(--ui-body) !important; }

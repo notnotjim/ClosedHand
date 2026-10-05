@@ -1961,6 +1961,8 @@
   <link rel="stylesheet" href="/model-settings.css">
   <script src="/model-settings.js"></script>
   <link rel="stylesheet" href="/connection-catalogue.css">
+  <link rel="stylesheet" href="/goals.css">
+  <script defer src="/goals.js"></script>
   <script defer src="/connection-catalogue.js"></script>
   <link rel="stylesheet" href="/assistant-email.css">
   <script src="/assistant-email.js" defer></script>
@@ -2085,6 +2087,7 @@
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
         <button class="tab" data-tab="automations" onclick="switchTab('automations')">Agents</button>
+        <button class="tab" data-tab="goals" onclick="switchTab('goals')">Goals</button>
         <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
         <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
         <button class="tab" data-tab="brain" onclick="switchTab('brain')">Context Brain</button>
@@ -2486,6 +2489,30 @@
       </div>
 
       <!-- Settings Tab Content -->
+      <!-- Goals: what the person is working towards, as plans ClosedHand helps
+           them carry out (webapp/public/goals.js, lib/goals.js). -->
+      <div class="tab-content" id="tab-goals">
+        <div style="padding-top:16px;">
+          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research. Tell it a goal in chat, or add one here.</p>
+          <p id="goals-cheer" role="status" hidden></p>
+          <div class="goals-head"><button type="button" class="goals-new" id="goal-new-toggle">+ New goal</button></div>
+          <form id="goal-new" hidden>
+            <input type="text" id="goal-new-title" maxlength="160" placeholder="What do you want to achieve?" aria-label="New goal" autocomplete="off">
+            <div class="goal-shapes" role="radiogroup" aria-label="Kind of goal">
+              <label><input type="radio" name="goal-shape" value="milestone" checked> A finish line to reach</label>
+              <label><input type="radio" name="goal-shape" value="habit"> An ongoing habit</label>
+            </div>
+            <div class="goal-new-actions">
+              <button type="submit">Add goal</button>
+              <button type="button" class="goal-small goal-quiet" id="goal-new-cancel">Cancel</button>
+            </div>
+          </form>
+          <div id="goals-list"></div>
+          <div id="goals-achieved"></div>
+          <p id="goals-error" class="auto-card-meta" role="status" hidden></p>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-pages">
         <div style="padding-top:16px;">
           <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here, or download it as PDF or Word.</p>
@@ -2667,24 +2694,14 @@
             </div>
           </div>
 
-          <!-- Goals and preferences: what the person is working towards, and
-               how ClosedHand should act. Both are theirs, added here or in chat. -->
+          <!-- Preferences: how ClosedHand should act, added here or in chat.
+               Goals have their own tab. -->
           <div class="settings-group" id="rules-section">
             <div class="settings-group-header">
-              <h2>Goals &amp; Preferences</h2>
-              <p class="section-desc">Goals you're working towards and preferences for how ClosedHand works. Add them here or tell ClosedHand in chat, and turn them off or remove them at any time.</p>
+              <h2>Preferences</h2>
+              <p class="section-desc">How you want ClosedHand to work. Add them here or tell ClosedHand in chat, and turn them off or remove them at any time.</p>
             </div>
             <div class="settings-group-body">
-              <h3 class="saved-preferences-title" style="margin-top:0;">Goals</h3>
-              <div id="goals-list" style="display:flex;flex-direction:column;gap:6px;">
-                <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading...</div>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:12px;">
-                <input type="text" id="new-goal-input" aria-label="New goal" placeholder="Write a goal" onkeydown="if(event.key==='Enter')addRule('goal')" style="flex:1;padding:10px 12px;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.1);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;outline:none;">
-                <button onclick="addRule('goal')" style="padding:10px 16px;background:#D0563F;color:#EFE6D6;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;white-space:nowrap;">Add</button>
-              </div>
-
-              <h3 class="saved-preferences-title">Preferences</h3>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading...</div>
               </div>
@@ -4593,6 +4610,9 @@
       if (tabName === 'pages') {
         loadPages();
       }
+      if (tabName === 'goals' && window.loadGoals) {
+        window.loadGoals();
+      }
     }
 
     function loadSettingsExtras() {
@@ -5649,23 +5669,16 @@
       const date = rule.created_at && new Date(rule.created_at);
       return label + (date && !Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
     }
-    // Goals and preferences share one list; the kind says which column of the
-    // section each sits in.
     async function loadUserRules() {
       const list = document.getElementById('rules-list');
-      const goalsList = document.getElementById('goals-list');
       if (!list) return;
       try {
         const res = await fetch('/api/rules');
         if (!res.ok) throw new Error('Could not load preferences');
-        const all = await res.json();
-        const goals = all.filter(function(r) { return r.kind === 'goal'; });
-        const rules = all.filter(function(r) { return r.kind !== 'goal'; });
-        if (goalsList) goalsList.innerHTML = goals.length ? goals.map(ruleRow).join('') : '<p>Tell ClosedHand what you’re working towards in chat, or add a goal below.</p>';
+        const rules = (await res.json()).filter(function(r) { return r.kind !== 'goal'; });
         list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference in chat, or add one below.</p>';
       } catch (e) {
         list.innerHTML = '<p>Could not load preferences. <button class="notification-retry" onclick="loadUserRules()">Try again</button></p>';
-        if (goalsList) goalsList.innerHTML = '';
       }
     }
     function ruleRow(r) {
@@ -5689,12 +5702,12 @@
         .then(function() { loadUserRules(); });
     };
 
-    window.addRule = function(kind) {
-      var input = document.getElementById(kind === 'goal' ? 'new-goal-input' : 'new-rule-input');
+    window.addRule = function() {
+      var input = document.getElementById('new-rule-input');
       if (!input || !input.value.trim()) return;
       var rule = input.value.trim();
       input.value = '';
-      fetch('/api/rules', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ rule: rule, kind: kind === 'goal' ? 'goal' : 'preference' }) })
+      fetch('/api/rules', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ rule: rule }) })
         .then(function() { loadUserRules(); });
     };
 
@@ -8119,7 +8132,7 @@
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-      } else if (['connections', 'automations', 'pages', 'settings', 'brain'].includes(resolved)) {
+      } else if (['connections', 'automations', 'goals', 'pages', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'skills') {
         openSkillsLibrary();

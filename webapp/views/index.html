@@ -5014,6 +5014,14 @@
   window.addEventListener('message', function(e) {
     if (e.data === 'closeDashSlide') { closeDashSlide(); return; }
     if (!e.data || typeof e.data !== 'object') return;
+    // The dashboard hands a message over to the chat box, ready to send: it
+    // is never sent from here. Only from this page's own origin.
+    if (e.data.type === 'chat-prefill' && e.origin === location.origin && typeof e.data.text === 'string') {
+      closeDashSlide();
+      var box = document.getElementById('chatInput');
+      if (box) { box.value = e.data.text.slice(0, 500); box.dispatchEvent(new Event('input', { bubbles: true })); box.focus(); }
+      return;
+    }
     var slide = document.querySelector('.dash-slide');
     if (e.data.type === 'dash-drag') {
       slide.classList.add('dragging');

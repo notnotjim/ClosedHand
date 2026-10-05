@@ -72,6 +72,9 @@ jobs:
       - name: Shopify connection and renewal
         run: node --test scripts/test-shopify-connection.js
 
+      - name: Goals, check-ins and trusted sites
+        run: node --test scripts/test-goals.js scripts/test-goals-and-sites.js
+
       - name: Agent dashboard visibility and counts
         run: node --test scripts/test-agent-dashboard.js
 

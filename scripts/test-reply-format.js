@@ -75,9 +75,9 @@ test("the web chat prompt puts dashboard links on words and names memory as the 
   const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
   assert.match(engine, /A link goes on its words, written \[words\]\(\/dashboard#section\)/);
   assert.doesNotMatch(engine, /Check it out here: \/dashboard|make them curious|want to explore it/, "no bare path, no pitch");
-  assert.match(engine, /"pinned facts" and "Context Notes" \(past conversations, condensed\) in Context Brain, and "goals" and "preferences" \(what save_rule stores\) in Settings, under Goals & Preferences\./);
+  assert.match(engine, /"pinned facts" and "Context Notes" \(past conversations, condensed\) in Context Brain, "goals" on the Goals tab, and "preferences" \(what save_rule stores\) in Settings\./);
   const dashboard = fs.readFileSync(path.join(__dirname, "..", "webapp", "views", "dashboard.html"), "utf8");
-  for (const name of ["Pinned facts", "Context Notes", "Goals &amp; Preferences"]) assert.ok(dashboard.includes(name), `the dashboard still says ${name}`);
+  for (const name of ["Pinned facts", "Context Notes", "<h2>Preferences</h2>", ">Goals</button>"]) assert.ok(dashboard.includes(name), `the dashboard still says ${name}`);
 });
 
 test("a reopened conversation shows what was said, not ClosedHand's bookkeeping", () => {

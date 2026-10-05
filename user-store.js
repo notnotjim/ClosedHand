@@ -343,6 +343,14 @@ class UserStore {
       store.userRules = rulesRes.data.filter(r => r.active).map(r => ({ id: r.id, rule: r.rule, source: r.source || 'user', kind: r.kind || 'preference' }));
     }
 
+    // Goals the person is working towards, with their plans (lib/goals.js).
+    try {
+      store.goals = await require("./lib/goals").activeGoals(userId, require("./lib/timezone").getUserTimezone(store));
+    } catch (e) {
+      store.goals = [];
+      console.error("[goals] could not load:", e.message);
+    }
+
     // RAG document count
     if (ragDocsRes?.count != null) {
       store.ragDocumentCount = ragDocsRes.count;

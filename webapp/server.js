@@ -5981,10 +5981,8 @@ app.post("/api/rules", async (req, res) => {
   try {
     const { rule } = req.body;
     if (!rule) return res.status(400).json({ error: "rule is required" });
-    // A goal (what they are working towards) or a preference (how to act).
-    const kind = req.body.kind === "goal" ? "goal" : "preference";
     const { data, error } = await supabase.from("user_rules")
-      .insert({ user_id: userId, rule, source: "user", kind })
+      .insert({ user_id: userId, rule, source: "user", kind: "preference" })
       .select("id, rule, active, source, kind, created_at").single();
     if (error) throw new Error("Could not save that. Try again.");
     res.json(data);
@@ -6002,6 +6000,174 @@ app.delete("/api/rules/:id", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ============================================================================
+// GOALS API: the Goals tab. The chat edits the same rows (lib/goals.js), and
+// both use goals-time.js for check-in times, so they always agree.
+// ============================================================================
+const goalsTime = require("./goals-time");
+const GOAL_FIELDS = "id, title, shape, why, obstacle, if_then, target_date, done_when, habit, reward, plan, stage, status, check_in, source, created_at, updated_at, achieved_at";
+
+async function goalOwner(req, res) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) { res.status(401).json({ error: "Not authenticated" }); return null; }
+  return userId;
+}
+async function goalProfile(userId) {
+  const { data } = await supabase.from("profiles").select("timezone, settings").eq("id", userId).single();
+  return { tz: data?.settings?.location?.timezone || data?.timezone || goalsTime.DEFAULT_TZ, botName: data?.settings?.bot_name || "ClosedHand" };
+}
+async function goalTimezone(userId) {
+  return (await goalProfile(userId)).tz;
+}
+async function ownGoal(userId, id) {
+  const { data, error } = await supabase.from("goals").select(GOAL_FIELDS).eq("id", id).eq("user_id", userId).maybeSingle();
+  if (error) throw new Error("Could not read that goal.");
+  if (!data) { const e = new Error("That goal is not there any more."); e.status = 404; throw e; }
+  return data;
+}
+async function goalEvent(goal, userId, kind, text) {
+  await mustWrite("could not record that", supabase.from("goal_events").insert({ goal_id: goal.id, user_id: userId, kind, text: String(text).slice(0, 500) }));
+}
+function goalReply(res, e) { res.status(e.status || 500).json({ error: e.message }); }
+
+app.get("/api/goals", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const achieved = req.query.status === "achieved";
+    const { data, error } = await supabase.from("goals").select(GOAL_FIELDS).eq("user_id", userId)
+      .in("status", achieved ? ["achieved"] : ["active", "paused"]).order("created_at", { ascending: false });
+    if (error) throw new Error("Could not load your goals.");
+    const { tz, botName } = await goalProfile(userId);
+    const since = goalsTime.weekStart(tz).toISOString();
+    const habitIds = (data || []).filter((g) => g.habit).map((g) => g.id);
+    let ticks = [];
+    if (habitIds.length) {
+      const r = await supabase.from("goal_events").select("goal_id, at").eq("kind", "habit_done").in("goal_id", habitIds).gte("at", since);
+      if (r.error) throw new Error("Could not load your goals.");
+      ticks = r.data || [];
+    }
+    let achievedCount = 0;
+    if (!achieved) {
+      const c = await supabase.from("goals").select("id").eq("user_id", userId).eq("status", "achieved");
+      achievedCount = (c.data || []).length;
+    }
+    res.json({
+      timezone: tz, week_start: since, achieved_count: achievedCount, assistant_name: botName,
+      goals: (data || []).map((g) => ({
+        ...g,
+        this_week: ticks.filter((t) => t.goal_id === g.id).map((t) => t.at),
+        check_in_text: g.check_in ? goalsTime.describeCheckIn(g.check_in) : null,
+      })),
+    });
+  } catch (e) { goalReply(res, e); }
+});
+
+app.get("/api/goals/:id/events", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    await ownGoal(userId, req.params.id);
+    const { data, error } = await supabase.from("goal_events").select("id, at, kind, text").eq("goal_id", req.params.id).order("at", { ascending: false }).limit(60);
+    if (error) throw new Error("Could not load what has happened.");
+    res.json(data || []);
+  } catch (e) { goalReply(res, e); }
+});
+
+app.post("/api/goals", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const title = String(req.body?.title || "").trim().slice(0, 160);
+    if (!title) return res.status(400).json({ error: "Write the goal first." });
+    const shape = req.body?.shape === "habit" ? "habit" : "milestone";
+    const { data, error } = await supabase.from("goals").insert({ user_id: userId, title, shape, source: "dashboard" }).select(GOAL_FIELDS).single();
+    if (error) throw new Error("Could not save the goal.");
+    await goalEvent(data, userId, "created", "Goal set on the dashboard");
+    res.json(data);
+  } catch (e) { goalReply(res, e); }
+});
+
+app.patch("/api/goals/:id", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const goal = await ownGoal(userId, req.params.id);
+    const body = req.body || {};
+    const patch = { updated_at: new Date().toISOString() };
+    const said = [];
+    if (["active", "paused", "achieved", "dropped"].includes(body.status) && body.status !== goal.status) {
+      patch.status = body.status;
+      if (body.status === "achieved") patch.achieved_at = patch.updated_at;
+      said.push({ active: ["resumed", "Picked up again"], paused: ["paused", "Paused"], achieved: ["achieved", "Achieved"], dropped: ["dropped", "Let go"] }[body.status]);
+    }
+    if (body.check_in !== undefined) {
+      const c = body.check_in ? goalsTime.cleanCheckIn(body.check_in, await goalTimezone(userId)) : null;
+      if (body.check_in && !c) return res.status(400).json({ error: "Pick at least one day and a time." });
+      if (c) c.next_at = goalsTime.nextCheckIn(c);
+      patch.check_in = c;
+      said.push(["planned", c ? `Check-ins: ${goalsTime.describeCheckIn(c)}` : "Check-ins off"]);
+    }
+    for (const k of ["title", "why", "if_then", "obstacle", "done_when", "reward"]) {
+      if (typeof body[k] === "string") { patch[k] = body[k].trim().slice(0, k === "title" ? 160 : 400) || (k === "title" ? goal.title : null); said.push(["planned", `${{ title: "Goal", why: "Why", if_then: "If-then", obstacle: "Obstacle", done_when: "Done when", reward: "Reward" }[k]}: ${patch[k] || "cleared"}`]); }
+    }
+    const { data, error } = await supabase.from("goals").update(patch).eq("id", goal.id).eq("user_id", userId).select(GOAL_FIELDS).single();
+    if (error) throw new Error("Could not save that.");
+    for (const [kind, text] of said) await goalEvent(goal, userId, kind, text);
+    res.json(data);
+  } catch (e) { goalReply(res, e); }
+});
+
+app.post("/api/goals/:id/steps", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const goal = await ownGoal(userId, req.params.id);
+    const text = String(req.body?.text || "").trim().slice(0, 200);
+    if (!text) return res.status(400).json({ error: "Write the step first." });
+    const step = { id: Math.random().toString(36).slice(2, 8), text, owner: req.body?.owner === "closedhand" ? "closedhand" : "you", due: null, status: "todo", done_at: null };
+    const plan = (goal.plan || []).concat(step);
+    const { data, error } = await supabase.from("goals").update({ plan, updated_at: new Date().toISOString() }).eq("id", goal.id).eq("user_id", userId).select(GOAL_FIELDS).single();
+    if (error) throw new Error("Could not add the step.");
+    await goalEvent(goal, userId, "step_added", "New step: " + text);
+    res.json(data);
+  } catch (e) { goalReply(res, e); }
+});
+
+app.patch("/api/goals/:id/steps/:stepId", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const goal = await ownGoal(userId, req.params.id);
+    const status = ["todo", "done", "skipped"].includes(req.body?.status) ? req.body.status : null;
+    if (!status) return res.status(400).json({ error: "Done, skipped or to do?" });
+    const plan = (goal.plan || []).map((s) => ({ ...s }));
+    const step = plan.find((s) => s.id === req.params.stepId);
+    if (!step) return res.status(404).json({ error: "That step is not there any more." });
+    step.status = status; step.done_at = status === "todo" ? null : new Date().toISOString();
+    const { data, error } = await supabase.from("goals").update({ plan, updated_at: new Date().toISOString() }).eq("id", goal.id).eq("user_id", userId).select(GOAL_FIELDS).single();
+    if (error) throw new Error("Could not update the step.");
+    await goalEvent(goal, userId, status === "done" ? "step_done" : status === "skipped" ? "step_skipped" : "note", (status === "done" ? "Done: " : status === "skipped" ? "Skipped: " : "Back to do: ") + step.text);
+    res.json(data);
+  } catch (e) { goalReply(res, e); }
+});
+
+// A habit done today, once a day.
+app.post("/api/goals/:id/habit", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    const goal = await ownGoal(userId, req.params.id);
+    const tz = await goalTimezone(userId);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    const midnight = goalsTime.zonedToUtc(today + "T00:00:00", tz).toISOString();
+    const { data: done } = await supabase.from("goal_events").select("id").eq("goal_id", goal.id).eq("kind", "habit_done").gte("at", midnight);
+    if (!(done || []).length) await goalEvent(goal, userId, "habit_done", "Done today");
+    res.json({ success: true, already: !!(done || []).length });
+  } catch (e) { goalReply(res, e); }
+});
+
+app.delete("/api/goals/:id", async (req, res) => {
+  const userId = await goalOwner(req, res); if (!userId) return;
+  try {
+    await mustWrite("could not remove that goal", supabase.from("goals").delete().eq("id", req.params.id).eq("user_id", userId));
+    res.json({ success: true });
+  } catch (e) { goalReply(res, e); }
 });
 
 // ============================================================================

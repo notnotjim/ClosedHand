@@ -1,4 +1,4 @@
-// Goals sit beside preferences, and the rare send of the person's details to
+// Pulse weighs goals, and the rare send of the person's details to
 // a new site goes without a question when they named that site themselves.
 // All names and sites invented.
 const { test } = require("node:test");
@@ -60,26 +60,6 @@ test("trusted sites live in chat, not in a list that reads like the only sites a
   } finally { Module._load = load; delete require.cache[require.resolve("../lib/outbound-guard")]; }
 });
 
-test("goals are saved beside preferences, from chat or the dashboard", async () => {
-  assert.match(read("migrations/054_goals.sql"), /ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'preference'/);
-  const defs = require("../lib/tools/definitions.js");
-  const tools = defs.TOOLS || defs.tools || Object.values(defs).find(Array.isArray);
-  const save = tools.find((t) => t.name === "save_rule");
-  assert.deepEqual(save.input_schema.properties.kind.enum, ["preference", "goal"]);
-  assert.match(save.description, /The user must state it as their aim; never infer one/);
-  const handlers = read("lib/tools/handlers.js");
-  assert.match(handlers, /user_id: userId, rule: ruleText, source: "assistant", kind,/);
-  assert.match(handlers, /\.eq\("active", true\)\.eq\("kind", kind\);/, "duplicates are looked for within the same kind");
-  assert.match(read("webapp/server.js"), /\.insert\(\{ user_id: userId, rule, source: "user", kind \}\)/);
-  const engine = read("lib/engine.js");
-  assert.match(engine, /THEIR GOALS \(what this user is working towards, in their words\)/);
-  assert.match(engine, /const userRules = allRules\.filter\(\(r\) => typeof r !== "object" \|\| r\.kind !== "goal"\);/, "goals are not followed as rules");
-  const dashboard = read("webapp/views/dashboard.html");
-  assert.match(dashboard, /<h2>Goals &amp; Preferences<\/h2>/);
-  assert.match(dashboard, /id="goals-list"/);
-  assert.match(dashboard, /body: JSON\.stringify\(\{ rule: rule, kind: kind === 'goal' \? 'goal' : 'preference' \}\)/);
-});
-
 test("Pulse weighs what moves a goal forward", async () => {
   const { triage } = require("../lib/pulse-triage");
   let system = "";
@@ -87,5 +67,5 @@ test("Pulse weighs what moves a goal forward", async () => {
   assert.match(system, /The person is working towards: "Run the Lisbon half marathon in April"\. An item that moves one of these forward or puts one at risk is worth flagging\./);
   await triage({ items: ["x"], level: "medium", fallback: async (s) => { system = s; return "{}"; } });
   assert.doesNotMatch(system, /working towards/, "no goals, no line");
-  assert.match(read("lib/pulse.js"), /const goals = \(store\.userRules \|\| \[\]\)\.filter\(\(r\) => r && r\.kind === "goal"\)\.map\(\(r\) => r\.rule\);/);
+  assert.match(read("lib/pulse.js"), /const goals = \(store\.goals \|\| \[\]\)\.filter\(\(g\) => g\.status === "active"\)/, "active goals, each with its next step");
 });

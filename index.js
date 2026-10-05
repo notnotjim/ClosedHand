@@ -190,6 +190,7 @@ async function main() {
   registerAllSchedules();
   startFlightTracking();
   require("./lib/bookings").startBookingsDiscovery();
+  require("./lib/goal-check-ins").startGoalCheckIns();
   resumeAgents();
   await registerAutomationCrons();
   await startPulse();
