@@ -1,0 +1,4 @@
+/* The skill picker in agent setup: built-in skills and any added from a link. */
+.skill-choice { min-height: 40px; padding: 8px 12px; border: 1px solid rgba(239,230,214,.2); border-radius: 6px; background: #1A1817; color: #EFE6D6; font: inherit; font-size: 14px; cursor: pointer; }
+.skill-choice[aria-pressed="true"] { background: #D0563F; color: #100E0D; border-color: #D0563F; }
+.skill-choice:focus-visible { outline: 2px solid #D0563F; outline-offset: 4px; }

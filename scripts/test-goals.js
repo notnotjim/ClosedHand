@@ -185,9 +185,9 @@ test("ClosedHand sets goals up the researched way and records progress from the 
   assert.match(read("migrations/055_goal_plans.sql"), /INSERT INTO goals \(user_id, title, source, created_at\)\n  SELECT user_id, rule, COALESCE\(source, 'chat'\), created_at FROM user_rules WHERE kind = 'goal';/, "goals saved this morning move across");
 });
 
-test("goals have their own tab, after Agents, that says how it helps", () => {
+test("goals have their own tab, after Schedules, that says how it helps", () => {
   const dashboard = read("webapp/views/dashboard.html");
-  assert.match(dashboard, /data-tab="automations"[^\n]*>Agents<\/button>\n\s*<button class="tab" data-tab="goals" onclick="switchTab\('goals'\)">Goals<\/button>/);
+  assert.match(dashboard, /data-tab="automations"[^\n]*>Schedules<\/button>\n\s*<button class="tab" data-tab="goals" onclick="switchTab\('goals'\)">Goals<\/button>/);
   assert.match(dashboard, /ClosedHand helps you reach your goals with methods proven in peer-reviewed research\. Tell it a goal in chat, or add one here\./);
   const tab = read("webapp/public/goals.js");
   for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "ClosedHand"}`']) assert.ok(tab.includes(label), label);
@@ -196,6 +196,9 @@ test("goals have their own tab, after Agents, that says how it helps", () => {
   assert.match(tab, /\(state\.achieved \|\| \[\]\)\.forEach\(\(g\) => done\.append\(card\(g\)\)\)/, "an achieved goal opens like any other");
   assert.match(tab, /else act\("Not achieved yet"/);
   assert.match(read("webapp/views/index.html"), /var fromHome = !hasMessages;\n    enterChatMode\(\);\n    addMessage\(displayText[^\n]*\n    if \(fromHome\) drawEarlierMessages\(text\);/, "a message sent from home shows the conversation it joins");
+  assert.match(dashboard, /<div id="reminders-list"><\/div>\n\s*<div id="goal-checkins-list"><\/div>/, "a goal's next check-in is listed under Upcoming");
+  assert.match(dashboard, /onclick: "openGoal\('" \+ g\.id \+ "'\)" \}\);/, "and opens the goal itself");
+  assert.match(tab, /window\.openGoal = async \(id\) => \{\n\s*state\.open\.add\(id\);/);
   assert.match(read("migrations/055_goal_plans.sql"), /done_when text,[\s\S]*habit jsonb,[\s\S]*reward text,/);
   assert.match(dashboard, /<script defer src="\/goals\.js"><\/script>/);
   assert.match(dashboard, /<h2>Preferences<\/h2>/, "Settings keeps preferences; goals moved to their tab");

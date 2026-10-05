@@ -273,6 +273,14 @@
   }
 
   window.loadGoals = load;
+  // Another part of the dashboard (a check-in under Upcoming) opens a goal.
+  window.openGoal = async (id) => {
+    state.open.add(id);
+    if (typeof window.switchTab === "function") window.switchTab("goals");
+    await load();
+    const card = document.querySelector(`.goal-card[data-id="${id}"]`);
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   document.addEventListener("DOMContentLoaded", () => {
     byId("goal-new-toggle").onclick = () => openNew(true);
     byId("goal-new-cancel").onclick = () => openNew(false);

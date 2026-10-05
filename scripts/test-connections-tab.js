@@ -83,12 +83,36 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.match(connected, /id="mcp-list"/, "pasted servers sit with everything else that is live");
   const add = dashboard.slice(dashboard.indexOf('id="mcp-section"'), dashboard.indexOf("<!-- Workers Tab Content -->"));
   for (const want of ["<h2>Add a connection</h2>", 'id="apple-local-section"', '<h3 class="add-sub" id="catalogue-apps-heading">Apps</h3>',
-    '<h3 class="add-sub">Connect anything</h3>', '<p class="mcp-description">Paste an MCP server</p>', "Connections are scanned for security risks</p>"]) {
+    '<h3 class="add-sub">Connect anything</h3>', '<p class="mcp-description">Paste an MCP server or a skill</p>', "Connections are scanned for security risks</p>"]) {
     assert.ok(add.includes(want), want);
   }
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
   assert.match(dashboard, /Connect your Mac and choose what ClosedHand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
+  assert.match(dashboard, /placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill"/, "one box takes a server or a skill");
+  assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
+  assert.match(dashboard, /var all = _builtinSkills\.map\(function \(skill\) \{ return \{ skill: skill, builtin: true \}; \}\)\n\s*\.concat\(_installedSkills\.map/, "built-in skills are listed, not only added ones");
+  assert.match(dashboard, /\(item\.builtin \? '' : '<div class="conn-drawer-actions"><button onclick="event\.stopPropagation\(\);deleteSkill\(/, "only an added skill can be removed");
+  assert.match(dashboard, /async function installSkill\(acceptWarnings, url\) \{[\s\S]*?var btn = document\.getElementById\('mcp-connect-btn'\);/, "a skill's scan shows under the box it was pasted into");
+  assert.doesNotMatch(dashboard, /openSkillsLibrary|skills-library|skill-install-url|Install a skill in Agents/, "no second place to add a skill");
+  assert.doesNotMatch(dashboard, /In chat, and by any agent you pick it for/, "no line that says the same on every skill");
+  assert.match(dashboard, /\.filter\(function \(app\) \{ return String\(skill\.name \|\| ''\)\.toLowerCase\(\)\.indexOf\(app\.toLowerCase\(\)\) === -1; \}\);/, "no Works with line that repeats the skill's own name");
   assert.match(dashboard, /var any = !!section\.querySelector\('#connected-grid > \.int-wrap, #mcp-list > \.int-wrap, #apple-local-section:not\(\[style\*="display: none"\]\)'\);/, "Connected shows only when something is");
   assert.match(dashboard, /if \(window\.filterConnectionCatalogue\) window\.filterConnectionCatalogue\(query\);/, "one search for the whole tab");
+});
+
+test("a card in any list opens on a click and closes on the next", () => {
+  const vm = require("node:vm");
+  const dashboard = read("webapp/views/dashboard.html");
+  const start = dashboard.indexOf("    function toggleMcpUnfurl(el) {");
+  const code = dashboard.slice(start, dashboard.indexOf("\n    }\n", start) + 6);
+  const classes = () => { const set = new Set(); return { add: (c) => set.add(c), remove: (c) => set.delete(c), contains: (c) => set.has(c) }; };
+  const list = { cards: [] };
+  const make = () => { const card = { classList: classes() }, unfurl = { classList: classes() }, wrap = { parentElement: list, querySelector: () => unfurl }; card.closest = () => wrap; list.cards.push({ card, unfurl }); return { card, unfurl }; };
+  list.querySelectorAll = (sel) => list.cards.map((c) => (sel.includes("unfurl") ? c.unfurl : c.card)).filter((n) => n.classList.contains(sel.includes("unfurl") ? "open" : "expanded"));
+  const a = make(), b = make();
+  const toggle = vm.runInNewContext(code + "\ntoggleMcpUnfurl", {});
+  toggle(a.card); assert.ok(a.unfurl.classList.contains("open"));
+  toggle(b.card); assert.ok(b.unfurl.classList.contains("open") && !a.unfurl.classList.contains("open"), "one open at a time");
+  toggle(b.card); assert.ok(!b.unfurl.classList.contains("open"), "a second click closes it");
 });

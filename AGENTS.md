@@ -60,7 +60,7 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   with the person's account, like a sign-in to do again.
 - Where people use ClosedHand has three names, used exactly: the chat in a browser is the
   "web chat" (its own tab can say "Chat"); WhatsApp, Telegram and the like are "chat apps";
-  the control panel (connections, agents, settings, Context Brain, usage) is the "dashboard".
+  the control panel (connections, schedules, goals, pages, settings, Context Brain, usage) is the "dashboard".
   The personal URL opens the web chat and the dashboard. Never bare "chat" where it could
   mean either kind. The sandbox is "ClosedHand's sandbox computer", as on the Computers tab,
   or "the sandbox computer"; never "cloud computer", since on self-host it runs on the

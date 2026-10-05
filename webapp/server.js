@@ -4245,10 +4245,9 @@ app.get("/api/connections/scopes", async (req, res) => {
   }
 });
 
-// GET /api/agents — list user's recent agent tasks
-// A finished run stays on the Agents list for a week, then folds into the
-// list's Archived section, which loads only when it is opened (?archived=1).
-// Nothing is deleted: its links and its report keep working.
+// GET /api/agents — the chat work the Schedules tab shows (see the route).
+// A finished run whose answer may not have arrived is listed for a week.
+// Pages use the same week before folding into their Archived section.
 const ARCHIVE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const LIVE_RUN_STATUSES = ["running", "pending", "awaiting_confirmation"];
 const DONE_RUN_STATUSES = ["completed", "failed", "cancelled", "partial", "blocked"];
@@ -4257,21 +4256,17 @@ app.get("/api/agents", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   try {
+    // The work started from chats that still needs the dashboard: what is
+    // running or waiting on the person, and a finished run whose answer may
+    // not have reached the chat, since this is then the only place to find
+    // it. A delivered answer is in the chat, and any page it made is under
+    // Pages, so it is not repeated here.
     const cutoff = new Date(Date.now() - ARCHIVE_AFTER_MS).toISOString();
-    // How many are archived, for the list's Archived row (?archived=1&count=1).
-    if (req.query.archived === "1" && req.query.count === "1") {
-      const { count, error } = await supabase.from("agent_tasks").select("id", { count: "exact", head: true })
-        .eq("user_id", userId).in("status", DONE_RUN_STATUSES).lt("created_at", cutoff);
-      if (error) throw error;
-      return res.json({ count: count || 0 });
-    }
     const runs = () => supabase
       .from("agent_tasks")
-      .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at, runtime")
+      .select("id, goal, title, status, model, result, progress, tools_used, error, created_at, completed_at, result_edited_at, runtime, delivery_status")
       .eq("user_id", userId);
-    const lists = req.query.archived === "1"
-      ? [runs().in("status", DONE_RUN_STATUSES).lt("created_at", cutoff)]
-      : [runs().in("status", LIVE_RUN_STATUSES), runs().in("status", DONE_RUN_STATUSES).gte("created_at", cutoff)];
+    const lists = [runs().in("status", LIVE_RUN_STATUSES), runs().in("status", DONE_RUN_STATUSES).gte("created_at", cutoff).neq("delivery_status", "sent")];
     const results = await Promise.all(lists.map((q) => q.order("created_at", { ascending: false }).limit(50)));
     const error = results.find((r) => r.error)?.error;
     if (error) throw error;

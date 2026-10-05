@@ -50,7 +50,7 @@ const getUrl = async (platform, section) => (platform === "web" ? "" : "https://
 const overview = (db, opts = {}) => getDashboardOverview({ db, userId: USER, platform: "whatsapp_linked", now: NOW, getUrl, ...opts });
 test("an idle dashboard still has a phone link, flights and hotels despite no reminder tasks", async () => {
   const r = await overview(fixture());
-  assert.equal(r.dashboard_url, "https://phone.example.com/dashboard#agents");
+  assert.equal(r.dashboard_url, "https://phone.example.com/dashboard#schedules");
   assert.equal(r.schedules_url, "https://phone.example.com/dashboard#schedules");
   assert.equal(r.sections.agents.running_count, 0);
   assert.equal(r.sections.schedules.count, 0);
@@ -87,7 +87,7 @@ test("unknown airport zones stay unknown; stale superseded and invalid records c
 });
 test("web keeps a relative link and unavailable phone configuration never becomes localhost", async () => {
   const web = await overview(fixture(), { platform: "web", getUrl: dashboardUrl });
-  assert.equal(web.dashboard_url, "/dashboard#agents");
+  assert.equal(web.dashboard_url, "/dashboard#schedules");
   const noLink = await overview(fixture(), { getUrl: async () => null });
   assert.equal(noLink.dashboard_url, null);
   assert.match(noLink.link_note, /Your phone/);

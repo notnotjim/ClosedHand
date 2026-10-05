@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/delight.css">
-  <link rel="stylesheet" href="/skills-library.css">
+  <link rel="stylesheet" href="/skill-picker.css">
   <style>
     /* Slide-over mode: trim padding, hide header row and chat FAB */
     .in-slideover .header-row { display: none; }
@@ -1182,6 +1182,18 @@
     }
     .flights-date-header:first-child { margin-top: 8px; }
     .flights-away { color: #D8624B; text-transform: none; letter-spacing: 0; }
+    /* One line each under Upcoming: what it is, what kind, and when. */
+    #tab-automations .upcoming-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; margin: 0 0 6px; border: 1px solid rgba(239,230,214,0.1); border-radius: 8px; background: none; color: inherit; font: inherit; text-align: left; }
+    #tab-automations button.upcoming-row { cursor: pointer; }
+    #tab-automations button.upcoming-row:hover { border-color: rgba(239,230,214,0.22); }
+    .upcoming-row .upcoming-icon { flex: none; font-size: 14px; }
+    .upcoming-row .upcoming-what { flex: 1; min-width: 0; }
+    .upcoming-row .upcoming-title { display: block; font-size: 14px; color: #EFE6D6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .upcoming-row .upcoming-kind { display: block; margin-top: 1px; font-size: 12px; color: rgba(239,230,214,0.6); }
+    .upcoming-row .upcoming-when { flex: none; font-size: 13px; color: #B6AFA4; white-space: nowrap; }
+    .upcoming-row.past { opacity: 0.6; }
+    #past-section { margin-top: 24px; }
+    #tab-automations #flights-list .flights-date-header:first-child { margin-top: 14px; }
 
     .flight-card {
       background: rgba(26,24,23,0.9);
@@ -1537,7 +1549,7 @@
     /* Archived: a heading row like the list's own, closed until wanted. */
     /* Specific enough to beat the dashboard's general button padding and size,
        so it lines up with the headings above it exactly. */
-    #auto-active-list .archive-row, #pages-list .archive-row { width: 100%; background: none; border: 0; padding: 0 4px; font-size: 13px; cursor: pointer; font-family: inherit; text-align: left; }
+    #auto-active-list .archive-row, #pages-list .archive-row, #past-section .archive-row { width: 100%; background: none; border: 0; padding: 0 4px; font-size: 13px; cursor: pointer; font-family: inherit; text-align: left; }
     .archive-row:hover, .archive-row:focus-visible { color: #EFE6D6; }
     .archive-row .count { font-weight: 500; letter-spacing: 0; }
     .archive-row .chevron-down { width: 6px; height: 6px; margin: -3px 2px 0; }
@@ -2086,7 +2098,7 @@
       <div class="dashboard-toolbar">
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
-        <button class="tab" data-tab="automations" onclick="switchTab('automations')">Agents</button>
+        <button class="tab" data-tab="automations" onclick="switchTab('automations')">Schedules</button>
         <button class="tab" data-tab="goals" onclick="switchTab('goals')">Goals</button>
         <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
         <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
@@ -2140,6 +2152,14 @@
             <div id="bridge-connected-card" style="display:none;"></div>
           </div>
           <div class="integrations-grid" id="mcp-list"></div>
+        </div>
+
+        <!-- Skills: how ClosedHand does a kind of job. The built-in ones, and
+             any added by pasting a link into the box under Connect anything. -->
+        <div class="section" id="skills-section">
+          <h2>Skills</h2>
+          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">How ClosedHand does a kind of job. Add one by pasting its link under Connect anything.</p>
+          <div class="integrations-grid" id="skills-connected"></div>
         </div>
 
         <!-- Connect a Service - Hero Section -->
@@ -2216,13 +2236,13 @@
           <div class="mcp-hero">
             <div class="mcp-copy">
               <h3 class="add-sub">Connect anything</h3>
-              <p class="mcp-description">Paste an MCP server</p>
+              <p class="mcp-description">Paste an MCP server or a skill</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="2" placeholder="Server or GitHub link, command or JSON" aria-label="MCP server" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="2" placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -2232,10 +2252,11 @@
 
             <div class="mcp-browse">
               <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
-              <a href="#automations" onclick="openSkillsLibrary();return false;" style="font-size: 13px;color:rgba(239,230,214,0.6);">Install a skill in Agents &rarr;</a>
+              <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse skills &rarr;</a>
             </div>
 
             <!-- Status messages -->
+            <div id="skill-warnings" style="display:none;margin-top:10px;max-width:520px;margin-left:auto;margin-right:auto;font-size: 13px;"></div>
             <div id="mcp-auth-status" role="status" aria-live="polite" style="display:none;margin-top:10px;font-size: 13px;color:#B6AFA4;text-align:center;"></div>
             <div id="mcp-credentials" style="display:none;margin-top:12px;max-width:520px;margin-left:auto;margin-right:auto;">
               <div style="display:flex;gap:6px;">
@@ -2267,7 +2288,7 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand spins up agent teams automatically when a task needs research, or an agent on each part. You can also create your own agents that run on a schedule, like daily briefings or monitoring.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">What ClosedHand is working on now, the agents you have set to run on a schedule, like daily briefings or monitoring, and what is coming up.</p>
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
@@ -2394,96 +2415,19 @@
           <!-- Upcoming: reminders + tracked flights + bookings picked out of mail -->
           <div class="mc-section-label" style="margin-top:24px;">Upcoming</div>
           <div id="reminders-list"></div>
+          <div id="goal-checkins-list"></div>
           <div class="flights-loading" id="flights-loading" style="display:none;">Checking flights…</div>
           <div id="flights-list"></div>
           <div id="bookings-list"></div>
-          <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, and bookings picked out of your mail (trains, hotels, tickets, tables) appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
+          <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, bookings picked out of your mail (trains, hotels, tickets, tables) and goal check-ins appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
 
-          <!-- Resources: datasets and skills, both nested under it -->
-          <div id="recent-flights" class="mc-subsection"></div>
-
-          <div class="mc-section-label" style="margin-top:24px;">Resources</div>
-          <p id="resources-blurb" style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 10px;line-height:1.5;">What ClosedHand builds and works from.</p>
-          <!-- Files: what has come in and gone out -->
-          <div id="files-section" class="mc-subsection" style="display:none;">
-            <div onclick="toggleFilesSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
-              <span id="files-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
-              <div class="mc-subsection-label">Files</div>
-              <span style="font-size:13px;color:rgba(239,230,214,0.6);" id="files-count-badge"></span>
-              <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
+          <!-- Past: reminders that ran and flights already flown, folded away -->
+          <div id="past-section" hidden>
+            <button type="button" class="mc-section-label archive-row" id="past-toggle" aria-expanded="false" aria-controls="past-body" onclick="togglePast()">Past <span class="count" id="past-count"></span><span class="chevron-down"></span></button>
+            <div id="past-body" hidden>
+              <div id="reminders-past"></div>
+              <div id="recent-flights"></div>
             </div>
-            <div id="files-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files ClosedHand has sent you in chat: things it made, and documents it pulled from your email or Drive. Each says which.</p>
-              <div id="files-list"></div>
-            </div>
-          </div>
-
-          <!-- Datasets Section -->
-          <div id="datasets-section" class="mc-subsection" style="display:none;">
-            <div onclick="toggleDatasetsSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
-              <span id="datasets-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
-              <div class="mc-subsection-label">Datasets</div>
-            </div>
-            <div id="datasets-body" style="display:none;">
-            <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables ClosedHand keeps up to date as it works, so it remembers what it has already done.</p>
-            <div id="datasets-list"></div>
-            <div id="datasets-empty" style="display:none;padding:16px;text-align:center;color:rgba(239,230,214,0.6);font-size:13px;">
-              Nothing here yet. Ask ClosedHand to keep track of something in a table, a list of ad campaigns or a content calendar for instance, and it will build one and keep it up to date.
-            </div>
-            </div>
-          </div>
-
-          <!-- Dataset detail view (shown when a dataset is clicked) -->
-          <div id="dataset-detail" style="display:none;margin-top:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <button onclick="closeDatasetDetail()" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:16px;">&larr;</button>
-                <span id="dataset-detail-name" style="font-size:15px;color:#EFE6D6;font-weight:500;"></span>
-                <span id="dataset-detail-count" style="font-size:12px;color:rgba(239,230,214,0.6);"></span>
-              </div>
-
-              <div style="display:flex;gap:8px;">
-                <a id="dataset-export-link" href="#" style="border:1px solid rgba(239,230,214,0.16);border-radius:6px;padding:4px 10px;color:#D8624B;font-size:12px;text-decoration:none;">Download</a>
-                <button onclick="deleteCurrentDataset()" style="background:none;border:1px solid rgba(239,230,214,0.28);border-radius:6px;padding:4px 10px;color:#D0563F;font-size:12px;cursor:pointer;">Delete dataset</button>
-              </div>
-            </div>
-            <div id="dataset-table-wrap" style="overflow-x:auto;border:1px solid rgba(239,230,214,0.1);border-radius:8px;"></div>
-          </div>
-
-          <div class="mc-subsection">
-            <button type="button" id="skills-library-toggle" class="skills-library-toggle" aria-expanded="false" aria-controls="skills-library-body" onclick="toggleSkillsLibrary()">
-              <span id="skills-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
-              <span class="mc-subsection-label">Skills</span>
-              <span style="font-size: 13px;color:rgba(239,230,214,0.6);" id="skills-count-badge"></span>
-            </button>
-            <div id="skills-library-body" style="display:none;margin-top:10px;">
-              <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:10px;">Skills explain how to do a job. Connections provide access to the apps it needs. Pin a skill to an agent when it should always use those instructions.</p>
-
-              <!-- Built-in skills -->
-              <div id="skills-builtin" style="margin-bottom:12px;">
-                <div id="skills-builtin-list"></div>
-                <p id="skills-load-error" role="status" hidden>Could not load skills. <button class="notification-retry" onclick="loadSkills()">Retry</button></p>
-              </div>
-
-              <!-- User-installed skills -->
-              <div id="skills-installed" style="margin-bottom:12px;display:none;">
-                <div style="font-size: 13px;color:#B6AFA4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Installed</div>
-                <div id="skills-list"></div>
-              </div>
-
-              <!-- Install from URL, inside the unfurl so a closed section looks closed -->
-              <div style="display:flex;gap:6px;align-items:center;margin-top:10px;">
-                <input type="text" id="skill-install-url" aria-label="Skill link" placeholder="Paste a link to install a new skill..." style="flex:1;padding:7px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#EFE6D6;font-size: 14px;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
-                <button onclick="installSkill()" id="skill-install-btn" style="padding:7px 12px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:6px;color:#B6AFA4;font-size: 13px;cursor:pointer;font-family:inherit;white-space:nowrap;">Install</button>
-              </div>
-              <div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
-                <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse community skills &rarr;</a>
-                <span style="font-size: 13px;color:rgba(239,230,214,0.5);">&#x1f6e1; Scanned for security risks before install</span>
-              </div>
-              <div id="skill-warnings" style="display:none;margin-top:6px;padding:8px;background:rgba(208,166,82,0.08);border-radius:6px;font-size: 13px;color:#D0A652;"></div>
-
-            </div>
-
           </div>
         </div>
       </div>
@@ -2526,6 +2470,56 @@
           <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here, or download it as PDF or Word.</p>
           <div id="pages-list"></div>
           <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
+          <!-- Files sent in chat and tables kept up to date: the rest of what
+               ClosedHand makes, shown only when there are any. -->
+          <div style="margin-top:24px;">
+          <!-- Files: what has come in and gone out -->
+          <div id="files-section" class="mc-subsection" style="display:none;">
+            <div onclick="toggleFilesSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
+              <span id="files-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
+              <div class="mc-subsection-label">Files</div>
+              <span style="font-size:13px;color:rgba(239,230,214,0.6);" id="files-count-badge"></span>
+              <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
+            </div>
+            <div id="files-body" style="display:none;">
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files ClosedHand has sent you in chat: things it made, and documents it pulled from your email or Drive. Each says which.</p>
+              <div id="files-list"></div>
+            </div>
+          </div>
+
+          <!-- Tables ClosedHand keeps up to date (the datasets table) -->
+          <div id="datasets-section" class="mc-subsection" style="display:none;">
+            <div onclick="toggleDatasetsSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
+              <span id="datasets-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
+              <div class="mc-subsection-label">Tables</div>
+            </div>
+            <div id="datasets-body" style="display:none;">
+            <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables ClosedHand keeps up to date as it works, so it remembers what it has already done.</p>
+            <div id="datasets-list"></div>
+            <div id="datasets-empty" style="display:none;padding:16px;text-align:center;color:rgba(239,230,214,0.6);font-size:13px;">
+              Nothing here yet. Ask ClosedHand to keep track of something in a table, a list of ad campaigns or a content calendar for instance, and it will build one and keep it up to date.
+            </div>
+            </div>
+          </div>
+
+          <!-- Dataset detail view (shown when a dataset is clicked) -->
+          <div id="dataset-detail" style="display:none;margin-top:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button onclick="closeDatasetDetail()" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:16px;">&larr;</button>
+                <span id="dataset-detail-name" style="font-size:15px;color:#EFE6D6;font-weight:500;"></span>
+                <span id="dataset-detail-count" style="font-size:12px;color:rgba(239,230,214,0.6);"></span>
+              </div>
+
+              <div style="display:flex;gap:8px;">
+                <a id="dataset-export-link" href="#" style="border:1px solid rgba(239,230,214,0.16);border-radius:6px;padding:4px 10px;color:#D8624B;font-size:12px;text-decoration:none;">Download</a>
+                <button onclick="deleteCurrentDataset()" style="background:none;border:1px solid rgba(239,230,214,0.28);border-radius:6px;padding:4px 10px;color:#D0563F;font-size:12px;cursor:pointer;">Delete table</button>
+              </div>
+            </div>
+            <div id="dataset-table-wrap" style="overflow-x:auto;border:1px solid rgba(239,230,214,0.1);border-radius:8px;"></div>
+          </div>
+
+          </div>
         </div>
       </div>
 
@@ -3200,8 +3194,9 @@
       loadScopeWarnings();
       loadPersonalUrlPrompt();
 
-      // Load MCP connections
+      // Load MCP connections, and skills added from a link beside them
       loadMcps();
+      loadSkills();
 
       // Load bridge status (must be after connected grid renders)
       loadBridgeStatus();
@@ -3676,9 +3671,11 @@
       var unfurl = wrap.querySelector('.int-unfurl');
       if (!unfurl) return;
       var isOpen = unfurl.classList.contains('open');
-      // Close all other MCP unfurls (accordion)
-      document.querySelectorAll('#mcp-list .int-unfurl.open').forEach(function(u) { u.classList.remove('open'); });
-      document.querySelectorAll('#mcp-list .int-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
+      // One open at a time within the card's own list (pasted servers, or
+      // skills), the clicked one included, so a second click closes it.
+      var list = wrap.parentElement;
+      list.querySelectorAll('.int-unfurl.open').forEach(function(u) { u.classList.remove('open'); });
+      list.querySelectorAll('.int-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
       if (!isOpen) {
         unfurl.classList.add('open');
         el.classList.add('expanded');
@@ -4594,11 +4591,10 @@
         loadSkills();
         startAutomationPolling();
         loadPulse();
-        if (typeof loadDatasets === 'function') loadDatasets();
-        if (typeof loadFiles === 'function') loadFiles();
         loadFlights();
         loadBookings();
         loadReminders();
+        loadGoalCheckIns();
       } else {
         stopAutomationPolling();
       }
@@ -4616,6 +4612,8 @@
         loadUsage();
       }
       if (tabName === 'pages') {
+        if (typeof loadFiles === 'function') loadFiles();
+        if (typeof loadDatasets === 'function') loadDatasets();
         loadPages();
       }
       if (tabName === 'goals' && window.loadGoals) {
@@ -5422,31 +5420,57 @@
       if (disc) disc.style.transform = open ? '' : 'rotate(180deg)';
     }
 
+    // A reminder's name says what it is for. Older ones were saved as a slug
+    // ("dentist-clinic-6oct") and read here as words. The note ClosedHand left
+    // itself for when it fires is its own working, so it is not shown.
+    function reminderTitle(name) {
+      var t = String(name || '').trim();
+      if (!t) return 'Reminder';
+      if (!/\s/.test(t)) t = t.replace(/[-_]+/g, ' ');
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    }
+    function upcomingRow(o) {
+      var tag = o.onclick ? 'button' : 'div';
+      return '<' + tag + ' class="upcoming-row' + (o.past ? ' past' : '') + '"' + (o.onclick ? ' type="button" onclick="' + o.onclick + '"' : '') + '>' +
+        '<span class="upcoming-icon" aria-hidden="true">' + o.icon + '</span>' +
+        '<span class="upcoming-what"><span class="upcoming-title">' + esc(o.title) + '</span><span class="upcoming-kind">' + esc(o.kind) + '</span></span>' +
+        '<span class="upcoming-when">' + esc(o.when || '') + '</span>' +
+      '</' + tag + '>';
+    }
+
+    var _pastReminders = 0, _pastFlights = 0;
+    function updatePast() {
+      var section = document.getElementById('past-section');
+      if (!section) return;
+      var n = _pastReminders + _pastFlights;
+      section.hidden = !n;
+      document.getElementById('past-count').textContent = '\u00b7 ' + n;
+    }
+    function togglePast() {
+      var btn = document.getElementById('past-toggle');
+      var open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(open));
+      document.getElementById('past-body').hidden = !open;
+    }
+
     async function loadReminders() {
       var el = document.getElementById('reminders-list');
       if (!el) return;
       try {
         var res = await fetch('/api/reminders');
         var rows = res.ok ? await res.json() : [];
-        // Completed one-offs are kept, but behind a line, not in the way: a
-        // reminder that ran a month ago is a record, not something upcoming.
+        // Live one-offs here; the last few that ran go under Past.
         var live = rows.filter(function(r) { return !r.archived; });
         var past = rows.filter(function(r) { return !!r.archived; });
-        var showPast = !!window._showPastReminders;
-        var shown = showPast ? live.concat(past) : live;
-        var pastNote = past.length ? '<div style="font-size:12px;color:rgba(239,230,214,0.6);margin:2px 0 8px;"><a href="#" onclick="window._showPastReminders=!window._showPastReminders;loadReminders();return false;" style="color:#B6AFA4;">' + (showPast ? 'Hide the ' + past.length + ' that already ran' : 'Show ' + past.length + ' that already ran') + '</a></div>' : '';
-        el.innerHTML = shown.map(function(r) {
-          var done = !!r.archived;
-          var when = done && r.archived_at ? 'ran ' + new Date(r.archived_at).toLocaleDateString() : (r.next_run || r.cron_expression || '');
-          return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid rgba(239,230,214,0.1);border-radius:8px;margin-bottom:6px;' + (done ? 'opacity:0.45;' : '') + '">' +
-            '<span style="font-size:13px;">' + (done ? '\u2713' : '\u23F0') + '</span>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-size:13px;color:#EFE6D6;">' + esc(r.name || 'Reminder') + '</div>' +
-              '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + esc(r.task || '') + '</div>' +
-            '</div>' +
-            '<span style="font-size:11px;color:rgba(239,230,214,0.6);white-space:nowrap;">' + esc(when) + '</span>' +
-          '</div>';
-        }).join('') + pastNote;
+        el.innerHTML = live.map(function(r) {
+          return upcomingRow({ icon: '\u23F0', title: reminderTitle(r.name), kind: 'Reminder', when: r.next_run || '' });
+        }).join('');
+        document.getElementById('reminders-past').innerHTML = past.map(function(r) {
+          var ran = r.archived_at ? new Date(r.archived_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+          return upcomingRow({ icon: '\u2713', title: reminderTitle(r.name), kind: 'Reminder', when: ran ? 'Ran ' + ran : 'Ran', past: true });
+        }).join('');
+        _pastReminders = past.length;
+        updatePast();
         updateUpcomingEmpty();
       } catch (e) {}
     }
@@ -5466,14 +5490,16 @@
         if (!flights.length) {
           listEl.innerHTML = '';
           document.getElementById('recent-flights').innerHTML = '';
+          _pastFlights = 0; updatePast();
           updateUpcomingEmpty();
           return;
         }
 
+        // Flights already flown go under Past with the reminders that ran.
         const recent = flights.filter(f => getFlightStatusInfo(f).past);
-        const recentEl = document.getElementById('recent-flights');
-        const wasOpen = !!recentEl.querySelector('details[open]');
-        recentEl.innerHTML = recent.length ? `<details${wasOpen ? ' open' : ''}><summary class="flights-date-header">Recent flights (${recent.length})</summary>${recent.map(renderFlightCard).join('')}</details>` : '';
+        document.getElementById('recent-flights').innerHTML = recent.map(renderFlightCard).join('');
+        _pastFlights = recent.length;
+        updatePast();
 
         // Group current/future flights by departure date at the origin airport.
         const groups = {};
@@ -5504,14 +5530,34 @@
     }
 
     // Upcoming shows one shared empty state, only when BOTH lists are empty
+    // Each goal's next check-in. The goal lives on the Goals tab; this row
+    // only says when, and opens it there.
+    async function loadGoalCheckIns() {
+      var el = document.getElementById('goal-checkins-list');
+      if (!el) return;
+      try {
+        var res = await fetch('/api/goals');
+        var data = res.ok ? await res.json() : { goals: [] };
+        var due = (data.goals || []).filter(function(g) { return g.status === 'active' && g.check_in && g.check_in.next_at; })
+          .sort(function(a, b) { return new Date(a.check_in.next_at) - new Date(b.check_in.next_at); });
+        el.innerHTML = due.map(function(g) {
+          var at = new Date(g.check_in.next_at);
+          var when = at.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+          return upcomingRow({ icon: '\u{1F3AF}', title: g.title, kind: 'Goal check-in' + (g.check_in_text ? ', every ' + g.check_in_text : ''), when: when, onclick: "openGoal('" + g.id + "')" });
+        }).join('');
+        updateUpcomingEmpty();
+      } catch (e) {}
+    }
+
     function updateUpcomingEmpty() {
       var f = document.getElementById('flights-list');
       var r = document.getElementById('reminders-list');
       var b = document.getElementById('bookings-list');
+      var g = document.getElementById('goal-checkins-list');
       var e = document.getElementById('flights-empty');
       if (!e) return;
-      var rLive = r ? r.querySelectorAll('div[style*="border-radius:8px"]').length : 0;
-      var empty = (!f || !f.children.length) && !rLive && (!b || !b.children.length);
+      var rLive = r ? r.children.length : 0;
+      var empty = (!f || !f.children.length) && !rLive && (!b || !b.children.length) && (!g || !g.children.length);
       e.style.display = empty ? 'block' : 'none';
     }
 
@@ -5878,20 +5924,6 @@
       }
     }
 
-    function toggleSkillsLibrary() {
-      var body = document.getElementById('skills-library-body');
-      var opening = body.style.display === 'none';
-      body.style.display = opening ? 'block' : 'none';
-      document.querySelector('#skills-disclosure .chevron-down').classList.toggle('open', opening);
-      document.getElementById('skills-library-toggle').setAttribute('aria-expanded', String(opening));
-    }
-
-    function openSkillsLibrary() {
-      switchTab('automations');
-      if (document.getElementById('skills-library-body').style.display === 'none') toggleSkillsLibrary();
-      requestAnimationFrame(function () { document.getElementById('skill-install-url').focus(); });
-    }
-
     function togglePulseSection() {
       var body = document.getElementById('pulse-settings-body');
       var chevron = document.querySelector('#pulse-disclosure .chevron-down');
@@ -5913,56 +5945,64 @@
     }
 
     // === Skills ===
-    function skillRow(skill, builtin) {
-      var row = document.createElement('div'); row.className = 'skill-library-row';
-      var copy = document.createElement('div'); copy.className = 'skill-library-copy';
-      var name = document.createElement('strong'); name.textContent = skill.name;
-      var description = document.createElement('p'); description.textContent = skill.description || '';
-      copy.append(name, description); row.append(copy);
-      if (builtin) {
-        var tag = document.createElement('span'); tag.className = 'skill-library-tag';
-        tag.textContent = skill.always_active ? 'Built in · Always active' : 'Built in';
-        row.append(tag);
-      } else {
-        var remove = document.createElement('button'); remove.type = 'button'; remove.className = 'skill-library-remove';
-        remove.textContent = '×'; remove.setAttribute('aria-label', 'Remove ' + skill.name);
-        remove.onclick = function () { deleteSkill(skill.id, skill.name); }; row.append(remove);
-      }
-      return row;
-    }
-
+    // Built-in skills come with their app and need no list. Skills added from
+    // a link (pasted on Connections) show there with the other connections,
+    // and both kinds can be picked when setting up an agent.
     async function loadSkills() {
-      var error = document.getElementById('skills-load-error');
-      error.hidden = true;
       try {
         var responses = await Promise.all([fetch('/builtin-skills.json'), fetch('/api/skills')]);
         if (responses.some(function (res) { return !res.ok; })) throw new Error('Skills unavailable');
         var data = await Promise.all(responses.map(function (res) { return res.json(); }));
         if (!data.every(Array.isArray)) throw new Error('Invalid skill catalogue');
         _builtinSkills = data[0]; _installedSkills = data[1];
-        document.getElementById('skills-builtin-list').replaceChildren.apply(
-          document.getElementById('skills-builtin-list'), _builtinSkills.map(function (skill) { return skillRow(skill, true); }));
-        document.getElementById('skills-list').replaceChildren.apply(
-          document.getElementById('skills-list'), _installedSkills.map(function (skill) { return skillRow(skill, false); }));
-        document.getElementById('skills-installed').style.display = _installedSkills.length ? 'block' : 'none';
-        document.getElementById('skills-count-badge').textContent = (_builtinSkills.length + _installedSkills.length) + ' skills';
         renderSkillsPicker();
+        renderConnectedSkills();
       } catch (e) {
-        error.hidden = false;
-        document.getElementById('skills-count-badge').textContent = 'Unavailable';
         console.error('Load skills error:', e);
       }
     }
 
-    async function installSkill(acceptWarnings, overrideUrl) {
-      var urlInput = document.getElementById('skill-install-url');
-      var btn = document.getElementById('skill-install-btn');
-      var warnEl = document.getElementById('skill-warnings');
-      var url = overrideUrl || (urlInput ? urlInput.value.trim() : '');
+    var SKILL_SERVICES = { meta_ads: 'Meta Ads', shopify: 'Shopify', slack: 'Slack', google: 'Google', microsoft: 'Microsoft 365' };
+    function renderConnectedSkills() {
+      var list = document.getElementById('skills-connected');
+      if (!list) return;
+      var all = _builtinSkills.map(function (skill) { return { skill: skill, builtin: true }; })
+        .concat(_installedSkills.map(function (skill) { return { skill: skill, builtin: false }; }));
+      list.innerHTML = all.map(function (item) {
+        var skill = item.skill;
+        // The apps it works with, unless its name already says so ("Meta Ads").
+        var needs = [].concat(skill.requires_service || []).map(function (id) { return SKILL_SERVICES[id] || String(id).replace(/_/g, ' '); })
+          .filter(function (app) { return String(skill.name || '').toLowerCase().indexOf(app.toLowerCase()) === -1; });
+        var detail = (skill.description ? '<p style="font-size:13px;color:#B6AFA4;line-height:1.5;margin:0 0 8px;">' + escHtml(skill.description) + '</p>' : '') +
+          (needs.length ? '<div class="conn-row"><span class="conn-row-label">Works with</span><span class="conn-row-value">' + escHtml(needs.join(' and ')) + '</span></div>' : '') +
+          (!item.builtin && skill.source_url ? '<div class="conn-row"><span class="conn-row-label">From</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(skill.source_url) + '</span></div>' : '') +
+          (item.builtin ? '' : '<div class="conn-drawer-actions"><button onclick="event.stopPropagation();deleteSkill(\'' + skill.id + '\', this)" class="conn-btn conn-btn-disconnect">Remove</button></div>');
+        var logo = typeof getMcpLogo === 'function' ? getMcpLogo(skill.name, '') : null;
+        var logoHtml = logo ? '<img src="' + logo + '" width="22" height="22" style="border-radius:4px;flex-shrink:0;" alt="">' : MCP_GENERIC_ICON;
+        return '<div class="int-wrap">' +
+          '<div class="int-card connected" onclick="toggleMcpUnfurl(this)" style="background:#1A1817;border-color:rgba(239,230,214,0.16);">' +
+            logoHtml +
+            '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#EFE6D6;font-weight:500;">' + escHtml(skill.name) + '</div>' +
+            '<div style="font-size: 13px;color:rgba(239,230,214,0.6);margin-top:1px;">' + (item.builtin ? 'Built in' : 'Added from a link') + '</div></div>' +
+            (item.builtin ? '' : '<span class="int-badge">Added &#10003;</span>') +
+            '<span class="int-chevron"><span class="chevron-down"></span></span>' +
+          '</div>' +
+          '<div class="int-unfurl"><div class="int-unfurl-inner">' + detail + '</div></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // A skill pasted into the Connections box: scanned, then added. What the
+    // scan found shows under the box; a warning can be accepted there.
+    var _pendingSkillUrl = null;
+    async function installSkill(acceptWarnings, url) {
+      url = url || _pendingSkillUrl;
       if (!url) return;
-      // If called from MCP input, populate the skill input for feedback
-      if (overrideUrl && urlInput) { openSkillsLibrary(); urlInput.value = url; }
-      btn.disabled = true; btn.textContent = 'Scanning...';
+      _pendingSkillUrl = url;
+      var btn = document.getElementById('mcp-connect-btn');
+      var warnEl = document.getElementById('skill-warnings');
+      btn.disabled = true; btn.textContent = 'Scanning…';
+      mcpStatus('Scanning the skill for security risks…');
       if (!acceptWarnings) warnEl.style.display = 'none';
       try {
         var res = await fetch('/api/skills/install', {
@@ -5972,6 +6012,7 @@
         var data = await res.json();
 
         if (data.blocked) {
+          mcpStatus('');
           warnEl.innerHTML = '<div style="background:rgba(216,98,75,0.08);border:1px solid rgba(216,98,75,0.2);border-radius:10px;padding:12px;">' +
             '<div style="color:#D8624B;font-weight:600;font-size: 14px;margin-bottom:4px;">Blocked: ' + escHtml(data.scan.summary) + '</div>' +
             '<ul style="margin:0;padding-left:16px;color:#D8624B;font-size: 13px;list-style:disc;">' +
@@ -5982,32 +6023,36 @@
         }
 
         if (data.needs_confirmation) {
+          mcpStatus('');
           warnEl.innerHTML = '<div style="background:rgba(208,166,82,0.08);border:1px solid rgba(208,166,82,0.2);border-radius:10px;padding:12px;">' +
             '<div style="color:#D0A652;font-weight:600;font-size: 14px;margin-bottom:4px;">Warning: ' + escHtml(data.scan.summary) + '</div>' +
             '<ul style="margin:0;padding-left:16px;color:#D0A652;font-size: 13px;list-style:disc;">' +
             data.scan.findings.map(function(f) { return '<li>' + escHtml(f.description) + '</li>'; }).join('') +
             '</ul>' +
-            '<button onclick="installSkill(true)" style="margin-top:8px;padding:6px 14px;background:rgba(208,166,82,0.1);border:1px solid rgba(208,166,82,0.3);border-radius:8px;color:#D0A652;font-size: 13px;cursor:pointer;font-family:inherit;">Install anyway</button>' +
+            '<button onclick="installSkill(true)" style="margin-top:8px;padding:6px 14px;background:rgba(208,166,82,0.1);border:1px solid rgba(208,166,82,0.3);border-radius:8px;color:#D0A652;font-size: 13px;cursor:pointer;font-family:inherit;">Add it anyway</button>' +
             '</div>';
           warnEl.style.display = 'block';
           return;
         }
 
-        if (!res.ok) { showToast(data.error || 'Failed to install', true); return; }
-        urlInput.value = '';
-        showToast('Skill "' + data.skill.name + '" installed');
+        if (!res.ok) { mcpStatus(''); showToast(data.error || 'Could not add that skill', true); return; }
+        _pendingSkillUrl = null;
+        warnEl.style.display = 'none';
+        document.getElementById('mcp-url-input').value = '';
+        mcpStatus('');
+        showToast('Skill "' + data.skill.name + '" added');
         loadSkills();
-      } catch (e) { showToast('Failed to install skill', true); }
-      finally { btn.disabled = false; btn.textContent = 'Install'; }
+      } catch (e) { mcpStatus(''); showToast('Could not add that skill', true); }
+      finally { btn.disabled = false; btn.textContent = 'Connect'; }
     }
 
-    async function deleteSkill(id, name) {
-      if (!confirm('Remove skill "' + name + '"?')) return;
+    async function deleteSkill(id, btn) {
+      if (btn && btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Remove for good?'; return; }
       try {
         var res = await fetch('/api/skills/' + id, { method: 'DELETE' });
         if (res.ok) { showToast('Skill removed'); loadSkills(); }
-        else showToast('Failed to remove', true);
-      } catch (e) { showToast('Failed to remove', true); }
+        else showToast('Could not remove it', true);
+      } catch (e) { showToast('Could not remove it', true); }
     }
 
     function renderSkillsPicker() {
@@ -6123,21 +6168,18 @@
         var res = await fetch('/api/agents');
         if (!res.ok) throw new Error('Tasks unavailable');
         var agents = await res.json();
-        _archivedRunCount = await archivedCount('/api/agents?archived=1&count=1');
         document.getElementById('auto-active-error').hidden = true;
-        // The runs ClosedHand started from a chat, one list: running and
-        // waiting ones first, each card saying which it is. The server keeps a
-        // week and folds older finished ones into Archived, which loads only
-        // when it is opened.
+        // The runs ClosedHand started from a chat that still need a look:
+        // running, waiting on the person, or finished without a sure delivery
+        // (the server leaves out the rest, whose answers are in the chat).
+        // Running and waiting first, each card saying which it is.
         var live = agents.filter(function(a) { return a.status === 'running' || a.status === 'pending'; });
         var waiting = agents.filter(function(a) { return a.status === 'awaiting_confirmation'; });
         var finished = agents.filter(function(a) { return live.indexOf(a) === -1 && waiting.indexOf(a) === -1; });
         var recent = live.concat(waiting, finished);
         activeLabel.style.display = 'none';
-        var html = (recent.length || _archivedRunCount ? '<div class="mc-section-label">From your chats</div>' : '') +
-          recent.map(renderAgentCard).join('') +
-          archiveRow('toggleArchivedRuns()', _archivedRunCount, !!_archivedRuns) +
-          (_archivedRuns ? _archivedRuns.map(renderAgentCard).join('') : '');
+        var html = (recent.length ? '<div class="mc-section-label">From your chats</div>' : '') +
+          recent.map(renderAgentCard).join('');
         if (activeList.innerHTML !== html) activeList.innerHTML = html;
 
       } catch (e) {
@@ -6155,20 +6197,6 @@
     }
     async function archivedCount(url) {
       try { var r = await fetch(url); return r.ok ? ((await r.json()).count || 0) : 0; } catch (e) { return 0; }
-    }
-    // Runs from more than a week ago, loaded when the person opens Archived.
-    var _archivedRuns = null, _archivedRunCount = 0;
-    async function toggleArchivedRuns() {
-      if (_archivedRuns) { _archivedRuns = null; loadRunningAgents(); return; }
-      try {
-        var res = await fetch('/api/agents?archived=1');
-        if (!res.ok) throw new Error('Archived runs unavailable');
-        _archivedRuns = await res.json();
-      } catch (e) {
-        showToast('Could not load archived runs. Try again shortly.', true);
-        return;
-      }
-      loadRunningAgents();
     }
 
     async function stopAgentRun(id, btn) {
@@ -6410,6 +6438,12 @@
         ? (last || 'Working on it') + ' \u00b7 running ' + when
         : runOutcome(a);
       if (!running && a.result_edited_at) detail += ' \u00b7 edited ' + timeAgo(a.result_edited_at);
+      // A finished run is only listed when its answer may not have arrived.
+      // Delivery takes a moment, so say so only once it is clearly late.
+      if (!running && a.status !== 'awaiting_confirmation' && a.delivery_status && a.delivery_status !== 'sent' &&
+          a.completed_at && Date.now() - new Date(a.completed_at).getTime() > 2 * 60000) {
+        detail = 'This may not have reached your chat, so it stays here. ' + detail;
+      }
       // The question went to the chat the task came from. Say where and when, so
       // the answer is given there; this card never takes one.
       var asked = a.status === 'awaiting_confirmation' ? (a.waiting || {}) : null;
@@ -8136,15 +8170,13 @@
     // messages already sent and in anyone's bookmarks.
     function resolveAndSwitchFromHash() {
       const h = window.location.hash.replace('#', '');
-      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules') ? 'automations' : h;
+      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h;
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
       } else if (['connections', 'automations', 'goals', 'pages', 'settings', 'brain'].includes(resolved)) {
         switchTab(resolved);
-      } else if (resolved === 'skills') {
-        openSkillsLibrary();
-      } else if (resolved === 'connect') {
+      } else if (resolved === 'connect' || resolved === 'skills') {
         // Connection links open the catalogue and MCP input.
         switchTab('connections');
         setTimeout(window.beckonAddBox, 150);
@@ -8398,7 +8430,7 @@
 
       <!-- Skills preference -->
       <div id="auto-skills-section" style="margin-bottom:10px;">
-        <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional, always used when picked; add or remove skills under Skills on the Agents tab)</span></label>
+        <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional, always used when picked; add a skill by pasting its link on Connections)</span></label>
         <div id="auto-skills-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:28px;">
           <span style="font-size: 13px;color:rgba(239,230,214,0.6);">Loading skills...</span>
         </div>
