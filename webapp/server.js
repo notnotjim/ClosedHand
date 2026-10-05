@@ -6080,7 +6080,14 @@ app.post("/api/goals", async (req, res) => {
     const title = String(req.body?.title || "").trim().slice(0, 160);
     if (!title) return res.status(400).json({ error: "Write the goal first." });
     const shape = req.body?.shape === "habit" ? "habit" : "milestone";
-    const { data, error } = await supabase.from("goals").insert({ user_id: userId, title, shape, source: "dashboard" }).select(GOAL_FIELDS).single();
+    const fields = { user_id: userId, title, shape, source: "dashboard" };
+    if (shape === "habit") fields.habit = { action: "", cue: String(req.body?.habit?.cue || "").trim().slice(0, 160), per_week: Math.max(1, Math.min(7, Number(req.body?.habit?.per_week) || 3)) };
+    else {
+      const doneWhen = String(req.body?.done_when || "").trim().slice(0, 400);
+      if (doneWhen) fields.done_when = doneWhen;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(req.body?.target_date || ""))) fields.target_date = req.body.target_date;
+    }
+    const { data, error } = await supabase.from("goals").insert(fields).select(GOAL_FIELDS).single();
     if (error) throw new Error("Could not save the goal.");
     await goalEvent(data, userId, "created", "Goal set on the dashboard");
     res.json(data);
@@ -6097,7 +6104,9 @@ app.patch("/api/goals/:id", async (req, res) => {
     if (["active", "paused", "achieved", "dropped"].includes(body.status) && body.status !== goal.status) {
       patch.status = body.status;
       if (body.status === "achieved") patch.achieved_at = patch.updated_at;
-      said.push({ active: ["resumed", "Picked up again"], paused: ["paused", "Paused"], achieved: ["achieved", "Achieved"], dropped: ["dropped", "Let go"] }[body.status]);
+      if (goal.status === "achieved") patch.achieved_at = null;
+      if (goal.status === "achieved" && body.status === "active") said.push(["resumed", "Not achieved yet, back to working on it"]);
+      else said.push({ active: ["resumed", "Picked up again"], paused: ["paused", "Paused"], achieved: ["achieved", "Achieved"], dropped: ["dropped", "Let go"] }[body.status]);
     }
     if (body.check_in !== undefined) {
       const c = body.check_in ? goalsTime.cleanCheckIn(body.check_in, await goalTimezone(userId)) : null;

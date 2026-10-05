@@ -12,13 +12,22 @@
 .goal-shapes input { accent-color: #D0563F; margin: 0; }
 .goal-shapes label:has(input:checked) { color: #EFE6D6; border-color: rgba(208,86,63,0.5); }
 .goal-new-actions { display: flex; gap: 10px; align-items: center; }
+.goal-new-more { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.goal-new-more[hidden] { display: none; }
+.goal-new-more label { display: inline-flex; align-items: center; gap: 8px; color: #B6AFA4; font-size: 13.5px; }
+.goal-new-more .goal-new-wide { flex: 1; min-width: 240px; }
+#goal-new .goal-new-more input[type=text] { flex: 1; padding: 7px 10px; font-size: 14px; }
+#goal-new-per { width: 56px; }
+.goal-summary .goal-progress:first-child { margin-top: 0; }
+.goal-tick:disabled { cursor: default; }
 
 .goal-card { background: #1A1817; border: 1px solid rgba(239,230,214,0.12); border-radius: 12px; padding: 18px 20px; margin: 0 0 12px; transition: border-color .15s; }
 .goal-card:hover { border-color: rgba(239,230,214,0.22); }
-.goal-card:not(.achieved) { cursor: pointer; }
+.goal-card { cursor: pointer; }
 .goal-detail { cursor: auto; }
 .goal-card.paused { opacity: 0.6; }
-.goal-card.achieved { opacity: 0.6; padding: 12px 20px; }
+.goal-card.achieved:not(.open) { opacity: 0.7; padding: 12px 20px; }
+.goal-card.achieved .goal-head .goal-by { margin-left: 4px; }
 #tab-goals .goal-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .goal-title { font-size: 16px; font-weight: 600; color: #EFE6D6; line-height: 1.35; }
 .goal-by { color: #B6AFA4; font-size: 13px; white-space: nowrap; }
@@ -47,7 +56,7 @@
 .goal-facts dt { color: #B6AFA4; }
 .goal-facts dd { margin: 0; color: #EFE6D6; }
 .goal-sub { margin: 18px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #B6AFA4; }
-.goal-detail > .goal-sub:first-child { margin-top: 0; }
+.goal-detail > .goal-sub:first-child, .goal-detail > .goal-history:first-child .goal-sub { margin-top: 0; }
 .goal-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .goal-step { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; font-size: 14px; color: #EFE6D6; }
 .goal-step.done .goal-step-text, .goal-step.skipped .goal-step-text { color: #B6AFA4; text-decoration: line-through; text-decoration-color: rgba(239,230,214,0.3); }

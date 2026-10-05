@@ -3916,8 +3916,10 @@
     }
 
     lastUserMessage = text;
+    var fromHome = !hasMessages;
     enterChatMode();
     addMessage(displayText, 'user', pendingFiles.length > 0 ? pendingFiles : null);
+    if (fromHome) drawEarlierMessages(text);
 
     // Clear preview area
     var previewArea = document.getElementById('file-preview-area');
@@ -5174,6 +5176,30 @@
           if (typeof fitMobileHero === 'function') fitMobileHero();
         }).catch(function() {});
       }
+    }).catch(function() {});
+  }
+
+  // Sending from the home screen carries on the open conversation, so the
+  // chat shows that conversation, not only the newest message: its earlier
+  // messages go above the one just sent, as when it is opened from the list.
+  function drawEarlierMessages(sent) {
+    fetch('/api/threads').then(function(r) { return r.ok ? r.json() : []; }).then(function(threads) {
+      var active = (threads || []).find(function(t) { return t.is_active; });
+      return active ? fetch('/api/threads/' + active.id).then(function(r) { return r.ok ? r.json() : null; }) : null;
+    }).then(function(thread) {
+      if (!thread || !thread.messages) return;
+      var earlier = shownInThread(thread.messages);
+      // Once answered, the message just sent is saved at the end with its reply.
+      for (var i = earlier.length - 1; i >= Math.max(0, earlier.length - 4); i--) {
+        if (earlier[i].role === 'user' && String(earlier[i].content).trim() === String(sent).trim()) { earlier = earlier.slice(0, i); break; }
+      }
+      var first = messagesEl.querySelector('.message');
+      if (!earlier.length || !first) return;
+      var before = messagesEl.querySelectorAll('.message').length;
+      earlier.forEach(function(msg) { addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null); });
+      var all = messagesEl.querySelectorAll('.message');
+      for (var j = before; j < all.length; j++) messagesEl.insertBefore(all[j], first);
+      scrollToBottom();
     }).catch(function() {});
   }
 

@@ -43,7 +43,7 @@
     const days = new Set((g.this_week || []).map((at) => weekday.format(new Date(at))));
     const box = el("div");
     const what = [g.habit.cue, g.habit.action].filter(Boolean).join(", ");
-    box.append(el("span", "", what.charAt(0).toUpperCase() + what.slice(1)));
+    if (what) box.append(el("span", "", what.charAt(0).toUpperCase() + what.slice(1)));
     const wrap = el("div", "goal-progress");
     const dots = el("div", "goal-week"); dots.setAttribute("aria-hidden", "true");
     ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((d) => { const dot = el("span", "goal-dot" + (days.has(d) ? " done" : "")); dot.title = d; dots.append(dot); });
@@ -79,9 +79,11 @@
   function summary(g) {
     const rows = [];
     if (g.done_when) rows.push(["Done when", el("span", "", g.done_when + (g.target_date ? `, by ${longDate(g.target_date)}` : ""))]);
-    if (g.habit) rows.push(["Habit", habitRow(g)]);
-    if ((g.plan || []).length) rows.push(["Next", planRow(g)]);
-    else if (g.stage) rows.push(["Now", el("span", "", g.stage)]);
+    if (g.status !== "achieved") {
+      if (g.habit) rows.push(["Habit", habitRow(g)]);
+      if ((g.plan || []).length) rows.push(["Next", planRow(g)]);
+      else if (g.stage) rows.push(["Now", el("span", "", g.stage)]);
+    }
     if (!rows.length) return null;
     const grid = el("dl", "goal-summary");
     rows.forEach(([label, value]) => { const dd = el("dd"); dd.append(value); grid.append(el("dt", "", label), dd); });
@@ -90,12 +92,13 @@
 
   function card(g) {
     const open = state.open.has(g.id);
-    const c = el("article", "goal-card" + (g.status === "paused" ? " paused" : "") + (open ? " open" : ""));
+    const c = el("article", "goal-card" + (g.status !== "active" ? " " + g.status : "") + (open ? " open" : ""));
     c.dataset.id = g.id;
     const head = el("button", "goal-head"); head.type = "button"; head.setAttribute("aria-expanded", String(open));
     const title = el("span", "goal-title", g.title);
     head.append(title);
     if (g.status === "paused") head.append(el("span", "goal-tag", "Paused"));
+    if (g.status === "achieved") head.append(el("span", "goal-by", g.achieved_at ? "achieved " + shortDate(g.achieved_at) : "achieved"));
     head.append(el("span", "chevron-down"));
     c.append(head);
     // Anywhere on the card opens or closes it, except its own controls and
@@ -107,12 +110,12 @@
       if (state.open.has(g.id)) state.open.delete(g.id); else state.open.add(g.id);
       render();
     };
-    const sum = summary(g);
+    const sum = g.status === "achieved" && !open ? null : summary(g);
     if (sum) c.append(sum);
     if (g.check_in_text && g.status === "active") c.append(el("p", "goal-checkin", "Check-in: " + g.check_in_text));
-    if (!g.done_when && !g.habit && !(g.plan || []).length) {
+    if (g.status !== "achieved" && !g.why && !g.if_then) {
       const plan = el("button", "goal-plan-chat", `Plan it with ${state.assistant || "ClosedHand"}`); plan.type = "button";
-      plan.onclick = () => askInChat(`Help me set up my goal: ${g.title}`);
+      plan.onclick = () => askInChat(`Help me set up my ${g.shape === "habit" ? "habit" : "goal"}: ${g.title}`);
       c.append(plan);
     }
     if (open) c.append(detail(g));
@@ -130,12 +133,13 @@
     if (g.target_date && !g.done_when) facts.append(el("dt", "", "By"), el("dd", "", longDate(g.target_date)));
     if (facts.children.length) d.append(facts);
 
-    if (g.shape !== "habit") {
+    const live = g.status !== "achieved";
+    if (g.shape !== "habit" && (live || (g.plan || []).length)) {
       d.append(el("h4", "goal-sub", "Plan"));
       const list = el("ul", "goal-steps");
       (g.plan || []).forEach((s) => {
         const li = el("li", "goal-step " + s.status);
-        const tick = el("button", "goal-tick"); tick.type = "button";
+        const tick = el("button", "goal-tick"); tick.type = "button"; tick.disabled = !live;
         tick.setAttribute("aria-label", (s.status === "done" ? "Mark not done: " : "Mark done: ") + s.text);
         tick.setAttribute("aria-pressed", String(s.status === "done"));
         tick.onclick = async () => {
@@ -149,6 +153,8 @@
         list.append(li);
       });
       d.append(list);
+    }
+    if (g.shape !== "habit" && live) {
       const add = el("form", "goal-add");
       const input = el("input"); input.placeholder = "Add a step"; input.maxLength = 200; input.setAttribute("aria-label", "Add a step");
       const go = el("button", "goal-small", "Add"); go.type = "submit";
@@ -157,8 +163,10 @@
       d.append(add);
     }
 
-    d.append(el("h4", "goal-sub", "Check-ins"));
-    d.append(checkInEditor(g));
+    if (live) {
+      d.append(el("h4", "goal-sub", "Check-ins"));
+      d.append(checkInEditor(g));
+    }
 
     const hist = el("div", "goal-history");
     hist.append(el("h4", "goal-sub", "Progress feed"));
@@ -179,6 +187,7 @@
     if (g.status === "active") act("Pause", "", () => setStatus(g, "paused"));
     if (g.status === "paused") act("Pick it up again", "", () => setStatus(g, "active"));
     if (g.status !== "achieved") act("Mark achieved", "goal-win", () => setStatus(g, "achieved"));
+    else act("Not achieved yet", "", () => setStatus(g, "active"));
     const remove = act("Remove", "goal-remove", async () => {
       if (remove.dataset.confirm !== "1") { remove.dataset.confirm = "1"; remove.textContent = "Remove for good?"; return; }
       try { await api(`/api/goals/${g.id}`, { method: "DELETE" }); state.open.delete(g.id); await load(); } catch (e) { alertIn(g.id, e.message); }
@@ -254,11 +263,7 @@
       row.append(el("span", "count", "· " + state.achievedCount), el("span", "chevron-down"));
       row.onclick = async () => { state.achievedOpen = !state.achievedOpen; if (state.achievedOpen && !state.achieved) state.achieved = (await api("/api/goals?status=achieved")).goals; render(); };
       done.append(row);
-      if (state.achievedOpen) (state.achieved || []).forEach((g) => {
-        const c = el("article", "goal-card achieved");
-        const head = el("div", "goal-head"); head.append(el("span", "goal-title", g.title), el("span", "goal-by", g.achieved_at ? "achieved " + shortDate(g.achieved_at) : "achieved"));
-        c.append(head); done.append(c);
-      });
+      if (state.achievedOpen) (state.achieved || []).forEach((g) => done.append(card(g)));
     }
   }
 
@@ -271,13 +276,22 @@
   document.addEventListener("DOMContentLoaded", () => {
     byId("goal-new-toggle").onclick = () => openNew(true);
     byId("goal-new-cancel").onclick = () => openNew(false);
+    byId("goal-new").querySelectorAll("input[name=goal-shape]").forEach((r) => { r.onchange = () => {
+      const habit = r.value === "habit" && r.checked;
+      byId("goal-new-habit").hidden = !habit; byId("goal-new-milestone").hidden = habit;
+      byId("goal-new-title").placeholder = habit ? "What do you want to do regularly?" : "What do you want to achieve?";
+    }; });
     byId("goal-new").onsubmit = async (ev) => {
       ev.preventDefault();
       const title = byId("goal-new-title").value.trim(); if (!title) return;
       const shape = byId("goal-new").querySelector("input[name=goal-shape]:checked")?.value || "milestone";
       try {
-        const g = await api("/api/goals", { method: "POST", body: JSON.stringify({ title, shape }) });
-        byId("goal-new-title").value = ""; openNew(false); state.open.add(g.id); await load();
+        const more = shape === "habit"
+          ? { habit: { cue: byId("goal-new-cue").value.trim(), per_week: Number(byId("goal-new-per").value) || 3 } }
+          : { done_when: byId("goal-new-done").value.trim(), target_date: byId("goal-new-by").value || null };
+        const g = await api("/api/goals", { method: "POST", body: JSON.stringify({ title, shape, ...more }) });
+        for (const id of ["goal-new-title", "goal-new-done", "goal-new-by", "goal-new-cue"]) byId(id).value = "";
+        openNew(false); state.open.add(g.id); await load();
       } catch (e) { byId("goals-error").textContent = e.message; byId("goals-error").hidden = false; }
     };
   });

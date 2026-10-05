@@ -2502,6 +2502,14 @@
               <label><input type="radio" name="goal-shape" value="milestone" checked> A finish line to reach</label>
               <label><input type="radio" name="goal-shape" value="habit"> An ongoing habit</label>
             </div>
+            <div class="goal-new-more" id="goal-new-milestone">
+              <label class="goal-new-wide">Done when <input type="text" id="goal-new-done" maxlength="400" placeholder="e.g. I run 5k in under 30 minutes" autocomplete="off"></label>
+              <label>By <input type="date" id="goal-new-by" class="goal-time"></label>
+            </div>
+            <div class="goal-new-more" id="goal-new-habit" hidden>
+              <label><input type="number" id="goal-new-per" class="goal-time" min="1" max="7" value="3" aria-label="Times a week"> times a week</label>
+              <label class="goal-new-wide">When <input type="text" id="goal-new-cue" maxlength="160" placeholder="e.g. after work" autocomplete="off"></label>
+            </div>
             <div class="goal-new-actions">
               <button type="submit">Add goal</button>
               <button type="button" class="goal-small goal-quiet" id="goal-new-cancel">Cancel</button>
