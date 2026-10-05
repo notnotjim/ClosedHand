@@ -37,6 +37,15 @@ test('a query sent as a POST body is a lookup; content, identifiers and files ar
   assert.match(guard.outboundIntent('api_request', { url: 'https://new.example.net/x', method: 'POST', body: { notes: 'x'.repeat(5000) } }, store).what, /POST carrying/);
   assert.match(guard.outboundIntent('api_request', { url: 'https://new.example.net/x', method: 'POST', body: { to: 'sam@example.com' } }, store).what, /email address/);
   assert.match(guard.outboundIntent('sandbox_exec', { code: 'curl -X POST https://new.example.net/up -d @/workspace/orders.json' }, store).what, /sends a file/);
+  // A download is a read. curl -D saves headers (it is not -d), -f fails
+  // quietly (it is not -F), and reading the downloaded file is not sending it.
+  const download = 'curl -sS -o /workspace/page.html -D /workspace/page.headers -L -A "ClosedHand/1.0" "https://short.example.org/AbCdEf"; python3 - <<\'PY\'\nt=open(\'/workspace/page.html\',encoding=\'utf-8\').read()\nprint(t[:200])\nPY';
+  assert.equal(guard.outboundIntent('sandbox_exec', { code: download }, store), null);
+  assert.equal(guard.outboundIntent('sandbox_exec', { code: 'curl -fsSL -f https://short.example.org/x -o /workspace/x.html && cat /workspace/x.html' }, store), null);
+  assert.equal(guard.outboundIntent('sandbox_exec', { code: 'from urllib.request import urlopen\ndata = urlopen("https://short.example.org/x").read()\nprint(data[:100])' }, store), null);
+  // Real sends still ask.
+  assert.match(guard.outboundIntent('sandbox_exec', { code: 'curl -F "file=@/workspace/orders.json" https://new.example.net/up' }, store).what, /sends a file/);
+  assert.match(guard.outboundIntent('sandbox_exec', { code: 'const fs = require("fs");\nfetch("https://new.example.net/up", { method: "POST", body: fs.readFileSync("/workspace/orders.json") })' }, store).what, /sends a file/);
   assert.match(guard.outboundIntent('sandbox_exec', { code: 'import requests\nrequests.post("https://new.example.net/up", data=open("/workspace/orders.json", "r").read())' }, store).what, /sends a file/);
   assert.match(guard.outboundIntent('sandbox_exec', { code: 'curl -X POST https://new.example.net/up -d "' + 'x'.repeat(5000) + '"' }, store).what, /of content/);
 });

@@ -124,6 +124,13 @@ test("automation sends an honest blocked answer without a rewrite",async()=>{
   const h=harness({tables:{automation_runs:[auto]},verdict:{passed:false,retry:false,status:"failed",feedback:"Nothing to change"}});
   await h.load("automations").processPendingAutomationRuns();await until(()=>h.db.tables.automation_runs[0].status==="partial");assert.equal(h.calls.length,1);
 });
+// The agent is told the date where the person is, not the server's.
+test("an agent's prompt carries the person's own date and time",async()=>{
+  const h=harness({tables:{agent_tasks:[row()]}});h.store.location={name:"Fixture Town",timezone:"America/Los_Angeles"};
+  await h.load("agents").processPendingTasks();await until(()=>h.db.tables.agent_tasks[0].status==="completed");
+  const system=typeof h.calls[0].system==="string"?h.calls[0].system:JSON.stringify(h.calls[0].system);
+  assert.match(system,/Current time where the user is \(America\/Los_Angeles\)/);assert.doesNotMatch(system,/Current time: \d/);
+});
 test("saved successful file receipt prevents a duplicate send after restart",async()=>{
   const prior=[{role:"assistant",content:[{type:"tool_use",id:"first",name:"sandbox_file_download",input:{path:"report.pdf"}}]},{role:"user",content:[{type:"tool_result",tool_use_id:"first",content:'{"success":true}'}]}];
   const h=harness({tables:{agent_tasks:[row({status:"running",messages:prior})]},model:async(p,n)=>n===1?{stop_reason:"tool_use",content:[{type:"tool_use",id:"again",name:"sandbox_file_download",input:{path:"report.pdf"}}]}:{stop_reason:"end_turn",content:[{type:"text",text:"The report was delivered."}]}});
