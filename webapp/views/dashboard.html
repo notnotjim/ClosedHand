@@ -403,6 +403,25 @@
       display: flex;
     }
 
+    /* Connect your Mac: one card, a line a step, so the box fits whole. */
+    #apple-modal .mac-head { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
+    #apple-modal .mac-intro { font-size:13px; color:#B6AFA4; text-align:center; line-height:1.6; margin:0 0 16px; }
+    #apple-modal .mac-steps { list-style:none; margin:0; padding:4px 14px; background:#100E0D; border:1px solid rgba(239,230,214,0.1); border-radius:10px; }
+    #apple-modal .mac-steps li { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:12px 0; }
+    #apple-modal .mac-steps li + li { border-top:1px solid rgba(239,230,214,0.08); }
+    #apple-modal .mac-step-n { flex:none; width:22px; height:22px; border-radius:50%; background:rgba(239,230,214,0.1); color:#B6AFA4; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+    #apple-modal .mac-step-t { flex:1; min-width:0; font-size:13px; color:#EFE6D6; line-height:1.45; }
+    #apple-modal .mac-step-btn { flex:none; padding:7px 14px; background:rgba(239,230,214,0.1); border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:13px; font-family:inherit; text-decoration:none; cursor:pointer; }
+    #apple-modal .mac-step-btn:hover { background:rgba(239,230,214,0.16); }
+    #apple-modal .mac-step-go { background:#EFE6D6; color:#100E0D; border-color:#EFE6D6; font-weight:600; }
+    #apple-modal .mac-step-go:hover { background:#FFF6E8; }
+    #apple-modal .mac-code { display:flex; gap:6px; flex:none; }
+    #apple-modal .mac-code-input { width:96px; padding:7px 10px; background:#1A1817; border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:14px; font-family:ui-monospace,monospace; letter-spacing:2px; text-transform:uppercase; text-align:center; outline:none; }
+    #apple-modal .mac-code-input:focus { border-color:#D8624B; }
+    #apple-modal .mac-step-note { flex-basis:100%; margin-left:32px; font-size:13px; color:#B6AFA4; line-height:1.5; }
+    /* An ongoing matter's rows: labels in their own column, a little air. */
+    .matter-rows { display:grid; grid-template-columns:64px minmax(0,1fr); gap:6px 12px; margin-top:10px; line-height:1.5; }
+    .matter-rows .matter-k { color:#B6AFA4; }
     .modal {
       background: rgba(239,230,214,0.1);
       border: 1px solid rgba(239,230,214,0.16);
@@ -2341,7 +2360,7 @@
                   <div style="font-size:20px;margin-bottom:6px;">&#128202;</div>
                   <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Data Cruncher</div>
                   <div style="font-size: 13px;color:#B6AFA4;line-height:1.4;">Runs Python code to process data and generate charts.</div>
-                  <div style="font-size:9px;color:rgba(239,230,214,0.6);margin-top:4px;">&#9654; Run manually (uses workspace)</div>
+                  <div style="font-size:9px;color:rgba(239,230,214,0.6);margin-top:4px;">&#9654; Run manually (uses the sandbox computer)</div>
                 </div>
                 <div class="auto-template" onclick="loadAgentTemplate('weekly-review')" style="padding:14px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='rgba(239,230,214,0.28)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">
                   <div style="font-size:20px;margin-bottom:6px;">&#128221;</div>
@@ -2506,7 +2525,7 @@
               <div id="phone-code" hidden>
                 <label for="phone-code-input">Paste the code from closedhand.com</label>
                 <input id="phone-code-input" oninput="codeTypedInSettings()" class="settings-input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234">
-                <p>After you confirm on closedhand.com, it shows a code with a Copy button. Paste it here and it finishes by itself. Only this ClosedHand can finish, so your address can never be pointed at somebody else's computer.</p>
+                <p>After you confirm on closedhand.com, it shows a code with a Copy button. Paste it here and it finishes by itself. Only your ClosedHand can finish it, so your address can never be pointed at somebody else's computer.</p>
                 <button class="account-action-btn" id="phone-code-submit" onclick="claimDashboardLink()">Finish</button>
                 <p id="phone-code-status" role="status"></p>
               </div>
@@ -2597,11 +2616,11 @@
               <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask. Purchases need your approval unless you change the rules here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
-              <p class="section-desc">Card numbers stay encrypted on the computer running ClosedHand, unlocked by a key only this ClosedHand has. ClosedHand uses them at checkout; the model never sees them.</p>
+              <p class="section-desc">Card numbers are encrypted with a key stored only on your own computer. ClosedHand uses them at checkout; the AI model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
-                <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:8px;">Spending rules</div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:10px;">Spending rules</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;">
                   <label class="wallet-field"><span>Currency</span><select id="sl-currency">
                     <option value="USD">USD, US dollar</option><option value="GBP">GBP, British pound</option><option value="EUR">EUR, euro</option><option value="JPY">JPY, Japanese yen</option><option value="AUD">AUD, Australian dollar</option><option value="CAD">CAD, Canadian dollar</option><option value="NZD">NZD, New Zealand dollar</option><option value="CHF">CHF, Swiss franc</option><option value="SGD">SGD, Singapore dollar</option><option value="HKD">HKD, Hong Kong dollar</option><option value="VND">VND, Vietnamese dong</option><option value="THB">THB, Thai baht</option><option value="KRW">KRW, South Korean won</option><option value="INR">INR, Indian rupee</option><option value="AED">AED, UAE dirham</option><option value="SEK">SEK, Swedish krona</option><option value="NOK">NOK, Norwegian krone</option><option value="DKK">DKK, Danish krone</option><option value="PLN">PLN, Polish zloty</option><option value="ZAR">ZAR, South African rand</option><option value="BRL">BRL, Brazilian real</option><option value="MXN">MXN, Mexican peso</option>
                   </select></label>
@@ -2609,21 +2628,21 @@
                   <label class="wallet-field"><span>Max per day</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-per-day" min="0" step="0.01" placeholder="no limit"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
                   <label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-per-month" min="0" step="0.01" placeholder="no limit"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
                 </div>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#EFE6D6;cursor:pointer;margin:4px 0 6px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#EFE6D6;cursor:pointer;margin:0 0 14px;">
                   <input type="checkbox" id="sl-always-ask" checked style="width:14px;height:14px;margin:0;accent-color:#D0563F;">
                   Ask me before every purchase
                 </label>
                 <label class="wallet-field" id="sl-auto-wrap" style="max-width:360px;opacity:0.5;"><span>Go ahead without asking under</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="sl-auto-under" min="0" step="0.01" placeholder="e.g. 20" disabled><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label>
-                <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+                <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
                   <button class="account-action-btn" onclick="saveSpendLimits()">Save rules</button>
                   <span id="sl-status" style="font-size:12.5px;color:#B6AFA4;"></span>
                 </div>
 
-                <hr class="conn-divider" style="margin:16px 0;">
-                <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:8px;">Cards</div>
-                <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+                <hr class="conn-divider" style="margin:20px 0;">
+                <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:10px;">Cards</div>
+                <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
                 <button class="account-action-btn" id="wallet-add-toggle" onclick="toggleAddCard()">Add a card</button>
-                <div id="wallet-add" style="display:none;margin-top:10px;padding:12px;background:#100E0D;border:1px solid rgba(239,230,214,0.16);border-radius:10px;">
+                <div id="wallet-add" style="display:none;margin-top:14px;padding:14px;background:#100E0D;border:1px solid rgba(239,230,214,0.16);border-radius:10px;">
                   <div style="font-size:12.5px;color:#B6AFA4;margin-bottom:10px;line-height:1.5;">The rules you set above and the card's own limits below are what cap the spending.</div>
                   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
                     <label class="wallet-field" style="grid-column:1/-1;"><span>Card number</span><input type="text" id="wc-number" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456"></label>
@@ -2743,12 +2762,12 @@
             <div class="account-action" id="action-delete-account">
               <div class="account-action-info">
                 <div class="account-action-title danger">Delete account</div>
-                <div class="account-action-desc">Deletes your ClosedHand account and everything ClosedHand keeps for you on this computer. This cannot be undone.</div>
+                <div class="account-action-desc">Deletes your ClosedHand account and everything ClosedHand keeps for you on your own computer. This cannot be undone.</div>
               </div>
               <button class="account-action-btn account-action-btn-danger" onclick="startAccountAction('delete-account')">Delete</button>
             </div>
             <div class="account-confirm-inline" id="confirm-delete-account">
-              <div class="account-confirm-text danger" id="delete-account-text">This permanently deletes everything ClosedHand keeps for you on this computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
+              <div class="account-confirm-text danger" id="delete-account-text">This permanently deletes everything ClosedHand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-delete-account" placeholder="Type DELETE" oninput="checkConfirmInput('delete-account','DELETE')">
                 <button class="confirm-go confirm-go-danger" id="go-delete-account" data-orig-text="Delete my account" onclick="executeAccountAction('delete-account')">Delete my account</button>
@@ -4460,7 +4479,7 @@
     async function loadAccountSummary() {
       const box = document.getElementById("account-summary"), divider = document.getElementById("account-summary-divider");
       const text = document.getElementById("account-summary-text"), confirmText = document.getElementById("delete-account-text");
-      const local = "everything ClosedHand keeps for you on this computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
+      const local = "everything ClosedHand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
       const strong = value => { const el = document.createElement("strong"); el.textContent = value; return el; };
       let data = null;
       try { const r = await fetch("/api/phone/account"); data = r.ok ? await r.json() : null; } catch (_) {}
@@ -4470,10 +4489,10 @@
       if (account) {
         const host = new URL(account.url).hostname;
         const who = (account.provider === "microsoft" ? "Microsoft" : "Google") + (account.email ? ": " + account.email : "");
-        text.append("Your ClosedHand account is ", strong(who), ". closedhand.com keeps only its email, linked to your personal URL, ", strong(host), ". Everything else here is on this computer.");
+        text.append("Your ClosedHand account is ", strong(who), ". closedhand.com keeps only its email, linked to your personal URL, ", strong(host), ". Everything else here is on your own computer.");
         confirmText.textContent = "This deletes your ClosedHand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
-        text.textContent = "You don’t have a ClosedHand account. Getting a personal URL makes one: the Google or Microsoft account you claim it with. Everything here is on this computer.";
+        text.textContent = "You don’t have a ClosedHand account. Getting a personal URL makes one: the Google or Microsoft account you claim it with. Everything here is on your own computer.";
         confirmText.textContent = "This permanently deletes " + local;
       }
       box.hidden = false; divider.hidden = false;
@@ -7722,16 +7741,16 @@
       var s = m.state || {};
       var when = new Date(m.last_touched).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       var rows = '';
-      if (s.people && s.people.length) rows += '<div style="margin-top:6px;"><span style="color:#B6AFA4;">People</span> ' + s.people.map(function(p) { return escHtml(p.name) + (p.position ? ' <span style="color:#D8624B;">' + escHtml(p.position) + '</span>' : '') + (p.said ? ' <span style="color:#B6AFA4;">' + escHtml(p.said) + '</span>' : ''); }).join(' · ') + '</div>';
-      if (s.open && s.open.length) rows += '<div style="margin-top:4px;"><span style="color:#B6AFA4;">Open</span> ' + s.open.map(escHtml).join(' · ') + '</div>';
-      if (s.decisions && s.decisions.length) rows += '<div style="margin-top:4px;"><span style="color:#B6AFA4;">Decided</span> ' + s.decisions.map(escHtml).join(' · ') + '</div>';
-      if (s.facts && s.facts.length) rows += '<div style="margin-top:4px;"><span style="color:#B6AFA4;">Facts</span> ' + s.facts.map(escHtml).join(' · ') + '</div>';
+      if (s.people && s.people.length) rows += '<span class="matter-k">People</span><span>' + s.people.map(function(p) { return escHtml(p.name) + (p.position ? ' <span style="color:#D8624B;">' + escHtml(p.position) + '</span>' : '') + (p.said ? ' <span style="color:#B6AFA4;">' + escHtml(p.said) + '</span>' : ''); }).join(' · ') + '</span>';
+      if (s.open && s.open.length) rows += '<span class="matter-k">Open</span><span>' + s.open.map(escHtml).join(' · ') + '</span>';
+      if (s.decisions && s.decisions.length) rows += '<span class="matter-k">Decided</span><span>' + s.decisions.map(escHtml).join(' · ') + '</span>';
+      if (s.facts && s.facts.length) rows += '<span class="matter-k">Facts</span><span>' + s.facts.map(escHtml).join(' · ') + '</span>';
       var done = m.status === 'resolved';
-      return '<div style="background:rgba(239,230,214,0.03);border:1px solid rgba(239,230,214,0.16);border-radius:10px;padding:12px 14px;margin-bottom:8px;font-size:13px;color:#EFE6D6;' + (done ? 'opacity:0.55;' : '') + '">' +
+      return '<div style="background:rgba(239,230,214,0.03);border:1px solid rgba(239,230,214,0.16);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;color:#EFE6D6;' + (done ? 'opacity:0.55;' : '') + '">' +
         '<div style="display:flex;align-items:center;gap:10px;"><span style="font-weight:600;color:#EFE6D6;">' + escHtml(m.title) + '</span><span style="color:#B6AFA4;font-size:12px;">' + (done ? 'concluded' : 'updated ' + when) + (m.expected_end ? ' · until ' + new Date(m.expected_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '') + '</span><span style="flex:1;"></span>' +
         (done ? '' : '<button class="conn-btn conn-btn-manage" title="ClosedHand marks this done itself when it sees the plan has concluded. Use this if it has not noticed." onclick="resolveMatter(\'' + m.id + '\')">Done</button>') +
         '<button class="conn-btn conn-btn-disconnect" style="opacity:0.55;" title="Forget it entirely: for something ClosedHand should never have treated as a plan." onclick="deleteMatter(\'' + m.id + '\')">Remove</button></div>' +
-        (m.summary ? '<div style="color:#B6AFA4;margin-top:6px;">' + escHtml(m.summary) + '</div>' : '') + rows + '</div>';
+        (m.summary ? '<div style="color:#B6AFA4;margin-top:8px;line-height:1.5;">' + escHtml(m.summary) + '</div>' : '') + (rows ? '<div class="matter-rows">' + rows + '</div>' : '') + '</div>';
     }
     async function resolveMatter(id) { await fetch('/api/matters/' + id + '/resolve', { method: 'POST' }); loadMatters(); }
     async function deleteMatter(id) { await fetch('/api/matters/' + id, { method: 'DELETE' }); loadMatters(); }
@@ -8339,7 +8358,7 @@
         <button type="button" class="auto-trigger-btn" data-trigger="event" onclick="selectTrigger('event')">When something happens</button>
       </div>
 
-      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:10px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Saved agents.</div>
+      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Saved agents.</div>
 
       <!-- Schedule picker (hidden by default) -->
       <div id="auto-schedule-picker" style="display:none;margin-bottom:10px;">
@@ -8538,48 +8557,33 @@
   <!-- Apple Connect Modal -->
   <div class="modal-overlay" id="apple-modal" onclick="if(event.target===this)closeAppleModal()">
     <div class="modal" style="max-width:420px;">
-      <div style="text-align:center;margin-bottom:16px;">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <div class="mac-head">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         <h3 id="apple-modal-title" style="margin:0;">Connect your Mac</h3>
       </div>
-      <p style="font-size:13px;color:#B6AFA4;text-align:center;line-height:1.6;margin-bottom:20px;">Choose which Mac files and apps ClosedHand may use. Content needed for a request is processed by your selected AI provider.</p>
+      <p class="mac-intro">Choose which Mac files and apps ClosedHand may use. Content needed for a request is processed by your selected AI provider.</p>
 
       <div id="apple-step-desktop" style="display:none;">
         <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into the ClosedHand app and connects automatically. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
       </div>
 
-      <!-- Step 1: Not paired yet -->
-      <div id="apple-step-setup">
-        <div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:10px;padding:16px;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <span style="width:24px;height:24px;border-radius:50%;background:rgba(239,230,214,0.1);color:#B6AFA4;font-size: 14px;font-weight:600;display:flex;align-items:center;justify-content:center;">1</span>
-            <span style="font-size:13px;color:#EFE6D6;">Download the ClosedHand Bridge app</span>
-          </div>
-          <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download style="display:block;text-align:center;padding:10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;text-decoration:none;transition:background 0.12s;margin-bottom:6px;" onmouseover="this.style.background='rgba(239,230,214,0.16)'" onmouseout="this.style.background='rgba(239,230,214,0.1)'">Download Bridge for Mac</a>
-
-          <div id="bridge-mobile-notice" style="display:none;text-align:center;padding:12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#B6AFA4;font-size: 14px;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files ClosedHand can access.</div>
+      <!-- Step 1: Not paired yet. One card, a line a step, so the whole box
+           fits without scrolling. -->
+      <ol id="apple-step-setup" class="mac-steps">
+        <li>
+          <span class="mac-step-n">1</span><span class="mac-step-t">Download ClosedHand Bridge</span>
+          <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download class="mac-step-btn">Download</a>
+          <div id="bridge-mobile-notice" class="mac-step-note" style="display:none;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files ClosedHand can access.</div>
           <script>(function(){var ua=navigator.userAgent;if(!/Macintosh|Mac OS X/i.test(ua)||/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}})()</script>
-        </div>
-
-        <div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:10px;padding:16px;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <span style="width:24px;height:24px;border-radius:50%;background:rgba(239,230,214,0.1);color:#B6AFA4;font-size: 14px;font-weight:600;display:flex;align-items:center;justify-content:center;">2</span>
-            <span style="font-size:13px;color:#EFE6D6;">Open it and get your pairing code</span>
-          </div>
-          <p style="font-size: 13px;color:rgba(239,230,214,0.6);margin:0;">It sits in your menu bar. Click it, then "Pair with ClosedHand" to get a code.</p>
-        </div>
-
-        <div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:10px;padding:16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <span style="width:24px;height:24px;border-radius:50%;background:rgba(239,230,214,0.1);color:#B6AFA4;font-size: 14px;font-weight:600;display:flex;align-items:center;justify-content:center;">3</span>
-            <span style="font-size:13px;color:#EFE6D6;">Enter the code here</span>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="bridge-code-input" placeholder="ABC123" maxlength="6" style="flex:1;padding:10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:18px;font-family:monospace;text-transform:uppercase;letter-spacing:3px;text-align:center;" oninput="this.value=this.value.toUpperCase()">
-            <button onclick="pairBridge()" id="bridge-pair-btn" style="padding:10px 16px;background:#EFE6D6;color:#100E0D;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Connect</button>
-          </div>
-        </div>
-      </div>
+        </li>
+        <li>
+          <span class="mac-step-n">2</span><span class="mac-step-t">Open it in your menu bar and choose “Pair with ClosedHand”</span>
+        </li>
+        <li>
+          <span class="mac-step-n">3</span><span class="mac-step-t">Enter the code</span>
+          <span class="mac-code"><input type="text" id="bridge-code-input" placeholder="ABC123" maxlength="6" class="mac-code-input" oninput="this.value=this.value.toUpperCase()"><button onclick="pairBridge()" id="bridge-pair-btn" class="mac-step-btn mac-step-go">Connect</button></span>
+        </li>
+      </ol>
 
       <!-- Step 2: Already paired -->
       <div id="apple-step-connected" style="display:none;text-align:center;">

@@ -66,6 +66,8 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 #memory-filters { display: flex; gap: 8px; row-gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
 .dashboard-container .auto-card { margin-bottom: 16px; }
 .dashboard-container .auto-card-header { padding: 20px; gap: 16px; }
+/* The line under a card's title lines up with it and has room below. */
+.dashboard-container .auto-card > .auto-card-meta { padding: 0 20px 18px; margin-top: -8px; }
 .dashboard-container .auto-card-detail-inner { padding: 0 20px 20px; }
 .dashboard-container .mc-section-label { margin-top: 32px; margin-bottom: 16px; }
 .dashboard-container .mcp-hero { padding: 48px 32px; }

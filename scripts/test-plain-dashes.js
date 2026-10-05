@@ -35,3 +35,11 @@ test("every way ClosedHand writes to the person goes through it", () => {
   assert.match(read("lib/response-presentation.js"), /Write without emdashes \(the long dash\): use a comma, colon or full stop/);
   assert.doesNotMatch(read("lib/plain-dashes.js"), new RegExp(EM), "the rule's own code holds none either");
 });
+
+test("ongoing matters are saved without emdashes too", () => {
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "../lib/matters.js"), "utf8");
+  assert.match(src, /JSON\.parse\(require\("\.\/plain-dashes"\)\.noEmDashes\(text\)\)/);
+  const { noEmDashes } = require("../lib/plain-dashes");
+  const json = JSON.stringify({ facts: ["Not in email or calendar originally \u2014 WhatsApp only"] });
+  assert.deepEqual(JSON.parse(noEmDashes(json)).facts, ["Not in email or calendar originally, WhatsApp only"]);
+});

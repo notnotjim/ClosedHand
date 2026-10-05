@@ -1335,7 +1335,7 @@ app.post("/api/telegram/session", async (req, res) => {
       .eq("platform", "telegram").eq("platform_user_id", String(tgUser.id)).limit(1);
     if (error) throw error;
     const { getAdminUserId } = require("./admin");
-    if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account is not the one linked to this ClosedHand." });
+    if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account isn't the one linked to your ClosedHand." });
     setAdminSessionCookie(res, TELEGRAM_SESSION_SEC);
     res.status(204).end();
   } catch (e) {

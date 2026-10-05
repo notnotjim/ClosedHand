@@ -154,7 +154,7 @@
         $('heading').textContent = 'You already have a personal URL linked to this email';
         $('lede').textContent = 'It opens a ClosedHand you set up before. Want to switch it to the one you’re setting up now? The earlier one stops opening there.';
       }
-      $('approve').textContent = address.move ? 'Switch it to this ClosedHand' : 'Confirm ' + name;
+      $('approve').textContent = address.move ? 'Switch to the new one' : 'Confirm ' + name;
       $('confirm-note').textContent = address.move ? '' : 'Only confirm if you’re setting up ClosedHand on your own computer.';
       $('confirm-note').hidden = !!address.move;
       say('');
