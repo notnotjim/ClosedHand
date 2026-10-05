@@ -14,9 +14,9 @@ vm.runInNewContext(page.slice(start, end) + "\nthis.formatReply = formatReply;",
 const { formatReply } = box;
 
 test("bold, lists and line breaks render", () => {
-  const reply = "**Wednesday 7 October, 11:55** Vietnam time.\n\n- VN123, DAD → SGN\n- Ref KQ7P2X, seat 12A\n\nThree days from now.";
+  const reply = "**Friday 9 October, 14:20** Lisbon time.\n\n- QZ417, LIS → OPO\n- Ref KQ7P2X, seat 12A\n\nThree days from now.";
   assert.equal(formatReply(reply),
-    "<strong>Wednesday 7 October, 11:55</strong> Vietnam time.<br><ul class=\"reply-list\"><li>VN123, DAD → SGN</li><li>Ref KQ7P2X, seat 12A</li></ul>Three days from now.",
+    "<strong>Friday 9 October, 14:20</strong> Lisbon time.<br><ul class=\"reply-list\"><li>QZ417, LIS → OPO</li><li>Ref KQ7P2X, seat 12A</li></ul>Three days from now.",
     "a list's own margins space it, so the blank lines around it go");
   assert.equal(formatReply("1. First\n2. Second"), "<ol class=\"reply-list\"><li>First</li><li>Second</li></ol>");
   assert.equal(formatReply("### Today\nNothing urgent"), "<strong class=\"reply-head\">Today</strong><br>Nothing urgent");

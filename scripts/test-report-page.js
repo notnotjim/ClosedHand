@@ -133,7 +133,7 @@ test("older titles cut mid-word read as untitled and are cut at a word", () => {
 });
 
 test("dividers render, the title is not repeated, empty headers and unedited reports stay quiet", () => {
-  const doc = { ...report, title: "Lisbon move, Wednesday 7 October", content: "# Lisbon move — Wednesday 7 October 2026\nEverything in one place.\n\n---\n\n| | |\n|---|---|\n| Flight | VN123 |", created_at: new Date("2026-10-04T05:00:00.000Z"), updated_at: new Date("2026-10-04T05:00:00.004Z") };
+  const doc = { ...report, title: "Lisbon move, Friday 9 October", content: "# Lisbon move — Friday 9 October 2026\nEverything in one place.\n\n---\n\n| | |\n|---|---|\n| Flight | QZ417 |", created_at: new Date("2026-10-04T05:00:00.000Z"), updated_at: new Date("2026-10-04T05:00:00.004Z") };
   const html = page.pageHtml(doc);
   assert.equal((html.match(/Lisbon move/g) || []).length, 2, "the title tag and the page heading only, not the document's own repeat");
   assert.match(html, /<hr>/);

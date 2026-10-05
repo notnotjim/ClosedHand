@@ -14,7 +14,7 @@ test("a date without its year is the first such day after the email was sent", (
   assert.equal(yearCorrection("2026-12-21T19:00:00+08:00", "2022-12-21T06:48:44Z", false), -4, "a 2022 email describes a 2022 trip");
   assert.equal(yearCorrection("2026-12-03T00:00:00+09:00", "2025-10-25T00:00:00Z", false), -1);
   assert.equal(yearCorrection("2026-01-15T10:00:00+00:00", "2026-12-20T10:00:00Z", false), 1, "a January trip in a December email is next January");
-  assert.equal(yearCorrection("2026-10-07T11:55:00+07:00", "2026-10-01T06:31:40Z", false), 0);
+  assert.equal(yearCorrection("2026-10-09T14:20:00+01:00", "2026-10-01T06:31:40Z", false), 0);
   assert.equal(yearCorrection("2026-10-04T09:00:00+07:00", "2026-10-04T08:00:00Z", false), 0, "booked on the day");
   assert.equal(yearCorrection("2028-06-01T10:00:00+00:00", "2026-06-01T10:00:00Z", true), 0, "a year the email wrote is kept, however far ahead");
   assert.equal(yearCorrection("2026-12-21T19:00:00+08:00", "2022-12-21T06:48:44Z"), -4, "unsaid, a date years after its email was guessed");
@@ -27,15 +27,15 @@ test("a date without its year is the first such day after the email was sent", (
 test("a flight from an old email is dated by that email, so a past trip never shows as upcoming", () => {
   const emails = [
     { id: "old", date: "Wed, 21 Dec 2022 06:48:44 +0000", subject: "Your booking", body: "QR1563 DPS-DOH 21 Dec 19:00. QR0009 DOH-LHR 22 Dec 01:50. Booking ZR5LMT2A" },
-    { id: "new", date: "2026-10-01T06:31:40Z", subject: "Your order", body: "VN123 DAD-SGN 7 Oct 11:55 KQ7P2X" },
+    { id: "new", date: "2026-10-01T06:31:40Z", subject: "Your order", body: "QZ417 LIS-OPO 9 Oct 14:20 KQ7P2X" },
   ];
   const parsed = [
     { emailIndex: 0, airline: "Qatar Airways", flightNumber: "QR1563", yearStated: false, departure: { airport: "DPS", dateTime: "2026-12-21T19:00:00+08:00" }, arrival: { airport: "DOH", dateTime: "2026-12-22T00:00:00+03:00" }, confirmationCode: "ZR5LMT2A" },
-    { emailIndex: 1, airline: "Vietnam Airlines", flightNumber: "VN123", yearStated: false, departure: { airport: "DAD", dateTime: "2026-10-07T11:55:00+07:00" }, arrival: { airport: "SGN", dateTime: "2026-10-07T13:25:00+07:00" }, confirmationCode: "KQ7P2X" },
+    { emailIndex: 1, airline: "Northwind Airways", flightNumber: "QZ417", yearStated: false, departure: { airport: "LIS", dateTime: "2026-10-09T14:20:00+01:00" }, arrival: { airport: "OPO", dateTime: "2026-10-09T15:10:00+01:00" }, confirmationCode: "KQ7P2X" },
   ];
   const result = reconcileFlights({}, parsed, emails, Date.parse("2026-10-05T00:00:00Z"));
   const keys = result.patches.map(([key]) => key);
-  assert.deepEqual(keys, ["flight-VN123-2026-10-07"], "the 2022 trip is past, so only the real flight is kept");
+  assert.deepEqual(keys, ["flight-QZ417-2026-10-09"], "the 2022 trip is past, so only the real flight is kept");
 });
 
 test("both readers are told to anchor on the email, and stored records heal", () => {
