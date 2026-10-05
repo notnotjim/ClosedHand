@@ -78,6 +78,9 @@ jobs:
       - name: Connections tab
         run: node --test scripts/test-connections-tab.js
 
+      - name: Wallet password check
+        run: node --test scripts/test-wallet-confirm.js
+
       - name: Agent dashboard visibility and counts
         run: node --test scripts/test-agent-dashboard.js
 

@@ -2165,6 +2165,15 @@
           .furl-handle:hover .furl-chev { color:#EFE6D6; }
           .furl-handle:focus-visible { outline:2px solid #D8624B; outline-offset:-2px; border-radius:12px; }
           .wallet-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#B6AFA4; }
+          /* The password check before ClosedHand may spend more freely. */
+          .wallet-confirm { margin:0 0 16px; padding:14px 16px; border:1px solid rgba(208,166,82,0.3); border-radius:10px; background:rgba(208,166,82,0.06); }
+          .wallet-confirm[hidden] { display:none; }
+          .wallet-confirm p { margin:0 0 10px; font-size:13px; line-height:1.5; color:#EFE6D6; }
+          .wallet-confirm-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+          .wallet-confirm-row input { flex:1; min-width:180px; padding:8px 10px; background:#100E0D; border:1px solid rgba(239,230,214,0.2); border-radius:8px; color:#EFE6D6; font:inherit; font-size:14px; outline:none; }
+          .wallet-confirm-row input:focus { border-color:#D8624B; }
+          .wallet-confirm #wallet-confirm-status { margin:8px 0 0; color:#D0A652; }
+          .wallet-confirm #wallet-confirm-status:empty { display:none; }
           .wallet-field input { padding:7px 10px; background:rgba(26,24,23,0.95); border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:13px; outline:none; font-family:inherit; }
           .wallet-field input:focus { border-color:#D8624B; }
           .wallet-field select { padding:7px 30px 7px 10px; background:rgba(26,24,23,0.95) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23B6AFA4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 10px center; border:1px solid rgba(239,230,214,0.16); border-radius:8px; color:#EFE6D6; font-size:13px; outline:none; font-family:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }
@@ -2613,12 +2622,21 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask. Purchases need your approval unless you change the rules here.</p>
+              <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask.<br>Purchases need your approval unless you change the rules here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
               <p class="section-desc">Card numbers are encrypted with a key stored only on your own computer. ClosedHand uses them at checkout; the AI model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
+                <div class="wallet-confirm" id="wallet-confirm" hidden>
+                  <p>Enter your dashboard password to let ClosedHand spend more freely. It is asked again after five minutes.</p>
+                  <div class="wallet-confirm-row">
+                    <input type="password" id="wallet-confirm-pw" autocomplete="current-password" aria-label="Dashboard password">
+                    <button type="button" class="account-action-btn" id="wallet-confirm-go">Confirm</button>
+                    <button type="button" class="account-action-btn" id="wallet-confirm-cancel">Cancel</button>
+                  </div>
+                  <p id="wallet-confirm-status" role="status"></p>
+                </div>
                 <div style="font-size:13px;font-weight:600;color:#EFE6D6;margin-bottom:10px;">Spending rules</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;">
                   <label class="wallet-field"><span>Currency</span><select id="sl-currency">
@@ -4711,10 +4729,40 @@
         auto_under: document.getElementById('sl-always-ask').checked ? '' : document.getElementById('sl-auto-under').value,
       };
       var st = document.getElementById('sl-status'); st.textContent = 'Saving...';
-      var res = await fetch('/api/settings/spend-limits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var res = await walletFetch('/api/settings/spend-limits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       var data = await res.json().catch(function() { return {}; });
       st.textContent = res.ok ? 'Saved.' : (data.error || 'Could not save');
       setTimeout(function() { st.textContent = ''; }, 3000);
+    }
+    // Loosening the rules or adding a card asks for the dashboard password
+    // once; the server says when (needs_password), and the change then goes
+    // through. Cancelling leaves things as they were.
+    function askWalletPassword() {
+      return new Promise(function (resolve) {
+        var box = document.getElementById('wallet-confirm'), pw = document.getElementById('wallet-confirm-pw'), st = document.getElementById('wallet-confirm-status');
+        var go = document.getElementById('wallet-confirm-go'), cancel = document.getElementById('wallet-confirm-cancel');
+        function done(ok) { box.hidden = true; go.onclick = null; cancel.onclick = null; pw.onkeydown = null; pw.value = ''; resolve(ok); }
+        box.hidden = false; st.textContent = ''; pw.value = '';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' }); pw.focus();
+        go.onclick = async function () {
+          go.disabled = true; st.textContent = '';
+          try {
+            var r = await fetch('/api/wallet/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw.value }) });
+            var d = await r.json().catch(function () { return {}; });
+            if (r.ok) done(true); else { st.textContent = d.error || 'That password is not right.'; pw.select(); }
+          } catch (e) { st.textContent = 'Could not check it. Try again.'; }
+          finally { go.disabled = false; }
+        };
+        cancel.onclick = function () { done(false); };
+        pw.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go.click(); } };
+      });
+    }
+    async function walletFetch(url, options) {
+      var res = await fetch(url, options);
+      if (res.status !== 403) return res;
+      var body = await res.clone().json().catch(function () { return {}; });
+      if (!body.needs_password || !(await askWalletPassword())) return res;
+      return fetch(url, options);
     }
     function toggleAddCard() {
       var el = document.getElementById('wallet-add');
@@ -4733,7 +4781,7 @@
         label: document.getElementById('wc-label').value,
         limits: { per_purchase: document.getElementById('wc-per-purchase').value, per_month: document.getElementById('wc-per-month').value },
       };
-      var res = await fetch('/api/wallet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var res = await walletFetch('/api/wallet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       var data = await res.json().catch(function() { return {}; });
       if (!res.ok) { st.textContent = data.error || 'Could not save the card'; return; }
       st.textContent = '';

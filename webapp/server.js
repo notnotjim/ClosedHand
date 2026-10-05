@@ -595,6 +595,58 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => process.e
 // person's rule: per purchase, per day, per month, and whether to ask.
 // ---------------------------------------------------------------------------
 
+// Loosening the spending rules or adding a card asks for the dashboard
+// password again, then trusts that browser for five minutes. These are the
+// changes that would let someone at an unlocked screen make ClosedHand spend
+// without asking. Looking, tightening a rule and removing a card never ask.
+// With no dashboard password set there is nothing to check against.
+const WALLET_CONFIRM_MS = 5 * 60 * 1000;
+const _walletConfirmed = new Map(); // browser token -> until
+async function walletConfirmed(req) {
+  if (!(await passwordConfigured())) return true;
+  const until = _walletConfirmed.get(readCookie(req, "ch_wallet_ok") || "");
+  return !!until && until > Date.now();
+}
+function walletNeedsPassword(res) {
+  return res.status(403).json({ needs_password: true, error: "Enter your dashboard password to let ClosedHand spend more freely." });
+}
+// Whether new rules let ClosedHand spend more, or more without asking.
+function loosensLimits(before, after) {
+  const b = before || {}, a = after || {};
+  for (const k of ["per_purchase", "per_day", "per_month"]) {
+    if (b[k] != null && (a[k] == null || Number(a[k]) > Number(b[k]))) return true;
+  }
+  if (b.always_ask !== false && a.always_ask === false) return true;
+  if (Number(a.auto_under || 0) > Number(b.auto_under || 0)) return true;
+  return false;
+}
+app.post("/api/wallet/confirm", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    // The same five tries and fifteen-minute lockout as signing in.
+    const ip = clientIp(req);
+    const rec = _loginFails.get(ip) || { n: 0, until: 0 };
+    if (rec.until > Date.now()) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (!(await checkDashboardPassword(String((req.body || {}).password || "")))) {
+      rec.n += 1;
+      if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
+      _loginFails.set(ip, rec);
+      await new Promise((r) => setTimeout(r, 400));
+      return res.status(403).json({ error: "That password is not right." });
+    }
+    _loginFails.delete(ip);
+    const token = crypto.randomBytes(16).toString("hex");
+    _walletConfirmed.set(token, Date.now() + WALLET_CONFIRM_MS);
+    for (const [t, until] of _walletConfirmed) if (until < Date.now()) _walletConfirmed.delete(t);
+    const secure = req.secure || req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
+    res.append("Set-Cookie", `ch_wallet_ok=${token}; Path=/api; HttpOnly; SameSite=Strict; Max-Age=${WALLET_CONFIRM_MS / 1000}${secure}`);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Could not check the password" });
+  }
+});
+
 function walletAvailable() {
   const { encryptString } = require("./crypto-tokens");
   return mcpClient.isSelfHost() && encryptString("probe") !== "probe";
@@ -658,6 +710,7 @@ app.post("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a ClosedHand you run yourself." });
+  if (!(await walletConfirmed(req))) return walletNeedsPassword(res);
   if (!walletAvailable()) return res.status(400).json({ error: "ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
   try {
     const b = req.body || {};
@@ -702,7 +755,11 @@ app.patch("/api/wallet/:id", async (req, res) => {
     const b = req.body || {};
     const patch = { updated_at: new Date().toISOString() };
     if (b.label !== undefined) patch.label = String(b.label || "").trim().slice(0, 60) || null;
-    if (b.limits !== undefined) patch.limits = cleanLimits(b.limits);
+    if (b.limits !== undefined) {
+      patch.limits = cleanLimits(b.limits);
+      const { data: card } = await supabase.from("wallet_cards").select("limits").eq("id", req.params.id).eq("user_id", userId).maybeSingle();
+      if (loosensLimits(card && card.limits, patch.limits) && !(await walletConfirmed(req))) return walletNeedsPassword(res);
+    }
     if (b.is_default === true) {
       const { error: e0 } = await supabase.from("wallet_cards").update({ is_default: false }).eq("user_id", userId);
       if (e0) throw e0;
@@ -737,8 +794,11 @@ app.post("/api/settings/spend-limits", async (req, res) => {
   try {
     const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
     const settings = (profile && profile.settings) || {};
-    settings.spend_limits = cleanLimits(req.body || {});
-    if (settings.spend_limits.always_ask === undefined) settings.spend_limits.always_ask = true;
+    const before = settings.spend_limits || { always_ask: true };
+    const next = cleanLimits(req.body || {});
+    if (next.always_ask === undefined) next.always_ask = true;
+    if (loosensLimits(before, next) && !(await walletConfirmed(req))) return walletNeedsPassword(res);
+    settings.spend_limits = next;
     const { error } = await supabase.from("profiles").update({ settings }).eq("id", userId);
     if (error) throw error;
     res.json({ success: true, limits: settings.spend_limits });
