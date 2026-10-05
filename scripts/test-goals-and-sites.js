@@ -44,20 +44,25 @@ test("trusted sites live in chat, not in a list that reads like the only sites a
   const Module = require("node:module");
   const load = Module._load;
   const writes = [];
+  // The saved record; the store's copy starts the same.
+  let row = { allowed_hosts: ["example.com", "forms.example.org"] };
+  const db = { from: () => ({
+    select: () => ({ eq: () => ({ single: async () => ({ data: { settings: structuredClone(row) }, error: null }) }) }),
+    update: (value) => ({ eq: async () => { row = structuredClone(value.settings); writes.push(value); return { error: null }; } }),
+  }) };
   Module._load = function (request, parent, ...rest) {
-    if (request === "./db" && parent && /outbound-guard\.js$/.test(parent.filename)) {
-      return { supabase: { from: () => ({ update: (settings) => ({ eq: async () => { writes.push(settings); return { error: null }; } }) }) } };
-    }
+    if (request === "./db" && parent && /(outbound-guard|profile-settings)\.js$/.test(parent.filename)) return { supabase: db };
     return load.call(this, request, parent, ...rest);
   };
   try {
     delete require.cache[require.resolve("../lib/outbound-guard")];
+    delete require.cache[require.resolve("../lib/profile-settings")];
     const g = require("../lib/outbound-guard");
     const store = { userId: "u1", profile: { settings: { allowed_hosts: ["example.com", "forms.example.org"] } } };
     assert.deepEqual(await g.forgetHost(store, "https://www.example.com/path"), { removed: true, sites: ["forms.example.org"] });
     assert.deepEqual(writes[0].settings.allowed_hosts, ["forms.example.org"]);
     assert.equal((await g.forgetHost(store, "other.example")).removed, false);
-  } finally { Module._load = load; delete require.cache[require.resolve("../lib/outbound-guard")]; }
+  } finally { Module._load = load; delete require.cache[require.resolve("../lib/outbound-guard")]; delete require.cache[require.resolve("../lib/profile-settings")]; }
 });
 
 test("Pulse weighs what moves a goal forward", async () => {

@@ -285,16 +285,38 @@ test("location is set where it shows, not in a Settings card", () => {
   assert.doesNotMatch(html, /id="location-section"|Locate me|location-manual-input/, "no Location card in Settings");
   const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
   assert.match(chat, /<button class="here" id="hereBtn"/, "the chat page sets it from the browser and shows the weather there");
-  assert.match(chat, /wx\.addEventListener\('click', function\(\) \{ wx\.hidden = true; btn\.hidden = false; btn\.click\(\); \}\);/, "clicking the weather sets it again after a move");
+  assert.match(chat, /if \(t\) \{ flipUnit\(t\); return; \}\n\s*if \(!e\.target\.closest\('\.wx-place'\)\) return;\n\s*wx\.hidden = true; btn\.hidden = false; btn\.click\(\);/, "the temperature flips the unit; the rest of the sentence sets the place again after a move");
+  assert.match(chat, /' <button type="button" class="wx-place" data-tip="Moved\? Click to update your location\." aria-label="[^"]*">and ' \+ esc\(w\.label\) \+ ' in ' \+ esc\(d\.location\.name\) \+ '<\/button>/, "the whole rest of the sentence is the one control");
   const defs = fs.readFileSync(require.resolve("../lib/tools/definitions.js"), "utf8");
   assert.match(defs, /name: "save_location"/, "and ClosedHand saves it when told in chat");
 });
 
 test("the weather line's tip shows at once, in the page's own quiet style", () => {
   const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
-  assert.match(chat, /<span class="here-wx" id="hereWx" role="button" tabindex="0" data-tip="Moved\? Click to update your location\." hidden><\/span>/);
+  assert.match(chat, /<span class="here-wx" id="hereWx" hidden><\/span>/);
+  assert.match(chat, /class="wx-place" data-tip="Moved\? Click to update your location\."/);
+  assert.doesNotMatch(chat, /\.wx-num small|<small>/, "the unit reads in the same tone as the number");
   assert.match(chat, /data-tip="Sets your local time from where you are, and shows the weather here"/);
   assert.doesNotMatch(chat, /wx\.title = |id="hereBtn" type="button" hidden title=/, "no slow browser tooltip");
   assert.match(chat, /var info = e\.target\.closest\('\[data-tip\]'\);/, "drawn by the page's own instant tooltip");
   assert.doesNotMatch(chat, /\[data-tip\]::after/, "one tooltip, not two");
+});
+
+test("clicking the temperature flips it between Celsius and Fahrenheit, and the choice is kept everywhere", () => {
+  const server = fs.readFileSync(require.resolve("../webapp/server.js"), "utf8");
+  const a = server.indexOf("function weatherInUnit("), b = server.indexOf("\n}\n", a) + 3;
+  const { weatherInUnit } = vm.runInNewContext(server.slice(a, b) + "\n({ weatherInUnit })");
+  const w = { tempC: 26.4, defaultUnit: "C", label: "clear", kind: "clear", isDay: false, timezone: "Europe/Lisbon" };
+  assert.deepEqual(JSON.parse(JSON.stringify(weatherInUnit(w, {}))), { label: "clear", kind: "clear", isDay: false, timezone: "Europe/Lisbon", temp: 26, unit: "C", other: { temp: 80, unit: "F" } }, "where they are, with the other unit ready");
+  assert.equal(weatherInUnit(w, { temperature_unit: "F" }).temp, 80, "their choice wins");
+  assert.equal(weatherInUnit({ ...w, defaultUnit: "F" }, { temperature_unit: "C" }).unit, "C");
+  assert.match(server, /app\.post\("\/api\/here\/unit"/);
+  assert.match(server, /settings: \{ \.\.\.\(data\?\.settings \|\| \{\}\), temperature_unit: unit \}/);
+  const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
+  assert.match(chat, /'<button type="button" class="wx-temp" data-tip="Click for \\u00b0' \+ other \+ '"/, "the number says what clicking it does");
+  assert.match(chat, /fetch\('\/api\/here\/unit', \{ method: 'POST'/);
+  assert.match(chat, /if \(still\) swap\(\); else \{ num\.classList\.add\('out'\); setTimeout\(swap, 160\); \}/, "no roll for people who turn motion off");
+  const handlers = fs.readFileSync(require.resolve("../lib/tools/handlers.js"), "utf8");
+  assert.match(handlers, /const chosenUnit = \(ctx\.activeUserStore \|\| ctx\.store\)\?\.profile\?\.settings\?\.temperature_unit;/, "ClosedHand's weather answers use the same choice");
+  assert.match(handlers, /temperature: deg\(current\.temperature_2m\)/);
 });

@@ -2270,7 +2270,18 @@
   .here:disabled .here-needle { animation: hereSpin 1.1s linear infinite; }
   @keyframes hereSpin { to { transform: rotate(360deg); } }
   .here-wx { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(239,230,214,0.5); cursor: pointer; outline: none; }
-  .here-wx:hover, .here-wx:focus-visible { color: rgba(239,230,214,0.72); }
+  .here-wx { cursor: default; }
+  /* One quiet sentence at rest, in two parts that show themselves the same
+     way on hover, a little brighter with a faint underline: the temperature
+     (flip the unit) and the rest of the sentence (update where you are). */
+  .here-wx button { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
+    text-decoration: underline dotted transparent; text-underline-offset: 3px; transition: color 0.15s ease, text-decoration-color 0.15s ease; }
+  .here-wx button:hover, .here-wx button:focus-visible { color: rgba(239,230,214,0.85); text-decoration-color: rgba(239,230,214,0.4); outline: none; }
+  /* The temperature rolls over to the other unit when clicked. */
+  .wx-temp { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: 1.5; }
+  .wx-num { display: inline-block; transition: transform 0.22s cubic-bezier(.2,.8,.2,1), opacity 0.22s ease; }
+  .wx-num.out { transform: translateY(-100%); opacity: 0; }
+  .wx-num.in { transform: translateY(100%); opacity: 0; transition: none; }
   /* Their tip is the page's own (data-tip, drawn by the via-tooltip script):
      it shows at once on hover, unlike the browser's slow title box. */
   .here-wx svg { color: rgba(239,230,214,0.62); overflow: visible; }
@@ -2452,7 +2463,7 @@
     <div class="hero-recent-pop" id="heroRecentPop" hidden></div>
     <div class="hero-footer">
       <button class="here" id="hereBtn" type="button" hidden data-tip="Sets your local time from where you are, and shows the weather here" aria-label="Orientate: sets your local time from where you are, and shows the weather here"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="here-needle" d="M14.8 9.2 13 13l-3.8 1.8L11 11z"/></svg><span>Orientate</span></button>
-      <span class="here-wx" id="hereWx" role="button" tabindex="0" data-tip="Moved? Click to update your location." hidden></span>
+      <span class="here-wx" id="hereWx" hidden></span>
     </div>
 
     <div style="flex:1"></div>
@@ -2730,12 +2741,38 @@
     snow: function() { return '<path d="M7 14h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 6.5 3.8 3.8 0 0 0 7 14z"/><g class="wx-flakes"><circle cx="9" cy="18.5" r=".8"/><circle cx="13" cy="20" r=".8"/><circle cx="17" cy="18.5" r=".8"/></g>'; },
     storm: function() { return '<path d="M7 14h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 6.5 3.8 3.8 0 0 0 7 14z"/><path class="wx-bolt" d="M12.5 15 10.5 19h3l-2 3.5"/>'; }
   };
+  var last = null;
+  var unitName = { C: 'Celsius', F: 'Fahrenheit' };
+  function tempButton(w) {
+    var other = w.other ? w.other.unit : (w.unit === 'F' ? 'C' : 'F');
+    return '<button type="button" class="wx-temp" data-tip="Click for \u00b0' + other + '" aria-label="' + esc(w.temp) + ' degrees ' + (unitName[w.unit] || '') + '. Click for ' + unitName[other] + '.">' +
+      '<span class="wx-num">' + esc(w.temp) + '\u00b0' + esc(w.unit || 'C') + '</span></button>';
+  }
+  // The other unit is already here, so the number flips at once; the choice
+  // is saved for the weather line and ClosedHand's weather answers.
+  function flipUnit(t) {
+    var w = last && last.weather;
+    if (!w || !w.other) return;
+    var next = { temp: w.other.temp, unit: w.other.unit }, prev = { temp: w.temp, unit: w.unit };
+    w.temp = next.temp; w.unit = next.unit; w.other = prev;
+    var num = t.querySelector('.wx-num'), still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var swap = function () {
+      num.classList.remove('out'); num.classList.add('in');
+      num.textContent = next.temp + '\u00b0' + next.unit;
+      void num.offsetWidth; num.classList.remove('in');
+      t.dataset.tip = 'Click for \u00b0' + prev.unit;
+      t.setAttribute('aria-label', next.temp + ' degrees ' + unitName[next.unit] + '. Click for ' + unitName[prev.unit] + '.');
+      t.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    };
+    if (still) swap(); else { num.classList.add('out'); setTimeout(swap, 160); }
+    fetch('/api/here/unit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unit: next.unit }) }).catch(function() {});
+  }
   function render(d) {
     if (!d || !d.location || !d.weather) { btn.hidden = false; wx.hidden = true; return; }
     var w = d.weather, g = (glyphs[w.kind] || glyphs.cloud)(w.isDay);
     wx.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + g + '</svg>' +
-      '<span>' + esc(w.temp) + '\u00b0 and ' + esc(w.label) + ' in ' + esc(d.location.name) + '</span>';
-    wx.setAttribute('aria-label', w.temp + '\u00b0 and ' + w.label + ' in ' + d.location.name + '. Moved? Click to update your location.');
+      '<span>' + tempButton(w) + ' <button type="button" class="wx-place" data-tip="Moved? Click to update your location." aria-label="' + esc(w.label) + ' in ' + esc(d.location.name) + '. Moved? Click to update your location.">and ' + esc(w.label) + ' in ' + esc(d.location.name) + '</button></span>';
+    last = d;
     wx.hidden = false; btn.hidden = true;
   }
   function load() {
@@ -2759,8 +2796,14 @@
     }, function() { settle('No problem, you can tell me in chat'); }, { timeout: 15000, maximumAge: 600000 });
   });
   // Moved on? The weather line orientates again.
-  wx.addEventListener('click', function() { wx.hidden = true; btn.hidden = false; btn.click(); });
-  wx.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wx.click(); } });
+  // The temperature flips the unit; the rest of the sentence ("and clear in
+  // Porto") updates where you are.
+  wx.addEventListener('click', function(e) {
+    var t = e.target.closest('.wx-temp');
+    if (t) { flipUnit(t); return; }
+    if (!e.target.closest('.wx-place')) return;
+    wx.hidden = true; btn.hidden = false; btn.click();
+  });
   load();
   setInterval(function() { if (!wx.hidden && !document.hidden) load(); }, 15 * 60000);
 })();

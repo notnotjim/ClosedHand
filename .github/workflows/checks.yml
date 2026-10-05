@@ -81,6 +81,12 @@ jobs:
       - name: Wallet password check
         run: node --test scripts/test-wallet-confirm.js
 
+      - name: Nothing before the login gate is open by accident
+        run: node --test scripts/test-api-before-gate.js
+
+      - name: Settings change against what is saved, never a stale copy
+        run: node --test scripts/test-profile-settings.js
+
       - name: Agent dashboard visibility and counts
         run: node --test scripts/test-agent-dashboard.js
 

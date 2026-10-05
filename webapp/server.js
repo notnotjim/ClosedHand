@@ -623,6 +623,7 @@ function loosensLimits(before, after) {
 app.post("/api/wallet/confirm", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   try {
     // The same five tries and fifteen-minute lockout as signing in.
     const ip = clientIp(req);
@@ -688,6 +689,7 @@ function cleanLimits(l) {
 app.get("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   if (!mcpClient.isSelfHost()) return res.json({ available: false, reason: "self-host only" });
   if (!walletAvailable()) return res.json({ available: false, reason: "no encryption key", cards: [], limits: {}, ledger: [] });
   try {
@@ -709,6 +711,7 @@ app.get("/api/wallet", async (req, res) => {
 app.post("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a ClosedHand you run yourself." });
   if (!(await walletConfirmed(req))) return walletNeedsPassword(res);
   if (!walletAvailable()) return res.status(400).json({ error: "ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
@@ -751,6 +754,7 @@ app.post("/api/wallet", async (req, res) => {
 app.patch("/api/wallet/:id", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   try {
     const b = req.body || {};
     const patch = { updated_at: new Date().toISOString() };
@@ -777,6 +781,7 @@ app.patch("/api/wallet/:id", async (req, res) => {
 app.delete("/api/wallet/:id", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   try {
     const { error } = await supabase.from("wallet_cards").delete().eq("id", req.params.id).eq("user_id", userId);
     if (error) throw error;
@@ -791,6 +796,7 @@ app.delete("/api/wallet/:id", async (req, res) => {
 app.post("/api/settings/spend-limits", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   try {
     const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
     const settings = (profile && profile.settings) || {};
@@ -1183,6 +1189,7 @@ async function publicBase() {
 
 app.get("/api/chat-apps", async (req, res) => {
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   if (!mcpClient.isSelfHost()) return res.json({ apps: {} });
   const pub = await publicBase();
   const conf = (k) => process.env[k] || require("./config").getConfCached(k);
@@ -1204,6 +1211,7 @@ app.get("/api/chat-apps", async (req, res) => {
 app.post("/api/chat-apps/:app", async (req, res) => {
   if (["discord", "slack", "line"].includes(req.params.app)) return res.status(400).json({ error: "Coming soon." });
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
@@ -1224,6 +1232,7 @@ app.post("/api/chat-apps/:app", async (req, res) => {
 
 app.delete("/api/chat-apps/:app", async (req, res) => {
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
   if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
@@ -3170,12 +3179,21 @@ async function weatherHere(lat, lon) {
   if (!r.ok) throw new Error("weather " + r.status);
   const d = await r.json(), code = d.current?.weather_code;
   const [, label, kind] = WX.find(([codes]) => codes.includes(code)) || [null, "out", "cloud"];
-  // Fahrenheit where people read it, Celsius elsewhere.
+  // Fahrenheit where people read it, Celsius elsewhere, until they choose.
   const f = /^America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Indiana)|^Pacific\/Honolulu/.test(d.timezone || "");
-  const t = d.current?.temperature_2m;
-  const value = { temp: Math.round(f ? t * 9 / 5 + 32 : t), unit: f ? "F" : "C", label, kind, isDay: d.current?.is_day === 1, timezone: d.timezone || null };
+  const value = { tempC: d.current?.temperature_2m, defaultUnit: f ? "F" : "C", label, kind, isDay: d.current?.is_day === 1, timezone: d.timezone || null };
   _hereWeather.set(key, { at: Date.now(), value });
   return value;
+}
+// The temperature in the unit the person chose by clicking it (saved as
+// settings.temperature_unit), or the one where they are; with the other one
+// ready, so the flip is instant.
+function weatherInUnit(w, settings) {
+  if (!w || !Number.isFinite(w.tempC)) return w || null;
+  const chosen = settings && (settings.temperature_unit === "F" || settings.temperature_unit === "C") ? settings.temperature_unit : w.defaultUnit;
+  const c = Math.round(w.tempC), f = Math.round(w.tempC * 9 / 5 + 32);
+  const { tempC, defaultUnit, ...rest } = w;
+  return { ...rest, temp: chosen === "F" ? f : c, unit: chosen, other: chosen === "F" ? { temp: c, unit: "C" } : { temp: f, unit: "F" } };
 }
 const _validTz = (tz) => { try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; } };
 
@@ -3187,7 +3205,7 @@ app.get("/api/here", async (req, res) => {
     const loc = data?.settings?.location;
     if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return res.json({ location: null });
     const lat = Math.round(loc.latitude * 100) / 100, lon = Math.round(loc.longitude * 100) / 100;
-    res.json({ location: { name: loc.name || null }, weather: await weatherHere(lat, lon).catch(() => null) });
+    res.json({ location: { name: loc.name || null }, weather: weatherInUnit(await weatherHere(lat, lon).catch(() => null), data?.settings) });
   } catch (e) {
     res.status(500).json({ error: "Could not load where you are." });
   }
@@ -3214,9 +3232,26 @@ app.post("/api/here", async (req, res) => {
     const location = { name: name || "where you are", latitude: lat, longitude: lon, ...(timezone ? { timezone } : {}), updated: new Date().toISOString(), source: "browser" };
     const { error } = await supabase.from("profiles").update({ settings: { ...settings, location }, updated_at: new Date().toISOString() }).eq("id", userId);
     if (error) throw new Error(error.message);
-    res.json({ location: { name: location.name, timezone: timezone }, weather });
+    res.json({ location: { name: location.name, timezone: timezone }, weather: weatherInUnit(weather, settings) });
   } catch (e) {
     res.status(500).json({ error: "Could not save where you are." });
+  }
+});
+
+// Clicking the temperature flips it between Celsius and Fahrenheit, and the
+// choice is kept, for the weather line and for ClosedHand's weather answers.
+app.post("/api/here/unit", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const unit = req.body?.unit === "F" ? "F" : req.body?.unit === "C" ? "C" : null;
+  if (!unit) return res.status(400).json({ error: "Celsius or Fahrenheit?" });
+  try {
+    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const { error } = await supabase.from("profiles").update({ settings: { ...(data?.settings || {}), temperature_unit: unit }, updated_at: new Date().toISOString() }).eq("id", userId);
+    if (error) throw new Error(error.message);
+    res.json({ unit });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save that." });
   }
 });
 

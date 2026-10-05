@@ -25,6 +25,15 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
       saved = structuredClone(value.settings);
       return { error: null };
     } }) }) } },
+    // Settings change against the saved record (here, saved), never the copy.
+    "./profile-settings": { updateSettings: async (userId, change, { store } = {}) => {
+      const next = structuredClone(saved);
+      if (typeof change === "function") change(next); else Object.assign(next, change);
+      if (typeof saveFails === "function" ? saveFails(next) : saveFails) throw new Error("database unavailable");
+      saved = structuredClone(next);
+      if (store && store.profile) store.profile.settings = next;
+      return next;
+    } },
     "./flights": {}, "./flights-scheduler": {}, "./llm": {}, "./telegram-name": { showName: async () => {} },
     "./services/fact-vectors": { factVectors: () => ({ mirrorFact: async () => {} }) },
     "./engine": { queuedAsk: async (...args) => {

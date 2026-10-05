@@ -450,16 +450,13 @@ class UserStore {
       );
     }
 
-    if (this._dirty.has("location")) {
-      const currentSettings = this.profile?.settings || {};
+    // Only when the location actually changed in this turn, and only that
+    // key: writing the whole settings copy loaded at the start of the turn
+    // undid whatever the dashboard had changed meanwhile.
+    if (this._dirty.has("location") && JSON.stringify(this.location || null) !== JSON.stringify(this.profile?.settings?.location || null)) {
       promises.push(
-        supabase
-          .from("profiles")
-          .update({
-            settings: { ...currentSettings, location: this.location },
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", this.userId)
+        require("./lib/profile-settings").updateSettings(this.userId, { location: this.location }, { store: this })
+          .then(() => null, (error) => ({ error }))
       );
     }
 

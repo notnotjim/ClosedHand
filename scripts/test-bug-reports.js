@@ -49,10 +49,20 @@ function database() {
 function reporter(env = { DB_DRIVER: "pg" }) {
   const db = database(), calls = [], ctx = { store: { conversations: { alice: [{ role: "user", content: "private message" }] } }, activeUserStore: { profile: { settings: {}, created_at: "2026-01-01" } } };
   const network = { failures: 0 };
+  // Settings change against the saved profile row (here, the fake table's,
+  // else the store's own when the table has none).
+  const profileSettings = { updateSettings: async (userId, change, { store } = {}) => {
+    const row = db.tables.profiles.find((r) => r.id === userId);
+    const next = { ...((row && row.settings) || (store && store.profile && store.profile.settings) || {}) };
+    for (const [k, v] of Object.entries(change || {})) { if (v === null || v === undefined) delete next[k]; else next[k] = v; }
+    if (row) row.settings = next;
+    if (store && store.profile) store.profile.settings = next;
+    return next;
+  } };
   const mod = { exports: {} };
   const sandbox = { module: mod, process: { env }, console: { log() {}, error() {} }, Buffer, Date, AbortSignal,
     fetch: async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); if (network.failures-- > 0) throw new Error("network timeout"); return { ok: true, json: async () => ({ ok: true, id: "central", receipt: "receipt", status: "resolved", resolution_note: "Fixed and verified.", resolved_at: "2026-09-12T00:00:00Z" }) }; },
-    require: n => n === "./context" ? ctx : n === "../user-store" ? { supabase: db, UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto : n === "../package.json" ? { version: "test" } : (() => { throw Error(n); })(),
+    require: n => n === "./context" ? ctx : n === "../user-store" ? { supabase: db, UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8"), sandbox);
   return { api: mod.exports, db, ctx, calls, network };
