@@ -288,36 +288,6 @@
       color: #D0A652;
     }
 
-    /* The standing invitation at the end of the integrations row. It points
-       at the add box below, which is where every new connection starts. */
-    .dashboard-container .int-card.int-more {
-      padding: 14px 20px; /* two lines of text at the neighbours' height */
-      background: transparent;
-      border-style: dashed;
-      border-color: rgba(239,230,214,0.22);
-      color: #B6AFA4;
-    }
-    .int-card.int-more:hover {
-      border-color: rgba(208,86,63,0.55);
-      background: rgba(208,86,63,0.06);
-      color: #EFE6D6;
-    }
-    .int-card.int-more .int-more-plus {
-      /* Drawn, not typed: a "+" glyph sits low on its baseline and never
-         centres in the circle. */
-      width: 28px; height: 28px; flex: none;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 50%;
-      border: 1px solid rgba(239,230,214,0.22);
-      color: #D8624B;
-      transition: transform 0.2s, border-color 0.15s;
-    }
-    .int-card.int-more:hover .int-more-plus { transform: rotate(90deg); border-color: rgba(208,86,63,0.55); }
-    .int-card.int-more .int-more-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .int-card.int-more .int-name { color: inherit; }
-    .int-card.int-more .int-more-sub { font-size: 12px; color: #B6AFA4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .int-card.int-more .int-more-arrow { margin-left: auto; color: #D8624B; opacity: 0; transform: translateY(-4px); transition: opacity 0.2s, transform 0.2s; }
-    .int-card.int-more:hover .int-more-arrow { opacity: 1; transform: translateY(0); }
     /* Beckon: the add box answers the card. The border spins up, the logos
        wake, and the box takes focus. */
     .mcp-pill.beckon::before {
@@ -2139,18 +2109,15 @@
           <div id="platform-pending-detail"></div>
         </div>
 
-        <!-- Connected Services -->
+        <!-- Connected: everything live in one place, whether built in or
+             added by pasting a server, and the Mac once it is set up. -->
         <div class="section" id="connected-section" style="display:none;">
-          <h2>Integrations</h2>
+          <h2>Connected</h2>
           <div class="integrations-grid" id="connected-grid" data-delight-stagger>
             <!-- Bridge card injected here when paired -->
             <div id="bridge-connected-card" style="display:none;"></div>
           </div>
-        </div>
-
-        <!-- Apple Local Connection -->
-        <div class="section" id="apple-local-section" style="display:none;">
-          <div id="bridge-standalone-card"></div>
+          <div class="integrations-grid" id="mcp-list"></div>
         </div>
 
         <!-- Connect a Service - Hero Section -->
@@ -2208,26 +2175,26 @@
           }
           .mcp-connect-btn:hover { background: rgba(208,86,63,0.25); border-color: rgba(208,86,63,0.5); box-shadow: 0 0 20px rgba(208,86,63,0.15); }
         </style>
+        <!-- Add a connection: the apps ClosedHand has built in (only those not
+             yet connected), then anything at all, pasted as an MCP server. -->
         <div class="section" id="mcp-section">
-          <div id="mcp-list-header" style="display:none;margin-bottom:8px;">
-            <h2 style="font-size:14px;font-weight:600;color:#B6AFA4;letter-spacing:0.02em;">Your MCPs</h2>
+          <h2>Add a connection</h2>
+          <!-- The Mac card sits here until set up, then moves to Connected -->
+          <div id="apple-local-section" style="display:none;">
+            <div id="bridge-standalone-card"></div>
           </div>
-          <div id="mcp-list" style="margin-bottom:12px;"></div>
-          <details id="connection-catalogue" class="connection-catalogue">
-            <summary>Connect more</summary>
+          <div id="connection-catalogue" class="connection-catalogue">
             <div id="catalogue-browse">
-              <label for="catalogue-search" class="catalogue-search-label">Find an app</label>
-              <input id="catalogue-search" type="search" placeholder="Search apps and services" autocomplete="off">
+              <h3 class="add-sub" id="catalogue-apps-heading">Apps</h3>
               <p id="catalogue-status" role="status"></p>
               <button id="catalogue-retry" class="catalogue-action" type="button" hidden>Retry</button>
-              <div id="connection-catalogue-list"></div>
+              <div id="connection-catalogue-list" class="catalogue-tiles" aria-labelledby="catalogue-apps-heading"></div>
             </div>
             <div id="catalogue-setup" hidden></div>
           <div class="mcp-hero">
             <div class="mcp-copy">
-              <div class="mcp-title">Add an MCP server</div>
-              <p class="mcp-description">Paste a server or GitHub link, package link, command or JSON configuration. Add a key when prompted.</p>
-              <p class="mcp-security">Checked for security risks before activation.</p>
+              <h3 class="add-sub">Connect anything</h3>
+              <p class="mcp-description">Paste an MCP server</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
@@ -2237,6 +2204,9 @@
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
+
+            <!-- Every pasted server is scanned before it is switched on -->
+            <p class="mcp-scan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Connections are scanned for security risks</p>
 
             <div class="mcp-browse">
               <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
@@ -2267,7 +2237,7 @@
               </div>
             </div>
           </div>
-          </details>
+          </div>
         </div>
 
       </div>
@@ -3144,15 +3114,8 @@
         }
       }
 
-      // The row always ends with the way to add more, and the section always
-      // shows, so a new dashboard says where connections come from.
-      connectedGrid.insertAdjacentHTML('beforeend',
-        '<div class="int-card int-more" role="button" tabindex="0" onclick="beckonAddBox()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();beckonAddBox();}">' +
-          '<span class="int-more-plus" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>' +
-          '<span class="int-more-text"><span class="int-name">Connect more</span><span class="int-more-sub">Browse apps and add connections</span></span>' +
-          '<span class="int-more-arrow" aria-hidden="true">&#8595;</span>' +
-        '</div>');
-      connectedSection.style.display = '';
+      // "Add a connection" sits right below, so the row holds only what is live.
+      updateConnectedSection();
 
       // Cache platforms for tab-switch re-render
       window._platformsCache = data.platforms;
@@ -3672,19 +3635,28 @@
       }
     }
 
+    // "Connected" shows only when something is: a service, a pasted server
+    // or the Mac. An empty section said nothing; "Add a connection" below
+    // says where connections come from.
+    function updateConnectedSection() {
+      var section = document.getElementById('connected-section');
+      if (!section) return;
+      var any = !!section.querySelector('#connected-grid > .int-wrap, #mcp-list > .int-wrap, #apple-local-section:not([style*="display: none"])');
+      section.style.display = any ? '' : 'none';
+    }
+
     async function loadMcps() {
       try {
         var res = await fetch('/api/mcps');
         if (!res.ok) return;
         var mcps = await res.json();
         var list = document.getElementById('mcp-list');
-        var header = document.getElementById('mcp-list-header');
         if (!mcps.length) {
           list.innerHTML = '';
-          if (header) header.style.display = 'none';
+          updateConnectedSection();
+          if (window.refreshConnectionCatalogue) window.refreshConnectionCatalogue();
           return;
         }
-        if (header) header.style.display = '';
         list.innerHTML = mcps.map(function(m) {
           var tools = m.tools_discovered || [];
           var toolCount = tools.length;
@@ -3753,7 +3725,7 @@
           detailHtml += '</div>';
           detailHtml += '<div id="mcp-debug-' + m.id + '" style="display:none;margin-top:8px;"></div>';
 
-          return '<div class="int-wrap" style="margin-bottom:6px;">' +
+          return '<div class="int-wrap">' +
             '<div class="int-card ' + (m.status === 'connected' ? 'connected' : '') + '" onclick="toggleMcpUnfurl(this)" style="background:' + bgColor + ';border-color:' + borderColor + ';">' +
               logoHtml +
               '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#EFE6D6;font-weight:500;">' + escHtml(m.name) + '</div>' +
@@ -3764,6 +3736,8 @@
             '<div class="int-unfurl"><div class="int-unfurl-inner">' + detailHtml + '</div></div>' +
           '</div>';
         }).join('');
+        updateConnectedSection();
+        if (window.refreshConnectionCatalogue) window.refreshConnectionCatalogue();
       } catch (e) { console.error('Load MCPs error:', e); }
     }
 
@@ -4068,33 +4042,6 @@
         }
       });
 
-      // Filter the not-yet-connected services inside "N more available".
-      // While searching, the grid opens itself and the toggle steps aside, so
-      // a match is visible instead of hidden behind a collapsed row; clearing
-      // the search collapses it back.
-      var discGrid = document.getElementById('disconnected-grid');
-      var discLink = document.querySelector('#disconnected-unfurl a');
-      var anyDiscVisible = false;
-      if (discGrid) {
-        discGrid.querySelectorAll('.int-wrap, .int-card').forEach(function(el) {
-          var name = (el.querySelector('.int-name') || {}).textContent || '';
-          var show = !q || name.toLowerCase().includes(q);
-          el.style.display = show ? '' : 'none';
-          if (show && q) anyDiscVisible = true;
-        });
-        if (q) {
-          discGrid.style.display = anyDiscVisible ? 'grid' : 'none';
-          if (discLink) discLink.style.display = 'none';
-        } else {
-          discGrid.style.display = 'none';
-          if (discLink) {
-            discLink.style.display = 'inline-flex';
-            var ch = discLink.querySelector('span');
-            if (ch) ch.style.transform = '';
-          }
-        }
-      }
-
       // Filter MCP list items
       document.querySelectorAll('#mcp-list > div').forEach(function(el) {
         var text = el.textContent || '';
@@ -4115,21 +4062,12 @@
       // either side; when cleared, visible if it has anything at all.
       var connSection = document.getElementById('connected-section');
       if (connSection) {
-        var anyConnVisible = !!document.querySelector('#connected-grid > *:not([style*="display: none"])');
-        if (q) {
-          connSection.style.display = (anyConnVisible || anyDiscVisible) ? '' : 'none';
-        } else {
-          var hasAnything = anyConnVisible || (window._disconnectedServices || []).length > 0;
-          connSection.style.display = hasAnything ? '' : 'none';
-        }
+        if (q) connSection.style.display = document.querySelector('#connected-grid > .int-wrap:not([style*="display: none"]), #mcp-list > .int-wrap:not([style*="display: none"])') ? '' : 'none';
+        else updateConnectedSection();
       }
-      var mcpSection = document.getElementById('mcp-section');
-      if (mcpSection) {
-        var anyMcpVisible = !q || !!document.querySelector('#mcp-list > div:not([style*="display: none"])');
-        mcpSection.style.display = '';
-        if (q) window.openConnectionCatalogue(query);
-        else if (window.filterConnectionCatalogue) window.filterConnectionCatalogue('');
-      }
+      // The same search narrows the apps under "Add a connection"; the paste
+      // box below them stays, for anything not in the list.
+      if (window.filterConnectionCatalogue) window.filterConnectionCatalogue(query);
     }
 
     async function disconnectFromSettings(service, name, isSignin) {
@@ -7226,11 +7164,20 @@
                 'onmouseout="this.style.borderColor=\'rgba(208,86,63,0.2)\';this.style.boxShadow=\'0 0 8px rgba(208,86,63,0.04)\';this.style.transform=\'translateY(0)\'">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
                 '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect Calendar, Files, Terminal, Reminders, Contacts, Notes</div></div>' +
+                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect your Mac and choose what ClosedHand has access to</div></div>' +
                 '<span style="font-size: 14px;color:#D8624B;font-weight:500;">Set up &#8250;</span>' +
               '</div>';
           }
         }
+        // Set up, the Mac is a connection like any other; until then it is
+        // one more thing to add.
+        var macCard = document.getElementById('apple-local-section');
+        var live = !!(data.desktop || data.status === 'connected' || data.status === 'reconnecting');
+        if (macCard) {
+          if (live) document.getElementById('connected-section').appendChild(macCard);
+          else document.getElementById('mcp-section').insertBefore(macCard, document.getElementById('connection-catalogue'));
+        }
+        updateConnectedSection();
       } catch (e) {}
     }
 
