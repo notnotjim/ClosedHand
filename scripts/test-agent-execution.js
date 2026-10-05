@@ -74,6 +74,16 @@ for (const payload of [{ passed: true, criteria_results: [{ criterion: "Correct 
     assert.ok(request.messages[0].content.includes("20:00+07:00")); assert.ok(request.messages[0].content.includes("booking"));
   });
 }
+test("the check says whether a rewrite could help", async () => {
+    // Only skip the rewrite when both answers agree: every claim holds up, and
+    // what is left needs the person. Either one alone still rewrites.
+    for (const [claims_supported, needs_person, expected] of [[true, true, false], [false, true, true], [true, false, true], [undefined, true, true], ["true", "true", true]]) {
+      const payload = { passed: false, claims_supported, needs_person, criteria_results: [{ criterion: "Booking moved", met: false }] };
+      const v = verifier({ messages: { create: async () => ({ content: [{ type: "text", text: JSON.stringify(payload) }] }) } });
+      const result = await v.verifyCompletion("Move booking", ["Booking moved"], "No booking found in the connected account", [], "owner");
+      assert.equal(result.passed, false); assert.equal(result.retry, expected);
+    }
+  });
 test("a failed checker stays unavailable", async () => {
   const v = verifier({ messages: { create: async () => { throw Error("offline"); } } });
   const result = await v.verifyCompletion("Goal", ["Outcome"], "Answer", [], "owner");
@@ -214,7 +224,9 @@ test("a background job that failed with nothing to show says what and why, and h
 
 test("a background job gets a short name, and until then its first sentence cut at a word", () => {
   const verification = fs.readFileSync(path.join(__dirname, "..", "lib", "verification.js"), "utf8");
-  assert.match(verification, /The title names the result as a document would be named, 3 to 7 words/);
+  assert.match(verification, /The title is 3 to 7 words/);
+  // A job's name must not read as done while it runs, or after it fails.
+  assert.match(verification, /For doing something, name the job, never its outcome/);
   const agents = fs.readFileSync(path.join(__dirname, "..", "lib", "agents.js"), "utf8");
   assert.match(agents, /\.\.\.\(prepared\.title \? \{ title: prepared\.title \} : \{\}\)/);
   const start = agents.indexOf("  // Until preparation names it");

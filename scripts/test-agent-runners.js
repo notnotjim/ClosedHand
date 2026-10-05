@@ -107,6 +107,23 @@ for(const verdict of [{passed:false,status:"failed",feedback:"Source missing"},{
   const h=harness({tables:{agent_tasks:[row()]},verdict});await h.load("agents").processPendingTasks();await until(()=>h.db.tables.agent_tasks[0].status==="partial");
   assert.equal(h.calls.length,verdict.status==="failed"?2:1);assert.ok(h.db.tables.agent_tasks[0].result.includes("20:00"));
 });
+// A rewrite cannot make a missing booking appear. When the check says so,
+// the honest answer goes out once, marked unfinished, with no note left over.
+test("one-off sends an honest blocked answer without a rewrite",async()=>{
+  const h=harness({tables:{agent_tasks:[row()]},verdict:{passed:false,retry:false,status:"failed",feedback:"Nothing to change"}});
+  await h.load("agents").processPendingTasks();await until(()=>h.db.tables.agent_tasks[0].status==="partial");
+  assert.equal(h.calls.length,1);assert.ok(!JSON.stringify(h.db.tables.agent_tasks[0].messages).includes("VERIFICATION"));
+});
+test("a failed check rewrites once and leaves no unanswered note",async()=>{
+  const h=harness({tables:{agent_tasks:[row()]},verdict:{passed:false,status:"failed",feedback:"Source missing"}});
+  await h.load("agents").processPendingTasks();await until(()=>h.db.tables.agent_tasks[0].status==="partial");
+  const msgs=h.db.tables.agent_tasks[0].messages;assert.equal(msgs[msgs.length-1].role,"assistant");
+});
+test("automation sends an honest blocked answer without a rewrite",async()=>{
+  const auto=row({status:"pending",lease_until:"2000-01-01T00:00:00Z",runtime:{config:{task_prompt:"Read departure",task_max_duration:900}},started_at:new Date().toISOString()});
+  const h=harness({tables:{automation_runs:[auto]},verdict:{passed:false,retry:false,status:"failed",feedback:"Nothing to change"}});
+  await h.load("automations").processPendingAutomationRuns();await until(()=>h.db.tables.automation_runs[0].status==="partial");assert.equal(h.calls.length,1);
+});
 test("saved successful file receipt prevents a duplicate send after restart",async()=>{
   const prior=[{role:"assistant",content:[{type:"tool_use",id:"first",name:"sandbox_file_download",input:{path:"report.pdf"}}]},{role:"user",content:[{type:"tool_result",tool_use_id:"first",content:'{"success":true}'}]}];
   const h=harness({tables:{agent_tasks:[row({status:"running",messages:prior})]},model:async(p,n)=>n===1?{stop_reason:"tool_use",content:[{type:"tool_use",id:"again",name:"sandbox_file_download",input:{path:"report.pdf"}}]}:{stop_reason:"end_turn",content:[{type:"text",text:"The report was delivered."}]}});
