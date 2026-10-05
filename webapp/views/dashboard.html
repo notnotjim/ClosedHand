@@ -6152,16 +6152,17 @@
         var agents = await res.json();
         _archivedRunCount = await archivedCount('/api/agents?archived=1&count=1');
         document.getElementById('auto-active-error').hidden = true;
-        // The list holds this week's runs; the server folds older finished
-        // ones into Archived, which loads only when it is opened.
+        // The runs ClosedHand started from a chat, one list: running and
+        // waiting ones first, each card saying which it is. The server keeps a
+        // week and folds older finished ones into Archived, which loads only
+        // when it is opened.
         var live = agents.filter(function(a) { return a.status === 'running' || a.status === 'pending'; });
         var waiting = agents.filter(function(a) { return a.status === 'awaiting_confirmation'; });
         var finished = agents.filter(function(a) { return live.indexOf(a) === -1 && waiting.indexOf(a) === -1; });
-        var group = function(label, runs) {
-          return runs.length ? '<div class="mc-section-label">' + label + '</div>' + runs.map(renderAgentCard).join('') : '';
-        };
+        var recent = live.concat(waiting, finished);
         activeLabel.style.display = 'none';
-        var html = group('Running now', live) + group('Waiting for your answer', waiting) + group('This week', finished) +
+        var html = (recent.length || _archivedRunCount ? '<div class="mc-section-label">From your chats</div>' : '') +
+          recent.map(renderAgentCard).join('') +
           archiveRow('toggleArchivedRuns()', _archivedRunCount, !!_archivedRuns) +
           (_archivedRuns ? _archivedRuns.map(renderAgentCard).join('') : '');
         if (activeList.innerHTML !== html) activeList.innerHTML = html;

@@ -41,7 +41,9 @@ test("a week of runs on the list, older ones archived and loaded on request", ()
   assert.match(server, /const ARCHIVE_AFTER_MS = 7 \* 24 \* 60 \* 60 \* 1000;/);
   assert.match(server, /req\.query\.archived === "1"\n\s*\? \[runs\(\)\.in\("status", DONE_RUN_STATUSES\)\.lt\("created_at", cutoff\)\]\n\s*: \[runs\(\)\.in\("status", LIVE_RUN_STATUSES\), runs\(\)\.in\("status", DONE_RUN_STATUSES\)\.gte\("created_at", cutoff\)\]/);
   assert.doesNotMatch(dashboard, /6 \* 3600 \* 1000/, "finished runs no longer vanish after six hours");
-  assert.match(dashboard, /group\('Running now', live\) \+ group\('Waiting for your answer', waiting\) \+ group\('This week', finished\)/);
+  assert.match(dashboard, /var recent = live\.concat\(waiting, finished\);/, "running and waiting first, in one list");
+  assert.match(dashboard, /\(recent\.length \|\| _archivedRunCount \? '<div class="mc-section-label">From your chats<\/div>' : ''\)/, "named for where the runs came from, and shown above Archived even when the week is empty");
+  assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
   assert.match(dashboard, /fetch\('\/api\/agents\?archived=1'\)/);
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "the Archived row shows only when something is archived");
   assert.match(dashboard, /'Archived <span class="count">\\u00b7 ' \+ count \+ '<\/span><span class="chevron-down"><\/span><\/button>'/, "a heading row like the list's own, with its count");
