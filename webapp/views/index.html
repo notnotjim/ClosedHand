@@ -471,32 +471,6 @@
     stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
   }
 
-  /* Plus dropdown menu */
-  .plus-dropdown-wrap { position: relative; z-index: 200; }
-  .plus-dropdown {
-    display: none; position: absolute; bottom: calc(100% + 8px); left: 0;
-    min-width: 240px; background: rgba(26,24,23,0.97);
-    border: 1px solid rgba(239,230,214,0.15); border-radius: 14px;
-    backdrop-filter: blur(24px); padding: 6px; z-index: 200;
-    box-shadow: 0 8px 32px rgba(26,24,23,0.5);
-    animation: dropIn 0.15s ease;
-  }
-  .plus-dropdown.open { display: block; }
-  @keyframes dropIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .plus-dropdown-item {
-    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-    border-radius: 10px; color: #B6AFA4; font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 14px; cursor: pointer; transition: all 0.15s; text-decoration: none;
-    border: none; background: none; width: 100%;
-  }
-  .plus-dropdown-item:hover { background: rgba(239,230,214,0.08); color: #EFE6D6; }
-  .plus-dropdown-item svg {
-    width: 16px; height: 16px; stroke: currentColor; fill: none;
-    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
-  }
 
   .send-btn {
     display: flex;
@@ -568,68 +542,13 @@
   }
   .suggestion-btn:hover { color: #B6AFA4; border-left-color: rgba(208,86,63,0.5); }
 
-  /* Chat using wrap: toggle morphs into icons */
-  .chat-using-wrap {
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-  }
+  /* The linked chat apps, shown as they are, beside the mic. */
+  .send-via { display: flex; align-items: center; gap: 6px; }
+  /* The same tile as the paperclip and mic beside them. */
+  .send-via .via-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(239,230,214,0.08); border: 1px solid rgba(239,230,214,0.1); box-sizing: border-box; }
+  .send-via .via-icon:hover { background: rgba(239,230,214,0.12); }
+  .send-via .via-icon img { width: 18px; height: 18px; }
 
-  /* Toggle button */
-  .chat-app-toggle {
-    max-width: 200px;
-    opacity: 1;
-    transition: max-width 0.35s ease, opacity 0.2s ease, padding 0.35s ease;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-  .chat-app-toggle.hiding {
-    max-width: 0;
-    opacity: 0;
-    padding-left: 0;
-    padding-right: 0;
-    border-width: 0;
-  }
-
-  /* Icons row */
-  .send-via {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-width 0.35s ease, opacity 0.25s ease 0.1s;
-  }
-  .send-via.open {
-    max-width: 250px;
-    opacity: 1;
-  }
-
-  /* In chat mode: always show icons, hide toggle */
-  .docked-input .send-via { max-width: 250px; opacity: 1; }
-  .docked-input .chat-app-toggle { max-width: 0; opacity: 0; padding: 0; border-width: 0; overflow: hidden; }
-
-  .send-via-close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background: none;
-    border: 1px solid rgba(239,230,214,0.1);
-    color: rgba(239,230,214,0.5);
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  .send-via-close:hover {
-    background: rgba(239,230,214,0.08);
-    color: #B6AFA4;
-  }
-  .docked-input .send-via-close { display: none; }
   .send-via a {
     display: flex;
     align-items: center;
@@ -684,37 +603,6 @@
   }
   .send-via a:hover img { opacity: 0.9; }
 
-  /* Chat app toggle button - matches send button sizing */
-  .chat-app-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 11px 20px;
-    border-radius: 12px;
-    background: rgba(239,230,214,0.08);
-    border: 1px solid rgba(239,230,214,0.12);
-    color: rgba(239,230,214,0.5);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 400;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .chat-app-toggle:hover {
-    background: rgba(239,230,214,0.12);
-    color: #B6AFA4;
-    border-color: rgba(239,230,214,0.18);
-  }
-  .chat-app-toggle svg {
-    width: 13px; height: 13px;
-    fill: none; stroke: currentColor;
-    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-    transition: transform 0.2s;
-  }
-  .chat-app-toggle.expanded svg { transform: rotate(180deg); }
-  /* Hide toggle in chat mode (icons are always visible there) */
-  .docked-input .chat-app-toggle { display: none; }
 
   /* Bridge download prompt */
 
@@ -2391,45 +2279,20 @@
         </div>
         <div class="input-toolbar">
           <div class="toolbar-left">
-            <div class="plus-dropdown-wrap">
-              <button class="toolbar-btn" id="plusBtn" title="More options">
-                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              </button>
-              <div class="plus-dropdown" id="plusDropdown">
-                <button class="plus-dropdown-item" id="attachBtn">
-                  <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-                  Attach files or images
-                </button>
-                <a class="plus-dropdown-item" href="/dashboard#connections" onclick="event.preventDefault();document.getElementById('plusDropdown').classList.remove('open');openDashSlide('#connect');">
-                  <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                  Connect a service
-                </a>
-                <a class="plus-dropdown-item" href="/dashboard#skills" onclick="event.preventDefault();document.getElementById('plusDropdown').classList.remove('open');openDashSlide('#skills');">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                  Install a skill
-                </a>
-                <a class="plus-dropdown-item" href="/dashboard#bridge" onclick="event.preventDefault();document.getElementById('plusDropdown').classList.remove('open');openDashSlide('#bridge');">
-                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                  Mac access
-                </a>
-              </div>
-            </div>
+            <!-- Attach is the one thing here about the message itself; setting
+                 up connections, skills and the Mac lives on the dashboard. -->
+            <button class="toolbar-btn" id="attachBtn" type="button" title="Attach files or images" aria-label="Attach files or images">
+              <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
           </div>
           <div class="toolbar-right">
-            <div class="chat-using-wrap" id="chatUsingWrap">
-              <button class="chat-app-toggle" id="chatAppToggle" type="button">
-                Chat using
-                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <div class="send-via" id="sendVia">
-                <a href="/setup#step-chat" class="via-icon" data-label="WhatsApp" id="viaWhatsApp"><img src="/logos/whatsapp.svg" alt="WhatsApp"></a>
-                <a href="/setup#step-chat" class="via-icon" data-label="Telegram" id="viaTelegram"><img src="/logos/telegram.svg" alt="Telegram"></a>
-                <a href="/auth/slack" class="via-icon" data-label="Slack" id="viaSlack" hidden><img src="/logos/slack.svg" alt="Slack"></a>
-                <a href="/auth/line" class="via-icon" data-label="LINE" id="viaLine" hidden><img src="/logos/line.svg" alt="LINE"></a>
-                <button class="send-via-close" id="sendViaClose" type="button" title="Close">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
+            <!-- The chat apps you have linked, to carry on there. Only linked ones
+                 show; setting one up is on the dashboard. -->
+            <div class="send-via" id="sendVia">
+              <a class="via-icon" data-label="Continue on WhatsApp" id="viaWhatsApp" hidden><img src="/logos/whatsapp.svg" alt="WhatsApp"></a>
+              <a class="via-icon" data-label="Continue on Telegram" id="viaTelegram" hidden><img src="/logos/telegram.svg" alt="Telegram"></a>
+              <a href="/auth/slack" class="via-icon" data-label="Continue on Slack" id="viaSlack" hidden><img src="/logos/slack.svg" alt="Slack"></a>
+              <a href="/auth/line" class="via-icon" data-label="Continue on LINE" id="viaLine" hidden><img src="/logos/line.svg" alt="LINE"></a>
             </div>
             <!-- RAG toggle removed: document search is always-on via unified recall -->
             <button class="toolbar-btn" id="micBtn" title="Voice input">
@@ -3542,17 +3405,7 @@
     });
   }
 
-  // Plus dropdown
-  var plusBtn = document.getElementById('plusBtn');
-  var plusDropdown = document.getElementById('plusDropdown');
-  plusBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    plusDropdown.classList.toggle('open');
-  });
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.plus-dropdown-wrap')) plusDropdown.classList.remove('open');
-  });
-  attachBtn.addEventListener('click', function() { plusDropdown.classList.remove('open'); fileInput.click(); });
+  attachBtn.addEventListener('click', function() { fileInput.click(); });
 
   // Back to home arrow
   var backToHome = document.getElementById('backToHome');
@@ -3640,22 +3493,6 @@
     });
   }
 
-  // Chat app toggle: smooth morph between button and icons
-  var chatAppToggle = document.getElementById('chatAppToggle');
-  var sendViaEl = document.getElementById('sendVia');
-  var sendViaClose = document.getElementById('sendViaClose');
-  if (chatAppToggle) {
-    chatAppToggle.addEventListener('click', function() {
-      chatAppToggle.classList.add('hiding');
-      setTimeout(function() { sendViaEl.classList.add('open'); }, 150);
-    });
-  }
-  if (sendViaClose) {
-    sendViaClose.addEventListener('click', function() {
-      sendViaEl.classList.remove('open');
-      setTimeout(function() { chatAppToggle.classList.remove('hiding'); }, 150);
-    });
-  }
 
   var pendingFiles = [];
 
@@ -7892,7 +7729,7 @@ function escapeHtml(s) {
 <script>
 // Self-host: the chat icons open YOUR chats. WhatsApp is your own number as a
 // linked device, Telegram is the bot you made; Slack and LINE only appear when
-// their credentials are in .env. Anything not set up yet leads to the setup page.
+// their credentials are in .env. One not set up yet does not appear.
 (function () {
   fetch("/api/setup/status", { headers: { Accept: "application/json" } })
     .then(function (r) { return r.ok ? r.json() : null; })
@@ -7900,8 +7737,8 @@ function escapeHtml(s) {
       if (!st) return;
       var wa = document.getElementById("viaWhatsApp"), tg = document.getElementById("viaTelegram");
       var sl = document.getElementById("viaSlack"), ln = document.getElementById("viaLine");
-      if (wa && st.waLinked && st.waLinked.linked && st.waLinked.number) { wa.href = "https://wa.me/" + st.waLinked.number; wa.target = "_blank"; }
-      if (tg && st.botUsername) { tg.href = "https://t.me/" + st.botUsername; tg.target = "_blank"; }
+      if (wa && st.waLinked && st.waLinked.linked && st.waLinked.number) { wa.href = "https://wa.me/" + st.waLinked.number; wa.target = "_blank"; wa.rel = "noopener"; wa.hidden = false; }
+      if (tg && st.botUsername) { tg.href = "https://t.me/" + st.botUsername; tg.target = "_blank"; tg.rel = "noopener"; tg.hidden = false; }
       if (sl && st.extraChat && st.extraChat.slack) sl.hidden = false;
       if (ln && st.extraChat && st.extraChat.line) ln.hidden = false;
     })

@@ -87,6 +87,9 @@ jobs:
       - name: Settings change against what is saved, never a stale copy
         run: node --test scripts/test-profile-settings.js
 
+      - name: The chat box
+        run: node --test scripts/test-chat-box.js
+
       - name: Agent dashboard visibility and counts
         run: node --test scripts/test-agent-dashboard.js
 
