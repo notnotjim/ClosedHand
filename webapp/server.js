@@ -731,30 +731,6 @@ app.delete("/api/wallet/:id", async (req, res) => {
 
 // The general spending rules, kept on the profile so the bot reads them with
 // everything else it knows about the person.
-// Places ClosedHand may send data to without asking, built up by "always"
-// answers in chat and edited here.
-app.get("/api/settings/allowed-hosts", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-  res.json({ hosts: (profile && profile.settings && profile.settings.allowed_hosts) || [] });
-});
-app.post("/api/settings/allowed-hosts", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-  try {
-    const hosts = Array.isArray(req.body && req.body.hosts) ? req.body.hosts.map((h) => String(h).toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "")).filter((h) => /^[a-z0-9.-]+$/.test(h)) : [];
-    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-    const settings = (profile && profile.settings) || {};
-    settings.allowed_hosts = [...new Set(hosts)];
-    const { error } = await supabase.from("profiles").update({ settings }).eq("id", userId);
-    if (error) throw error;
-    res.json({ success: true, hosts: settings.allowed_hosts });
-  } catch (e) {
-    res.status(500).json({ error: "Could not save" });
-  }
-});
-
 app.post("/api/settings/spend-limits", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -5975,7 +5951,7 @@ app.get("/api/rules", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
     const { data, error } = await supabase.from("user_rules")
-      .select("id, rule, active, source, created_at")
+      .select("id, rule, active, source, kind, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
     if (error) throw error;
@@ -6005,9 +5981,12 @@ app.post("/api/rules", async (req, res) => {
   try {
     const { rule } = req.body;
     if (!rule) return res.status(400).json({ error: "rule is required" });
-    const { data } = await supabase.from("user_rules")
-      .insert({ user_id: userId, rule, source: "user" })
-      .select("id, rule, active, source, created_at").single();
+    // A goal (what they are working towards) or a preference (how to act).
+    const kind = req.body.kind === "goal" ? "goal" : "preference";
+    const { data, error } = await supabase.from("user_rules")
+      .insert({ user_id: userId, rule, source: "user", kind })
+      .select("id, rule, active, source, kind, created_at").single();
+    if (error) throw new Error("Could not save that. Try again.");
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });

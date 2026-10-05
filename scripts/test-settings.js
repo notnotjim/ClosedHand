@@ -20,7 +20,7 @@ function notifications() {
   const state = vm.createContext({
     window: {}, console: { error() {} }, PLATFORM_LOGOS: {},
     document: { getElementById: id => id === "platform-pills" ? container : null },
-    renderPulseLevel() {}, renderQuietHours() {}, loadAllowedHosts() {}, showToast() {},
+    renderPulseLevel() {}, renderQuietHours() {}, showToast() {},
     escHtml: s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]),
   });
   vm.runInContext('let pulseState = {deliveryPlatforms: []}; let _pulseLoaded=false; let _pulseError=false; let _platformsLoadError=false; let _pulseSaving=false;\n' +

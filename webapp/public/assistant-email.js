@@ -32,7 +32,7 @@
       return;
     }
     heading.append(document.createTextNode(' '), el('span', 'Beta', 'badge badge-soon'));
-    const allowance = el('details'); allowance.append(el('summary', 'Beta allowance'));
+    const allowance = el('details'); allowance.append(el('summary', 'Allowance'));
     const table = el('table', '', 'assistant-email-usage');
     const labels = el('tr');
     for (const label of ['', 'Sent', 'Received']) { const cell = el('th', label); cell.scope = 'col'; labels.append(cell); }

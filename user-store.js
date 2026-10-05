@@ -103,7 +103,7 @@ class UserStore {
           .single(),
         supabase
           .from("user_rules")
-          .select("id, rule, source")
+          .select("id, rule, source, kind")
           .eq("user_id", userId)
           .eq("active", true),
         supabase
@@ -340,7 +340,7 @@ class UserStore {
 
     // User rules (persistent preferences)
     if (rulesRes.data) {
-      store.userRules = rulesRes.data.filter(r => r.active).map(r => ({ id: r.id, rule: r.rule, source: r.source || 'user' }));
+      store.userRules = rulesRes.data.filter(r => r.active).map(r => ({ id: r.id, rule: r.rule, source: r.source || 'user', kind: r.kind || 'preference' }));
     }
 
     // RAG document count
