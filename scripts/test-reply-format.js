@@ -124,7 +124,7 @@ test("the conversation uses the app's scale, set once, larger on touch screens",
   assert.doesNotMatch(page, /div\.style\.fontSize = '16px'/, "no inline sizes overriding the scale");
   assert.match(page, /\.message \{\n\s*max-width: 85%;\n\s*padding: var\(--chat-pad\);\n\s*border-radius: 18px;\n\s*font-size: var\(--chat-text\);/);
   assert.match(page, /\.docked-input \.input-textarea-wrap textarea \{\n\s*font-size: var\(--chat-text\);/);
-  assert.match(page, /\.docked-input \.input-box-wrap:focus-within \{ transform: none; \}/, "the chat input does not zoom on focus");
+  assert.match(page, /\.docked-input \.input-box-wrap:focus-within, \.docked-input \.input-box-wrap\.composing \{ transform: none; \}/, "the chat input does not zoom on focus");
   assert.match(page, /\.docked-input \.toolbar-btn \{ width: var\(--chat-control\); height: var\(--chat-control\);/);
   assert.match(page, /docked-input textarea \{[^}]*font-size: 16px !important/, "phones keep 16px in the input so the page does not zoom");
 });

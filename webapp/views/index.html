@@ -356,7 +356,9 @@
     animation: heroIn 0.8s ease forwards 0.9s;
   }
 
-  .input-box-wrap:focus-within {
+  /* Open while composing: focused, or holding text or a file, or choosing a
+     file (the picker takes focus from the page). .composing is set in JS. */
+  .input-box-wrap:focus-within, .input-box-wrap.composing {
     max-width: 900px;
     transform: scale(1.03);
     border-color: rgba(208,86,63,0.4);
@@ -384,7 +386,7 @@
     overflow: visible;
     transition: background 0.6s;
   }
-  .input-box-wrap:focus-within .input-box {
+  .input-box-wrap:focus-within .input-box, .input-box-wrap.composing .input-box {
     background: rgba(26,24,23,0.85);
   }
 
@@ -418,19 +420,19 @@
   }
   .docked-input .input-textarea-wrap { padding: var(--chat-input-pad); }
   /* The home page's hero box grows 3% when focused; the chat's input stays put. */
-  .docked-input .input-box-wrap:focus-within { transform: none; }
+  .docked-input .input-box-wrap:focus-within, .docked-input .input-box-wrap.composing { transform: none; }
   .docked-input .input-textarea-wrap textarea {
     font-size: var(--chat-text);
     font-weight: 400;
     min-height: var(--chat-input-min);
   }
-  .docked-input:focus-within .input-box-wrap .input-textarea-wrap textarea {
+  .docked-input:focus-within .input-box-wrap .input-textarea-wrap textarea, .docked-input .input-box-wrap.composing .input-textarea-wrap textarea {
     min-height: var(--chat-input-focus);
   }
   .docked-input .input-toolbar { padding: 8px 14px 12px; }
   .docked-input .toolbar-btn { width: var(--chat-control); height: var(--chat-control); border-radius: 10px; }
   .docked-input .send-btn { font-size: var(--chat-text-sm); padding: 8px 18px; border-radius: 10px; }
-  .input-box-wrap:focus-within .input-textarea-wrap textarea {
+  .input-box-wrap:focus-within .input-textarea-wrap textarea, .input-box-wrap.composing .input-textarea-wrap textarea {
     min-height: 120px;
   }
   .input-textarea-wrap textarea::placeholder {
@@ -642,7 +644,7 @@
       transform-origin: 50% 0;
       transition: color 0.15s, border-color 0.6s ease, background 0.15s, transform 0.5s cubic-bezier(0.16,1,0.3,1);
     }
-    .input-box-wrap:focus-within + .hero-recent-tab { border-color: rgba(208,86,63,0.4); transform: translateY(3px) scale(1.03); }
+    .input-box-wrap:focus-within + .hero-recent-tab, .input-box-wrap.composing + .hero-recent-tab { border-color: rgba(208,86,63,0.4); transform: translateY(3px) scale(1.03); }
     .hero-recent-tab:hover, .hero-recent-tab[aria-expanded="true"] { color: #EFE6D6; background: #1A1817; }
     .hero-recent-tab .chev { opacity: 0.7; }
     .hero-recent-tab .chev { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -686,7 +688,11 @@
   body.chat-active .hero-recent-float, body.chat-active .hero-recent-pop { display: none !important; }
   .hero-recent-row.hero-recent-more .title { color: #B6AFA4; }
   .hero-recent-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(239,230,214,0.42); margin: 0 0 4px 6px; }
-  .hero-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(239,230,214,0.07); text-decoration: none; }
+  .hero-recent-row { display: flex; align-items: center; gap: 12px; padding: 10px; border-top: 1px solid rgba(239,230,214,0.07); border-radius: 10px; text-decoration: none; transition: background 0.15s; }
+  .hero-recent-row:hover { background: rgba(239,230,214,0.04); }
+  .hero-recent-row:hover + .hero-recent-row { border-top-color: transparent; }
+  .hero-recent-row .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .hero-recent-row .text .title { flex: none; }
   .hero-recent-row:first-child { border-top: 0; }
   .hero-recent-row .title { flex: 1; min-width: 0; font-size: 14px; color: #EFE6D6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hero-recent-row .meta { font-size: 12px; color: #B6AFA4; white-space: nowrap; }
@@ -1198,8 +1204,8 @@
     .hero-recent-tab { padding: 5px 12px 6px; font-size: 11px; }
     /* Full-width on a phone: a box scaled up on focus pokes past the screen
        edges and Safari pans to it. Brighten, do not grow. */
-    .input-box-wrap:focus-within { transform: none; }
-    .input-box-wrap:focus-within + .hero-recent-tab { transform: none; }
+    .input-box-wrap:focus-within, .input-box-wrap.composing { transform: none; }
+    .input-box-wrap:focus-within + .hero-recent-tab, .input-box-wrap.composing + .hero-recent-tab { transform: none; }
     .hero-recent-row { padding: 9px 4px; }
     .hero-recent-row .title { font-size: 13px; }
     .hero-recent-row .meta { font-size: 11px; }
@@ -3281,7 +3287,7 @@
 
   input.addEventListener('focus', function() {
     userFocused = true;
-    input.setAttribute('placeholder', 'Ask anything or drop any type of file...');
+    input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file...');
   });
   input.addEventListener('blur', function() {
     if (!input.value.trim() && !window._chatModeActive) userFocused = false;
@@ -3289,7 +3295,7 @@
 
   function step() {
     if (window._chatModeActive || userFocused || input.value.trim() || document.getElementById('file-preview-area')) {
-      input.setAttribute('placeholder', 'Ask anything or drop any type of file...');
+      input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file...');
       setTimeout(step, 200);
       return;
     }
@@ -3361,9 +3367,10 @@
   input.addEventListener('input', function() {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 160) + 'px';
-    var hasText = input.value.trim().length > 0;
+    var hasText = input.value.trim().length > 0 || pendingFiles.length > 0;
     sendBtn.disabled = !hasText;
     sendBtn.classList.toggle('active', hasText);
+    updateComposing();
   });
 
   // Reset textarea height on blur so it collapses back to compact size
@@ -3405,7 +3412,26 @@
     });
   }
 
-  attachBtn.addEventListener('click', function() { fileInput.click(); });
+  // Pressing the paperclip leaves focus where it is, so the box does not
+  // grow under the pointer. While the picker is open the page has no focus;
+  // a box that was open stays open, and one that was closed stays closed
+  // unless a file comes back, which opens it with the cursor in place.
+  attachBtn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+  attachBtn.addEventListener('click', function() {
+    var wrap = input.closest('.input-box-wrap');
+    picking = !!wrap && (wrap.matches(':focus-within') || wrap.classList.contains('composing'));
+    updateComposing();
+    window.addEventListener('focus', function back() {
+      window.removeEventListener('focus', back);
+      setTimeout(function() {
+        var wasOpen = picking;
+        picking = false;
+        if (wasOpen) input.focus();
+        updateComposing();
+      }, 0);
+    });
+    fileInput.click();
+  });
 
   // Back to home arrow
   var backToHome = document.getElementById('backToHome');
@@ -3495,6 +3521,23 @@
 
 
   var pendingFiles = [];
+  var picking = false;
+
+  // The placeholder says what fits what is in the box.
+  function composerPlaceholder() {
+    return pendingFiles.length > 1 ? 'Ask about these files, or just send'
+      : pendingFiles.length === 1 ? 'Ask about this file, or just send'
+      : 'Ask anything or drop any type of file...';
+  }
+  window.composerPlaceholder = composerPlaceholder;
+
+  // Open while composing: text or a file in the box, or a file being chosen
+  // from a box that was already open. Focus alone gave the box away whenever
+  // the file picker took the page's focus.
+  function updateComposing() {
+    var wrap = input.closest('.input-box-wrap');
+    if (wrap) wrap.classList.toggle('composing', picking || !!input.value.trim() || pendingFiles.length > 0);
+  }
 
   function handleFiles(files) {
     for (var i = 0; i < files.length; i++) {
@@ -3520,7 +3563,7 @@
       if (!previewArea) {
         previewArea = document.createElement('div');
         previewArea.id = 'file-preview-area';
-        previewArea.style.cssText = 'display:flex;gap:8px;padding:8px 16px 0;flex-wrap:wrap;';
+        previewArea.style.cssText = 'display:flex;gap:8px;padding:0;margin:0 0 14px;flex-wrap:wrap;';
         var textareaWrap = input.closest('.input-textarea-wrap');
         if (textareaWrap) textareaWrap.insertBefore(previewArea, input);
       }
@@ -3551,11 +3594,15 @@
         if (idx >= 0) pendingFiles.splice(idx, 1);
         chip.remove();
         if (previewArea && previewArea.children.length === 0) previewArea.remove();
+        input.setAttribute('placeholder', composerPlaceholder());
+        input.dispatchEvent(new Event('input'));
       };
       chip.appendChild(removeBtn);
       previewArea.appendChild(chip);
 
+      input.setAttribute('placeholder', composerPlaceholder());
       input.dispatchEvent(new Event('input'));
+      input.focus();
     };
     reader.readAsDataURL(file);
   }
@@ -3828,6 +3875,9 @@
       payload.files = pendingFiles.slice();
       pendingFiles = [];
     }
+    // Sent: the box is empty again and may close, with its usual words.
+    updateComposing();
+    input.setAttribute('placeholder', composerPlaceholder());
     if (chatWs && chatWs.readyState === 1) {
       chatWs.send(JSON.stringify(payload));
     } else {
@@ -5006,10 +5056,12 @@
           var wrap = document.getElementById('heroRecent');
           if (!list || !wrap) return;
           list.innerHTML = rows.map(function(t) {
-            var count = t.message_count ? ' \u00b7 ' + t.message_count : '';
+            var count = t.message_count ? ' \u00b7 ' + t.message_count + (t.message_count === 1 ? ' message' : ' messages') : '';
+            // The name, with when it was last used under it: one item, at
+            // any width, rather than a name and a time a screen apart.
             return '<a class="hero-recent-row" href="#" data-thread="' + esc(t.id) + '">' +
-              '<span class="title">' + esc(t.title || 'Untitled') + '</span>' +
-              '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span>' +
+              '<span class="text"><span class="title">' + esc(t.title || 'Untitled') + '</span>' +
+              '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span></span>' +
               '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
           }).join('') + (withMsgs.length > rows.length
             ? '<a class="hero-recent-row hero-recent-more" href="#" data-all="1"><span class="title">+' + (withMsgs.length - rows.length) + ' more</span><span class="arrow" aria-hidden="true">&#8250;</span></a>'
