@@ -510,12 +510,15 @@ class UserStore {
   }
 
   // Save a schedule
-  async saveSchedule(name, cronExpression, task, chatId, runOnce = null, timezone = null, platform = null) {
+  // eventAt: when the thing the reminder is about happens, if it is about a
+  // dated event, so the dashboard can show that rather than the reminder's
+  // own firing time.
+  async saveSchedule(name, cronExpression, task, chatId, runOnce = null, timezone = null, platform = null, eventAt = null) {
     // Remove existing with same name
     await supabase.from("schedules").delete().eq("user_id", this.userId).eq("name", name);
     const { data } = await supabase
       .from("schedules")
-      .insert({ user_id: this.userId, name, cron_expression: cronExpression, task, enabled: true, chat_id: chatId, run_once: runOnce, timezone, platform })
+      .insert({ user_id: this.userId, name, cron_expression: cronExpression, task, enabled: true, chat_id: chatId, run_once: runOnce, timezone, platform, event_at: eventAt })
       .select()
       .single();
 

@@ -236,11 +236,11 @@ test("Settings > Account says what the ClosedHand account holds, and Delete acco
   await withAccount.state.loadAccountSummary();
   assert.equal(withAccount.el("account-summary").hidden, false);
   assert.equal(withAccount.el("account-summary-text").textContent,
-    "Your ClosedHand account is Google: a@example.com. closedhand.com keeps only its email, linked to your personal URL, amber-fox-42.closedhand.ai. Everything else here is on your own computer.");
+    "Signed in withGoogle \u00b7 a@example.comUsed forYour personal URL, amber-fox-42.closedhand.aiclosedhand.com storesYour email and nothing elseYour dataStays on your own computer", "labelled facts, not a sentence");
   assert.match(withAccount.el("delete-account-text").textContent, /^This deletes your ClosedHand account: amber-fox-42\.closedhand\.ai stops working and closedhand\.com forgets your sign-in\. It also permanently deletes everything ClosedHand keeps for you on your own computer/);
   const without = accountPage(() => ({ body: { account: null } }));
   await without.state.loadAccountSummary();
-  assert.match(without.el("account-summary-text").textContent, /^You don’t have a ClosedHand account\. Getting a personal URL makes one/);
+  assert.match(without.el("account-summary-text").textContent, /^Signed in withNothing yet\. Getting a personal URL signs you in with Google or Microsoft, and that sign-in is your ClosedHand account\./);
   assert.match(without.el("delete-account-text").textContent, /^This permanently deletes everything ClosedHand keeps for you on your own computer/);
   const offline = accountPage(() => ({ body: { account: null, unreachable: true } }));
   await offline.state.loadAccountSummary();
@@ -288,4 +288,13 @@ test("location is set where it shows, not in a Settings card", () => {
   assert.match(chat, /wx\.addEventListener\('click', function\(\) \{ wx\.hidden = true; btn\.hidden = false; btn\.click\(\); \}\);/, "clicking the weather sets it again after a move");
   const defs = fs.readFileSync(require.resolve("../lib/tools/definitions.js"), "utf8");
   assert.match(defs, /name: "save_location"/, "and ClosedHand saves it when told in chat");
+});
+
+test("the weather line's tip shows at once, in the page's own quiet style", () => {
+  const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
+  assert.match(chat, /<span class="here-wx" id="hereWx" role="button" tabindex="0" data-tip="Moved\? Click to update your location\." hidden><\/span>/);
+  assert.match(chat, /data-tip="Sets your local time from where you are, and shows the weather here"/);
+  assert.doesNotMatch(chat, /wx\.title = |id="hereBtn" type="button" hidden title=/, "no slow browser tooltip");
+  assert.match(chat, /var info = e\.target\.closest\('\[data-tip\]'\);/, "drawn by the page's own instant tooltip");
+  assert.doesNotMatch(chat, /\[data-tip\]::after/, "one tooltip, not two");
 });

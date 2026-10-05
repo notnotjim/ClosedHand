@@ -50,7 +50,7 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached your chat, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
-  assert.match(dashboard, />ClosedHand sends out agents, on their own or as a team, when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");
+  assert.match(dashboard, />ClosedHand sends out agents when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");
 });
 
 test("the Schedules tab holds what is about time; what ClosedHand made is on Pages", () => {
@@ -113,4 +113,26 @@ test("Upcoming is one timeline: every kind under the same date headings, soonest
   assert.deepEqual(headings, [FlightTime.dateLabel("2027-03-12T09:15:00Z", tz), FlightTime.dateLabel("2027-03-13T14:20:00Z", tz)], "a reminder's date is a heading like a flight's");
   assert.ok(el.innerHTML.indexOf("[reminder]") < el.innerHTML.indexOf("[reminder 2]") && el.innerHTML.indexOf("[reminder 2]") < el.innerHTML.indexOf("[flight]"), "in time order across kinds, under one heading per day");
   assert.doesNotMatch(dashboard, /id="reminders-list"|id="flights-list"|id="bookings-list"|id="goal-checkins-list"/, "one list, not four");
+});
+
+test("a reminder about an appointment shows the appointment's time, and when it will remind beside it", async () => {
+  const FlightTime = require("../webapp/public/flight-time.js");
+  const timeline = dashboard.slice(dashboard.indexOf("    var _upcoming = {"), dashboard.indexOf("    function updateUpcomingEmpty() {"));
+  const reminders = dashboard.slice(dashboard.indexOf("    function reminderTitle(name) {"), dashboard.indexOf("    async function loadFlights() {"));
+  const els = { "upcoming-list": { innerHTML: "" }, "reminders-past": { innerHTML: "" } };
+  const rows = [
+    { name: "Plumber visit", next_at: "2027-03-12T07:30:00Z", event_at: "2027-03-12T09:00:00Z", timezone: "Europe/Lisbon", repeats: null },
+    { name: "Water the plants", next_at: "2027-03-13T18:00:00Z", timezone: "Europe/Lisbon", repeats: "every Sat" },
+  ];
+  const ctx = { FlightTime, console, esc: (t) => String(t), updateUpcomingEmpty() {},
+    document: { getElementById: (id) => els[id] || null },
+    fetch: async () => ({ ok: true, json: async () => rows }) };
+  vm.runInNewContext(timeline + reminders + "\nthis.loadReminders = loadReminders;", ctx);
+  await ctx.loadReminders();
+  const html = els["upcoming-list"].innerHTML;
+  assert.match(html, /Plumber visit<\/span><span class="upcoming-kind">Reminder at 07:30<\/span><\/span><span class="upcoming-when">09:00<\/span>/, "the event's time, the reminder's beside it");
+  assert.match(html, /Water the plants<\/span><span class="upcoming-kind">Reminder, every Sat<\/span><\/span><span class="upcoming-when">18:00<\/span>/, "a plain reminder still shows when it fires");
+  assert.match(read("migrations/056_reminder_event_time.sql"), /ALTER TABLE schedules ADD COLUMN IF NOT EXISTS event_at timestamptz;/);
+  assert.match(read("lib/tools/definitions.js"), /event_at: \{\n\s*type: "string",\n\s*description: "When the reminder is about something at a set time/);
+  assert.match(read("user-store.js"), /run_once: runOnce, timezone, platform, event_at: eventAt \}/);
 });

@@ -5438,7 +5438,7 @@ app.get("/api/reminders", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("schedules")
-      .select("name, cron_expression, task, enabled, run_once, archived_at, timezone")
+      .select("name, cron_expression, task, enabled, run_once, archived_at, timezone, event_at")
       .eq("user_id", userId)
       .order("name");
     if (error) throw error;

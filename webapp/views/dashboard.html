@@ -1110,8 +1110,12 @@
     .account-confirm-text.warn { color: #D0A652; }
     .account-confirm-text.danger { color: #D8624B; }
     .account-summary { padding: 16px; }
-    .account-summary p { margin: 0; font-size: 14px; line-height: 1.5; color: #B6AFA4; }
-    .account-summary strong { color: #EFE6D6; font-weight: 500; overflow-wrap: anywhere; }
+    /* The account as labelled facts: what it is, what it is for, what
+       closedhand.com stores and where everything else is. */
+    .account-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 24px; margin: 0; font-size: 14px; line-height: 1.5; }
+    .account-facts dt { color: #B6AFA4; }
+    .account-facts dd { margin: 0; color: #EFE6D6; overflow-wrap: anywhere; }
+    @media (max-width: 600px) { .account-facts { grid-template-columns: 1fr; gap: 2px 0; } .account-facts dd { margin-bottom: 8px; } }
     #delete-account-offline { margin: 12px 0; }
     .confirm-type-input {
       background: #1A1817;
@@ -2269,7 +2273,7 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand sends out agents, on their own or as a team, when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand sends out agents when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
@@ -2711,7 +2715,7 @@
                  owns this computer's personal URL. closedhand.com keeps only its
                  email; everything below is on this computer. -->
             <div class="account-summary" id="account-summary" hidden>
-              <p id="account-summary-text"></p>
+              <dl class="account-facts" id="account-summary-text"></dl>
             </div>
             <hr class="account-divider" id="account-summary-divider" hidden>
 
@@ -4473,7 +4477,11 @@
       const box = document.getElementById("account-summary"), divider = document.getElementById("account-summary-divider");
       const text = document.getElementById("account-summary-text"), confirmText = document.getElementById("delete-account-text");
       const local = "everything ClosedHand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
-      const strong = value => { const el = document.createElement("strong"); el.textContent = value; return el; };
+      const row = (label, value) => {
+        const dt = document.createElement("dt"); dt.textContent = label;
+        const dd = document.createElement("dd"); dd.textContent = value;
+        text.append(dt, dd);
+      };
       let data = null;
       try { const r = await fetch("/api/phone/account"); data = r.ok ? await r.json() : null; } catch (_) {}
       if (!data || data.unreachable) { box.hidden = true; divider.hidden = true; return; }
@@ -4481,11 +4489,14 @@
       text.textContent = "";
       if (account) {
         const host = new URL(account.url).hostname;
-        const who = (account.provider === "microsoft" ? "Microsoft" : "Google") + (account.email ? ": " + account.email : "");
-        text.append("Your ClosedHand account is ", strong(who), ". closedhand.com keeps only its email, linked to your personal URL, ", strong(host), ". Everything else here is on your own computer.");
+        row("Signed in with", (account.provider === "microsoft" ? "Microsoft" : "Google") + (account.email ? " \u00b7 " + account.email : ""));
+        row("Used for", "Your personal URL, " + host);
+        row("closedhand.com stores", "Your email and nothing else");
+        row("Your data", "Stays on your own computer");
         confirmText.textContent = "This deletes your ClosedHand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
-        text.textContent = "You don’t have a ClosedHand account. Getting a personal URL makes one: the Google or Microsoft account you claim it with. Everything here is on your own computer.";
+        row("Signed in with", "Nothing yet. Getting a personal URL signs you in with Google or Microsoft, and that sign-in is your ClosedHand account.");
+        row("Your data", "Stays on your own computer");
         confirmText.textContent = "This permanently deletes " + local;
       }
       box.hidden = false; divider.hidden = false;
@@ -5418,6 +5429,13 @@
         var past = rows.filter(function(r) { return !!r.archived; });
         setUpcoming('reminders', live.map(function(r) {
           var where = { tz: r.timezone || undefined };
+          // A reminder about a dated event (the 09:00 appointment it fires
+          // at 07:30 for) is shown at the event's time, with its own beside.
+          if (r.event_at && !r.repeats) {
+            var sameDay = r.next_at && FlightTime.dateLabel(r.next_at, where) === FlightTime.dateLabel(r.event_at, where);
+            var remind = !r.next_at ? 'Reminder' : 'Reminder ' + (sameDay ? 'at ' : new Date(r.next_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: r.timezone || undefined }) + ', ') + FlightTime.time(r.next_at, where);
+            return upcomingItem(r.event_at, where, upcomingRow({ icon: '\u23F0', title: reminderTitle(r.name), kind: remind, when: FlightTime.time(r.event_at, where) }));
+          }
           return upcomingItem(r.next_at, where, upcomingRow({ icon: '\u23F0', title: reminderTitle(r.name), kind: r.repeats ? 'Reminder, ' + r.repeats : 'Reminder', when: r.next_at ? FlightTime.time(r.next_at, where) : '' }));
         }));
         document.getElementById('reminders-past').innerHTML = past.map(function(r) {
