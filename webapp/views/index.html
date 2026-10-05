@@ -2331,7 +2331,7 @@
     </button>
     <div class="hero-recent-pop" id="heroRecentPop" hidden></div>
     <div class="hero-footer">
-      <button class="here" id="hereBtn" type="button" hidden data-tip="Sets your local time from where you are, and shows the weather here" aria-label="Orientate: sets your local time from where you are, and shows the weather here"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="here-needle" d="M14.8 9.2 13 13l-3.8 1.8L11 11z"/></svg><span>Orientate</span></button>
+      <button class="here" id="hereBtn" type="button" hidden data-tip="Sets your local time from where you are and shows the weather here" aria-label="Orientate: sets your local time from where you are and shows the weather here"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="here-needle" d="M14.8 9.2 13 13l-3.8 1.8L11 11z"/></svg><span>Orientate</span></button>
       <span class="here-wx" id="hereWx" hidden></span>
     </div>
 
@@ -3525,8 +3525,8 @@
 
   // The placeholder says what fits what is in the box.
   function composerPlaceholder() {
-    return pendingFiles.length > 1 ? 'Ask about these files, or just send'
-      : pendingFiles.length === 1 ? 'Ask about this file, or just send'
+    return pendingFiles.length > 1 ? 'Ask about these files or just send'
+      : pendingFiles.length === 1 ? 'Ask about this file or just send'
       : 'Ask anything or drop any type of file...';
   }
   window.composerPlaceholder = composerPlaceholder;

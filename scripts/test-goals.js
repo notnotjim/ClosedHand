@@ -188,7 +188,7 @@ test("ClosedHand sets goals up the researched way and records progress from the 
 test("goals have their own tab, after Schedules, that says how it helps", () => {
   const dashboard = read("webapp/views/dashboard.html");
   assert.match(dashboard, /data-tab="automations"[^\n]*>Schedules<\/button>\n\s*<button class="tab" data-tab="goals" onclick="switchTab\('goals'\)">Goals<\/button>/);
-  assert.match(dashboard, /ClosedHand helps you reach your goals with methods proven in peer-reviewed research\. Tell it a goal in chat, or add one here\./);
+  assert.match(dashboard, /ClosedHand helps you reach your goals with methods proven in peer-reviewed research\.<br>Tell it a goal in chat or add one here\./);
   const tab = read("webapp/public/goals.js");
   for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "ClosedHand"}`']) assert.ok(tab.includes(label), label);
   assert.match(dashboard, /id="goal-new-milestone"[\s\S]*id="goal-new-done"[\s\S]*id="goal-new-by"[\s\S]*id="goal-new-habit" hidden[\s\S]*id="goal-new-per"[\s\S]*id="goal-new-cue"/, "each kind asks the one thing it needs");

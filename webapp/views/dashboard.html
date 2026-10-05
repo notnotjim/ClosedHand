@@ -2313,7 +2313,7 @@
             <div class="mc-section-label" style="margin:0;">Routines</div>
             <button onclick="openCreateAutomationModal()" style="padding:6px 14px;background:#1A1817;border:1px solid #D0563F;border-radius:8px;color:#D0563F;font-size: 14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,230,214,0.1)';this.style.boxShadow='0 0 8px rgba(208,86,63,0.15)'" onmouseout="this.style.background='#1A1817';this.style.boxShadow='none'">+ New routine</button>
           </div>
-          <p class="routines-blurb">Agents you set up once that run on a timetable, when something happens, or when you press Run.</p>
+          <p class="routines-blurb">Agents you set up once that run on a timetable, when something happens or when you press Run.</p>
           <div id="auto-saved-list"></div>
           <p id="auto-saved-error" class="auto-card-meta" role="status" hidden>Could not load your routines. Please try again shortly.</p>
 
@@ -2354,7 +2354,7 @@
                 <div class="auto-template" onclick="loadAgentTemplate('morning-briefing')" style="padding:14px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='rgba(239,230,214,0.28)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">
                   <div style="font-size:20px;margin-bottom:6px;">&#9728;&#65039;</div>
                   <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Morning Briefing</div>
-                  <div style="font-size: 13px;color:#B6AFA4;line-height:1.4;">Calendar, weather, urgent emails, and news every morning.</div>
+                  <div style="font-size: 13px;color:#B6AFA4;line-height:1.4;">Calendar, weather, urgent emails and news every morning.</div>
                   <div style="font-size:9px;color:rgba(239,230,214,0.6);margin-top:4px;">&#128337; Daily at 8am</div>
                 </div>
                 <div class="auto-template" onclick="loadAgentTemplate('smart-morning')" style="padding:14px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='rgba(239,230,214,0.28)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">
@@ -2429,7 +2429,7 @@
            them carry out (webapp/public/goals.js, lib/goals.js). -->
       <div class="tab-content" id="tab-goals">
         <div style="padding-top:16px;">
-          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research. Tell it a goal in chat, or add one here.</p>
+          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell it a goal in chat or add one here.</p>
           <p id="goals-cheer" role="status" hidden></p>
           <div class="goals-head"><button type="button" class="goals-new" id="goal-new-toggle">+ New goal</button></div>
           <form id="goal-new" hidden>
@@ -2459,7 +2459,7 @@
 
       <div class="tab-content" id="tab-pages">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here, or download it as PDF or Word.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here or download it as PDF or Word.</p>
           <div id="pages-list"></div>
           <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
           <!-- Files sent in chat and tables kept up to date: the rest of what
@@ -2598,7 +2598,7 @@
           <div class="settings-group" style="border-color:rgba(239,230,214,0.16);flex:1;min-width:280px;">
             <div class="settings-group-header">
               <h2>Pulse</h2>
-              <p class="section-desc">ClosedHand monitors your email, calendar, and other connections in the background. When something needs your attention, it reaches out proactively.</p>
+              <p class="section-desc">ClosedHand monitors your email, calendar and other connections in the background. When something needs your attention, it reaches out proactively.</p>
             </div>
             <div class="settings-group-body">
               <div class="segmented-control" id="pulse-level" style="margin-bottom:10px;">
@@ -2741,12 +2741,12 @@
             <div class="account-action" id="action-clear-conversations">
               <div class="account-action-info">
                 <div class="account-action-title">Clear conversation history</div>
-                <div class="account-action-desc">Erases every conversation and the Context Notes distilled from them. Pinned facts, schedules, and connections are kept.</div>
+                <div class="account-action-desc">Erases every conversation and the Context Notes distilled from them. Pinned facts, schedules and connections are kept.</div>
               </div>
               <button class="account-action-btn" onclick="startAccountAction('clear-conversations')">Clear</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-conversations">
-              <div class="account-confirm-text">This permanently deletes your entire conversation history everywhere ClosedHand keeps it, including the Context Notes distilled from past conversations. Pinned facts, schedules, and connected services are not affected.</div>
+              <div class="account-confirm-text">This permanently deletes your entire conversation history everywhere ClosedHand keeps it, including the Context Notes distilled from past conversations. Pinned facts, schedules and connected services are not affected.</div>
               <div class="account-confirm-actions">
                 <button class="confirm-go confirm-go-neutral enabled" id="go-clear-conversations" data-orig-text="Clear history" onclick="executeAccountAction('clear-conversations')">Clear history</button>
               </div>
@@ -2758,12 +2758,12 @@
             <div class="account-action" id="action-clear-data">
               <div class="account-action-info">
                 <div class="account-action-title">Wipe all data</div>
-                <div class="account-action-desc">Deletes conversations, Context Notes, pinned facts, rules, schedules, datasets, automations, and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
+                <div class="account-action-desc">Deletes conversations, Context Notes, pinned facts, rules, schedules, datasets, automations and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
               </div>
               <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Wipe</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-data">
-              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, pinned facts, rules, schedules, datasets, automations, and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
+              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, pinned facts, rules, schedules, datasets, automations and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-clear-data" placeholder="Type WIPE" oninput="checkConfirmInput('clear-data','WIPE')">
                 <button class="confirm-go confirm-go-warn" id="go-clear-data" data-orig-text="Wipe everything" onclick="executeAccountAction('clear-data')">Wipe everything</button>
@@ -2919,7 +2919,7 @@
 
     let welcomeStep = 0, welcomeInitialized = false;
     const welcomeSteps = [
-      { tab: 'connections', text: 'Your connected apps live here. Add an app when you need it, or disconnect one any time.' },
+      { tab: 'connections', text: 'Your connected apps live here. Add an app when you need it or disconnect one any time.' },
       { tab: 'brain', text: 'See what I remember in Context Brain. You can read, correct or delete your Pinned facts and Context Notes.' },
       { tab: 'automations', text: 'Check on the jobs you give me in chat, like a morning briefing. You can manage them here, then get back to your day.' }
     ];
@@ -3158,8 +3158,9 @@
       // Toast on connect/error
       const params = new URLSearchParams(window.location.search);
       if (params.get("connected")) {
-        const svc = allServices[params.get("connected")];
-        showToast(`${svc?.name || "Service"} connected successfully!`);
+        const key = params.get("connected");
+        const svc = allServices[key];
+        showToast(`${svc?.name || (key === "google_extra" ? "Google account" : "Service")} connected.`);
         window.history.replaceState({}, "", "/dashboard");
       }
       if (params.get("error")) {
@@ -3328,7 +3329,7 @@
         const accessToken = document.getElementById("shopify-token").value.trim();
         const clientId = document.getElementById("shopify-client-id").value.trim();
         const clientSecret = document.getElementById("shopify-client-secret").value.trim();
-        if (!accessToken && (!clientId || !clientSecret)) throw new Error("Enter your app's Client ID and Client secret, or use an existing access token below.");
+        if (!accessToken && (!clientId || !clientSecret)) throw new Error("Enter your app's Client ID and Client secret or use an existing access token below.");
         btn.disabled = true;
         btn.textContent = "Connecting...";
         const res = await fetch("/api/connect-shopify-token", {
@@ -4186,13 +4187,23 @@
       }
     }
 
+    // Delight replaces this with the page's toast once it has set up, on
+    // DOMContentLoaded. A notice raised before then, like "connected" straight
+    // after a sign-in, waits for it instead of painting its own: the stand-in
+    // was orange text on an orange fill.
     function showToast(msg, isError = false) {
-      const toast = document.getElementById("toast");
-      toast.textContent = msg;
-      toast.style.display = "block";
-      toast.style.background = isError ? "#D0563F" : "#D0563F";
-      toast.style.color = isError ? "#D8624B" : "#D8624B";
-      setTimeout(() => { toast.style.display = "none"; }, 3000);
+      const show = () => {
+        if (window.Delight && document.getElementById("toast-container")) return Delight.toast(msg, isError ? "error" : "success");
+        const toast = document.getElementById("toast");
+        toast.textContent = msg;
+        toast.style.display = "block";
+        toast.style.background = "#1F1B19";
+        toast.style.border = "1px solid rgba(239,230,214,0.18)";
+        toast.style.color = isError ? "#D8624B" : "#EFE6D6";
+        setTimeout(() => { toast.style.display = "none"; }, 3500);
+      };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => setTimeout(show, 0), { once: true });
+      else show();
     }
 
     // --- BYOK (API Key) ---
@@ -5595,7 +5606,7 @@
         const res = await fetch('/api/rules');
         if (!res.ok) throw new Error('Could not load preferences');
         const rules = (await res.json()).filter(function(r) { return r.kind !== 'goal'; });
-        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference in chat, or add one below.</p>';
+        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference in chat or add one below.</p>';
       } catch (e) {
         list.innerHTML = '<p>Could not load preferences. <button class="notification-retry" onclick="loadUserRules()">Try again</button></p>';
       }
@@ -6387,7 +6398,7 @@
       var displayStatus = hasActiveRun ? 'running' : a.status;
       var statusClass = displayStatus === 'active' ? 'active' : displayStatus === 'paused' ? 'paused' : displayStatus === 'running' ? 'active' : 'idle';
       var triggerText = a.trigger_human_schedule || (a.trigger_type === 'event' ? 'When ' + (a.trigger_event_condition || a.trigger_event_source) : 'Run manually');
-      var triggerTitle = a.trigger_type === 'manual' ? 'Ask ClosedHand to run it in chat, or tap Run' : '';
+      var triggerTitle = a.trigger_type === 'manual' ? 'Ask ClosedHand to run it in chat or tap Run' : '';
 
       var actionsHtml = '<div class="auto-card-actions">';
       if (a.trigger_type === 'manual' || a.status === 'idle') {
@@ -6666,7 +6677,7 @@
 
       if (!name) { errEl.textContent = 'Give it a name.'; errEl.style.display = 'block'; return; }
       if (!prompt) { errEl.textContent = 'Describe what it should do.'; errEl.style.display = 'block'; return; }
-      if (_selectedDest === 'email' && _assistantEmail && !_assistantEmail.on) { errEl.textContent = 'Turn on ' + _assistantEmail.name + '\u2019s email address in Settings first, or choose another place to send results.'; errEl.style.display = 'block'; return; }
+      if (_selectedDest === 'email' && _assistantEmail && !_assistantEmail.on) { errEl.textContent = 'Turn on ' + _assistantEmail.name + '\u2019s email address in Settings first or choose another place to send results.'; errEl.style.display = 'block'; return; }
 
       // Build schedule
       var triggerCron = null;
@@ -8270,7 +8281,7 @@
         <button type="button" class="auto-trigger-btn" data-trigger="event" onclick="selectTrigger('event')">When something happens</button>
       </div>
 
-      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat, or when you press Run on its card under Routines.</div>
+      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat or when you press Run on its card under Routines.</div>
 
       <!-- Schedule picker (hidden by default) -->
       <div id="auto-schedule-picker" style="display:none;margin-bottom:10px;">

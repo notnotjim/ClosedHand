@@ -29,7 +29,7 @@ test("the box stays open while composing, and the paperclip never moves it under
 });
 
 test("with a file attached, the words fit and Send lights up", () => {
-  assert.match(chat, /pendingFiles\.length > 1 \? 'Ask about these files, or just send'\n\s*: pendingFiles\.length === 1 \? 'Ask about this file, or just send'/);
+  assert.match(chat, /pendingFiles\.length > 1 \? 'Ask about these files or just send'\n\s*: pendingFiles\.length === 1 \? 'Ask about this file or just send'/);
   assert.match(chat, /var hasText = input\.value\.trim\(\)\.length > 0 \|\| pendingFiles\.length > 0;/);
   assert.match(chat, /previewArea\.style\.cssText = 'display:flex;gap:8px;padding:0;margin:0 0 14px;flex-wrap:wrap;';/, "the chip lines up with the text, with room under it");
 });

@@ -296,7 +296,7 @@ test("the weather line's tip shows at once, in the page's own quiet style", () =
   assert.match(chat, /<span class="here-wx" id="hereWx" hidden><\/span>/);
   assert.match(chat, /class="wx-place" data-tip="Moved\? Click to update your location\."/);
   assert.doesNotMatch(chat, /\.wx-num small|<small>/, "the unit reads in the same tone as the number");
-  assert.match(chat, /data-tip="Sets your local time from where you are, and shows the weather here"/);
+  assert.match(chat, /data-tip="Sets your local time from where you are and shows the weather here"/);
   assert.doesNotMatch(chat, /wx\.title = |id="hereBtn" type="button" hidden title=/, "no slow browser tooltip");
   assert.match(chat, /var info = e\.target\.closest\('\[data-tip\]'\);/, "drawn by the page's own instant tooltip");
   assert.doesNotMatch(chat, /\[data-tip\]::after/, "one tooltip, not two");

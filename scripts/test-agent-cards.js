@@ -82,7 +82,7 @@ test("saved agents are routines, everywhere a person reads about them; agents st
   assert.doesNotMatch(schedules, /Saved agents|Saved Agents|New agent/);
   assert.match(schedules, /<div class="mc-metric-label">Agents at work<\/div>/);
   assert.match(schedules, /<div class="mc-metric-label">Routines<\/div>/);
-  assert.match(schedules, /<p class="routines-blurb">Agents you set up once that run on a timetable, when something happens, or when you press Run\.<\/p>/);
+  assert.match(schedules, /<p class="routines-blurb">Agents you set up once that run on a timetable, when something happens or when you press Run\.<\/p>/);
   assert.match(dashboard, />New routine<[\s\S]*>An agent you set up once to do one job for you\.</);
   const defs = read("lib/tools/definitions.js");
   assert.match(defs, /Create a routine: an agent the person sets up once that runs on a schedule, when something happens, or when they ask\. Call it a routine when you talk about it\./);

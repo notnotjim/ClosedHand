@@ -262,7 +262,7 @@
         if (kind === "primary") renderCheck();
         if (!quiet) {
           show((vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
-            : "The service returned no models. Check that a model is available, or enter its model ID below.");
+            : "The service returned no models. Check that a model is available or enter its model ID below.");
           scheduleCheck();
         }
       } catch (e) {

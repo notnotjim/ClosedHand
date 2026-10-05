@@ -88,7 +88,7 @@
         : confirmed ? (state.registrationState === 'error'
           ? 'Your personal URL is claimed, but its connection is delayed. ClosedHand will retry automatically.'
           : 'Your personal URL is claimed. Connecting it now. You can continue setup.')
-        : state.serviceAvailable === false ? 'closedhand.com can’t give out personal URLs right now. Carry on, and get yours from the dashboard later.'
+        : state.serviceAvailable === false ? 'closedhand.com can’t give out personal URLs right now. Carry on and get yours from the dashboard later.'
         : confirm ? (signingIn && handsBack ? 'Sign in in the window that opened. It closes by itself when you’re done.' : '')
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
       // Every ClosedHand gets a personal URL here. Carrying on without one is
@@ -103,7 +103,7 @@
       var response = await fetch('/api/phone', { method: method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body), signal: AbortSignal.timeout(20000) });
       if (!response.ok) {
         var failure = await response.json().catch(function () { return {}; });
-        throw new Error(failure.error || 'Could not check your personal URL. Try again, or continue setup without one.');
+        throw new Error(failure.error || 'Could not check your personal URL. Try again or continue setup without one.');
       }
       return response.json();
     }
