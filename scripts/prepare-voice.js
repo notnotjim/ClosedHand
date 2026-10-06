@@ -15,6 +15,23 @@ async function verified(file, entry) {
   } catch { return false; }
 }
 
+// Remove every file the manifest does not list. The Mac build keeps this
+// folder between builds, so a model the manifest dropped (the 92 MB q8 model,
+// replaced by the full-size one) stayed in it and shipped in every app after.
+async function prune(directory) {
+  const keep = new Set(manifest.files.map(entry => path.normalize(entry.path)));
+  async function walk(dir) {
+    let entries;
+    try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) { await walk(full); continue; }
+      if (!keep.has(path.relative(directory, full))) await fs.promises.rm(full, { force: true });
+    }
+  }
+  await walk(directory);
+}
+
 async function prepare(directory = path.join(__dirname, "../assets/voice/kokoro-v1")) {
   if (!manifest.files.length) throw new Error("The bundled voice manifest is empty");
   for (const entry of manifest.files) {
@@ -38,8 +55,9 @@ async function prepare(directory = path.join(__dirname, "../assets/voice/kokoro-
       }
     }
   }
+  await prune(directory);
   console.log("Bundled voice files verified.");
 }
 
 if (require.main === module) prepare(process.argv[2]).catch(err => { console.error(err.message); process.exitCode = 1; });
-module.exports = { prepare, verified };
+module.exports = { prepare, prune, verified };

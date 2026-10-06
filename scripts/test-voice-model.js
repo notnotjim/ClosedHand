@@ -15,3 +15,19 @@ test("the full-size model is bundled and loaded as full size", () => {
   assert.match(worker, /dtype: "fp32", device: "cpu", local_files_only: true,/);
   assert.doesNotMatch(worker, /dtype: "q8"/);
 });
+
+test("a model the manifest no longer lists is removed from the voice folder, not shipped", async () => {
+  const os = require("node:os");
+  const { prune } = require("./prepare-voice");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voice-"));
+  for (const f of ["onnx/model.onnx", "onnx/model_quantized.onnx", "voices/af_heart.bin", "voices/old_voice.bin"]) {
+    fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+    fs.writeFileSync(path.join(dir, f), "x");
+  }
+  await prune(dir);
+  assert.ok(fs.existsSync(path.join(dir, "onnx/model.onnx")), "a listed file stays");
+  assert.ok(fs.existsSync(path.join(dir, "voices/af_heart.bin")), "a listed voice stays");
+  assert.ok(!fs.existsSync(path.join(dir, "onnx/model_quantized.onnx")), "the dropped q8 model goes");
+  assert.ok(!fs.existsSync(path.join(dir, "voices/old_voice.bin")), "an unlisted voice goes");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
