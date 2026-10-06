@@ -30,6 +30,8 @@ const PAIRS = [
   { name: "assistant-email-protocol", copies: ["lib/assistant-email-protocol.js", "webapp/assistant-email-protocol.js", "closedhand-com/lib/assistant-email-protocol.js"] },
   { name: "goals-time", copies: ["lib/goals-time.js", "webapp/goals-time.js"] },
   { name: "name-guess", copies: ["lib/name-guess.js", "webapp/name-guess.js"] },
+  { name: "settings-patch", copies: ["lib/settings-patch.js", "webapp/settings-patch.js"] },
+  { name: "config", copies: ["lib/config.js", "webapp/config.js"] },
   { name: "db-driver-pg", copies: ["lib/db-driver-pg.js", "webapp/db-driver-pg.js", "closedhand-com/lib/db-driver-pg.js"] },
   { name: "recall-settings", copies: ["lib/services/recall-settings.js", "webapp/recall-settings.js"] },
   { name: "model-policy", copies: ["lib/model-policy.js", "webapp/model-policy.js"] },

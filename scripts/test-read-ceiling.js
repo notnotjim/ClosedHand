@@ -29,7 +29,7 @@ test("a read-only lookup that hangs is set aside, and the reply carries on", asy
 test("both ways tools run go through the ceiling", () => {
   const engine = read("lib/engine.js");
   assert.match(engine, /prefetched\.set\(b\.id, withReadCeiling\(b\.name, handleInternalTool\(b\.name, input\)/);
-  assert.match(engine, /: await withReadCeiling\(block\.name, handleInternalTool\(block\.name, input\)\);/);
+  assert.match(engine, /: withReadCeiling\(block\.name, handleInternalTool\(block\.name, input\)\)\);/);
 });
 
 test("a live Gmail search reads the newest 40, a few at a time, and says when there were more", () => {

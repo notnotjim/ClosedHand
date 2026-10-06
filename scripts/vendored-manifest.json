@@ -2,6 +2,8 @@
   "assistant-email-protocol": "61f210e94eba2df6",
   "goals-time": "6a9f58e1f74ff9c8",
   "name-guess": "8624abc0cd206bcd",
+  "settings-patch": "a20d7d9ac1d43a0d",
+  "config": "9ed0a1fd008581ad",
   "db-driver-pg": "951c78403eeec4d6",
   "recall-settings": "69d4a9b8f9049041",
   "model-policy": "c043f44b724d303d",

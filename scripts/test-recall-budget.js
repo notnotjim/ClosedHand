@@ -25,7 +25,7 @@ test("the engine runs recall and the matter pick together, under the budget, sha
   assert.match(engine, /const RECALL_BUDGET_MS = 6000;/);
   assert.match(engine, /const recalled = fetchRelevantContext\(userId, userMessage, conversation\.slice\(-5, -1\), \{\n\s*shareEmbedding: \(text, embedding\) => \{ shared = \{ text, embedding \}; \},/);
   assert.match(engine, /matters\.pickTouched\(userId, userMessage, \{\n\s*messageVector: shared\?\.text === userMessage \? shared\.embedding : null,/);
-  assert.match(engine, /contextInjection = \(await withinRecallBudget\(Promise\.all\(\[recalled, picked\]\)\)\)\?\.\[0\] \|\| "";/);
+  assert.match(engine, /contextInjection = \(await timing\.time\("recall", withinRecallBudget\(Promise\.all\(\[recalled, picked\]\)\)\)\)\?\.\[0\] \|\| "";/);
   assert.doesNotMatch(engine, /await matters\.pickTouched/, "the pick no longer waits for recall to finish");
 });
 

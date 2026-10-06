@@ -13,9 +13,9 @@ function load(file, dependencies = {}, extras = {}) {
   return context.module.exports;
 }
 function config(values, env = {}) {
-  const query = { select() { return this; }, eq() { return this; }, async single() {
+  const query = { select() { return this; }, eq() { return this; }, async maybeSingle() {
     await new Promise(resolve => setImmediate(resolve));
-    return { data: { settings: { self_host_config: values } } };
+    return { data: { settings: { self_host_config: values } }, error: null };
   } };
   return load('lib/config.js', { './db': { isDbConfigured: () => true, supabase: { from: () => query } },
     './admin': { getAdminUserId: () => 'test' } }, { process: { env } });

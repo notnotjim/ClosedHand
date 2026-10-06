@@ -131,10 +131,12 @@ function install(app, deps) {
   }));
   app.post("/api/model-config/default", route(async (req, res, id) => {
     if (!deps.allowDefault) return res.status(400).json({ error: "There is no default model here. Connect a model provider for ClosedHand to use." });
-    const settings = { ...await profile(id) };
-    for (const key of ["model_config", "llm_provider", "anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key", "custom_base_url", "custom_model", "custom_model_fast", "byok_models"]) delete settings[key];
-    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", id);
-    if (error) throw new Error("Could not change the models. Your previous setup is still active.");
+    await profile(id);
+    try {
+      await require("./settings-patch").patchSettings(supabase, id, { unset: ["model_config", "llm_provider", "anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key", "custom_base_url", "custom_model", "custom_model_fast", "byok_models"] });
+    } catch (_) {
+      throw new Error("Could not change the models. Your previous setup is still active.");
+    }
     res.json({ success: true });
   }));
   app.post("/api/model-config/models", route(async (req, res, id) => {
@@ -166,8 +168,13 @@ function install(app, deps) {
       settings = await profile(id);
       if (entry.previous !== JSON.stringify(settings.model_config || null)) throw new Error("The models changed in another session. Check again before saving.");
     }
-    const { error } = await supabase.from("profiles").update({ settings: withConfig(settings, entry.config), updated_at: new Date().toISOString() }).eq("id", id);
-    if (error) throw new Error("Could not save the models. Your previous setup is still active.");
+    // Only the model keys that change are written (settings-patch.js).
+    const { diff, patchSettings } = require("./settings-patch");
+    try {
+      await patchSettings(supabase, id, diff(settings, withConfig(settings, entry.config)));
+    } catch (_) {
+      throw new Error("Could not save the models. Your previous setup is still active.");
+    }
     receipts.delete(req.body.ticket);
     res.json({ success: true });
   }));

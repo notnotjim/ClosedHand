@@ -270,8 +270,17 @@ test("a save receipt belongs to one user and preserves unrelated settings", asyn
   let settings = { marker: "preserve", self_host_config: { EMBED_MODEL: "locked" } };
   const routes = {};
   const app = { get: (p, fn) => routes["GET " + p] = fn, post: (p, fn) => routes["POST " + p] = fn };
-  const db = { from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { settings } }) }) }),
-    update: values => ({ eq: async () => { settings = values.settings; return { error: null }; } }) }) };
+  // Saves arrive key by key, as patch_profile_settings applies them (migrations/057).
+  const db = { from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { settings } }) }) }) }),
+    rpc: async (name, a) => {
+      const next = { ...settings };
+      for (const k of a.p_unset || []) delete next[k];
+      for (const [k, v] of Object.entries(a.p_set || {})) if (k !== "self_host_config") next[k] = v;
+      next.self_host_config = { ...(settings.self_host_config || {}), ...(a.p_conf_set || {}) };
+      for (const k of a.p_conf_unset || []) delete next.self_host_config[k];
+      settings = next;
+      return { data: [{ patch_profile_settings: settings }], error: null };
+    } };
   config.install(app, { supabase: db, authorize: async req => req.user, allowDefault: true,
     ensureMemory: async () => { settings.self_host_config.INITIALIZED = true; } });
   async function invoke(path, user, body) {

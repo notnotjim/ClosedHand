@@ -785,10 +785,7 @@ async function autoEnableNotificationPlatform(userId, platform) {
     if (!pulseSettings.proactiveLevel) pulseSettings.proactiveLevel = "medium";
     settings.pulse_settings = pulseSettings;
 
-    await supabase
-      .from("profiles")
-      .update({ settings })
-      .eq("id", userId);
+    await require("./lib/settings-patch").patchSettings(supabase, userId, { set: { pulse_settings: pulseSettings } });
   } catch (e) {
     console.error(`[autoEnableNotificationPlatform] Error for user ${userId}, platform ${platform}:`, e.message);
   }

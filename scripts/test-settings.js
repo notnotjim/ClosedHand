@@ -139,11 +139,17 @@ test("the actual notification save route retains linked WhatsApp and rejects unk
         select() { return this; },
         eq(_, id) { assert.equal(id, "test-owner"); return this; },
         async single() { return { data: { settings: stored } }; },
-        update(values) { assert.equal(table, "profiles"); stored = values.settings; return this; },
+        async maybeSingle() { return { data: { settings: stored }, error: null }; },
         async upsert() { assert.equal(table, "pulse_config"); return {}; },
         then(resolve) { resolve({ error: null }); },
       };
+    }, async rpc(name, a) {
+      assert.equal(name, "patch_profile_settings");
+      assert.deepEqual(Object.keys(a.p_set), ["pulse_settings"], "only the Pulse settings are written");
+      stored = { ...stored, ...a.p_set };
+      return { data: [{ patch_profile_settings: stored }], error: null };
     } },
+    changeSettings: require("../lib/settings-patch").changeSettings,
   });
   vm.runInContext(source.match(/const SUPPORTED_PLATFORMS = \{[\s\S]*?\n\};/)[0] + "\n" + route, state);
   const response = { status(code) { throw new Error("Unexpected HTTP " + code); }, json(body) { assert.equal(body.success, true); } };

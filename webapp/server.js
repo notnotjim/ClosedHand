@@ -502,6 +502,8 @@ app.get("/setup/google", (req, res) => res.redirect("/setup#step-accounts=google
 // route registered after the gate below require the session. ADMIN_PASSWORD in
 // env still works and wins over the stored hash.
 const { getConf: getRuntimeConf, setConf: setRuntimeConf } = require("./config");
+// Settings change only by the keys named, inside the database (settings-patch.js).
+const { patchSettings, changeSettings } = require("./settings-patch");
 
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -515,7 +517,13 @@ function verifyPasswordHash(pw, stored) {
 }
 async function passwordConfigured() {
   if (process.env.ADMIN_PASSWORD) return true;
-  return !!(await getRuntimeConf("DASHBOARD_PASSWORD_HASH"));
+  // Settings that could not be read count as a password being set: a
+  // database restart must lock the dashboard for a moment, never open it.
+  try {
+    return !!(await require("./config").getConfStrict("DASHBOARD_PASSWORD_HASH"));
+  } catch (_) {
+    return true;
+  }
 }
 async function checkDashboardPassword(pw) {
   if (process.env.ADMIN_PASSWORD) {
@@ -802,16 +810,14 @@ app.post("/api/settings/spend-limits", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   if (!(await requireSetupAccess(req, res))) return;
   try {
-    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-    const settings = (profile && profile.settings) || {};
-    const before = settings.spend_limits || { always_ask: true };
+    const { data: profile, error: readError } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    if (readError || !profile) throw new Error(readError ? readError.message : "no profile");
+    const before = (profile.settings && profile.settings.spend_limits) || { always_ask: true };
     const next = cleanLimits(req.body || {});
     if (next.always_ask === undefined) next.always_ask = true;
     if (loosensLimits(before, next) && !(await walletConfirmed(req))) return walletNeedsPassword(res);
-    settings.spend_limits = next;
-    const { error } = await supabase.from("profiles").update({ settings }).eq("id", userId);
-    if (error) throw error;
-    res.json({ success: true, limits: settings.spend_limits });
+    await patchSettings(supabase, userId, { set: { spend_limits: next } });
+    res.json({ success: true, limits: next });
   } catch (e) {
     console.error("[wallet] limits error:", e.message);
     res.status(500).json({ error: "Could not save the spending rules" });
@@ -1457,15 +1463,13 @@ app.post("/api/usage/prices", async (req, res) => {
     const pin = num(req.body && req.body.in), pout = num(req.body && req.body.out);
     if (!model) return res.status(400).json({ error: "Which model?" });
     for (const v of [pin, pout]) if (v !== null && !(Number.isFinite(v) && v >= 0 && v < 1000)) return res.status(400).json({ error: "Prices are per million tokens, from 0 to 1000." });
-    const { data: profile, error: readError } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-    if (readError) throw readError;
-    const settings = { ...(profile?.settings || {}) };
-    const prices = { ...(settings.model_prices || {}) };
-    if (pin === null && pout === null) delete prices[model];
-    else prices[model] = { in: pin || 0, out: pout || 0 };
-    settings.model_prices = prices;
-    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
-    if (error) throw error;
+    let prices;
+    await changeSettings(supabase, userId, (cur) => {
+      prices = { ...(cur.model_prices || {}) };
+      if (pin === null && pout === null) delete prices[model];
+      else prices[model] = { in: pin || 0, out: pout || 0 };
+      cur.model_prices = prices;
+    });
     res.json({ success: true, prices });
   } catch (e) {
     res.status(500).json({ error: "Could not save the price." });
@@ -1622,10 +1626,7 @@ async function autoEnableNotificationPlatform(userId, platform) {
     pulseSettings.deliveryPlatforms = platforms;
     settings.pulse_settings = pulseSettings;
 
-    await supabase
-      .from("profiles")
-      .update({ settings })
-      .eq("id", userId);
+    await patchSettings(supabase, userId, { set: { pulse_settings: pulseSettings } });
   } catch (e) {
     console.error(`[autoEnableNotificationPlatform] Error for user ${userId}, platform ${platform}:`, e.message);
   }
@@ -2908,11 +2909,8 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
   await saveConnection(userId, serviceKey, tokens, svc, metadata);
 
   // Set onboarding step so bot expects the name answer (we already asked)
-  const { data: pRow } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-  const sett = pRow?.settings || {};
-  sett.onboarding_step = "name_bot";
-  const { error: settingsErr } = await supabase.from("profiles").update({ settings: sett }).eq("id", userId);
-  if (settingsErr) console.error(`[settings] could not save: ${settingsErr.message}`);
+  await patchSettings(supabase, userId, { set: { onboarding_step: "name_bot" } })
+    .catch((e) => console.error(`[settings] could not save: ${e.message}`));
 
   // Send welcome Flex Message + onboarding prompt via LINE push
   const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -3319,11 +3317,8 @@ app.post("/api/here", async (req, res) => {
     const weather = await weatherHere(lat, lon).catch(() => null);
     const browserTz = typeof req.body?.timezone === "string" && _validTz(req.body.timezone) ? req.body.timezone : null;
     const timezone = browserTz || weather?.timezone || null;
-    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
-    const settings = data?.settings || {};
     const location = { name: name || "where you are", latitude: lat, longitude: lon, ...(timezone ? { timezone } : {}), updated: new Date().toISOString(), source: "browser" };
-    const { error } = await supabase.from("profiles").update({ settings: { ...settings, location }, updated_at: new Date().toISOString() }).eq("id", userId);
-    if (error) throw new Error(error.message);
+    const settings = await patchSettings(supabase, userId, { set: { location } });
     res.json({ location: { name: location.name, timezone: timezone }, weather: weatherInUnit(weather, settings) });
   } catch (e) {
     res.status(500).json({ error: "Could not save where you are." });
@@ -3338,9 +3333,7 @@ app.post("/api/here/unit", async (req, res) => {
   const unit = req.body?.unit === "F" ? "F" : req.body?.unit === "C" ? "C" : null;
   if (!unit) return res.status(400).json({ error: "Celsius or Fahrenheit?" });
   try {
-    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
-    const { error } = await supabase.from("profiles").update({ settings: { ...(data?.settings || {}), temperature_unit: unit }, updated_at: new Date().toISOString() }).eq("id", userId);
-    if (error) throw new Error(error.message);
+    await patchSettings(supabase, userId, { set: { temperature_unit: unit } });
     res.json({ unit });
   } catch (e) {
     res.status(500).json({ error: "Could not save that." });
@@ -4255,9 +4248,9 @@ app.get("/api/pulse", async (req, res) => {
         .from("chat_links").select("platform").eq("user_id", userId);
       if (links && links.length) {
         deliveryPlatforms = [links[0].platform];
-        const settingsObj = profile?.settings || {};
-        settingsObj.pulse_settings = { ...(settingsObj.pulse_settings || {}), deliveryPlatforms };
-        await supabase.from("profiles").update({ settings: settingsObj }).eq("id", userId).then(() => {}, () => {});
+        await changeSettings(supabase, userId, (cur) => {
+          cur.pulse_settings = { ...(cur.pulse_settings || {}), deliveryPlatforms };
+        }).catch(() => {});
       }
     }
 
@@ -4290,11 +4283,7 @@ app.post("/api/settings/preferred-name", async (req, res) => {
   try {
     const name = String((req.body && req.body.name) || "").replace(/\s+/g, " ").trim();
     if (!name || name.length > 40) return res.status(400).json({ error: "A name of 1 to 40 characters, please." });
-    const { data: profile, error: readError } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-    if (readError) throw readError;
-    const settings = { ...(profile?.settings || {}), preferred_name: name };
-    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
-    if (error) throw error;
+    await patchSettings(supabase, userId, { set: { preferred_name: name } });
     // A name the setup scan guessed that this one contradicts goes (name-guess.js).
     await require("./name-guess").correct({ db: supabase, userId, chosen: name, removeVector: (u, k) => _factVectors.removeFactVector(u, k) })
       .catch((e) => console.error("preferred-name guess correction:", e.message));
@@ -4310,11 +4299,7 @@ app.post("/api/settings/confirm-sends", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
     const { enabled } = req.body;
-    const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-    const settings = profile?.settings || {};
-    settings.require_send_confirmation = enabled !== false;
-    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
-    if (error) throw error;
+    const settings = await patchSettings(supabase, userId, { set: { require_send_confirmation: enabled !== false } });
     res.json({ success: true, confirmSends: settings.require_send_confirmation });
   } catch (e) {
     console.error("confirm-sends save error:", e.message);
@@ -4352,29 +4337,19 @@ app.put("/api/pulse", async (req, res) => {
 
   try {
     // 1. Save dashboard settings to profiles.settings.pulse_settings (JSONB — always works)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("settings")
-      .eq("id", userId)
-      .single();
-
-    const currentSettings = profile?.settings || {};
-    const prevPulse = currentSettings.pulse_settings || {};
-    // Merge: a request that omits deliveryPlatforms must not wipe them
-    currentSettings.pulse_settings = {
-      proactiveLevel,
-      quietStart: safeQuietStart,
-      quietEnd: safeQuietEnd,
-      quietEnabled: quietEnabled !== false,
-      deliveryPlatforms: Array.isArray(deliveryPlatforms) ? platforms : (prevPulse.deliveryPlatforms || []),
-    };
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ settings: currentSettings, updated_at: new Date().toISOString() })
-      .eq("id", userId);
-
-    if (profileError) {
+    try {
+      await changeSettings(supabase, userId, (cur) => {
+        const prevPulse = cur.pulse_settings || {};
+        // Merge: a request that omits deliveryPlatforms must not wipe them
+        cur.pulse_settings = {
+          proactiveLevel,
+          quietStart: safeQuietStart,
+          quietEnd: safeQuietEnd,
+          quietEnabled: quietEnabled !== false,
+          deliveryPlatforms: Array.isArray(deliveryPlatforms) ? platforms : (prevPulse.deliveryPlatforms || []),
+        };
+      });
+    } catch (profileError) {
       console.error(`Pulse profile save error for ${userId}:`, profileError.message);
       throw profileError;
     }
@@ -5853,24 +5828,7 @@ app.put("/api/location", async (req, res) => {
   }
 
   try {
-    const { data: profile, error: fetchErr } = await supabase
-      .from("profiles")
-      .select("settings")
-      .eq("id", userId)
-      .single();
-
-    if (fetchErr) throw fetchErr;
-
-    const currentSettings = profile?.settings || {};
-    const { error: updateErr } = await supabase
-      .from("profiles")
-      .update({
-        settings: { ...currentSettings, location: { name, latitude, longitude, updatedAt: new Date().toISOString() } },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-
-    if (updateErr) throw updateErr;
+    await patchSettings(supabase, userId, { set: { location: { name, latitude, longitude, updatedAt: new Date().toISOString() } } });
     res.json({ success: true });
   } catch (err) {
     console.error("Location save error:", err.message);
@@ -7060,11 +7018,11 @@ app.post("/api/rag/residency", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const { level } = req.body;
   if (!["standard", "zero"].includes(level)) return res.status(400).json({ error: "Invalid level" });
-  const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
-  const settings = profile?.settings || {};
-  settings.rag_residency = level;
-  const { error: saveErr } = await supabase.from("profiles").update({ settings }).eq("id", userId);
-  if (saveErr) return res.status(500).json({ error: `could not save your settings (${saveErr.message})` });
+  try {
+    await patchSettings(supabase, userId, { set: { rag_residency: level } });
+  } catch (e) {
+    return res.status(500).json({ error: `could not save your settings (${e.message})` });
+  }
   res.json({ success: true, level });
 });
 
@@ -8136,7 +8094,7 @@ app.post("/api/account/clear-data", async (req, res) => {
       supabase.from("rag_sources").delete().eq("user_id", userId),
       supabase.from("canvases").delete().eq("user_id", userId),
       supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory"),
-      supabase.from("profiles").update({ settings: cleanSettings, updated_at: new Date().toISOString() }).eq("id", userId),
+      patchSettings(supabase, userId, { unset: ["onboarding_step", "preferred_name", "bot_name", "personality"] }).then(() => ({ error: null }), (e) => ({ error: e })),
     ]);
     const wipeFailed = wiped.find(x => x && x.error);
     if (wipeFailed) throw new Error(wipeFailed.error.message);

@@ -311,7 +311,7 @@ test("clicking the temperature flips it between Celsius and Fahrenheit, and the 
   assert.equal(weatherInUnit(w, { temperature_unit: "F" }).temp, 80, "their choice wins");
   assert.equal(weatherInUnit({ ...w, defaultUnit: "F" }, { temperature_unit: "C" }).unit, "C");
   assert.match(server, /app\.post\("\/api\/here\/unit"/);
-  assert.match(server, /settings: \{ \.\.\.\(data\?\.settings \|\| \{\}\), temperature_unit: unit \}/);
+  assert.match(server, /await patchSettings\(supabase, userId, \{ set: \{ temperature_unit: unit \} \}\);/);
   const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
   assert.match(chat, /'<button type="button" class="wx-temp" data-tip="Click for \\u00b0' \+ other \+ '"/, "the number says what clicking it does");
   assert.match(chat, /fetch\('\/api\/here\/unit', \{ method: 'POST'/);

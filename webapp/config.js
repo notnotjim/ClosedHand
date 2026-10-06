@@ -14,18 +14,25 @@ const CACHE_MS = 3000;
 
 let _cache = null;
 let _cacheAt = 0;
+let _failed = false;
 
 async function _load() {
   const now = Date.now();
-  if (_cache && now - _cacheAt < CACHE_MS) return _cache;
+  if (_cache && !_failed && now - _cacheAt < CACHE_MS) return _cache;
   try {
     const { supabase, isDbConfigured } = require("./db");
-    if (!isDbConfigured()) { _cache = {}; _cacheAt = now; return _cache; }
+    if (!isDbConfigured()) { _cache = {}; _cacheAt = now; _failed = false; return _cache; }
     const { getAdminUserId } = require("./admin");
-    const { data } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).single();
+    const { data, error } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).maybeSingle();
+    if (error) throw new Error(error.message);
     _cache = (data && data.settings && data.settings.self_host_config) || {};
+    _failed = false;
   } catch (_) {
-    _cache = _cache || {};
+    // A failed read, as happens for a moment while the database restarts,
+    // is not "no settings": keep what was known, remember that this read
+    // failed (getConfStrict), and try again on the next call.
+    _failed = true;
+    return _cache || {};
   }
   _cacheAt = now;
   return _cache;
@@ -39,44 +46,33 @@ async function getConf(key) {
   return conf[key];
 }
 
+// The same, but throws when the settings could not be read just now, for a
+// caller that must tell "not set" from "unknown": an unreadable password must
+// lock the dashboard, never open it.
+async function getConfStrict(key) {
+  const env = process.env[key];
+  if (env !== undefined && env !== "") return env;
+  const conf = await _load();
+  if (_failed) throw new Error("settings could not be read");
+  return conf[key];
+}
+
 // Merge a patch into self_host_config (the wizard's write path; webapp only in
 // practice). Null values delete keys.
 async function setConf(patch) {
   const { supabase } = require("./db");
   const { getAdminUserId } = require("./admin");
-  const adminId = getAdminUserId();
-  const { data } = await supabase.from("profiles").select("settings").eq("id", adminId).single();
-  const settings = (data && data.settings) || {};
-  const conf = { ...(settings.self_host_config || {}) };
+  // Only these keys change, inside the database (settings-patch.js). Writing
+  // back a whole copy is how a failed read wiped every setting, and how the
+  // bot's model-download progress and the setup page's answers undid each
+  // other.
+  const confSet = {}, confUnset = [];
   for (const [k, v] of Object.entries(patch)) {
-    if (v === null || v === undefined) delete conf[k];
-    else conf[k] = v;
+    if (v === null || v === undefined) confUnset.push(k);
+    else confSet[k] = v;
   }
-  settings.self_host_config = conf;
-  const { error } = await supabase
-    .from("profiles")
-    .update({ settings, updated_at: new Date().toISOString() })
-    .eq("id", adminId);
-  if (error) throw new Error(error.message || error.code);
-
-  // Two processes write this one settings blob: the webapp saves wizard
-  // answers while the bot writes local-model download progress every few
-  // seconds. Both read-modify-write the whole object, so a write landing
-  // between another's read and write silently reverts it. That is how an
-  // install ended up with RERANK_MODEL set and EMBED_MODEL missing, which
-  // reads as "memory is on" while nothing is ever indexed. Confirm the keys
-  // actually survived, and put them back if they did not.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const { data: after } = await supabase.from("profiles").select("settings").eq("id", adminId).single();
-    const live = (after && after.settings && after.settings.self_host_config) || {};
-    const lost = Object.entries(patch).filter(([k, v]) => v !== null && v !== undefined && live[k] !== v);
-    if (!lost.length) break;
-    const merged = { ...live };
-    for (const [k, v] of lost) merged[k] = v;
-    const nextSettings = { ...((after && after.settings) || {}), self_host_config: merged };
-    await supabase.from("profiles").update({ settings: nextSettings, updated_at: new Date().toISOString() }).eq("id", adminId);
-  }
-
+  const settings = await require("./settings-patch").patchSettings(supabase, getAdminUserId(), { confSet, confUnset });
+  const conf = settings.self_host_config || {};
   _cache = conf;
   _cacheAt = Date.now();
   return conf;
@@ -120,4 +116,4 @@ async function dashboardBase() {
   return null;
 }
 
-module.exports = { getConf, setConf, invalidateConf, getConfCached, dashboardBase };
+module.exports = { getConf, getConfStrict, setConf, invalidateConf, getConfCached, dashboardBase };

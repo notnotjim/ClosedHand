@@ -9,11 +9,21 @@ const path = require("node:path");
 const Module = require("node:module");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 
+// Applies patch_profile_settings the way migrations/057 does.
+function applyPatch(row, a) {
+  const next = { ...row };
+  for (const k of a.p_unset || []) delete next[k];
+  for (const [k, v] of Object.entries(a.p_set || {})) if (k !== "self_host_config") next[k] = v;
+  const conf = { ...(row.self_host_config || {}) };
+  for (const k of a.p_conf_unset || []) delete conf[k];
+  Object.assign(conf, a.p_conf_set || {});
+  next.self_host_config = conf;
+  return next;
+}
 function withDb(row, fn) {
   const db = { row, writes: 0, from: () => ({
-    select: () => ({ eq: () => ({ single: async () => ({ data: { settings: structuredClone(db.row) }, error: null }) }) }),
-    update: (value) => ({ eq: async () => { db.row = structuredClone(value.settings); db.writes++; return { error: null }; } }),
-  }) };
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { settings: structuredClone(db.row) }, error: null }) }) }),
+  }), rpc: async (name, args) => { db.row = applyPatch(db.row, structuredClone(args)); db.writes++; return { data: [{ patch_profile_settings: structuredClone(db.row) }], error: null }; } };
   const load = Module._load;
   Module._load = function (request, parent, ...rest) {
     if (request === "./db" && parent && /profile-settings\.js$/.test(parent.filename)) return { supabase: db };
