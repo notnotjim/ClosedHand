@@ -36,6 +36,9 @@ class UserStore {
     this.sandbox = null;    // { railway_service_id, hostname, sandbox_token, status, ... }
     this.workspaceFiles = null; // { files: [...], cached_at: "..." } — cached /workspace listing
     this.profile = null;
+    // True when the profile read failed (not merely "no row"): the settings
+    // are unknown, which is different from having chosen nothing.
+    this.settingsUnread = false;
     this.activeThreadId = null;
     this.threadList = [];
     this.userRules = [];
@@ -306,6 +309,7 @@ class UserStore {
     }
 
     // Profile (includes location in settings)
+    store.settingsUnread = !!(profileRes.error && profileRes.error.code !== "PGRST116");
     if (profileRes.data) {
       store.profile = profileRes.data;
       store.location = profileRes.data.settings?.location || null;
