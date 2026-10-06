@@ -4291,6 +4291,9 @@ app.post("/api/settings/preferred-name", async (req, res) => {
     const settings = { ...(profile?.settings || {}), preferred_name: name };
     const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
     if (error) throw error;
+    // A name the setup scan guessed that this one contradicts goes (name-guess.js).
+    await require("./name-guess").correct({ db: supabase, userId, chosen: name, removeVector: (u, k) => _factVectors.removeFactVector(u, k) })
+      .catch((e) => console.error("preferred-name guess correction:", e.message));
     res.json({ success: true, name });
   } catch (e) {
     console.error("preferred-name save error:", e.message);
