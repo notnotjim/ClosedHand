@@ -118,9 +118,11 @@ cp "$HERE/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 # ClosedHand's own Google app (see lib/google-app.js): from the environment,
 # or from a file kept outside the repository on the machine that builds
 # releases. Without either the app connects Google through the person's own
-# project.
+# project. The file is read only when CLOSEDHAND_GOOGLE_QUICK=1: until Google
+# verifies the app, an ordinary release must not offer it, and the file
+# sitting on the build machine was enough to ship it.
 GOOGLE_APP_ENV="${CLOSEDHAND_GOOGLE_APP_ENV:-$HOME/.config/closedhand/google-app.env}"
-if [ -z "${CLOSEDHAND_GOOGLE_CLIENT_ID:-}" ] && [ -f "$GOOGLE_APP_ENV" ]; then . "$GOOGLE_APP_ENV"; fi
+if [ -z "${CLOSEDHAND_GOOGLE_CLIENT_ID:-}" ] && [ "${CLOSEDHAND_GOOGLE_QUICK:-}" = "1" ] && [ -f "$GOOGLE_APP_ENV" ]; then . "$GOOGLE_APP_ENV"; fi
 GOOGLE_ID="$(printf '%s' "${CLOSEDHAND_GOOGLE_CLIENT_ID:-}" | tr -cd 'A-Za-z0-9._-')"
 GOOGLE_SECRET="$(printf '%s' "${CLOSEDHAND_GOOGLE_CLIENT_SECRET:-}" | tr -cd 'A-Za-z0-9._-')"
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__SHA__/$SHA/g" \

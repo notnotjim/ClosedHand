@@ -83,7 +83,11 @@ const SERVICES = {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     profileUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+    // Exactly the list in the Google Cloud console's Data Access page for
+    // ClosedHand's own app, openid included: Google's review compares the
+    // two lists string for string.
     scopes: [
+      "openid",
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/gmail.readonly",
@@ -92,14 +96,14 @@ const SERVICES = {
       // ClosedHand can revise a draft in place instead of driving the user's
       // browser because it had no API path to one.
       "https://www.googleapis.com/auth/gmail.compose",
-      // Events only, deliberately. The full "auth/calendar" scope asks the user
-      // to agree to "permanently delete all the calendars you can access",
-      // which is both far more than ClosedHand does and the most alarming line
-      // Google produces for Calendar. Adding calendar.readonly alongside would
-      // buy the calendar LIST, and the only thing that lists beyond each
-      // account's primary is holiday calendars, which are noise. One scope, the
-      // mildest wording, and nothing the product actually needs is lost.
-      "https://www.googleapis.com/auth/calendar.events",
+      // Events on calendars the person owns, deliberately. ClosedHand only
+      // reads and changes events on each account's main calendar, which they
+      // own, and every call it makes (events list, get, insert, patch,
+      // delete) accepts this scope. The full "auth/calendar" scope asks the
+      // user to agree to "permanently delete all the calendars you can
+      // access"; calendar.events would add calendars other people share,
+      // which ClosedHand never reads. Google's review asks for the narrowest.
+      "https://www.googleapis.com/auth/calendar.events.owned",
       "https://www.googleapis.com/auth/drive.readonly",
       "https://www.googleapis.com/auth/drive.file",
     ],
@@ -4416,10 +4420,13 @@ app.get("/api/connections/scopes", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   const REQUIRED = (SERVICES.google.scopes || []).filter(s => s.includes("/auth/"));
+  const GRANT_COVERS = {
+    "https://www.googleapis.com/auth/calendar.events.owned": ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar"],
+  };
   const LABELS = {
     "gmail.readonly": "read your email",
     "gmail.compose": "write and send email, and edit drafts",
-    "calendar.events": "read and change calendar events",
+    "calendar.events.owned": "read and change events on your calendars",
     "drive.readonly": "read your Drive files",
     "drive.file": "manage files it creates in your Drive",
   };
@@ -4447,7 +4454,10 @@ app.get("/api/connections/scopes", async (req, res) => {
       } catch (_) { /* treat as unknown rather than as missing */ }
 
       if (granted.length === 0) continue;
-      const missing = REQUIRED.filter(r => !granted.includes(r));
+      // A broader grant covers a narrower ask: accounts connected before
+      // Calendar narrowed to events.owned hold calendar.events, which
+      // includes it, and must not be told to reconnect.
+      const missing = REQUIRED.filter(r => !granted.includes(r) && !(GRANT_COVERS[r] || []).some((b) => granted.includes(b)));
       out.push({
         service: c.service,
         email: c.metadata?.email || null,
