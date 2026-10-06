@@ -37,7 +37,8 @@ test('the dashboard, setup, chat and lookup all say it stopped working', () => {
   assert.match(dash, /if \(!ex\.metadata\?\.reconnect_required\) return remove;/);
   assert.match(dash, /acctRow\(exEmail, extraAccountActions\(ex, exEmail, '\/auth\/google\?extra=1'\)\)/);
   assert.match(dash, /msRow\(exEmail, extraAccountActions\(ex, exEmail, '\/auth\/microsoft\?extra=1'\)\)/);
-  assert.match(dash, /extrasAgain === 1 \? "1 needs attention"/);
+  assert.match(dash, /\$\{again \|\| extrasAgain \? `<span class="int-badge problem"/, 'a red mark in place of the tick when any account on the card stopped');
+  assert.match(dash, /connTab\.classList\.toggle\('has-attn', signInAgain\.length > 0\)/, 'and a dot on the Connections tab');
   const setup = fs.readFileSync(path.join(root, 'webapp', 'views', 'setup.html'), 'utf8');
   assert.match(setup, /stopped\.join\(", "\) \+ " needs signing in again on the dashboard"/);
   assert.match(fs.readFileSync(path.join(root, 'webapp', 'setup-state.js'), 'utf8'), /addedSignInAgain,/);

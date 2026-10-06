@@ -298,9 +298,10 @@
     .name-row input { flex: 0 1 220px; min-width: 140px; padding: 7px 10px; background: #1A1817; border: 1px solid rgba(239,230,214,0.16); border-radius: 8px; color: #EFE6D6; font: inherit; font-size: 15px; }
     .name-row button { padding: 6px 14px; background: rgba(239,230,214,0.1); border: 1px solid rgba(239,230,214,0.28); border-radius: 8px; color: #EFE6D6; font: inherit; font-size: 12px; cursor: pointer; }
     .booking-moved { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(216,98,75,0.14); color: #E8A493; font-size: 10px; }
-    .int-card .int-badge.again {
-      color: #D0A652;
-    }
+    /* Something here stopped working: a red mark where the tick goes, and a
+       red dot on the tab. */
+    .int-card .int-badge.problem { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #D8624B; color: #FFF; font-size: 12px; font-weight: 700; line-height: 1; }
+    .tab.has-attn::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; background: #D8624B; position: relative; top: -7px; }
 
     /* Beckon: the add box answers the card. The border spins up, the logos
        wake, and the box takes focus. */
@@ -2168,7 +2169,7 @@
              any added by pasting a link into the box under Connect anything. -->
         <div class="section" id="skills-section">
           <h2>Skills</h2>
-          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">How ClosedHand does a kind of job. Add one by pasting its link under Connect anything.</p>
+          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">A skill is a package of instructions and resources that ClosedHand follows to complete a particular type of task. Add one in the Connect box below.</p>
           <div class="integrations-grid" id="skills-connected"></div>
         </div>
 
@@ -3156,11 +3157,18 @@
       // Saved connections Google or Microsoft stopped accepting: shown with
       // the others, but asking to sign in again.
       const signInAgain = data.signInAgain || [];
+      // A red dot on the Connections tab, seen from any tab.
+      const connTab = document.querySelector('.tab[data-tab="connections"]');
+      if (connTab) {
+        connTab.classList.toggle('has-attn', signInAgain.length > 0);
+        if (signInAgain.length) connTab.setAttribute('aria-label', 'Connections, ' + signInAgain.length + ' needing attention'); else connTab.removeAttribute('aria-label');
+      }
       let hasConnected = false;
       for (const [key, svc] of entries) {
         const again = signInAgain.includes(key);
-        // An added account its provider stopped accepting: the card stays
-        // connected (the first account works) but says one needs a sign-in.
+        // A card says whether it works, in one place: the green tick, or a red
+        // mark when its sign-in or an added account's has stopped. Opening it
+        // shows which account and the way to fix it.
         const extrasAgain = signInAgain.filter((s) => s.startsWith(key + "_extra_")).length;
         const isConnected = connectedServices.includes(key) || again;
 
@@ -3171,7 +3179,7 @@
               <div class="int-card connected" data-key="${key}" onclick="intCardClick(this)">
                 ${logoImg(svc.logoUrl)}
                 <span class="int-name">${escHtml(svc.name)}</span>
-                ${again ? '<span class="int-badge again">Sign in again</span>' : extrasAgain ? `<span class="int-badge again">${extrasAgain === 1 ? "1 needs attention" : extrasAgain + " need attention"}</span>` : '<span class="int-badge">Connected &#10003;</span>'}
+                ${again || extrasAgain ? `<span class="int-badge problem" title="${again ? "Its sign-in stopped working" : "An account here stopped working"}. Open to fix it." aria-label="Not working, open to fix">!</span>` : '<span class="int-badge">Connected &#10003;</span>'}
                 <span class="int-chevron"><span class="chevron-down"></span></span>
               </div>
               <div class="int-unfurl" data-key="${key}">

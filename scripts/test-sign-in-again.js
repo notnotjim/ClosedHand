@@ -73,6 +73,6 @@ test("the dashboard and setup pages say sign in again, and signing in clears the
   assert.match(setup, /againNote\("g", st\.googleSignInAgain, st\.googleAccount\)/);
   assert.match(setup, /againNote\("m", st\.microsoftSignInAgain, st\.microsoftAccount\)/);
   const dashboard = read("webapp/views/dashboard.html");
-  assert.match(dashboard, /<span class="int-badge again">Sign in again<\/span>/);
+  assert.match(dashboard, /<span class="int-badge problem" title="\$\{again \? "Its sign-in stopped working"/);
   assert.match(dashboard, /if \(m\.reconnect_required\) \{/);
 });
