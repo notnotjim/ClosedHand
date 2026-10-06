@@ -16,7 +16,7 @@ test('OneDrive has the same four chat tools as Google Drive, offered only with M
  }
  const engine=read('lib/engine.js');
  assert.match(engine,/\(g === "outlook" \|\| g === "onedrive"\) && !hasMicrosoft/);
- assert.match(engine,/"onedrive_search", "onedrive_list_recent"/);
+ assert.match(read('lib/read-only-tools.js'),/"onedrive_search", "onedrive_list_recent"/);
  assert.match(read('webapp/security-scan.js'),/"onedrive_search","onedrive_list_recent","onedrive_read","onedrive_send_file"/);
  assert.match(read('lib/agents.js'),/case "onedrive_send_file": return input\.file_id \? "odrv:"/);
 });
