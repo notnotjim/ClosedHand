@@ -4420,9 +4420,8 @@ app.get("/api/connections/scopes", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
   const REQUIRED = (SERVICES.google.scopes || []).filter(s => s.includes("/auth/"));
-  const GRANT_COVERS = {
-    "https://www.googleapis.com/auth/calendar.events.owned": ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar"],
-  };
+  const AUTH = "https://www.googleapis.com/auth/";
+  const GRANT_COVERS = { [AUTH + "calendar.events.owned"]: [AUTH + "calendar.events", AUTH + "calendar"] };
   const LABELS = {
     "gmail.readonly": "read your email",
     "gmail.compose": "write and send email, and edit drafts",

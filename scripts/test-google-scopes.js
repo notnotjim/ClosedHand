@@ -31,7 +31,7 @@ test('Calendar calls only touch the main calendar, which events.owned covers', (
 });
 
 test('an account holding the broader Calendar grant is not told to reconnect', () => {
-  assert.match(server, /"https:\/\/www\.googleapis\.com\/auth\/calendar\.events\.owned": \["https:\/\/www\.googleapis\.com\/auth\/calendar\.events", "https:\/\/www\.googleapis\.com\/auth\/calendar"\]/);
+  assert.match(server, /const GRANT_COVERS = \{ \[AUTH \+ "calendar\.events\.owned"\]: \[AUTH \+ "calendar\.events", AUTH \+ "calendar"\] \};/);
   assert.match(server, /const missing = REQUIRED\.filter\(r => !granted\.includes\(r\) && !\(GRANT_COVERS\[r\] \|\| \[\]\)\.some\(\(b\) => granted\.includes\(b\)\)\);/);
 });
 
