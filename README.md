@@ -107,7 +107,7 @@ Where you run it sets the tier. On a laptop it works while the lid is open and c
 
 ## Security posture
 
-Single-tenant by construction, not by configuration: every request resolves to the one admin. The first person to message it on a chat app becomes its owner and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data never transits anyone's infrastructure except the providers you connected.
+Single-tenant by construction, not by configuration: every request resolves to the one admin. The first person to message it on a chat app becomes its owner and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data goes only to the services you connect and the AI model provider you choose. Pages you open through your personal URL pass through ClosedHand's relay on Cloudflare, encrypted on the way and not kept.
 
 ## Reporting a problem
 

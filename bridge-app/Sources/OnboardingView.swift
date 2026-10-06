@@ -15,8 +15,8 @@ struct OnboardingView: View {
     private let steps = [
         OnboardingStep(
             icon: "hand.raised.circle.fill",
-            title: "Your privacy comes first",
-            body: "ClosedHand Bridge connects your Mac's apps to your ClosedHand assistant. All data is encrypted end to end and only accessible to your ClosedHand account. Nothing is sold or shared with third parties. You control exactly what is shared using the toggles in the menu bar, and you can wipe all your data from ClosedHand's servers at any time with two clicks.",
+            title: "Where your data goes",
+            body: "Bridge lets ClosedHand use this Mac's apps and files. What it reads goes only to ClosedHand, and to the AI model you chose when ClosedHand answers you. If ClosedHand runs on another computer, it travels there through ClosedHand's relay on Cloudflare, encrypted on the way and not kept. Choose what Bridge can reach with the toggles in the menu bar.",
             action: nil
         ),
         OnboardingStep(

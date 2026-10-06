@@ -51,7 +51,7 @@ struct SettingsView: View {
                     Text("Disconnect and remove Bridge data")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("Unpairs this Mac, removes your Bridge connection from ClosedHand's servers, and clears any cached Bridge data. Your conversations, memory, and other ClosedHand data are not affected.")
+                    Text("Unpairs this Mac from ClosedHand and deletes the copy of this Mac's calendar that ClosedHand keeps. Your conversations, pinned facts, Context Notes and everything else in ClosedHand stay.")
                         .font(.caption)
                         .foregroundColor(.secondary)
 

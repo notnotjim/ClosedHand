@@ -1402,10 +1402,18 @@ app.post("/api/telegram/session", async (req, res) => {
 // --- The gate: everything registered below needs the session (or Basic auth
 // --- for scripts) once a password exists. Pre-password, everything is open,
 // --- which is the localhost first-run expectation.
+// The Bridge app and the uploads it starts sign with their own credential (its
+// pairing token, or a one-time upload token), never the dashboard session, so
+// the gate used to turn every one of them away once a password existed: Mac
+// file transfers, thumbnails, the Bridge's sync and its Remove button all
+// failed. Each of these handlers refuses a missing or wrong token itself
+// (scripts/test-bridge-routes.js checks that they do).
+const SIGNED_BY_BRIDGE = new Set(["/api/bridge/file-upload", "/api/bridge/thumb-upload", "/api/bridge/sync-cache", "/api/bridge/disconnect"]);
 app.use(async (req, res, next) => {
   try {
     if (!(await passwordConfigured())) return next();
     if (hasAdminSession(req)) return next();
+    if (req.method === "POST" && SIGNED_BY_BRIDGE.has(req.path)) return next();
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
     if (scheme === "Basic" && encoded) {
       const pass = Buffer.from(encoded, "base64").toString().split(":").slice(1).join(":");
@@ -8254,6 +8262,28 @@ app.delete("/api/bridge", async (req, res) => {
   } catch (e) {
     console.error("Bridge disconnect error:", e.message);
     res.status(500).json({ error: "Failed to disconnect" });
+  }
+});
+
+// The Bridge app's own Remove, signed with its pairing token: unpairs this Mac,
+// closes its connection and deletes the copy of its calendar that ClosedHand
+// keeps. Conversations, pinned facts, Context Notes and the rest stay.
+app.post("/api/bridge/disconnect", async (req, res) => {
+  try {
+    const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) return res.status(401).json({ error: "Bridge token required" });
+    const { data: bridge, error } = await supabase.from("user_bridges").select("user_id").eq("token", token).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!bridge) return res.status(403).json({ error: "Invalid bridge token" });
+    const userId = bridge.user_id;
+    await mustWrite("could not delete this Mac's calendar copy", supabase.from("data_cache").delete().eq("user_id", userId).in("source", ["mac_calendar", "bridge"]));
+    await mustWrite("could not unpair this Mac", supabase.from("user_bridges").delete().eq("user_id", userId));
+    const ws = bridgeConnections.get("user:" + userId);
+    if (ws) try { ws.close(); } catch (_) {}
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Bridge remove error:", e.message);
+    res.status(500).json({ error: "Could not remove this Mac's connection. Try again." });
   }
 });
 
