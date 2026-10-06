@@ -252,7 +252,8 @@
     const list = byId("goals-list"); list.replaceChildren();
     if (!state.goals.length) {
       const empty = el("div", "goal-empty");
-      empty.append(el("p", "", "No goals yet. Tell ClosedHand one in chat, like “My goal is to run a 10k by spring”, or add one here."));
+      // The intro above already says how to add one; this shows what one looks like.
+      empty.append(el("p", "", "No goals yet. One might be “Run a 10k by spring” or “Read for 20 minutes a day”."));
       list.append(empty);
     }
     state.goals.forEach((g) => list.append(card(g)));
@@ -269,6 +270,8 @@
 
   function openNew(show) {
     byId("goal-new").hidden = !show; byId("goal-new-toggle").hidden = show;
+    // The form is the empty state's answer: while it is open the note goes.
+    const empty = document.querySelector("#goals-list .goal-empty"); if (empty) empty.hidden = show;
     if (show) byId("goal-new-title").focus();
   }
 

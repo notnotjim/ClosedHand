@@ -123,7 +123,7 @@ test("everything you have is one card size: chat apps, connected and skills", ()
   assert.match(css, /\.dashboard-container :is\(\.platforms-grid, \.integrations-grid\) \{ gap: 12px; grid-auto-flow: row; grid-template-columns: repeat\(auto-fill, minmax\(min\(100%, 320px\), 1fr\)\);/, "the same columns for every group");
   assert.match(css, /\.dashboard-container :is\(\.plat-card, \.int-card\) \{ flex-direction: row; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px;/, "the same one-line card");
   assert.doesNotMatch(css, /platforms-grid \{ grid-template-columns: repeat\(5/, "chat apps no longer squeezed into five columns");
-  assert.match(dashboard, /'<span class="int-name">' \+ escHtml\(skill\.name\) \+ '<\/span>' \+\n\s*\(item\.builtin \? '<span class="int-tag">Built in<\/span>' : '<span class="int-tag">Added<\/span>'\)/, "a skill is one line with a quiet tag");
+  assert.match(dashboard, /'<span class="int-name">' \+ escHtml\(skill\.name\) \+ '<\/span>' \+\n\s*\(missing\.length \? '<span class="int-tag" title="Connect it below to use this skill">Needs '[^\n]*\n\s*: item\.builtin \? '<span class="int-tag">Built in<\/span>' : '<span class="int-tag">Added<\/span>'\)/, "a skill is one line with a quiet tag, saying what it needs when its service is missing");
   assert.match(dashboard, /'<span class="int-name">' \+ escHtml\(m\.name\) \+ '<\/span>' \+\n\s*statusBadge/, "a pasted server is one line too");
 });
 

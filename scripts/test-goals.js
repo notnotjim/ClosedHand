@@ -195,7 +195,7 @@ test("goals have their own tab, after Schedules, that says how it helps", () => 
   assert.match(read("webapp/server.js"), /if \(shape === "habit"\) fields\.habit = \{/, "a habit made on the dashboard counts its week from the start");
   assert.match(tab, /\(state\.achieved \|\| \[\]\)\.forEach\(\(g\) => done\.append\(card\(g\)\)\)/, "an achieved goal opens like any other");
   assert.match(tab, /else act\("Not achieved yet"/);
-  assert.match(read("webapp/views/index.html"), /var fromHome = !hasMessages;\n    enterChatMode\(\);\n    addMessage\(displayText[^\n]*\n    if \(fromHome\) drawEarlierMessages\(text\);/, "a message sent from home shows the conversation it joins");
+  assert.match(read("webapp/views/index.html"), /var fromHome = !hasMessages;[\s\S]{0,800}if \(fromHome && !startFresh\) drawEarlierMessages\(text\);/, "a message sent from home shows the conversation it joins");
   assert.match(dashboard, /setUpcoming\('checkins', due\.map\(function\(g\) \{/, "a goal's next check-in is listed under Upcoming");
   assert.match(dashboard, /onclick: "openGoal\('" \+ g\.id \+ "'\)" \}\)\);/, "and opens the goal itself");
   assert.match(tab, /window\.openGoal = async \(id\) => \{\n\s*state\.open\.add\(id\);/);

@@ -180,6 +180,15 @@ function deletedHtml(report) {
 <p><a href="/dashboard#pages">Your other pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
 }
 
+// A page link that leads nowhere: the same page around a short note, with
+// the way back, instead of bare text on a white screen.
+function missingHtml() {
+  return shell("Page not found", `<div class="bar">${brand}</div>
+<h1>This page isn\u2019t here</h1>
+<p>It may have been deleted, or the link may be for a different ClosedHand.</p>
+<p><a href="/dashboard#pages">Your pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
+}
+
 // --- Word -------------------------------------------------------------------
 
 const xml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -259,4 +268,4 @@ function xlsxBuffer(report) {
   return XLSX.write(book, { type: "buffer", bookType: "xlsx" });
 }
 
-module.exports = { blocks, hasTables, bodyHtml, pageHtml, deletedHtml, docxBuffer, xlsxBuffer };
+module.exports = { blocks, hasTables, bodyHtml, pageHtml, deletedHtml, missingHtml, docxBuffer, xlsxBuffer };

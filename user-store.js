@@ -606,6 +606,9 @@ class UserStore {
       .eq("user_id", this.userId)
       .eq("service", service);
     console.log(`[connections] ${service} marked reconnect_required for ${this.userId} (${reason})`);
+    // Once per failure (the flag above returns early after this), tell the
+    // person where they get their updates, so it never dies unnoticed.
+    try { await require("./lib/connection-alert").tellOwner(this.userId, this, service); } catch (_) {}
   }
 
   // Delete a service connection (e.g. user says "disconnect Shopify")

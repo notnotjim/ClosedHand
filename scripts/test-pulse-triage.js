@@ -47,7 +47,7 @@ test('the screen is told the date, so "tomorrow" and "weeks away" can be told ap
   await triage({ items, level: 'medium', now: 'Today is Monday 12 April 2027.', fallback: async (s, m) => { message = m; return '{"pulse":false,"flagged":[]}'; } });
   assert.match(message, /^Today is Monday 12 April 2027\.\n\nNew items since last check:/);
   const pulse = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
-  assert.match(pulse, /items: triageItems, level, goals,\n\s*now: require\("\.\/timezone"\)\.nowStamp\(/);
+  assert.match(pulse, /items: triageItems, level, goals, known: knownLines,\n\s*now: require\("\.\/timezone"\)\.nowStamp\(/);
 });
 
 // A mailing list can open "Dear Sam" and end "call me". The screen is told

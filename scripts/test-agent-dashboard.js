@@ -65,10 +65,15 @@ test('a task waiting for confirmation stays visible after six hours', async () =
 });
 function route(url, records, fail = '') {
   let handler;
-  const db = { from(table) { let owner; const q = { select() { return q; }, eq(k, value) { assert.equal(k, 'user_id'); owner = value; return q; }, then(resolve) { return Promise.resolve(table === fail ? { error: new Error('offline') } : { data: (records[table] || []).filter(r => r.user_id === owner) }).then(resolve); } }; return q; } };
+  // The profile is read by id for the person's time zone; everything else by owner.
+  const db = { from(table) { let owner; const q = { select() { return q; }, eq(k, value) { assert.equal(k, table === 'profiles' ? 'id' : 'user_id'); owner = value; return q; },
+    maybeSingle() { return Promise.resolve({ data: (records.profiles || []).find(r => r.id === owner) || null }); },
+    then(resolve) { return Promise.resolve(table === fail ? { error: new Error('offline') } : { data: (records[table] || []).filter(r => r.user_id === owner) }).then(resolve); } }; return q; } };
   const start = server.indexOf('app.get("' + url + '",');
   const end = server.indexOf('\napp.', start + 1);
-  vm.runInNewContext(server.slice(start, end), { app: { get(name, fn) { handler = fn; } }, supabase: db, getUserIdFromRequest: () => 'owner', Date, console: { error() {} } });
+  const helperStart = server.indexOf('function startOfTodayIn');
+  const helper = server.slice(helperStart, server.indexOf('\n}\n', helperStart) + 2);
+  vm.runInNewContext(helper + '\n' + server.slice(start, end), { app: { get(name, fn) { handler = fn; } }, supabase: db, getUserIdFromRequest: () => 'owner', Date, Intl, Number, Object, console: { error() {} } });
   const res = { code: 200, status(code) { this.code = code; return this; }, json(value) { this.body = value; } };
   return handler({}, res).then(() => res);
 }

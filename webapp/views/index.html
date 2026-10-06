@@ -625,6 +625,10 @@
     text-wrap: pretty;
   }
   /* Recent conversations: thin rows, no boxes, the box's width. */
+  .hero-continuing { margin: -6px auto 14px; font-size: 12px; color: rgba(239,230,214,0.5); text-align: center; max-width: 900px; padding: 0 16px; }
+  .hero-continuing #heroContinuingName { color: rgba(239,230,214,0.75); }
+  .hero-continuing button { background: none; border: 0; padding: 0; font: inherit; color: rgba(232,164,147,0.85); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .hero-continuing button:hover { color: #E8A493; }
   .hero-recent { width: 100%; max-width: 900px; margin: 40px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
   /* A tab on the underside of the box, in the box's own border, and a
      drawer that slides the rows out from under it. Closed by default. */
@@ -1301,6 +1305,8 @@
   .library-view.active { display:flex !important; flex-direction:column; align-items:center; justify-content:flex-start; }
   .rag-container { width:100%; max-width:900px; flex:1; display:flex; flex-direction:column; background:rgba(16,14,13,0.92); backdrop-filter:blur(30px); border:1px solid rgba(239,230,214,0.04); border-radius:16px; padding:28px 32px 32px; margin-top:8px; box-shadow:0 8px 40px rgba(16,14,13,0.4); }
   #ragEmpty { flex:1; display:flex; flex-direction:column; }
+  .rag-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .rag-empty-actions .rag-upload-btn[hidden] { display: none; }
   .rag-empty-panel { border:2px dashed rgba(239,230,214,0.08); border-radius:16px; padding:48px 32px; text-align:center; background:rgba(239,230,214,0.02); flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   .rag-empty-panel svg { color:rgba(239,230,214,0.5); margin-bottom:12px; }
   .rag-empty-panel h3 { color:#B6AFA4; font-size:16px; margin:0 0 6px; }
@@ -2164,6 +2170,7 @@
   .here:disabled .here-needle { animation: hereSpin 1.1s linear infinite; }
   @keyframes hereSpin { to { transform: rotate(360deg); } }
   .here-wx { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(239,230,214,0.5); cursor: pointer; outline: none; }
+  .today-line { flex-basis: 100%; margin: 8px auto 0; max-width: 680px; padding: 0 16px; font-size: 13px; line-height: 1.5; color: rgba(239,230,214,0.5); text-align: center; text-wrap: balance; }
   .here-wx { cursor: default; }
   /* One quiet sentence at rest, in two parts that show themselves the same
      way on hover, a little brighter with a faint underline: the temperature
@@ -2277,6 +2284,9 @@
          on the screen rather than in the hero. -->
     <div style="flex:0.35"></div>
     <h1 class="hero-heading" id="chatGreeting">How can I help?</h1>
+    <!-- Sending from here carries on the open conversation only while it is
+         recent, and says so; after a few quiet hours it starts a new one. -->
+    <div class="hero-continuing" id="heroContinuing" hidden>Continuing <span id="heroContinuingName"></span> <span aria-hidden="true">&middot;</span> <button type="button" id="heroStartFresh">Start fresh</button></div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2333,6 +2343,8 @@
     <div class="hero-footer">
       <button class="here" id="hereBtn" type="button" hidden data-tip="Sets your local time from where you are and shows the weather here" aria-label="Orientate: sets your local time from where you are and shows the weather here"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="here-needle" d="M14.8 9.2 13 13l-3.8 1.8L11 11z"/></svg><span>Orientate</span></button>
       <span class="here-wx" id="hereWx" hidden></span>
+      <!-- What is on today and tomorrow, at a glance (GET /api/today). -->
+      <p class="today-line" id="todayLine" hidden></p>
     </div>
 
     <div style="flex:1"></div>
@@ -2495,7 +2507,7 @@
               </span>
               <span class="mon-subtitle">
               <span class="mon-status off" id="monLocalStatus"></span>
-              <span id="monLocalStatusText">Offline</span>
+              <span id="monLocalStatusText">Not connected</span>
               </span>
             </div>
             <div class="mon-bar-right">
@@ -2543,8 +2555,11 @@
           <line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/>
         </svg>
         <h3>File Search</h3>
-        <p>Sift through everything on your drives and computers with one plain-English query.<br>"Every invoice from 2025", "photos where someone has blue eyes", "anything about the Lisbon trip".<br>Get every match, not just the file you named. Your files stay where they are.</p>
-        <button class="rag-upload-btn" onclick="ragAddSource()">+ Add source</button>
+        <p>Search everything on your drives and computers in plain English. It recalls by meaning, not just keywords:<br>"Every invoice from 2025", "photos where someone has blue eyes", "anything about the Lisbon trip".<br>Get every match, not just the file you named. Your files stay where they are.</p>
+        <div class="rag-empty-actions">
+          <button class="rag-upload-btn" id="ragQuickDrive" type="button" hidden>Search your Google Drive</button>
+          <button class="rag-upload-btn" onclick="ragAddSource()">+ Add source</button>
+        </div>
       </div>
     </div>
 
@@ -2646,6 +2661,13 @@
   }
   function load() {
     fetch('/api/here', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null; }).then(render).catch(function() {});
+    // Today and tomorrow, at a glance, under the weather.
+    fetch('/api/today', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+      var line = document.getElementById('todayLine');
+      if (!line) return;
+      line.textContent = (d && d.text) || '';
+      line.hidden = !(d && d.text);
+    }).catch(function() {});
   }
   function settle(text) {
     btn.disabled = false;
@@ -3848,9 +3870,14 @@
 
     lastUserMessage = text;
     var fromHome = !hasMessages;
+    // From the home page: carry on the open conversation while it is recent
+    // (with its history drawn above), otherwise start a new one first. Until
+    // the list has loaded (undefined) it carries on, as it always did.
+    var startFresh = fromHome && window._homeContinue === null;
     enterChatMode();
+    var contLine = document.getElementById('heroContinuing'); if (contLine) contLine.hidden = true;
     addMessage(displayText, 'user', pendingFiles.length > 0 ? pendingFiles : null);
-    if (fromHome) drawEarlierMessages(text);
+    if (fromHome && !startFresh) drawEarlierMessages(text);
 
     // Clear preview area
     var previewArea = document.getElementById('file-preview-area');
@@ -3878,11 +3905,23 @@
     // Sent: the box is empty again and may close, with its usual words.
     updateComposing();
     input.setAttribute('placeholder', composerPlaceholder());
-    if (chatWs && chatWs.readyState === 1) {
-      chatWs.send(JSON.stringify(payload));
+    var deliver = function() {
+      if (chatWs && chatWs.readyState === 1) {
+        chatWs.send(JSON.stringify(payload));
+      } else {
+        pendingMessages.push(payload);
+        connectChat();
+      }
+    };
+    if (startFresh) {
+      window._homeContinue = undefined;
+      fetch('/api/threads/new', { method: 'POST' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { if (d && d.thread_id) _activeThreadId = d.thread_id; })
+        .catch(function() {})
+        .then(function() { deliver(); loadActivityFeed(); });
     } else {
-      pendingMessages.push(payload);
-      connectChat();
+      deliver();
     }
     _awaitingReply = true;
     armResponseWatchdog();
@@ -4337,7 +4376,7 @@
         }
         list.innerHTML = threads.map(function(t) {
           var ago = timeAgo(t.updated_at);
-          var title = t.title || 'Untitled';
+          var title = t.display_title || t.title || 'New conversation';
           var activeStyle = t.is_active ? 'border-left:3px solid #D8624B;background:rgba(216,98,75,0.06);' : 'border-left:3px solid transparent;';
           return '<div class="activity-item" style="' + activeStyle + 'border-radius:0;padding-left:12px;">' +
             '<div onclick="switchToThread(\'' + t.id + '\')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' +
@@ -4371,7 +4410,7 @@
 
       list.innerHTML = threads.map(function(t) {
         var ago = timeAgo(t.updated_at);
-        var title = t.title || (t.is_active ? 'New conversation' : 'Untitled');
+        var title = t.display_title || t.title || 'New conversation';
         var isActive = t.is_active;
         var msgCount = t.message_count || 0;
         var activeStyle = isActive ? 'border-left:3px solid #D8624B;background:rgba(216,98,75,0.06);' : 'border-left:3px solid transparent;';
@@ -5048,6 +5087,17 @@
         // for someone with no history.
         fetch('/api/threads').then(function(r) { return r.json(); }).then(function(threads) {
           if (!Array.isArray(threads)) return;
+          // The open conversation is carried on only while recent: three
+          // quiet hours and the next message starts a new one.
+          var openT = threads.filter(function(t) { return t.is_active; })[0];
+          var recent = openT && openT.resumable && (Date.now() - Date.parse(openT.updated_at) < 3 * 3600000);
+          window._homeContinue = recent ? openT : null;
+          var cont = document.getElementById('heroContinuing');
+          if (cont && recent) {
+            document.getElementById('heroContinuingName').textContent = '\u201c' + (openT.display_title || openT.title || 'your last conversation') + '\u201d';
+            cont.hidden = false;
+            document.getElementById('heroStartFresh').onclick = function() { window._homeContinue = null; cont.hidden = true; var ci = document.getElementById('chatInput'); if (ci) ci.focus(); };
+          }
           var withMsgs = threads.filter(function(t) { return t.resumable !== undefined ? t.resumable : (t.message_count || 0) > 0; });
           if (!withMsgs.length) return;
           var esc = function(x) { return String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
@@ -5060,7 +5110,7 @@
             // The name, with when it was last used under it: one item, at
             // any width, rather than a name and a time a screen apart.
             return '<a class="hero-recent-row" href="#" data-thread="' + esc(t.id) + '">' +
-              '<span class="text"><span class="title">' + esc(t.title || 'Untitled') + '</span>' +
+              '<span class="text"><span class="title">' + esc(t.display_title || t.title || 'New conversation') + '</span>' +
               '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span></span>' +
               '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
           }).join('') + (withMsgs.length > rows.length
@@ -5304,12 +5354,16 @@ async function readMacAccessStatus() {
   } catch (e) { return { status: 'unavailable', desktop: window._macDesktop === true }; }
 }
 
+// ClosedHand already runs on this computer, so "Offline" here read as a
+// fault. Bridge is a separate, optional thing: it opens a Mac's own files and
+// apps to ClosedHand, on this Mac or another.
+var BRIDGE_PITCH = 'ClosedHand already runs on this computer. Bridge lets it open your Mac\u2019s own files and apps too, on this Mac or another one.';
 function macAccessHelp(data) {
   if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when ClosedHand is reachable.' };
   if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'ClosedHand’s' : 'ClosedHand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
   if (data.desktop) return { title: 'Mac access is not connected', text: 'The ClosedHand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running ClosedHand.' };
   if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep ClosedHand Bridge open on the connected Mac. It will reconnect automatically.' };
-  return { title: 'Connect a Mac', text: 'Install Bridge on the Mac whose files and apps you want ClosedHand to use. With Docker, this can be the same Mac or a different one.', setup: true };
+  return { title: 'Connect a Mac', text: BRIDGE_PITCH, setup: true };
 }
 
 function macAccessNotice(data) {
@@ -5362,7 +5416,7 @@ function checkBridgeStatus() {
       if (label) label.textContent = data.desktop ? 'Mac access' : 'Mac access settings';
       if (label) label.style.color = '';
       if (monDot) monDot.className = 'mon-status off';
-      if (monStatusText) { monStatusText.textContent = data.status === 'reconnecting' ? 'Reconnecting' : 'Unavailable'; monStatusText.style.color = 'rgba(239,230,214,0.25)'; }
+      if (monStatusText) { monStatusText.textContent = data.status === 'reconnecting' ? 'Reconnecting' : data.status === 'not_paired' ? 'Not connected' : 'Unavailable'; monStatusText.style.color = 'rgba(239,230,214,0.25)'; }
     }
   }).catch(function() {});
 }
@@ -5782,6 +5836,22 @@ function ragCloseModal() {
   document.getElementById('ragModal').style.display = 'none';
 }
 
+// Google Drive already connected: offer it straight from the empty screen,
+// rather than behind "+ Add source" as if nothing were connected yet.
+async function ragOfferDrive() {
+  var btn = document.getElementById('ragQuickDrive');
+  if (!btn) return;
+  try {
+    var r = await fetch('/api/rag/available-sources');
+    var av = r.ok ? await r.json() : {};
+    if (!av.gdrive) return;
+    var accts = (av.gdriveAccounts && av.gdriveAccounts.length) ? av.gdriveAccounts : [{ account: 'google' }];
+    var first = accts.filter(function (a) { return a.primary; })[0] || accts[0];
+    btn.onclick = function () { document.getElementById('ragModal').style.display = 'flex'; ragBrowse('gdrive', 'root', undefined, first.account); };
+    btn.hidden = false;
+  } catch (e) {}
+}
+
 async function ragLoadSources() {
   try {
     var resp = await fetch('/api/rag/sources');
@@ -5795,6 +5865,7 @@ async function ragLoadSources() {
     if (!sources || sources.length === 0) {
       emptyEl.style.display = '';
       sourcesEl.style.display = 'none';
+      ragOfferDrive();
       return;
     }
     emptyEl.style.display = 'none';
@@ -6534,14 +6605,14 @@ function escapeHtml(s) {
     monLocalCrumb(_monLocalPath);
     async function setOffline(){
       if(dot)dot.className='mon-status off';
-      if(stxt){stxt.textContent='Offline';stxt.style.color='rgba(239,230,214,0.25)';}
+      if(stxt){stxt.textContent='Not connected';stxt.style.color='rgba(239,230,214,0.25)';}
       // Hide view toggles and breadcrumb when offline
       var vt=document.getElementById('monLocalViewToggle');if(vt)vt.style.display='none';
       var cr=document.getElementById('monLocalCrumb');if(cr)cr.style.display='none';
       el.style.display='flex';el.style.flexDirection='column';el.style.flex='1';
       var state = await readMacAccessStatus(), help = macAccessHelp(state);
       if (!help.setup) {
-        if(stxt)stxt.textContent = state.status === 'connected' ? 'Connected' : state.status === 'reconnecting' ? 'Reconnecting' : 'Unavailable';
+        if(stxt)stxt.textContent = state.status === 'connected' ? 'Connected' : state.status === 'reconnecting' ? 'Reconnecting' : state.status === 'not_paired' ? 'Not connected' : 'Unavailable';
         if(dot && state.status === 'connected')dot.className='mon-status on';
         el.innerHTML = '<div class="bridge-cta"><h3>' + help.title + '</h3><p>' + help.text + '</p><button class="bridge-cta-pair" onclick="monLoadLocal()">Try again</button></div>';
         return;
@@ -6562,7 +6633,7 @@ function escapeHtml(s) {
         +'<path d="M13 28 Q32 6 51 34" stroke-dasharray="2.5 3.5" stroke-width="1.25"/>'
         +'</svg></div>'
         +'<h3>Connect a Mac</h3>'
-        +'<p>Install Bridge on the Mac whose files and apps you want ClosedHand to use. This can be the Mac running Docker or a different Mac.</p>'
+        +'<p>'+BRIDGE_PITCH+'</p>'
         +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open this dashboard on your Mac to download Bridge.</p>')
         +'<div class="bridge-cta-flow">'
         +'<div class="bridge-cta-step"><em>1</em> Download</div>'

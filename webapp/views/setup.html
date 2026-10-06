@@ -1075,8 +1075,10 @@
     $("#done-count").textContent = String(doneCount);
     $("#total-count").textContent = String(steps.length);
     $("#next-chip").textContent = next ? (next.key === "personal_url" ? "next: claim your personal URL" : "next: " + next.label.toLowerCase()) : "";
+    var stopped = state.addedSignInAgain || [];
     $("#summary-note").textContent = requiredDone
-      ? (doneCount === steps.length ? "everything is connected" : "ready, with more to unlock")
+      ? (stopped.length ? stopped.join(", ") + " needs signing in again on the dashboard"
+        : doneCount === steps.length ? "everything is connected" : "ready, with more to unlock")
       : "";
 
     var chatStep = (state.steps || []).find(function (s) { return s.key === "chat"; });

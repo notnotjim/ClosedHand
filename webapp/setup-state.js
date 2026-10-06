@@ -15,6 +15,7 @@ async function getSetupState() {
   let settings = {};
   let connections = [];
   let signInAgain = [];
+  let addedSignInAgain = [];
   let googleAccount = null;
   let microsoftAccount = null;
   let profileCreatedAt = null;
@@ -28,6 +29,9 @@ async function getSetupState() {
       const { data } = await supabase.from("connections").select("service, metadata").eq("user_id", getAdminUserId());
       // A connection Google or Microsoft stopped accepting is not connected.
       ({ working: connections, signInAgain } = require("./connection-health").split(data));
+      // Added accounts that stopped working, by address, so setup never says
+      // "everything is connected" over one that is not.
+      addedSignInAgain = (data || []).filter((r) => /_extra_/.test(r.service || "") && r.metadata?.reconnect_required).map((r) => r.metadata?.email || r.service);
       const g = (data || []).find((r) => r.service === "google");
       if (g) googleAccount = { name: g.metadata?.name || null, email: g.metadata?.email || null };
       const m = (data || []).find((r) => r.service === "microsoft");
@@ -160,6 +164,7 @@ async function getSetupState() {
     // Who is connected (name and address only), so the card can say so.
     googleConnected: google,
     googleSignInAgain: !google && signInAgain.some((s) => s === "google" || s.startsWith("google")),
+    addedSignInAgain,
     googleAccount,
     microsoftConnected: microsoft,
     microsoftSignInAgain: !microsoft && signInAgain.some((s) => s === "microsoft" || s.startsWith("microsoft_extra_")),

@@ -11,10 +11,11 @@ test('every account of a service is reported, the first one first', () => {
     google: { tokens: { access_token: 'x' }, metadata: { email: 'sam@example.com' } },
     google_extra_work: { tokens: { access_token: 'y' }, metadata: { email: 'sam.work@example.com' } },
     google_extra_gone: { metadata: { email: 'old@example.com' } },
+    google_extra_dead: { tokens: { access_token: 'v' }, metadata: { email: 'sam.old@example.com', reconnect_required: true } },
     microsoft_extra_home: { tokens: { access_token: 'z' }, metadata: { email: 'sam@example.net' } },
     shopify: { tokens: { access_token: 'w' }, metadata: { shopDomain: 'fixture.myshopify.com' } },
   };
-  assert.deepEqual(accountsFor(connections, 'google'), ['sam@example.com', 'sam.work@example.com']);
+  assert.deepEqual(accountsFor(connections, 'google'), ['sam@example.com', 'sam.work@example.com', 'sam.old@example.com (needs signing in again)']);
   assert.deepEqual(accountsFor(connections, 'shopify'), ['fixture.myshopify.com']);
   assert.deepEqual(accountsFor(connections, 'slack'), []);
   assert.deepEqual(accountsFor({}, 'google'), []);

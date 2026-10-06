@@ -2,10 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm');
 const read = name => fs.readFileSync(require.resolve('../webapp/' + name), 'utf8');
-test('plain dashboard bookmarks open the app and specific section links retain their destination', () => {
+test('a plain dashboard bookmark opens the dashboard and specific section links retain their destination', () => {
   const html = read('views/dashboard.html');
   const source = html.slice(html.indexOf('  if (window.self === window.top)'), html.indexOf('</script>', html.indexOf('  if (window.self === window.top)')));
-  for (const [search, hash, expected] of [['', '', '/'], ['', '#agents', '/?dash=%23agents'], ['?task=123', '#agents', '/?dash=%3Ftask%3D123%23agents']]) {
+  for (const [search, hash, expected] of [['', '', '/?dash=%23connections'], ['', '#agents', '/?dash=%23agents'], ['?task=123', '#agents', '/?dash=%3Ftask%3D123%23agents']]) {
     let result; const top = {}, window = { self: top, top, location: { search, hash, replace(value) { result = value; } } };
     vm.runInNewContext(source, { window }); assert.equal(result, expected);
   }

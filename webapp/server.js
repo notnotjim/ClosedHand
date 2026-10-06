@@ -1434,9 +1434,37 @@ app.get("/api/usage/summary", async (req, res) => {
       tokens_in: Number(r.tokens_in) || 0,
       tokens_out: Number(r.tokens_out) || 0,
     }));
-    res.json({ days, rows });
+    // The prices the person entered for their models, so the tab can show
+    // what the tokens cost. ClosedHand does not guess anyone's prices.
+    const { data: prof } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).maybeSingle();
+    res.json({ days, rows, prices: (prof && prof.settings && prof.settings.model_prices) || {} });
   } catch (e) {
     res.status(500).json({ error: "usage summary failed" });
+  }
+});
+
+// A model's price per million tokens, as the provider's price list gives it.
+app.post("/api/usage/prices", async (req, res) => {
+  try {
+    const { getAdminUserId } = require("./admin");
+    const userId = getAdminUserId();
+    const model = String((req.body && req.body.model) || "").trim().slice(0, 120);
+    const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+    const pin = num(req.body && req.body.in), pout = num(req.body && req.body.out);
+    if (!model) return res.status(400).json({ error: "Which model?" });
+    for (const v of [pin, pout]) if (v !== null && !(Number.isFinite(v) && v >= 0 && v < 1000)) return res.status(400).json({ error: "Prices are per million tokens, from 0 to 1000." });
+    const { data: profile, error: readError } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    if (readError) throw readError;
+    const settings = { ...(profile?.settings || {}) };
+    const prices = { ...(settings.model_prices || {}) };
+    if (pin === null && pout === null) delete prices[model];
+    else prices[model] = { in: pin || 0, out: pout || 0 };
+    settings.model_prices = prices;
+    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
+    if (error) throw error;
+    res.json({ success: true, prices });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save the price." });
   }
 });
 
@@ -2652,6 +2680,15 @@ async function handleExtraGoogleAccount(res, stateData, svc, tokens) {
     .from("connections").select("service, metadata")
     .eq("user_id", userId).like("service", "google%");
   const { data: prof } = await supabase.from("profiles").select("email").eq("id", userId).single();
+  // Signing in again as an extra account already here renews its sign-in,
+  // as it does for Microsoft. Refusing it as "already connected" left an
+  // account Google had stopped accepting with no way back but Remove and Add.
+  const same = (existing || []).find((c) => c.service.startsWith("google_extra_") && normGmail(c.metadata?.email) === normGmail(email));
+  if (same) {
+    await saveConnection(userId, same.service, tokens, svc, metadata);
+    console.log(`[Auth] Extra Google account signed in again for ${userId}: ${email} (${same.service})`);
+    return res.redirect("/dashboard?connected=google_extra");
+  }
   const knownEmails = new Set([normGmail(prof?.email)]);
   for (const c of existing || []) knownEmails.add(normGmail(c.metadata?.email));
   if (knownEmails.has(normGmail(email))) {
@@ -3211,6 +3248,57 @@ app.get("/api/here", async (req, res) => {
   }
 });
 
+// Rain chance by hour where the person is, for the today line (30 minutes).
+const _hereRain = new Map();
+async function rainByHour(lat, lon) {
+  const key = lat + "," + lon, hit = _hereRain.get(key);
+  if (hit && Date.now() - hit.at < 30 * 60000) return hit.value;
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability&timezone=UTC&forecast_days=2`, { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error("rain " + r.status);
+  const d = await r.json();
+  const value = new Map((d.hourly?.time || []).map((t, i) => [Date.parse(t + "Z"), d.hourly.precipitation_probability[i]]));
+  _hereRain.set(key, { at: Date.now(), value });
+  return value;
+}
+
+// GET /api/today: what is on today and tomorrow, for the line under the
+// home page's chat box (webapp/today-line.js).
+app.get("/api/today", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const loc = prof?.settings?.location || {};
+    const tz = _validTz(loc.timezone) ? loc.timezone : "UTC";
+    const now = Date.now(), until = new Date(now + 2 * 86400000).toISOString(), from = new Date(now - 3600000).toISOString();
+    const [events, bookings, flights] = await Promise.all([
+      supabase.from("data_cache").select("summary:data->>summary, all_day:data->>all_day, received_at").eq("user_id", userId).eq("type", "event").gte("received_at", from).lte("received_at", until).limit(30),
+      supabase.from("bookings").select("title, starts_at, status").eq("user_id", userId).gte("starts_at", from).lte("starts_at", until),
+      supabase.from("facts").select("key, value").eq("user_id", userId).like("key", "flight-%"),
+    ]);
+    const items = [];
+    for (const e of events.data || []) if (e.summary && String(e.all_day) !== "true") items.push({ at: Date.parse(e.received_at), raw: e.summary, kind: "event" });
+    for (const b of bookings.data || []) if (b.status !== "cancelled") items.push({ at: Date.parse(b.starts_at), raw: b.title, kind: "booking" });
+    for (const f of flights.data || []) {
+      try {
+        let v = f.value; if (typeof v === "string") v = JSON.parse(v); if (v && typeof v.value === "string") v = JSON.parse(v.value);
+        const at = Date.parse(v?.departure?.dateTime || "");
+        if (at) items.push({ at, raw: v.flightNumber || "flight", label: "Flight to " + (v.arrival?.airport || "").toUpperCase(), kind: "flight" });
+      } catch (_) { /* not a flight record */ }
+    }
+    let rain = null;
+    if (items.length && Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude)) {
+      rain = await rainByHour(Math.round(loc.latitude * 100) / 100, Math.round(loc.longitude * 100) / 100).catch(() => null);
+    }
+    const rainAt = (ms) => { if (!rain) return false; const hour = Math.floor(ms / 3600000) * 3600000; return (rain.get(hour) || 0) >= 60; };
+    const line = require("./today-line");
+    const entries = line.build(items, { tz, now, rainAt });
+    res.json({ entries, text: line.sentence(entries) });
+  } catch (e) {
+    res.status(500).json({ error: "Could not load today." });
+  }
+});
+
 app.post("/api/here", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -3255,6 +3343,18 @@ app.post("/api/here/unit", async (req, res) => {
   }
 });
 
+// One name for a thread everywhere: its title, or until it has one, the start
+// of the first thing the person asked. One list said "Untitled" and the other
+// "New conversation" for the same thread.
+function threadDisplayTitle(title, messages) {
+  if (title) return title;
+  const text = (m) => typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((c) => c.text || "").join(" ") : "";
+  const first = (messages || []).find((m) => m.role === "user" && text(m).trim());
+  const plain = first ? text(first).replace(/^\s*\[[^\]]*\]\s*/g, "").replace(/\s+/g, " ").trim() : "";
+  if (!plain) return "New conversation";
+  return plain.length > 60 ? plain.slice(0, 57).replace(/\s+\S*$/, "") + "…" : plain;
+}
+
 app.get("/api/threads", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -3274,7 +3374,7 @@ app.get("/api/threads", async (req, res) => {
       // not a chat that was only hello, names and "yep".
       const after = intro && intro.thread === t.id ? messages.slice(intro.messages || 0) : messages;
       const resumable = !!t.title || after.some((m) => m.role === "user" && text(m).trim().length >= 12);
-      return { id: t.id, title: t.title, is_active: t.is_active,
+      return { id: t.id, title: t.title, display_title: threadDisplayTitle(t.title, messages), is_active: t.is_active,
         created_at: t.created_at, updated_at: t.updated_at,
         message_count: messages.length, resumable };
     });
@@ -3436,7 +3536,7 @@ app.get("/api/threads/archived", async (req, res) => {
     if (error) throw error;
     res.json((data || []).map(t => ({
       id: t.id,
-      title: t.title || "Untitled conversation",
+      title: threadDisplayTitle(t.title, t.messages),
       updated_at: t.updated_at,
       message_count: Array.isArray(t.messages) ? t.messages.length : 0,
     })));
@@ -3887,7 +3987,7 @@ app.get("/api/connections", async (req, res) => {
   try {
     const { data: connections, error: connErr } = await supabase
       .from("connections")
-      .select("service, metadata, updated_at")
+      .select("service, metadata, connected_at, updated_at")
       .eq("user_id", userId);
 
     if (connErr) throw connErr;
@@ -3899,7 +3999,8 @@ app.get("/api/connections", async (req, res) => {
       isSignup: SERVICES[c.service]?.isSignup || false,
       provides: SERVICES[c.service]?.provides || [],
       metadata: c.metadata || null,
-      connectedAt: c.updated_at,
+      // When it was connected, not when its sign-in last refreshed.
+      connectedAt: c.connected_at || c.updated_at,
     }));
 
     res.json(result);
@@ -4176,6 +4277,27 @@ app.get("/api/pulse", async (req, res) => {
 
 // Toggle whether ClosedHand confirms before sending email on the user's behalf
 // (chat and background agents). Default on; off is opt-in for bulk senders.
+// What ClosedHand calls the person: the greeting, every reply, agents,
+// routines and Pulse all read preferred_name. Set once during setup from
+// whatever was to hand, it could not be changed anywhere afterwards.
+app.post("/api/settings/preferred-name", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const name = String((req.body && req.body.name) || "").replace(/\s+/g, " ").trim();
+    if (!name || name.length > 40) return res.status(400).json({ error: "A name of 1 to 40 characters, please." });
+    const { data: profile, error: readError } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    if (readError) throw readError;
+    const settings = { ...(profile?.settings || {}), preferred_name: name };
+    const { error } = await supabase.from("profiles").update({ settings, updated_at: new Date().toISOString() }).eq("id", userId);
+    if (error) throw error;
+    res.json({ success: true, name });
+  } catch (e) {
+    console.error("preferred-name save error:", e.message);
+    res.status(500).json({ error: "Could not save the name." });
+  }
+});
+
 app.post("/api/settings/confirm-sends", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -4499,7 +4621,14 @@ async function ownReport(req, res) {
     .eq("id", req.params.id)
     .limit(1);
   const report = data?.[0];
-  if (error || !report) { res.status(404).send("This page was not found. It may have been deleted."); return null; }
+  if (error || !report) {
+    // Opening a page link: the styled page with the way back. Other callers get the plain message.
+    if (req.method === "GET" && /^\/page\/[^/]+$/.test(req.path)) {
+      res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'");
+      res.status(404).send(require("./report-page").missingHtml());
+    } else res.status(404).send("This page was not found. It may have been deleted.");
+    return null;
+  }
   if (report.user_id !== userId) { res.status(403).send("Not authorized"); return null; }
   return report;
 }
@@ -4763,6 +4892,20 @@ app.get("/api/automations", async (req, res) => {
 
 
 
+// The instant the day began where the person is (midnight in their zone).
+function startOfTodayIn(tz) {
+  try {
+    if (!tz) throw new Error("no zone");
+    const now = new Date();
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
+      .formatToParts(now).map((p) => [p.type, p.value]));
+    const sinceMidnight = (((Number(parts.hour) % 24) * 60 + Number(parts.minute)) * 60 + Number(parts.second)) * 1000 + now.getMilliseconds();
+    return now.getTime() - sinceMidnight;
+  } catch (_) {
+    return new Date().setHours(0, 0, 0, 0);
+  }
+}
+
 app.get("/api/automations/stats", async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -4784,7 +4927,10 @@ app.get("/api/automations/stats", async (req, res) => {
     const runs = runsRes.data || [];
     const autos = autosRes.data || [];
     const tasks = tasksRes.data || [];
-    const todayStart = new Date().setHours(0,0,0,0);
+    // "Today" is the person's day, not the server's: the server runs on UTC,
+    // seven hours behind someone in Vietnam.
+    const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const todayStart = startOfTodayIn(prof?.settings?.location?.timezone || prof?.settings?.timezone);
 
     // Running means running, not enabled. The old count was of saved agents
     // with status active, which is whether a trigger is armed.
@@ -6239,6 +6385,7 @@ app.patch("/api/goals/:id", async (req, res) => {
       if (typeof body[k] === "string") { patch[k] = body[k].trim().slice(0, k === "title" ? 160 : 400) || (k === "title" ? goal.title : null); said.push(["planned", `${{ title: "Goal", why: "Why", if_then: "If-then", obstacle: "Obstacle", done_when: "Done when", reward: "Reward" }[k]}: ${patch[k] || "cleared"}`]); }
     }
     const { data, error } = await supabase.from("goals").update(patch).eq("id", goal.id).eq("user_id", userId).select(GOAL_FIELDS).single();
+    if (!error && (patch.status === "achieved" || patch.status === "dropped")) await closeGoalMatters(userId, goal.title);
     if (error) throw new Error("Could not save that.");
     for (const [kind, text] of said) await goalEvent(goal, userId, kind, text);
     res.json(data);
@@ -6291,10 +6438,28 @@ app.post("/api/goals/:id/habit", async (req, res) => {
   } catch (e) { goalReply(res, e); }
 });
 
+// A goal that is removed, achieved or let go closes the matter about it in
+// Context Brain. One removed from Goals stayed "Ongoing" there, still saying
+// the goal was waiting on days and a gym.
+async function closeGoalMatters(userId, title) {
+  const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const goal = norm(title);
+  if (!goal) return;
+  const { data, error } = await supabase.from("matters").select("id, title").eq("user_id", userId).eq("status", "open");
+  if (error) { console.error("[goals] could not read matters:", error.message); return; }
+  for (const m of data || []) {
+    if (!norm(m.title).includes(goal)) continue;
+    const { error: e } = await supabase.from("matters").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", m.id).eq("user_id", userId);
+    if (e) console.error("[goals] could not close a matter:", e.message);
+  }
+}
+
 app.delete("/api/goals/:id", async (req, res) => {
   const userId = await goalOwner(req, res); if (!userId) return;
   try {
+    const goal = await ownGoal(userId, req.params.id).catch(() => null);
     await mustWrite("could not remove that goal", supabase.from("goals").delete().eq("id", req.params.id).eq("user_id", userId));
+    if (goal) await closeGoalMatters(userId, goal.title);
     res.json({ success: true });
   } catch (e) { goalReply(res, e); }
 });

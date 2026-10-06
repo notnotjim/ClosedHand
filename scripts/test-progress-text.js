@@ -74,7 +74,8 @@ test("a progress line quotes words a person would say, never search syntax, iden
   assert.equal(d("pin_fact", { key: "profile-name-certainty" }), "Pinning a fact");
   assert.equal(d("web_search", { query: "icloud-storage-reminder" }), 'Searching the web for "icloud storage reminder"', "a name made for code reads as words");
   assert.equal(d("web_search", { query: "sam@my-mail.com" }), 'Searching the web for "sam@my-mail.com"', "an address keeps its dashes");
-  assert.equal(d("api_request", { method: "GET", url: "https://nominatim.openstreetmap.org/search?q=x" }), "Checking openstreetmap.org");
+  // A service nobody would know by its address is named by what it does.
+  assert.equal(d("api_request", { method: "GET", url: "https://nominatim.openstreetmap.org/search?q=x" }), "Looking at the map");
   assert.equal(d("api_request", { method: "POST", url: "https://shop.example.co.uk/x", service: "shopify" }), "Sending to Shopify");
   assert.equal(d("api_request", { method: "DELETE", url: "https://api.example.co.uk/items/1" }), "Removing something from example.co.uk");
   assert.equal(d("maps_geocode", { address: "Random Alley 148 Saigon" }), "Finding Random Alley 148 Saigon on the map");

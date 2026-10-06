@@ -284,6 +284,20 @@
 
     /* Saved, but its provider stopped accepting the sign-in. */
     .conn-again { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: rgba(239,230,214,0.75); }
+    .usage-prices { margin-top: 20px; }
+    .usage-prices h3 { font-size: 14px; margin: 0 0 4px; }
+    .usage-prices-note { font-size: 12px; color: rgba(239,230,214,0.55); margin: 0 0 10px; }
+    .usage-price-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid rgba(239,230,214,0.08); font-size: 13px; }
+    .usage-price-row .m { min-width: 160px; color: #EFE6D6; }
+    .usage-price-row label { color: rgba(239,230,214,0.6); display: inline-flex; align-items: center; gap: 4px; }
+    .usage-price-row input { width: 80px; padding: 5px 8px; background: #1A1817; border: 1px solid rgba(239,230,214,0.16); border-radius: 6px; color: #EFE6D6; font: inherit; font-size: 12px; }
+    .usage-price-row button { padding: 4px 12px; background: rgba(239,230,214,0.1); border: 1px solid rgba(239,230,214,0.28); border-radius: 6px; color: #EFE6D6; font: inherit; font-size: 12px; cursor: pointer; }
+    .usage-tile .t-cost { margin-top: 4px; font-size: 13px; color: #E8A493; }
+    .name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .name-row label { font-size: 15px; color: #EFE6D6; }
+    .name-row input { flex: 0 1 220px; min-width: 140px; padding: 7px 10px; background: #1A1817; border: 1px solid rgba(239,230,214,0.16); border-radius: 8px; color: #EFE6D6; font: inherit; font-size: 15px; }
+    .name-row button { padding: 6px 14px; background: rgba(239,230,214,0.1); border: 1px solid rgba(239,230,214,0.28); border-radius: 8px; color: #EFE6D6; font: inherit; font-size: 12px; cursor: pointer; }
+    .booking-moved { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(216,98,75,0.14); color: #E8A493; font-size: 10px; }
     .int-card .int-badge.again {
       color: #D0A652;
     }
@@ -657,6 +671,15 @@
       scrollbar-width: none;
     }
     .tab-bar::-webkit-scrollbar { display: none; }
+    /* More tabs than fit (a phone): the row fades at the edge that has more,
+       so it reads as scrollable rather than cut off. */
+    .tab-bar.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); }
+    .tab-bar.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); }
+    .tab-bar.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); }
+    @media (max-width: 600px) {
+      .dashboard-container { padding-left: 16px !important; padding-right: 16px !important; }
+      .tab { padding: 12px 14px; font-size: 15px; }
+    }
 
     .tab {
       padding: 14px 20px;
@@ -1975,8 +1998,10 @@
   // Fixed here rather than at each redirect, because there are a dozen of them
   // and a bookmark or a refresh lands the same way.
   if (window.self === window.top) {
+    // A bare /dashboard (typed or bookmarked) still opens the dashboard,
+    // on Connections, rather than landing on the chat page with nothing open.
     var inner = window.location.search + window.location.hash;
-    window.location.replace("/" + (inner ? "?dash=" + encodeURIComponent(inner) : ""));
+    window.location.replace("/?dash=" + encodeURIComponent(inner || "#connections"));
   }
 </script>
   <div id="ambient-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:-1;"></div>
@@ -2693,6 +2718,11 @@
               <p class="section-desc">How you want ClosedHand to work. Add them here or tell ClosedHand in chat, and turn them off or remove them at any time.</p>
             </div>
             <div class="settings-group-body">
+              <div class="name-row">
+                <label for="preferred-name">ClosedHand calls you</label>
+                <input type="text" id="preferred-name" maxlength="40" autocomplete="given-name" placeholder="Your name">
+                <button type="button" id="preferred-name-save" onclick="savePreferredName()">Save</button>
+              </div>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading...</div>
               </div>
@@ -2801,8 +2831,8 @@
           <div class="brain-toolbar">
             <input type="text" id="brain-search" placeholder="Search memory..." oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;">
             <div style="display:flex;gap:2px;">
-              <button onclick="switchBrainView('list')" class="brain-view-btn" data-view="list" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:transparent;color:#B6AFA4;border-radius:6px 0 0 6px;cursor:pointer;font-size:12px;font-family:inherit;">List</button>
-              <button onclick="switchBrainView('graph')" class="brain-view-btn active" data-view="graph" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:rgba(239,230,214,0.16);color:#EFE6D6;border-radius:0 6px 6px 0;cursor:pointer;font-size:12px;font-family:inherit;">Graph</button>
+              <button onclick="switchBrainView('list')" class="brain-view-btn active" data-view="list" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:rgba(239,230,214,0.16);color:#EFE6D6;border-radius:6px 0 0 6px;cursor:pointer;font-size:12px;font-family:inherit;">List</button>
+              <button onclick="switchBrainView('graph')" class="brain-view-btn" data-view="graph" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:transparent;color:#B6AFA4;border-radius:0 6px 6px 0;cursor:pointer;font-size:12px;font-family:inherit;">Graph</button>
             </div>
             <button onclick="openAddPinnedNote()" style="padding:6px 14px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">+ Add Note</button>
           </div>
@@ -2857,7 +2887,7 @@
           <div class="usage-toolbar">
             <div>
               <h2 style="margin-bottom:2px;">Usage</h2>
-              <p style="margin:0;font-size:13px;color:#B6AFA4;">Where your key money goes. Token counts come from your providers' own responses; check your provider dashboard for billing.</p>
+              <p style="margin:0;font-size:13px;color:#B6AFA4;">Where your key money goes. Token counts come from your providers' own responses. Add their prices below to see what it costs.</p>
             </div>
             <div class="spacer"></div>
             <div class="usage-range" id="usage-range">
@@ -2879,6 +2909,7 @@
             <div class="usage-tooltip" id="usage-tooltip"></div>
           </div>
           <div class="usage-notes" id="usage-notes"></div>
+          <div class="usage-prices" id="usage-prices"></div>
           <div class="usage-table" id="usage-table"></div>
           <div class="usage-empty" id="usage-empty" style="display:none;">
             No usage recorded yet. Numbers appear here after ClosedHand's first model call.
@@ -3128,6 +3159,9 @@
       let hasConnected = false;
       for (const [key, svc] of entries) {
         const again = signInAgain.includes(key);
+        // An added account its provider stopped accepting: the card stays
+        // connected (the first account works) but says one needs a sign-in.
+        const extrasAgain = signInAgain.filter((s) => s.startsWith(key + "_extra_")).length;
         const isConnected = connectedServices.includes(key) || again;
 
         if (isConnected) {
@@ -3137,7 +3171,7 @@
               <div class="int-card connected" data-key="${key}" onclick="intCardClick(this)">
                 ${logoImg(svc.logoUrl)}
                 <span class="int-name">${escHtml(svc.name)}</span>
-                ${again ? '<span class="int-badge again">Sign in again</span>' : '<span class="int-badge">Connected &#10003;</span>'}
+                ${again ? '<span class="int-badge again">Sign in again</span>' : extrasAgain ? `<span class="int-badge again">${extrasAgain === 1 ? "1 needs attention" : extrasAgain + " need attention"}</span>` : '<span class="int-badge">Connected &#10003;</span>'}
                 <span class="int-chevron"><span class="chevron-down"></span></span>
               </div>
               <div class="int-unfurl" data-key="${key}">
@@ -3444,6 +3478,18 @@
       return "Connected";
     }
 
+    // An added account: Remove, and when its provider stopped accepting the
+    // sign-in, a way back in first. Signing in as the same account renews it.
+    function extraAccountActions(ex, exEmail, signInUrl) {
+      const remove = `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Remove</button>`;
+      if (!ex.metadata?.reconnect_required) return remove;
+      // On a line of their own under the email, so the email shows in full
+      // and the person can tell which account stopped.
+      return `<span style="display:flex;align-items:center;gap:8px;flex-basis:100%;">`
+        + `<span class="conn-badge-warn" style="flex-shrink:0;" title="Its provider stopped accepting ClosedHand's sign-in, so its mail and calendar are not updating.">Stopped working</span>`
+        + `<button class="conn-btn conn-btn-manage" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();(window.top||window).location.href='${signInUrl}'">Sign in again</button>` + remove + `</span>`;
+    }
+
     function connDrawerHtml(c) {
       const m = c.metadata || {};
       const rows = [];
@@ -3454,9 +3500,11 @@
           + `<button class="conn-btn conn-btn-manage" onclick="event.stopPropagation();(window.top||window).location.href='/auth/${c.service}'">Sign in again</button>`);
       }
 
-      // Account identity rows
-      if (m.name) rows.push(row("Account", escHtml(m.name)));
-      if (m.email) rows.push(row("Email", escHtml(m.email)));
+      // Account identity rows. Google and Microsoft list every account
+      // below, so naming the first one here as well said it twice.
+      const listsAccounts = c.service === "google" || c.service === "microsoft";
+      if (m.name && !listsAccounts) rows.push(row("Account", escHtml(m.name)));
+      if (m.email && !listsAccounts) rows.push(row("Email", escHtml(m.email)));
       if (m.username) rows.push(row("Username", `@${escHtml(m.username)}`));
       if (m.team) rows.push(row("Workspace", escHtml(m.team)));
       if (m.shopDomain) rows.push(row("Store", escHtml(m.shopDomain)));
@@ -3473,14 +3521,13 @@
       if (c.service === "google") {
         const extras = (window._connectionsCache || []).filter(x => /^google_extra_/.test(x.service));
         const acctRow = (email, right) =>
-          `<div class="conn-resource" style="display:flex;align-items:center;gap:8px;">`
+          `<div class="conn-resource" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">`
           + `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${email}">${email}</span>`
           + right + `</div>`;
         let acctHtml = acctRow(escHtml(m.email || "Primary account"), `<span class="conn-badge-ok" style="flex-shrink:0;">Primary</span>`);
         for (const ex of extras) {
           const exEmail = escHtml(ex.metadata?.email || ex.service);
-          acctHtml += acctRow(exEmail,
-            `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Remove</button>`);
+          acctHtml += acctRow(exEmail, extraAccountActions(ex, exEmail, '/auth/google?extra=1'));
         }
         acctHtml += `<div style="margin-top:8px;"><button style="font-size:12px;padding:6px 14px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.28);border-radius:8px;color:#EFE6D6;cursor:pointer;font-family:inherit;" onclick="event.stopPropagation();(window.top||window).location.href='/auth/google?extra=1'">+ Add another Google account</button></div>`;
         html += resourceSection("Accounts", acctHtml);
@@ -3490,14 +3537,13 @@
       if (c.service === "microsoft") {
         const msExtras = (window._connectionsCache || []).filter(x => /^microsoft_extra_/.test(x.service));
         const msRow = (email, right) =>
-          `<div class="conn-resource" style="display:flex;align-items:center;gap:8px;">`
+          `<div class="conn-resource" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">`
           + `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${email}">${email}</span>`
           + right + `</div>`;
         let msAcctHtml = msRow(escHtml(m.email || "Primary account"), `<span class="conn-badge-ok" style="flex-shrink:0;">Primary</span>`);
         for (const ex of msExtras) {
           const exEmail = escHtml(ex.metadata?.email || ex.service);
-          msAcctHtml += msRow(exEmail,
-            `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Remove</button>`);
+          msAcctHtml += msRow(exEmail, extraAccountActions(ex, exEmail, '/auth/microsoft?extra=1'));
         }
         msAcctHtml += `<div style="margin-top:8px;"><button style="font-size:12px;padding:6px 14px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.28);border-radius:8px;color:#EFE6D6;cursor:pointer;font-family:inherit;" onclick="event.stopPropagation();(window.top||window).location.href='/auth/microsoft?extra=1'">+ Add another Microsoft account</button></div>`;
         html += resourceSection("Accounts", msAcctHtml);
@@ -3575,6 +3621,7 @@
         if (!res.ok) return;
         const connections = await res.json();
         window._connectionsCache = connections;
+        if (typeof renderConnectedSkills === 'function' && typeof _builtinSkills !== 'undefined' && _builtinSkills.length) renderConnectedSkills();
 
         // Populate unfurls in the Connections tab
         connections.forEach(function(c) {
@@ -4651,6 +4698,17 @@
       document.getElementById('sl-auto-under').disabled = ask;
       document.getElementById('sl-auto-wrap').style.opacity = ask ? '0.5' : '1';
     }
+    var REGION_CURRENCY = { GB: 'GBP', US: 'USD', IE: 'EUR', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', BE: 'EUR', PT: 'EUR', AT: 'EUR', FI: 'EUR', GR: 'EUR', AU: 'AUD', NZ: 'NZD', CA: 'CAD', JP: 'JPY', SG: 'SGD', VN: 'VND', IN: 'INR', CH: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK', HK: 'HKD', TH: 'THB', ZA: 'ZAR' };
+    function defaultCurrency() {
+      try {
+        var langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
+        for (var i = 0; i < langs.length; i++) {
+          var region = String(langs[i] || '').split('-')[1];
+          if (region && REGION_CURRENCY[region.toUpperCase()]) return REGION_CURRENCY[region.toUpperCase()];
+        }
+      } catch (e) {}
+      return 'USD';
+    }
     function updateSpendCurrency() {
       var currency = document.getElementById('sl-currency').value;
       document.querySelectorAll('[data-spend-currency]').forEach(function (el) { el.textContent = currency; });
@@ -4689,8 +4747,11 @@
         // Shops charge in their own money; the checkout total is converted into
         // this currency before the limits are checked.
         var sel = document.getElementById('sl-currency');
-        sel.value = l.currency || 'USD';
-        if (sel.value !== (l.currency || 'USD')) sel.value = 'USD';
+        // Until a currency is chosen, the one of the browser's region (en-GB:
+        // pounds), not dollars for everyone.
+        var guess = defaultCurrency();
+        sel.value = l.currency || guess;
+        if (sel.value !== (l.currency || guess)) sel.value = 'USD';
         sel.onchange = updateSpendCurrency;
         updateSpendCurrency();
         document.getElementById('sl-always-ask').checked = l.always_ask !== false;
@@ -5024,12 +5085,54 @@
       return USAGE_FEATURES.find(f => f.key === key) || { key: key, label: 'Other', color: 'var(--u-other)' };
     }
 
+    // Cost, from the prices the person entered per model (per million tokens).
+    var usagePrices = {};
+    function usageCost(rows) {
+      var total = 0, priced = false;
+      rows.forEach(function (r) {
+        var p = usagePrices[r.model];
+        if (!p) return;
+        priced = true;
+        total += (r.tokens_in / 1e6) * (Number(p.in) || 0) + (r.tokens_out / 1e6) * (Number(p.out) || 0);
+      });
+      return priced ? total : null;
+    }
+    function fmtCost(n) { return n === null ? '' : (n < 0.01 ? 'under $0.01' : '\u2248 $' + n.toFixed(2)); }
+    function renderUsagePrices(rows) {
+      var el = document.getElementById('usage-prices');
+      if (!el) return;
+      var models = [];
+      rows.forEach(function (r) { if (r.model && models.indexOf(r.model) === -1) models.push(r.model); });
+      if (!models.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<h3>Prices</h3><p class="usage-prices-note">Per million tokens, from your provider\u2019s price list. Providers often charge less for text they have seen before, so the cost shown is the most it can be.</p>' +
+        models.map(function (m) {
+          var p = usagePrices[m] || {};
+          var id = 'price-' + m.replace(/[^a-z0-9]+/gi, '-');
+          return '<div class="usage-price-row"><span class="m">' + escHtml(m) + '</span>' +
+            '<label>$<input type="number" min="0" step="0.01" id="' + id + '-in" value="' + (p.in !== undefined ? escHtml(String(p.in)) : '') + '" placeholder="in"></label>' +
+            '<label>$<input type="number" min="0" step="0.01" id="' + id + '-out" value="' + (p.out !== undefined ? escHtml(String(p.out)) : '') + '" placeholder="out"></label>' +
+            '<button type="button" onclick="saveUsagePrice(\'' + escHtml(m).replace(/'/g, "\\'") + '\', \'' + id + '\')">Save</button></div>';
+        }).join('');
+    }
+    async function saveUsagePrice(model, id) {
+      var vin = document.getElementById(id + '-in').value, vout = document.getElementById(id + '-out').value;
+      var r = await fetch('/api/usage/prices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: model, in: vin, out: vout }) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) { showToast(d.error || 'Could not save the price', true); return; }
+      usagePrices = d.prices || {};
+      renderUsage(usageRows);
+      showToast('Price saved.');
+    }
+    window.saveUsagePrice = saveUsagePrice;
+
     async function loadUsage() {
       try {
         const res = await fetch('/api/usage/summary?days=' + usageDays);
         const data = await res.json();
         usageRows = data.rows || [];
+        usagePrices = data.prices || {};
         renderUsage(usageRows);
+        renderUsagePrices(usageRows);
       } catch (e) {
         document.getElementById('usage-empty').style.display = 'block';
       }
@@ -5078,6 +5181,7 @@
           '<div class="t-name"><span class="usage-swatch" style="background:' + meta.color + '"></span>' + meta.label + '</div>' +
           '<div class="t-val">' + fmtTokens(f.tin + f.tout) + '</div>' +
           '<div class="t-sub">' + fmtTokens(f.tin) + ' in · ' + fmtTokens(f.tout) + ' out · ' + f.calls + ' calls</div>' +
+          (function () { var c = usageCost(rows.filter(function (r) { var mk = usageFeatureMeta(r.feature).label === 'Other' ? 'other' : r.feature; return mk === k; })); return c === null ? '' : '<div class="t-cost">' + fmtCost(c) + '</div>'; })() +
           '</div>';
       }).join('');
 
@@ -5346,7 +5450,8 @@
       var route = det.from && det.to ? escHtml(det.from) + ' &rarr; ' + escHtml(det.to) : (b.location ? escHtml(b.location) : '');
       var tbc = function(v) { return v ? escHtml(String(v)) : '<span style="color:rgba(239,230,214,0.6);">TBC</span>'; };
       var details = [];
-      details.push('<span class="flight-detail">Ref <span>' + tbc(b.reference) + '</span></span>');
+      // Only what is known: "Ref TBC" on a table that has no reference said nothing.
+      if (b.reference) details.push('<span class="flight-detail">Ref <span>' + escHtml(b.reference) + '</span></span>');
       if (b.kind === 'hotel' && b.ends_at) details.push('<span class="flight-detail">Check-out <span>' + escHtml(fmtBookingDate(b.ends_at, b.timezone)) + '</span></span>');
       else if (b.ends_at && !sameDay) details.push('<span class="flight-detail">Until <span>' + escHtml(fmtBookingDate(b.ends_at, b.timezone)) + '</span></span>');
       else if (until) details.push('<span class="flight-detail">Until <span>' + escHtml(until) + '</span></span>');
@@ -5356,12 +5461,17 @@
       if (det.cancel_by) details.push('<span class="flight-detail">Free cancellation until <span>' + escHtml(fmtBookingDate(det.cancel_by, b.timezone)) + '</span></span>');
       if (det.check_in_url) details.push('<span class="flight-detail"><a href="' + escHtml(det.check_in_url) + '" target="_blank" rel="noopener" style="color:#D8624B;">Check in</a></span>');
       var cancelled = b.status === 'cancelled';
+      // ClosedHand moved it: say from when, so the change is visible at a glance.
+      var movedFrom = det.moved_from ? fmtBookingTime(det.moved_from, b.timezone) : '';
+      var moved = movedFrom && movedFrom !== when ? ' <span class="booking-moved">moved from ' + escHtml(movedFrom) + '</span>' : '';
+      // The venue's name is often the provider's too; say it once.
+      var showProvider = b.provider && String(b.provider).trim().toLowerCase() !== String(b.title).trim().toLowerCase();
       return '<div class="flight-card" style="' + (cancelled ? 'opacity:0.55;' : '') + '">' +
         '<div class="flight-status-bar ' + (cancelled ? 'cancelled' : 'scheduled') + '"></div>' +
         '<div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
           '<div style="min-width:110px;"><span style="font-size:13px;margin-right:6px;" title="' + escHtml(b.kind) + '">' + icon + '</span><span class="flight-number">' + escHtml(b.title) + '</span>' +
-            (b.provider ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(b.provider) + '</div>' : '') + '</div>' +
-          '<div style="flex:1;min-width:200px;font-size:13px;color:#EFE6D6;">' + route + (when ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(when) + (sameDay && until ? ' to ' + escHtml(until) : '') + '</div>' : '') + '</div>' +
+            (showProvider ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(b.provider) + '</div>' : '') + '</div>' +
+          '<div style="flex:1;min-width:200px;font-size:13px;color:#EFE6D6;">' + route + (when ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(when) + (sameDay && until ? ' to ' + escHtml(until) : '') + moved + '</div>' : '') + '</div>' +
           '<span class="flight-status-badge ' + (cancelled ? 'cancelled' : 'scheduled') + '">' + (cancelled ? 'Cancelled' : 'Booked') + '</span>' +
           '<button class="conn-btn conn-btn-manage" title="Not a booking? Remove it" onclick="removeBooking(\'' + b.id + '\')" style="padding:2px 8px;font-size:11px;">&times;</button>' +
         '</div>' +
@@ -5399,14 +5509,19 @@
           : !f.liveStatus ? 'Scheduled times from your booking.' : '';
 
 
-      // Fixed headings: show what WILL be known, TBC until the live feed fills it
+      // Within a day of departure the headings that WILL be known show as
+      // TBC until the live feed fills them. Further out, four TBCs on a
+      // card were clutter: only what is known is shown.
+      const depMs = Date.parse(live.departureTime || f.departure?.dateTime || '');
+      const soon = !isNaN(depMs) && depMs - Date.now() < 24 * 3600000;
       const tbc = v => v ? escHtml(String(v)) : '<span style="color:rgba(239,230,214,0.6);">TBC</span>';
       let details = [];
-      details.push(`<span class="flight-detail">Terminal <span>${tbc(live.terminal || f.departure?.terminal)}</span></span>`);
-      details.push(`<span class="flight-detail">Gate <span>${tbc(live.gate)}</span></span>`);
-      details.push(`<span class="flight-detail">Arr Gate <span>${tbc(live.gateDestination)}</span></span>`);
-      details.push(`<span class="flight-detail">Aircraft <span>${tbc(f.aircraftType || live.aircraftType)}</span></span>`);
-      details.push(`<span class="flight-detail">Booking ref <span>${tbc(f.confirmationCode)}</span></span>`);
+      const field = (label, v) => { if (v || soon) details.push(`<span class="flight-detail">${label} <span>${tbc(v)}</span></span>`); };
+      field('Terminal', live.terminal || f.departure?.terminal);
+      field('Gate', live.gate);
+      field('Arr Gate', live.gateDestination);
+      field('Aircraft', f.aircraftType || live.aircraftType);
+      if (f.confirmationCode) details.push(`<span class="flight-detail">Booking ref <span>${escHtml(String(f.confirmationCode))}</span></span>`);
       if (live.delay && live.delay > 0) details.push(`<span class="flight-detail delay-highlight">Delayed <span>${live.delay}min</span></span>`);
 
       return `<div class="flight-card">
@@ -5842,10 +5957,20 @@
     function renderConnectedSkills() {
       var list = document.getElementById('skills-connected');
       if (!list) return;
+      // A skill for a service that is not connected cannot work yet: it says
+      // what it needs, dimmed, after the ones that work. "Built in" on a
+      // Shopify skill with no Shopify read as if it were ready.
+      var connectedKeys = (window._connectionsCache || []).map(function (c) { return String(c.service || '').replace(/_extra_.*$/, ''); });
+      var missingFor = function (skill) {
+        return [].concat(skill.requires_service || []).filter(function (id) { return connectedKeys.indexOf(id) === -1; });
+      };
       var all = _builtinSkills.map(function (skill) { return { skill: skill, builtin: true }; })
         .concat(_installedSkills.map(function (skill) { return { skill: skill, builtin: false }; }));
+      if (window._connectionsCache) all.sort(function (a, b) { return (missingFor(a.skill).length ? 1 : 0) - (missingFor(b.skill).length ? 1 : 0); });
       list.innerHTML = all.map(function (item) {
         var skill = item.skill;
+        var missing = window._connectionsCache ? missingFor(skill) : [];
+        var missingNames = missing.map(function (id) { return SKILL_SERVICES[id] || String(id).replace(/_/g, ' '); });
         // The apps it works with, unless its name already says so ("Meta Ads").
         var needs = [].concat(skill.requires_service || []).map(function (id) { return SKILL_SERVICES[id] || String(id).replace(/_/g, ' '); })
           .filter(function (app) { return String(skill.name || '').toLowerCase().indexOf(app.toLowerCase()) === -1; });
@@ -5856,10 +5981,11 @@
         var logo = typeof getMcpLogo === 'function' ? getMcpLogo(skill.name, '') : null;
         var logoHtml = logo ? '<img src="' + logo + '" width="22" height="22" style="border-radius:4px;flex-shrink:0;" alt="">' : MCP_GENERIC_ICON;
         return '<div class="int-wrap">' +
-          '<div class="int-card connected" onclick="toggleMcpUnfurl(this)" style="background:#1A1817;border-color:rgba(239,230,214,0.16);">' +
+          '<div class="int-card connected" onclick="toggleMcpUnfurl(this)" style="background:#1A1817;border-color:rgba(239,230,214,0.16);' + (missing.length ? 'opacity:0.55;' : '') + '">' +
             logoHtml +
             '<span class="int-name">' + escHtml(skill.name) + '</span>' +
-            (item.builtin ? '<span class="int-tag">Built in</span>' : '<span class="int-tag">Added</span>') +
+            (missing.length ? '<span class="int-tag" title="Connect it below to use this skill">Needs ' + escHtml(missingNames.join(' and ')) + '</span>'
+              : item.builtin ? '<span class="int-tag">Built in</span>' : '<span class="int-tag">Added</span>') +
             '<span class="int-chevron"><span class="chevron-down"></span></span>' +
           '</div>' +
           '<div class="int-unfurl"><div class="int-unfurl-inner">' + detail + '</div></div>' +
@@ -7201,7 +7327,8 @@
     var _allPinnedFacts = []; var _allBrainData = [];
     var _memoryFilter = 'all';
 
-    var _brainViewMode = 'graph';
+    // The list reads at a glance; the graph is there for exploring.
+    var _brainViewMode = 'list';
 
     function switchBrainView(mode) {
       _brainViewMode = mode;
@@ -7232,6 +7359,55 @@
         listEl.style.display = 'block';
         renderMemoryList();
       }
+    }
+
+    var PROFILE_LABELS = { name: 'Name', email: 'Email', location: 'Where you are', phone: 'Phone', birthday: 'Birthday', timezone: 'Time zone' };
+    // The tab row says when it has more to scroll to, and keeps the open tab in view.
+    (function() {
+      var bar = document.querySelector('.tab-bar');
+      if (!bar) return;
+      var mark = function() {
+        bar.classList.toggle('more-right', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4);
+        bar.classList.toggle('more-left', bar.scrollLeft > 4);
+      };
+      bar.addEventListener('scroll', mark, { passive: true });
+      window.addEventListener('resize', mark);
+      bar.addEventListener('click', function(e) {
+        var t = e.target.closest('.tab');
+        if (t && t.scrollIntoView) t.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+      });
+      setTimeout(mark, 0);
+      setTimeout(function() { var a = bar.querySelector('.tab.active'); if (a && a.scrollIntoView) a.scrollIntoView({ inline: 'nearest', block: 'nearest' }); mark(); }, 300);
+    })();
+
+    // What ClosedHand calls the person, shown and changed in Preferences.
+    async function loadPreferredName() {
+      try {
+        var r = await fetch('/api/status');
+        if (!r.ok) return;
+        var d = await r.json();
+        var el = document.getElementById('preferred-name');
+        if (el && d.name && d.name !== 'User') el.value = d.name;
+      } catch (e) {}
+    }
+    async function savePreferredName() {
+      var el = document.getElementById('preferred-name');
+      var name = (el && el.value || '').trim();
+      if (!name) { showToast('Type the name you want to be called', true); return; }
+      var r = await fetch('/api/settings/preferred-name', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) });
+      var d = await r.json().catch(function() { return {}; });
+      if (r.ok) showToast('ClosedHand will call you ' + d.name + '.'); else showToast(d.error || 'Could not save the name', true);
+    }
+    window.savePreferredName = savePreferredName;
+    loadPreferredName();
+
+    function factLabel(n) {
+      var key = String(n.key || '');
+      if (/^profile[-_]/.test(key)) {
+        var rest = key.replace(/^profile[-_]/, '');
+        return PROFILE_LABELS[rest] || (rest.charAt(0).toUpperCase() + rest.slice(1)).replace(/[-_]/g, ' ');
+      }
+      return n.subject || key.replace(/[-_]/g, ' ');
     }
 
     function renderBrainList(nodes) {
@@ -7722,8 +7898,10 @@
           for (var i = 0; i < rows.length; i++) {
             var n = rows[i];
             var valPreview = (n.value || '').length > 200 ? n.value.substring(0, 200) + '...' : (n.value || '');
-            var accessBadge = n.accessCount ? '<span class="access-badge">' + n.accessCount + 'x</span>' : '';
-            var displayKey = n.subject || n.key.replace(/[-_]/g, ' ');
+            var accessBadge = n.accessCount ? '<span class="access-badge" title="How many replies have drawn on this">used ' + n.accessCount + (n.accessCount === 1 ? ' time' : ' times') + '</span>' : '';
+            // A fact about the person is labelled by what it is (Name, Email):
+            // labelled by its subject, a name and an email both showed the same name.
+            var displayKey = factLabel(n);
             html += '<div class="pinned-note-row" onclick="openPinnedNoteEdit(\'' + escapeAttr(n.key) + '\')">';
             html += '<div style="min-width:120px;max-width:180px;flex-shrink:0;">';
             html += '<span style="font-size:12px;color:#D0A652;font-weight:500;">' + escapeHtml(displayKey) + '</span>' + accessBadge;
@@ -8049,7 +8227,7 @@
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-      } else if (['connections', 'automations', 'goals', 'pages', 'settings', 'brain'].includes(resolved)) {
+      } else if (['connections', 'automations', 'goals', 'pages', 'settings', 'brain', 'usage'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'connect' || resolved === 'skills') {
         // Connection links open the catalogue and MCP input.
