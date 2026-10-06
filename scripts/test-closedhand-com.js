@@ -51,6 +51,19 @@ test('a ClosedHand account keeps only the email: no name from the sign-in, and n
   }
 });
 
+// The ClosedHand account is an account on closedhand.com that you sign in to
+// with Google or Microsoft. Pages once said it was the Google account itself,
+// which reads as nonsense: they are two accounts, and one signs in to the other.
+test('no page says the ClosedHand account is the Google or Microsoft account or its sign-in', () => {
+  const pages = ['closedhand-com/views', 'webapp/views'].flatMap(dir => fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.html')).map(f => path.join(dir, f)));
+  const sources = [...pages, 'README.md', 'closedhand-com/public/account.js', 'lib/platforms/telegram.js'];
+  const said = /ClosedHand account (is|was) (the|your) (Google|Microsoft|sign-in)|(sign-in|account) (is|becomes) your ClosedHand account|becomes your ClosedHand account|ClosedHand account ID|It.s the Google or Microsoft account/i;
+  for (const file of sources) {
+    const text = fs.readFileSync(path.join(__dirname, '..', file), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+    assert.doesNotMatch(text, said, file);
+  }
+});
+
 test('personal URL tickets carry one request, signed, for thirty minutes', () => {
   const secret = 'k'.repeat(40), request = { secret_hash: 'a'.repeat(64), hostname: 'alex.closedhand.ai', port: 3000 };
   const ticket = addresses.ticketFor(request, secret);

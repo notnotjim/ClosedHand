@@ -2570,7 +2570,7 @@
               </div>
             </div>
             <div id="phone-setup" hidden>
-              <p>ClosedHand gives your dashboard an address, like amber-fox-42.closedhand.ai, so you can open it from any device. To claim the address, you sign in once with Google or Microsoft on closedhand.com, and that becomes your ClosedHand account. closedhand.com keeps only that account’s email, linked to your address. Connecting your mail is separate: that access goes to ClosedHand on your computer, not to closedhand.com. You can change the name afterwards. This is separate from connecting your mail and calendar and from your dashboard password.</p>
+              <p>ClosedHand gives your dashboard an address, like amber-fox-42.closedhand.ai, so you can open it from any device. To claim the address, you sign in with Google or Microsoft on closedhand.com, which creates your ClosedHand account to hold it. closedhand.com keeps only the email you sign in with, linked to your address. You can change the name afterwards. Connecting your mail and calendar is separate: that access goes to ClosedHand on your computer, not to closedhand.com. Your dashboard password is separate too.</p>
               <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand. Keep that computer awake and online to use the link.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Get your personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Claim your personal URL</a>
@@ -4579,7 +4579,7 @@
         row("Your data", "Stays on your own computer");
         confirmText.textContent = "This deletes your ClosedHand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
-        row("Signed in with", "Nothing yet. Getting a personal URL signs you in with Google or Microsoft, and that sign-in is your ClosedHand account.");
+        row("Signed in with", "Nothing yet. Claiming a personal URL creates your ClosedHand account, which you sign in to with Google or Microsoft.");
         row("Your data", "Stays on your own computer");
         confirmText.textContent = "This permanently deletes " + local;
       }

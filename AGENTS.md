@@ -33,9 +33,13 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   "ClosedHand": the person is already using it. Never "install", "installation", "instance" or
   "copy" as a noun for it in anything people read: website, app, chat replies, error messages,
   release notes, README. Code, comments and contributor docs may use them.
-- The ClosedHand account is the Google or Microsoft sign-in that claims a personal URL.
-  closedhand.com keeps only that account's email, linked to the personal URL; it
-  never keeps the password, the mail or anything from the person's computer. Setup has two
+- The ClosedHand account is the account on closedhand.com that holds a personal URL. It has
+  no password of its own: people sign in to it with Google or Microsoft. closedhand.com keeps
+  only the email of that sign-in, linked to the personal URL; it never keeps the password, the
+  mail or anything from the person's computer. Copy says what the account holds and how you
+  sign in to it, never that it is the Google or Microsoft account or the sign-in ("your
+  ClosedHand account is your Google account"): they are separate accounts, and one is only
+  used to sign in to the other. Setup has two
   Google or Microsoft sign-ins and the copy always says which one it is: claiming the personal
   URL happens on closedhand.com, while connecting mail and calendar gives access to ClosedHand
   on the person's computer, not to closedhand.com. Never write "closedhand.com never sees your

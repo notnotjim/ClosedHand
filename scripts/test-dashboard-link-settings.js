@@ -240,7 +240,7 @@ test("Settings > Account says what the ClosedHand account holds, and Delete acco
   assert.match(withAccount.el("delete-account-text").textContent, /^This deletes your ClosedHand account: amber-fox-42\.closedhand\.ai stops working and closedhand\.com forgets your sign-in\. It also permanently deletes everything ClosedHand keeps for you on your own computer/);
   const without = accountPage(() => ({ body: { account: null } }));
   await without.state.loadAccountSummary();
-  assert.match(without.el("account-summary-text").textContent, /^Signed in withNothing yet\. Getting a personal URL signs you in with Google or Microsoft, and that sign-in is your ClosedHand account\./);
+  assert.match(without.el("account-summary-text").textContent, /^Signed in withNothing yet\. Claiming a personal URL creates your ClosedHand account, which you sign in to with Google or Microsoft\./);
   assert.match(without.el("delete-account-text").textContent, /^This permanently deletes everything ClosedHand keeps for you on your own computer/);
   const offline = accountPage(() => ({ body: { account: null, unreachable: true } }));
   await offline.state.loadAccountSummary();
