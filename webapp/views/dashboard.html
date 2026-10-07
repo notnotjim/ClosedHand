@@ -6922,21 +6922,6 @@
       if (_autoPollTimer) { clearInterval(_autoPollTimer); _autoPollTimer = null; }
     }
 
-    // Files and Datasets each hide until they have something in them, so on a
-    // new account this heading sat above nothing at all. Say what will turn up
-    // here, and only describe what is present once something is.
-    function updateResourcesBlurb() {
-      var el = document.getElementById('resources-blurb');
-      if (!el) return;
-      var f = document.getElementById('files-section');
-      var d = document.getElementById('datasets-section');
-      var hasFiles = f && f.style.display !== 'none';
-      var hasData = d && d.style.display !== 'none';
-      el.textContent = (hasFiles || hasData)
-        ? 'What ClosedHand builds and works from.'
-        : 'Reports and spreadsheets ClosedHand makes for you will appear here, along with any tables it keeps updated as it works.';
-    }
-
     async function loadAutomationStats() {
       try {
         var res = await fetch('/api/automations/stats');
@@ -6990,9 +6975,8 @@
         var res = await fetch('/api/files');
         var files = res.ok ? await res.json() : [];
         // Same rule as datasets: nothing to show means nothing to explain.
-        if (!files.length) { if (section) section.style.display = 'none'; updateResourcesBlurb(); return; }
+        if (!files.length) { if (section) section.style.display = 'none'; return; }
         if (section) section.style.display = '';
-        updateResourcesBlurb();
         var badge = document.getElementById('files-count-badge');
         if (badge) badge.textContent = files.length;
         var clearBtn = document.getElementById('files-clear-all');
@@ -7109,11 +7093,9 @@
           if (listEl) listEl.innerHTML = '';
           if (emptyEl) emptyEl.style.display = 'none';
           if (sectionEl) sectionEl.style.display = 'none';
-          updateResourcesBlurb();
           return;
         }
         if (sectionEl) sectionEl.style.display = '';
-        updateResourcesBlurb();
         if (emptyEl) emptyEl.style.display = 'none';
 
         var html = '';

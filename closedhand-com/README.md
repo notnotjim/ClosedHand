@@ -4,7 +4,7 @@ The small service behind closedhand.com. It serves the public website and
 the three things a copy of ClosedHand asks it for:
 
 - **Personal URLs** (`name.closedhand.ai`): a copy asks for a name, its owner
-  confirms it here by signing in with Google (or Microsoft), the Cloudflare
+  claims it here by signing in with Google (or Microsoft), the Cloudflare
   Worker in `workers/provisioner` builds the route, and the copy proves it
   answers at the new address before the address is marked ready.
 - **Bug reports** that a person chose to send, with a receipt that can check
