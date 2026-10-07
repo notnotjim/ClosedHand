@@ -72,7 +72,7 @@ test("Email sends the results from the assistant's own address to its owner, as 
     const id = await require("../lib/own-email").sendToSelf("Oil monitor", "Brent is up 2%.\n[[next]]\nSee the page.");
     assert.match(id, /^[0-9a-f-]{36}$/);
     account.enabled = false; account.address = null;
-    await assert.rejects(require("../lib/own-email").sendToSelf("Oil monitor", "x"), /Turn on your assistant’s email address in Settings/);
+    await assert.rejects(require("../lib/own-email").sendToSelf("Oil monitor", "x"), /Turn on ClosedHand’s email address in Settings/);
   } finally { Module._load = load; }
   const thread = inserts.find((i) => i.table === "assistant_email_threads").row;
   assert.deepEqual(thread.participants, ["sam@example.com"]);

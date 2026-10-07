@@ -33,7 +33,7 @@ function createRelay({ db, owner: signedIn, secret, env = process.env, baseUrl =
   };
   async function account(req, res) {
     const proof = p.identity(req);
-    if (!proof) { res.status(401).json({ error: 'Invalid installation.' }); return null; }
+    if (!proof) { res.status(401).json({ error: 'ClosedHand could not be recognised. Update it and try again.' }); return null; }
     const row = mustWrite(await db.from('mail_relay_accounts').select('*').eq('id', proof.id).maybeSingle());
     if (!row || !p.equal(row.secret_hash, proof.hash)) { res.status(401).json({ error: 'Confirm this email address from Settings first.' }); return null; }
     return row;
@@ -43,7 +43,7 @@ function createRelay({ db, owner: signedIn, secret, env = process.env, baseUrl =
     app.post('/api/assistant-mail-relay/register', wrap(async (req, res) => {
       if (env.ASSISTANT_EMAIL_PRODUCTION !== '1') return res.status(503).json({ error: 'Email addresses are waiting for delivery approval. Please try again later.' });
       const proof = p.identity(req);
-      if (!proof || !p.validPublicKey(req.body?.publicKey)) return res.status(400).json({ error: 'Invalid installation.' });
+      if (!proof || !p.validPublicKey(req.body?.publicKey)) return res.status(400).json({ error: 'ClosedHand could not be recognised. Update it and try again.' });
       const ticket = p.signTicket({ ...proof, publicKey: req.body.publicKey, name: p.header(req.body.name || 'ClosedHand', 60) }, secret);
       res.json({ url: baseUrl + '/assistant-email/confirm#' + ticket });
     }));
@@ -60,11 +60,11 @@ function createRelay({ db, owner: signedIn, secret, env = process.env, baseUrl =
       const launchOwners = (env.ASSISTANT_EMAIL_TEST_OWNERS || '').split(',').map(p.address).filter(Boolean);
       if (launchOwners.length && !launchOwners.includes(email)) return res.status(503).json({ error: 'Email beta is completing its final checks. Please try again later.' });
       let row = mustWrite(await db.from('mail_relay_accounts').select('*').eq('id', proof.id).maybeSingle());
-      if (row && (row.owner_id !== owner || !p.equal(row.secret_hash, proof.hash) || row.public_key !== proof.publicKey)) return res.status(403).json({ error: 'This address belongs to another installation.' });
+      if (row && (row.owner_id !== owner || !p.equal(row.secret_hash, proof.hash) || row.public_key !== proof.publicKey)) return res.status(403).json({ error: 'This address belongs to another ClosedHand.' });
       if (!row) {
         const prefix = proof.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'closedhand';
         row = mustWrite(await db.rpc('provision_mail_relay_account', { installation: proof.id, owner, proof_hash: proof.hash, public_key_text: proof.publicKey, sender_address: prefix + '-' + crypto.randomBytes(4).toString('hex') + '@' + p.DOMAIN, verified_email: email }))[0];
-        if (!row) return res.status(409).json({ error: 'This account already has three email installations. Pause an unused installation before adding another.' });
+        if (!row) return res.status(409).json({ error: 'This account already has three ClosedHand email addresses. Pause one before adding another.' });
       }
       res.json({ address: row.address, email: row.owner_email });
     }));

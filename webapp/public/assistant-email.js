@@ -59,8 +59,8 @@
         try {
           const result = await request('/enable', {});
           if (tab) tab.location = result.url;
-          else { const link = el('a', 'Confirm your email address'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; content.append(link); }
-          status.textContent = 'Confirm your Google account in the new tab. This page updates automatically.';
+          else { const link = el('a', 'Confirm ClosedHand’s email address'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; content.append(link); }
+          status.textContent = 'Finish signing in on the new tab. This page updates automatically.';
           clearInterval(polling); polling = setInterval(() => { if (!document.hidden) refresh().catch(e => { status.textContent = e.message; }); }, 4000);
         } catch (e) { if (tab) tab.close(); throw e; }
       }));
