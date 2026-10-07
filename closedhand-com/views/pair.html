@@ -37,21 +37,21 @@
       <!-- Step 2: confirm, as the signed-in account. -->
       <div id="confirm" hidden>
         <div class="who"><span id="who"></span><a id="switch">Use a different account</a></div>
-        <button class="btn btn-primary" id="approve" type="button">Confirm</button>
-        <p class="fine" id="confirm-note">Only confirm if you’re setting up ClosedHand on your own computer.</p>
+        <button class="btn btn-primary" id="approve" type="button">Claim it</button>
+        <p class="fine" id="confirm-note">Only claim it if you’re setting up ClosedHand on your own computer.</p>
       </div>
 
       <!-- Step 3: the code, typed into the ClosedHand that asked. Only that
            copy can finish, so a link from somebody else leads nowhere. -->
       <div id="code-step" hidden>
-        <p class="code" id="code" aria-label="Confirmation code"></p>
+        <p class="code" id="code" aria-label="Claim code"></p>
         <button class="btn btn-primary" id="copy-code" type="button">Copy code</button>
         <p class="fine code-note">It works for ten minutes. Only the ClosedHand that asked can use it, so this address only ever opens yours.</p>
       </div>
 
       <!-- After confirming: what is happening, until it opens. -->
       <ol class="steps" id="progress" hidden>
-        <li id="step-confirmed">Confirmed</li>
+        <li id="step-confirmed">Claimed</li>
         <li id="step-connecting">Connecting to the computer running ClosedHand</li>
         <li id="step-ready">Ready to open</li>
       </ol>

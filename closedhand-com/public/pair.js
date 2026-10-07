@@ -61,8 +61,8 @@
   function progress(data) {
     confirmedAt = confirmedAt || Date.now();
     show('progress');
-    $('heading').textContent = 'Personal URL confirmed';
-    $('lede').textContent = 'Keep ClosedHand running on your computer while it connects.';
+    $('heading').textContent = 'Personal URL claimed';
+    $('lede').textContent = 'Keep ClosedHand running while it connects.';
     const ready = data.state === 'active' && validUrl(data.url);
     $('step-confirmed').className = 'done';
     $('step-connecting').className = ready ? 'done' : 'now';
@@ -113,7 +113,7 @@
         progress(address); return;
       }
       if (account.signedIn && address.state === 'awaiting-code' && /^[A-Z0-9]{6}$/.test(address.code || '')) { awaitCode(address); return; }
-      if (address.state === 'revoked') throw new Error('This personal URL was removed. Get a new one in ClosedHand’s Settings.');
+      if (address.state === 'revoked') throw new Error('This personal URL was removed. Claim a new one in ClosedHand’s Settings.');
       if (validUrl(account.url) && new URL(account.url).hostname !== name) {
         show(null);
         $('address-note').textContent = 'Already owns ' + new URL(account.url).hostname;
@@ -154,8 +154,8 @@
         $('heading').textContent = 'You already have a personal URL linked to this email';
         $('lede').textContent = 'It opens a ClosedHand you set up before. Want to switch it to the one you’re setting up now? The earlier one stops opening there.';
       }
-      $('approve').textContent = address.move ? 'Switch to the new one' : 'Confirm ' + name;
-      $('confirm-note').textContent = address.move ? '' : 'Only confirm if you’re setting up ClosedHand on your own computer.';
+      $('approve').textContent = address.move ? 'Switch to the new one' : 'Claim ' + name;
+      $('confirm-note').textContent = address.move ? '' : 'Only claim it if you’re setting up ClosedHand on your own computer.';
       $('confirm-note').hidden = !!address.move;
       say('');
     } catch (e) {
@@ -179,7 +179,7 @@
   async function approve() {
     if (busy) return;
     clearTimeout(timer); busy = true; $('approve').disabled = true;
-    say('Confirming…');
+    say('Claiming…');
     try {
       const result = await request('/api/phone-enrollment/approve', { ticket });
       if (result.state === 'awaiting-code') awaitCode(result);

@@ -635,7 +635,7 @@ if [ -n "${SSH_CONNECTION:-}" ]; then
   say "you used to connect here:"
   say "  ssh -N -L 3000:127.0.0.1:3000 user@server"
   say "Keep that terminal open, then open $DASH_URL on your computer."
-  say "After setup, Settings > Dashboard link explains personal address access."
+  say "Setup gives ClosedHand its personal URL; Settings > Personal URL manages it."
 elif [ "$OPENED" = "1" ]; then
   say "Opening the setup page in your browser: $DASH_URL"
 else

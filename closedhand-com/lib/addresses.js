@@ -338,7 +338,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // opens another copy.
   app.post('/api/phone-enrollment/details', wrap(async (req, res) => {
     const t = readTicket(req.body?.ticket, secret);
-    if (!t) return res.status(400).json({ error: 'This confirmation link is not valid. Start again in ClosedHand.' });
+    if (!t) return res.status(400).json({ error: 'This claim link is not valid. Start again in ClosedHand.' });
     const answer = { url: 'https://' + t.hostname, state: 'unconfirmed' };
     const owner = sessions.owner(req);
     if (owner) {
@@ -356,7 +356,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
         if (code) Object.assign(answer, { state: 'awaiting-code', code, url: 'https://' + waiting.hostname });
       }
     }
-    if (t.expires <= Date.now() && answer.state === 'unconfirmed') return res.status(400).json({ error: 'This confirmation expired. Start again in ClosedHand.' });
+    if (t.expires <= Date.now() && answer.state === 'unconfirmed') return res.status(400).json({ error: 'This claim link expired. Start again in ClosedHand.' });
     res.json(answer);
   }));
 
@@ -365,9 +365,9 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // code could not fix is refused now.
   app.post('/api/phone-enrollment/approve', wrap(async (req, res) => {
     const owner = sessions.owner(req), t = readTicket(req.body?.ticket, secret);
-    if (!owner) return res.status(401).json({ error: 'Sign in to confirm that this personal URL is yours.' });
-    if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this confirmation on ClosedHand.' });
-    if (!t || t.expires <= Date.now()) return res.status(400).json({ error: 'This confirmation expired. Start again in ClosedHand.' });
+    if (!owner) return res.status(401).json({ error: 'Sign in to claim this personal URL.' });
+    if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this claim page on closedhand.com.' });
+    if (!t || t.expires <= Date.now()) return res.status(400).json({ error: 'This claim link expired. Start again in ClosedHand.' });
     const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
     // A picked name gives way to the owner's own address, or the name held
     // for them, or to another free one if somebody took it in the meantime.
@@ -402,15 +402,15 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     const waiting = (await db.query(
       'UPDATE approvals SET attempts = attempts + 1 WHERE secret_hash = $1 AND expires_at > now() AND attempts < $2 RETURNING *',
       [copy.secret_hash, MAX_CODE_TRIES])).rows[0];
-    if (!waiting) return res.status(409).json({ error: 'Confirm your personal URL on closedhand.com first. It then shows the code to type here.' });
+    if (!waiting) return res.status(409).json({ error: 'Claim your personal URL on closedhand.com first. It then shows the code to type here.' });
     if (!/^[A-Z0-9]{6}$/.test(code) || !equal(code, decryptString(waiting.code) || '')) {
       if (waiting.attempts < MAX_CODE_TRIES) return res.status(400).json({ error: 'That code does not match. Check the code on closedhand.com and try again.' });
       await db.query('DELETE FROM approvals WHERE secret_hash = $1 AND code = $2', [copy.secret_hash, waiting.code]);
-      return res.status(400).json({ error: 'That code did not match, so it no longer works. Confirm again on closedhand.com for a new code.' });
+      return res.status(400).json({ error: 'That code did not match, so it no longer works. Claim it again on closedhand.com for a new code.' });
     }
     // One use: only the request that removes it goes on.
     const used = await db.query('DELETE FROM approvals WHERE secret_hash = $1 AND code = $2 RETURNING owner_id, hostname, web_port', [copy.secret_hash, waiting.code]);
-    if (!used.rowCount) return res.status(409).json({ error: 'Confirm your personal URL on closedhand.com first. It then shows the code to type here.' });
+    if (!used.rowCount) return res.status(409).json({ error: 'Claim your personal URL on closedhand.com first. It then shows the code to type here.' });
     const a = used.rows[0];
     const row = await reserve(db, { ownerId: a.owner_id, secretHash: copy.secret_hash, hostname: a.hostname, port: a.web_port, limit });
     res.json({ state: shown(row), url: 'https://' + row.hostname });

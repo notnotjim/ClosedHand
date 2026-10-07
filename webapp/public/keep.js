@@ -37,7 +37,7 @@
       $('other-device').hidden = $('qr').hidden && $('send').hidden;
       message('');
     } else if (data.local) {
-      $('setup-copy').textContent = data.url ? 'Your current address is temporary. Set up a permanent link in Settings before saving a shortcut.' : 'Get your personal URL in Settings before saving a shortcut.';
+      $('setup-copy').textContent = data.url ? 'Your current address is temporary. Claim your personal URL in Settings before saving a shortcut.' : 'Claim your personal URL in Settings before saving a shortcut.';
       message('');
     }
     clearTimeout(timer);

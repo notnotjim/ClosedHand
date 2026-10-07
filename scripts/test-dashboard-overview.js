@@ -90,7 +90,7 @@ test("web keeps a relative link and unavailable phone configuration never become
   assert.equal(web.dashboard_url, "/dashboard#schedules");
   const noLink = await overview(fixture(), { getUrl: async () => null });
   assert.equal(noLink.dashboard_url, null);
-  assert.match(noLink.link_note, /Your phone/);
+  assert.match(noLink.link_note, /Claim the personal URL/);
   const failed = await overview(fixture(), { getUrl: async () => { throw Error("offline"); } });
   assert.match(failed.link_note, /could not be checked/);
 });

@@ -18,7 +18,7 @@ function save(patch) {
 }
 async function requirePassword() {
   if (!process.env.ADMIN_PASSWORD && !(await getConf("DASHBOARD_PASSWORD_HASH"))) {
-    throw new Error("Choose a dashboard password on the setup page before turning on phone access.");
+    throw new Error("Choose a dashboard password on the setup page before claiming your personal URL.");
   }
 }
 async function start() {
@@ -64,13 +64,13 @@ async function start() {
       try {
         const response = await fetch(url + "/health", { signal: AbortSignal.timeout(10000) });
         const health = response.ok ? await response.json() : null;
-        if (health?.status !== "ok" || health?.service !== "closedhand-webapp") throw new Error("Phone address is unreachable");
+        if (health?.status !== "ok" || health?.service !== "closedhand-webapp") throw new Error("Your personal URL is unreachable");
         failures = 0;
       } catch (_) {
         if (proc !== child || !wanted) return;
         if (++failures >= 3) {
           clearInterval(healthTimer);
-          failed(new Error("Phone address stopped responding. Reconnecting."));
+          failed(new Error("Your personal URL stopped responding. Reconnecting."));
           child.kill();
         }
       } finally { checking = false; }
@@ -109,7 +109,7 @@ async function start() {
       proc = null; url = null;
       if (permanent) recheck = true;
       state = error.code === "ENOENT" ? "unavailable" : "error";
-      lastError = error.code === "ENOENT" ? "Update ClosedHand to enable phone access." : error.message;
+      lastError = error.code === "ENOENT" ? "Update ClosedHand to use a personal URL." : error.message;
       save({ PHONE_ACCESS_URL: null }).catch(e => console.error("[Phone] Could not clear address:", e.message));
       if (wanted && state !== "unavailable") {
         clearTimeout(retryTimer);
@@ -117,7 +117,7 @@ async function start() {
       }
     };
     child.on("error", failed);
-    child.on("exit", code => failed(new Error(`Phone connection stopped (${code}).`)));
+    child.on("exit", code => failed(new Error(`Your personal URL’s connection stopped (${code}).`)));
   } catch (e) {
     if (run !== generation) return;
     state = "error"; lastError = e.message;
@@ -134,7 +134,7 @@ async function start() {
 }
 async function enable(nextMode = "quick") {
   await requirePassword();
-  if (!["quick", "managed"].includes(nextMode)) throw new Error("Unknown phone access option.");
+  if (!["quick", "managed"].includes(nextMode)) throw new Error("Unknown personal URL option.");
   let requestedPairing = null;
   // Asking again gets a fresh confirmation (they last thirty minutes), unless
   // this copy already has its address or its owner already confirmed it.

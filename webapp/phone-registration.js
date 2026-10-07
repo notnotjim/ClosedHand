@@ -5,7 +5,7 @@ const { encryptString, decryptString } = require('./crypto-tokens');
 const PROVIDER = 'https://closedhand.com';
 function encrypted(value) {
   const result = encryptString(value);
-  if (!result?.startsWith('enc:v1:')) throw new Error('Phone access needs encrypted storage. Check ClosedHand’s settings.');
+  if (!result?.startsWith('enc:v1:')) throw new Error('Your personal URL needs encrypted storage. Check ClosedHand’s settings.');
   return result;
 }
 let identityPromise;
@@ -19,7 +19,7 @@ async function credentials() {
       id = crypto.randomUUID(); secret = crypto.randomBytes(32).toString('hex');
       await setConf({ PHONE_INSTALL_ID: id, PHONE_INSTALL_SECRET: encrypted(secret) });
     }
-    if (!/^[a-f0-9-]{36}$/.test(id || '') || !/^[a-f0-9]{64}$/.test(secret || '')) throw new Error('Could not open this computer’s phone access settings.');
+    if (!/^[a-f0-9-]{36}$/.test(id || '') || !/^[a-f0-9]{64}$/.test(secret || '')) throw new Error('Could not open the personal URL settings.');
     return id + '.' + secret;
   })().catch(error => { identityPromise = null; throw error; });
   return identityPromise;
@@ -31,7 +31,7 @@ async function call(path, method = 'GET', body) {
     redirect: 'error', signal: AbortSignal.timeout(15000),
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Could not set up a lasting phone address. Please try again.');
+  if (!response.ok) throw new Error(result.error || 'Could not set up your personal URL. Please try again.');
   return result;
 }
 // Ask for a personal URL. closedhand.com picks the name (two ordinary words
@@ -42,7 +42,7 @@ async function call(path, method = 'GET', body) {
 // state comes with it, so a code arriving any other way is never sent on.
 async function begin() {
   const data = await call('register', 'POST', { port: Number(process.env.PORT || 3000), confirm: 'code' });
-  if (typeof data.ticket !== 'string') throw new Error('Could not start phone access.');
+  if (typeof data.ticket !== 'string') throw new Error('Could not start claiming your personal URL.');
   const state = crypto.randomBytes(16).toString('hex');
   // A ticket lasts thirty minutes; a few recent links stay good together.
   const recent = (await claimStates()).filter(s => Date.now() - s.at < 30 * 60000).slice(-4);
@@ -122,7 +122,7 @@ async function connection({ recheck = false } = {}) {
   registrationState = ['unconfirmed', 'pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state) ? data.state : null;
   if (data.state === 'unconfirmed' && saved) await forget();
   if (!['active','connecting'].includes(data.state)) return null;
-  if (!validAddress(data.url) || typeof data.token !== 'string' || data.token.length < 30) throw new Error('The phone address could not be verified.');
+  if (!validAddress(data.url) || typeof data.token !== 'string' || data.token.length < 30) throw new Error('Your personal URL could not be verified.');
   // A connecting credential may start the tunnel, but is not a verified link yet.
   if (data.state === 'active') await setConf({ PHONE_PERMANENT_URL: data.url, PHONE_TUNNEL_TOKEN: encrypted(data.token) });
   return { url: data.url, token: data.token, verify: data.state === 'connecting' };

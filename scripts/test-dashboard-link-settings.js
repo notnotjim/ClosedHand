@@ -143,7 +143,7 @@ test("the dashboard status route authenticates before reading only public addres
 test("Settings offers a picked personal URL, and renames a lasting one with a tidied preview", async () => {
   const { state, el } = page();
   state.renderPhone({ enabled: false, state: "off" });
-  assert.equal(el("phone-start").textContent, "Get your personal URL");
+  assert.equal(el("phone-start").textContent, "Claim your personal URL");
   assert.equal(el("phone-change-line").hidden, true, "nothing to rename yet");
   assert.doesNotMatch(html, /id="phone-address-name"/, "no name to choose");
   const sent = [];

@@ -144,21 +144,21 @@ closedhand.com can't tell that sign-in from one made by any other app. Either
 way, claiming creates your ClosedHand account, which holds your personal URL.
 You sign in to it with Google or Microsoft, and closedhand.com keeps only the
 email you sign in with. The code, or the Microsoft sign-in, means
-a confirmation link sent by somebody else can never point your address at their
-computer. Bookmark your address, pin it in your chat,
+a claim link sent by somebody else can never point your address at their
+computer. Bookmark your address, pin it in a chat app,
 or add it to your phone's home screen (in Safari on iPhone, **Share → Add to Home
 Screen**).
 
 Your dashboard and data stay on the computer running ClosedHand. Your ClosedHand
 account on closedhand.com keeps only your personal URL, the Google or Microsoft
-sign-in that confirmed it, and what Cloudflare needs to carry the connection to
+sign-in that claimed it, and what Cloudflare needs to carry the connection to
 that computer. Open the
 address from any device while the computer running ClosedHand is awake and
 online; your dashboard password is always required. Pausing the link stops the
 connection and resuming keeps the same address. Change the name in **Settings →
 Personal URL**: the old address sends people to the new one for 30 days, then
 says it has moved. It stays yours to take back for six months after the rename,
-then anyone can have it. If you set ClosedHand up again and confirm with
+then anyone can have it. If you set ClosedHand up again and claim with
 the same account, your personal URL moves there. Using
 ClosedHand on the computer itself needs no sign-in to closedhand.com.
 
@@ -170,5 +170,5 @@ unavailable for six months with nothing linking it to you. A personal URL whose
 computer hasn't connected for 90 days is released, its name kept for you for six
 months, and a sign-in that holds no personal URL is forgotten after a day.
 
-Temporary phone access remains available in Settings. Its address changes when
+A temporary link remains available in Settings. Its address changes when
 the connection restarts, so use a personal URL before bookmarking or pinning.

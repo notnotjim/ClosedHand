@@ -33,7 +33,7 @@ test('web stays relative and disabled phone access never emits localhost or stal
   assert.equal(await client.agentLinkNotice('web'), 'You can watch it run on your [dashboard](/dashboard#schedules).', 'the link sits on the word');
   assert.equal(await client.agentLinkNotice('web', 'Full result'), '[Full result](/dashboard#schedules)');
   assert.equal(await client.dashboardUrl('whatsapp'), null);
-  assert.match(await client.agentLinkNotice('whatsapp'), /Your phone/);
+  assert.match(await client.agentLinkNotice('whatsapp'), /claim your personal URL/);
 });
 test('configured permanent HTTPS address wins over the temporary tunnel', async () => {
   const conf = config({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone }, { WEBAPP_URL: 'https://my.example.com/' });

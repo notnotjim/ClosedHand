@@ -155,7 +155,7 @@ test("with no personal URL, the page link says how to reach pages from a phone",
   const { pageButtons } = loadInApp(null);
   const shaped = await pageButtons(null, `Open the page: /page/${SAIGON}`);
   assert.deepEqual(shaped.buttons, []);
-  assert.match(shaped.text, /turn on Your phone in the dashboard's Settings/);
+  assert.match(shaped.text, /claim your personal URL in the dashboard's Settings/);
 });
 
 test("WhatsApp gets the full personal URL for every ClosedHand page", () => {
