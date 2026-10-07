@@ -1287,6 +1287,15 @@
     .flight-details {
       display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;
     }
+    /* A card made from an email opens it; the booking's files sit under it. */
+    .flight-card.has-source { cursor: pointer; }
+    .flight-card.has-source:hover { border-color: rgba(239,230,214,0.22); }
+    .flight-details a.source-link { color: #EFE6D6; text-decoration: underline; text-underline-offset: 2px; }
+    .source-docs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
+    .source-doc { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 10px; border: 1px solid rgba(239,230,214,0.16); border-radius: 6px; font-size: 12px; color: #EFE6D6; text-decoration: none; }
+    .source-doc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+    .source-doc:hover { border-color: rgba(216,98,75,0.6); }
+    .source-doc-more { background: none; border: 0; padding: 4px 2px; font: inherit; font-size: 12px; color: #B6AFA4; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
     .flight-detail {
       font-size: 13px; color: #B6AFA4;
     }
@@ -2439,12 +2448,13 @@
           <div id="upcoming-list"></div>
           <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, bookings picked out of your mail (trains, hotels, tickets, tables) and goal check-ins appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
 
-          <!-- Past: reminders that ran and flights already flown, folded away -->
+          <!-- Past: reminders that ran, flights already flown and bookings already over, folded away -->
           <div id="past-section" hidden>
             <button type="button" class="mc-section-label archive-row" id="past-toggle" aria-expanded="false" aria-controls="past-body" onclick="togglePast()">Past <span class="count" id="past-count"></span><span class="chevron-down"></span></button>
             <div id="past-body" hidden>
               <div id="reminders-past"></div>
               <div id="recent-flights"></div>
+              <div id="recent-bookings"></div>
             </div>
           </div>
         </div>
@@ -5474,7 +5484,9 @@
       var moved = movedFrom && movedFrom !== when ? ' <span class="booking-moved">moved from ' + escHtml(movedFrom) + '</span>' : '';
       // The venue's name is often the provider's too; say it once.
       var showProvider = b.provider && String(b.provider).trim().toLowerCase() !== String(b.title).trim().toLowerCase();
-      return '<div class="flight-card" style="' + (cancelled ? 'opacity:0.55;' : '') + '">' +
+      var mail = b.source_mail && b.source_mail.open_url;
+      return '<div class="flight-card' + (mail ? ' has-source' : '') + '" style="' + (cancelled ? 'opacity:0.55;' : '') + '"' +
+        (mail ? ' data-mail="' + escHtml(mail) + '" onclick="openSourceMail(event, this.dataset.mail)" title="Open the email this came from"' : '') + '>' +
         '<div class="flight-status-bar ' + (cancelled ? 'cancelled' : 'scheduled') + '"></div>' +
         '<div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
           '<div style="min-width:110px;"><span style="font-size:13px;margin-right:6px;" title="' + escHtml(b.kind) + '">' + icon + '</span><span class="flight-number">' + escHtml(b.title) + '</span>' +
@@ -5484,14 +5496,38 @@
           '<button class="conn-btn conn-btn-manage" title="Not a booking? Remove it" onclick="removeBooking(\'' + b.id + '\')" style="padding:2px 8px;font-size:11px;">&times;</button>' +
         '</div>' +
         (details.length ? '<div class="flight-details" style="padding:0 14px 10px;">' + details.join('') + '</div>' : '') +
+        sourceDocsHtml(b.source_mail) +
       '</div>';
+    }
+    // The files that came with a booking (an e-ticket, a voucher), from every
+    // email about it. Two show; the rest fold behind "more".
+    function sourceDocsHtml(sm) {
+      var docs = (sm && sm.documents) || [];
+      if (!docs.length) return '';
+      return '<div class="source-docs">' + docs.map(function(d, i) {
+        return '<a class="source-doc' + (i >= 2 ? ' more' : '') + '"' + (i >= 2 ? ' hidden' : '') + ' href="' + escHtml(d.url) + '" target="_blank" rel="noopener" title="' + escHtml(d.name) + '">\u{1F4C4} <span>' + escHtml(d.name) + '</span></a>';
+      }).join('') + (docs.length > 2 ? '<button type="button" class="source-doc-more" onclick="showMoreDocs(this)">' + (docs.length - 2) + ' more</button>' : '') + '</div>';
+    }
+    function showMoreDocs(btn) {
+      btn.parentNode.querySelectorAll('.source-doc.more').forEach(function(a) { a.hidden = false; });
+      btn.remove();
+    }
+    // A click anywhere on the card opens its email, except on its own links and buttons.
+    function openSourceMail(ev, url) {
+      if (!url || ev.target.closest('a, button')) return;
+      window.open(url, '_blank', 'noopener');
     }
     async function loadBookings() {
       try {
         var res = await fetch('/api/bookings');
         if (!res.ok) throw new Error('Failed');
         var rows = await res.json();
-        setUpcoming('bookings', rows.map(function(b) {
+        // Bookings already over go under Past, as flights already flown do.
+        var over = rows.filter(function(b) { return b.over; });
+        document.getElementById('recent-bookings').innerHTML = over.map(renderBookingCard).join('');
+        _pastBookings = over.length;
+        updatePast();
+        setUpcoming('bookings', rows.filter(function(b) { return !b.over; }).map(function(b) {
           var item = upcomingItem(b.starts_at, { tz: b.timezone || undefined }, renderBookingCard(b));
           if (item.date === 'Date to be confirmed') item.date = fmtBookingDate(b.starts_at, b.timezone) || item.date;
           return item;
@@ -5532,7 +5568,10 @@
       if (f.confirmationCode) details.push(`<span class="flight-detail">Booking ref <span>${escHtml(String(f.confirmationCode))}</span></span>`);
       if (live.delay && live.delay > 0) details.push(`<span class="flight-detail delay-highlight">Delayed <span>${live.delay}min</span></span>`);
 
-      return `<div class="flight-card">
+      const mail = f.source_mail && f.source_mail.open_url;
+      // "your booking" opens the email the times came from.
+      const noteHtml = escHtml(timeNote).replace('your booking', mail ? `<a class="source-link" href="${escHtml(mail)}" target="_blank" rel="noopener">your booking</a>` : 'your booking');
+      return `<div class="flight-card${mail ? ' has-source' : ''}"${mail ? ` data-mail="${escHtml(mail)}" onclick="openSourceMail(event, this.dataset.mail)" title="Open the email this came from"` : ''}>
         <div class="flight-status-bar ${status.cls}"></div>
         <div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <div style="min-width:110px;">
@@ -5555,7 +5594,8 @@
           <span class="flight-status-badge ${status.cls}">${escHtml(status.label)}</span>
         </div>
         ${details.length ? `<div class="flight-details" style="padding:0 14px 10px;">${details.join('')}</div>` : ''}
-        ${timeNote ? `<p class="flight-details" style="padding:0 14px 14px;margin:0;">${escHtml(timeNote)}</p>` : ''}
+        ${sourceDocsHtml(f.source_mail)}
+        ${timeNote ? `<p class="flight-details" style="padding:0 14px 14px;margin:0;">${noteHtml}</p>` : ''}
       </div>`;
     }
 
@@ -5587,11 +5627,11 @@
       '</' + tag + '>';
     }
 
-    var _pastReminders = 0, _pastFlights = 0;
+    var _pastReminders = 0, _pastFlights = 0, _pastBookings = 0;
     function updatePast() {
       var section = document.getElementById('past-section');
       if (!section) return;
-      var n = _pastReminders + _pastFlights;
+      var n = _pastReminders + _pastFlights + _pastBookings;
       section.hidden = !n;
       document.getElementById('past-count').textContent = '\u00b7 ' + n;
     }

@@ -5743,6 +5743,99 @@ app.delete("/api/matters/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+// Where a flight or booking came from: the email ClosedHand read it in, to
+// open in Gmail, and the files attached to the mail about it. A booking is
+// often spread over several emails (an order confirmation with the details,
+// the airline's e-ticket with the PDF), so the files come from every cached
+// email that names the booking reference as well as the source one. Gmail
+// only: the Outlook and IMAP copies keep neither a web link nor attachment ids.
+const MAIL_SOURCE = /^gmail(_[a-z0-9]+)?$/;
+const MAIL_ID = /^[A-Za-z0-9_-]{6,64}$/;
+const mailFiles = (data) => (data?.attachments || []).filter((a) => !a.inline && a.attachmentId && a.filename);
+async function sourceMail(userId, { emailId, reference } = {}) {
+  const rows = [];
+  const add = (list) => { for (const r of list || []) if (MAIL_SOURCE.test(r.source) && !rows.some((x) => x.source === r.source && x.external_id === r.external_id)) rows.push(r); };
+  const base = () => supabase.from("data_cache").select("source, external_id, data").eq("user_id", userId).eq("type", "email");
+  if (MAIL_ID.test(String(emailId || ""))) {
+    const { data, error } = await base().eq("external_id", String(emailId));
+    if (error) throw new Error(error.message);
+    add(data);
+  }
+  const ref = String(reference || "").trim();
+  if (/^[A-Za-z0-9-]{5,20}$/.test(ref)) {
+    for (const field of ["data->>subject", "data->>body"]) {
+      const { data, error } = await base().ilike(field, `%${ref}%`).limit(10);
+      if (error) throw new Error(error.message);
+      add(data);
+    }
+  }
+  const source = rows.find((r) => r.external_id === String(emailId)) || null;
+  const documents = [];
+  for (const r of rows) {
+    mailFiles(r.data).forEach((f, n) => {
+      if (documents.some((d) => d.name === f.filename)) return;
+      documents.push({ name: f.filename, type: f.mimeType || "", url: `/api/mail/attachment?source=${r.source}&id=${encodeURIComponent(r.external_id)}&n=${n}` });
+    });
+  }
+  if (!source && !documents.length) return null;
+  const thread = source ? String(source.data?.threadId || source.external_id) : null;
+  const account = source?.data?.account;
+  return {
+    open_url: source ? "https://mail.google.com/mail/" + (account ? "?authuser=" + encodeURIComponent(account) : "") + "#all/" + encodeURIComponent(thread) : null,
+    documents,
+  };
+}
+
+// A booking is over once it ends. Most don't say when they end (a table at
+// 19:00), so those count as over a few hours after they start: long enough to
+// cover the evening, short enough that last night's dinner is not upcoming.
+const BOOKING_HOURS = { hotel: 24, event: 4, restaurant: 3 };
+function bookingOver(b, now = Date.now()) {
+  const end = b.ends_at ? Date.parse(b.ends_at) : Date.parse(b.starts_at) + (BOOKING_HOURS[b.kind] || 3) * 3600000;
+  return !isNaN(end) && end < now;
+}
+
+// A file attached to an email ClosedHand keeps, fetched from Gmail for the
+// person signed in to this dashboard. PDFs and pictures open in the browser;
+// anything else downloads, and nothing served here may run script.
+app.get("/api/mail/attachment", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const source = String(req.query.source || ""), id = String(req.query.id || ""), n = Number(req.query.n);
+  if (!MAIL_SOURCE.test(source) || !MAIL_ID.test(id) || !Number.isInteger(n) || n < 0) return res.status(400).json({ error: "That file link isn't valid." });
+  try {
+    const { data: row, error } = await supabase.from("data_cache").select("data").eq("user_id", userId).eq("type", "email").eq("source", source).eq("external_id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    const file = mailFiles(row?.data)[n];
+    if (!file) return res.status(404).json({ error: "That file is no longer in your mail." });
+    const service = source === "gmail" ? "google" : "google_extra_" + source.slice("gmail_".length);
+    const { data: conn, error: connErr } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", service).maybeSingle();
+    if (connErr) throw new Error(connErr.message);
+    const toks = require("./crypto-tokens").decryptTokens(conn?.tokens) || {};
+    const signIn = "Sign in to that Google account again on the dashboard to open its files.";
+    if (!toks.refresh_token) return res.status(409).json({ error: signIn });
+    const tok = await (await fetch("https://oauth2.googleapis.com/token", { method: "POST", body: new URLSearchParams({
+      ...require("./google-app").clientFor(toks, SERVICES.google.clientId, SERVICES.google.clientSecret),
+      refresh_token: toks.refresh_token, grant_type: "refresh_token" }) })).json();
+    if (!tok.access_token) return res.status(409).json({ error: signIn });
+    const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}/attachments/${encodeURIComponent(file.attachmentId)}`, { headers: { Authorization: "Bearer " + tok.access_token } });
+    if (!r.ok) return res.status(502).json({ error: "Gmail didn't send the file. Try again." });
+    const body = Buffer.from((await r.json()).data || "", "base64url");
+    const type = String(file.mimeType || "").toLowerCase();
+    const viewable = /^(application\/pdf|image\/(png|jpeg|gif|webp))$/.test(type);
+    const name = String(file.filename).replace(/["\\\r\n]/g, "");
+    res.set({
+      "Content-Type": viewable ? type : "application/octet-stream",
+      "Content-Disposition": `${viewable ? "inline" : "attachment"}; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      "Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store",
+    });
+    res.send(body);
+  } catch (e) {
+    console.error("[mail] attachment error:", e.message);
+    res.status(500).json({ error: "Could not open that file. Try again." });
+  }
+});
+
 app.get("/api/bookings", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -5751,9 +5844,13 @@ app.get("/api/bookings", async (req, res) => {
     const { data, error } = await supabase.from("bookings").select("*").eq("user_id", userId)
       .or(`starts_at.gte.${since},ends_at.gte.${since}`).order("starts_at", { ascending: true }).limit(100);
     if (error) throw error;
-    // A booking whose end has passed is over, not upcoming (a ride's receipt arrives after the ride).
+    // Over ones are listed under Past, as flights already flown are.
     const now = Date.now();
-    res.json((data || []).filter((b) => !b.ends_at || Date.parse(b.ends_at) >= now));
+    const rows = await Promise.all((data || []).map(async (b) => ({
+      ...b, over: bookingOver(b, now),
+      source_mail: await sourceMail(userId, { emailId: b.source_email_id, reference: b.reference }).catch(() => null),
+    })));
+    res.json(rows);
   } catch (e) {
     console.error("[bookings] list error:", e.message);
     res.status(500).json({ error: "Could not load bookings" });
@@ -5798,6 +5895,9 @@ app.get("/api/flights", async (req, res) => {
       })
       .sort((a, b) => new Date(a.departure.dateTime) - new Date(b.departure.dateTime));
 
+    await Promise.all(flights.map(async (f) => {
+      f.source_mail = await sourceMail(userId, { emailId: f.emailId, reference: f.confirmationCode }).catch(() => null);
+    }));
     res.json(flights);
   } catch (err) {
     console.error("Flights fetch error:", err.message);
