@@ -38,6 +38,13 @@ test("a question about what a background run found loads its saved result", () =
   assert.deepEqual([...box.likely("reword the report's second section", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
 });
 
+test("changing a setting loads the settings tools", () => {
+  const tools = [{ name: "update_settings" }, { name: "pulse_toggle" }, { name: "pulse_check" }, { name: "gmail_send" }];
+  assert.deepEqual([...box.likely("turn pulse off for the weekend", [], tools)].sort(), ["pulse_check", "pulse_toggle", "update_settings"]);
+  assert.deepEqual([...box.likely("set quiet hours from 11pm", [], tools)].sort(), ["pulse_check", "pulse_toggle", "update_settings"]);
+  assert.deepEqual([...box.likely("call me Sammy from now on", [], tools)].sort(), ["pulse_check", "pulse_toggle", "update_settings"]);
+});
+
 test("anything else leaves every tool on demand", () => {
   assert.deepEqual(pick("What's the weather like?"), []);
   assert.deepEqual(pick("Thanks!"), []);
