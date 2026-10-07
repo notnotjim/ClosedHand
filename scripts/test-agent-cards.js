@@ -47,7 +47,7 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /var recent = live\.concat\(waiting, finished\);/, "running and waiting first, in one list");
   assert.match(dashboard, /\(recent\.length \? '<div class="mc-section-label">From your chats<\/div>' : ''\)/, "named for where the runs came from");
   assert.doesNotMatch(dashboard, /toggleArchivedRuns|_archivedRunCount|\/api\/agents\?archived=1/);
-  assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached your chat, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
+  assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached the chat you asked in, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
   assert.match(dashboard, />ClosedHand sends out agents when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");

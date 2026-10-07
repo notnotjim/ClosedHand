@@ -2130,7 +2130,7 @@
         <summary aria-label="Dashboard help" title="Dashboard help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg></summary>
         <div class="dashboard-help-menu">
           <button id="dashboard-welcome-replay" type="button">Take a quick tour</button>
-          <a href="/keep" target="_top">Keep your dashboard handy</a>
+          <a href="/keep" target="_top">Keep ClosedHand handy</a>
           <a href="/setup" target="_top">Back to setup</a>
         </div>
       </details>
@@ -2156,7 +2156,7 @@
 
         <!-- Chat Platforms -->
         <div class="section">
-          <h2>Chat Platforms</h2>
+          <h2>Chat apps</h2>
           <div class="platforms-wrap" id="platforms-wrap">
             <div class="platforms-grid" id="platforms-grid" data-delight-stagger></div>
           </div>
@@ -2465,7 +2465,7 @@
            them carry out (webapp/public/goals.js, lib/goals.js). -->
       <div class="tab-content" id="tab-goals">
         <div style="padding-top:16px;">
-          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell it a goal in chat or add one here.</p>
+          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell ClosedHand a goal or add one here.</p>
           <p id="goals-cheer" role="status" hidden></p>
           <div class="goals-head"><button type="button" class="goals-new" id="goal-new-toggle">+ New goal</button></div>
           <form id="goal-new" hidden>
@@ -2510,7 +2510,7 @@
               <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="files-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files ClosedHand has sent you in chat: things it made, and documents it pulled from your email or Drive. Each says which.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files ClosedHand has sent you: things it made, and documents it pulled from your email or Drive. Each says which.</p>
               <div id="files-list"></div>
             </div>
           </div>
@@ -2597,7 +2597,7 @@
             <details id="phone-options" hidden>
               <summary>Link options</summary>
               <div class="dashboard-link-options">
-                <p id="phone-link-help">Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.</p>
+                <p id="phone-link-help">Bookmark this link, pin it in a chat app or save it to your home screen. You can use it on any device.</p>
                 <a id="phone-save" href="/keep" target="_top">How to create a shortcut on your phone’s home screen</a>
                 <div id="phone-qr-details">
                   <p>Scan with another device to open your dashboard.</p>
@@ -2726,7 +2726,7 @@
           <div class="settings-group" id="rules-section">
             <div class="settings-group-header">
               <h2>Preferences</h2>
-              <p class="section-desc">How you want ClosedHand to work. Add them here or tell ClosedHand in chat, and turn them off or remove them at any time.</p>
+              <p class="section-desc">How you want ClosedHand to work. Add them here or tell ClosedHand, and turn them off or remove them at any time.</p>
             </div>
             <div class="settings-group-body">
               <div class="name-row">
@@ -2886,7 +2886,7 @@
               <button id="uploads-clear-all" onclick="event.stopPropagation();clearAllUploads()" title="Delete every stored copy in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="uploads-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent in chat, kept so ClosedHand can re-read them when you refer back. Deleting one removes ClosedHand's copy only; whatever you sent it from is untouched.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent ClosedHand, kept so it can re-read them when you refer back. Deleting one removes ClosedHand's copy only; whatever you sent it from is untouched.</p>
               <div id="uploads-list"></div>
             </div>
           </div>
@@ -2963,7 +2963,7 @@
     const welcomeSteps = [
       { tab: 'connections', text: 'Your connected apps live here. Add an app when you need it or disconnect one any time.' },
       { tab: 'brain', text: 'See what I remember in Context Brain. You can read, correct or delete your Pinned facts and Context Notes.' },
-      { tab: 'automations', text: 'Check on the jobs you give me in chat, like a morning briefing. You can manage them here, then get back to your day.' }
+      { tab: 'automations', text: 'Check on the jobs you give me, like a morning briefing. You can manage them here, then get back to your day.' }
     ];
     function positionWelcome() {
       const panel = document.getElementById('dashboard-welcome');
@@ -4942,7 +4942,7 @@
         document.getElementById('phone-qr').src = '/api/phone/qr.svg?destination=dashboard';
       }
       document.getElementById('phone-link-help').textContent = permanent
-        ? 'Bookmark this link, pin it in your chat or save it to your home screen. You can use it on any device.'
+        ? 'Bookmark this link, pin it in a chat app or save it to your home screen. You can use it on any device.'
         : 'This is a temporary link and changes when the connection restarts. Claim your personal URL before saving it.';
       if (p.state === 'unavailable') {
         desc.textContent = 'Update ClosedHand to use it on other devices.';
@@ -5769,7 +5769,7 @@
         const res = await fetch('/api/rules');
         if (!res.ok) throw new Error('Could not load preferences');
         const rules = (await res.json()).filter(function(r) { return r.kind !== 'goal'; });
-        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference in chat or add one below.</p>';
+        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference or add one below.</p>';
       } catch (e) {
         list.innerHTML = '<p>Could not load preferences. <button class="notification-retry" onclick="loadUserRules()">Try again</button></p>';
       }
@@ -6253,7 +6253,7 @@
       try {
         var res = await fetch('/api/agents/' + id + '/stop', { method: 'POST' });
         if (res.ok) {
-          showToast('Stopping. ClosedHand will confirm in your chat once it halts.');
+          showToast('Stopping. ClosedHand will say so in the chat you asked in once it stops.');
           loadRunningAgents();
         } else {
           var d = await res.json().catch(function() { return {}; });
@@ -6328,7 +6328,7 @@
     function confirmPageDelete(btn, id) {
       var wrap = document.createElement('span');
       wrap.className = 'agent-del-confirm';
-      wrap.innerHTML = '<span>Delete this page for good? The answer in your chat stays.</span>'
+      wrap.innerHTML = '<span>Delete this page for good? The answer stays in the chat you asked in.</span>'
         + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
         + '<button class="agent-del" type="button">Keep</button>';
       var buttons = wrap.querySelectorAll('button');
@@ -6423,7 +6423,7 @@
           return l.replace(/^[#>*\-\s]+/, '').replace(/[*_`]/g, '').trim();
         }).filter(Boolean)[0] || '';
         if (first.length > 110) first = first.slice(0, 110).replace(/\s+\S*$/, '') + '\u2026';
-        return first || 'The answer went to your chat.';
+        return first || 'The answer went to the chat you asked in.';
       }
       if (a.status === 'cancelled') return 'Stopped before it finished.';
       if (a.status === 'blocked') return 'It needs something from you to carry on.';
@@ -6491,7 +6491,7 @@
       // Delivery takes a moment, so say so only once it is clearly late.
       if (!running && a.status !== 'awaiting_confirmation' && a.delivery_status && a.delivery_status !== 'sent' &&
           a.completed_at && Date.now() - new Date(a.completed_at).getTime() > 2 * 60000) {
-        detail = 'This may not have reached your chat, so it stays here. ' + detail;
+        detail = 'This may not have reached the chat you asked in, so it stays here. ' + detail;
       }
       // The question went to the chat the task came from. Say where and when, so
       // the answer is given there; this card never takes one.
@@ -6572,7 +6572,7 @@
       var displayStatus = hasActiveRun ? 'running' : a.status;
       var statusClass = displayStatus === 'active' ? 'active' : displayStatus === 'paused' ? 'paused' : displayStatus === 'running' ? 'active' : 'idle';
       var triggerText = a.trigger_human_schedule || (a.trigger_type === 'event' ? 'When ' + (a.trigger_event_condition || a.trigger_event_source) : 'Run manually');
-      var triggerTitle = a.trigger_type === 'manual' ? 'Ask ClosedHand to run it in chat or tap Run' : '';
+      var triggerTitle = a.trigger_type === 'manual' ? 'Ask ClosedHand to run it or tap Run' : '';
 
       var actionsHtml = '<div class="auto-card-actions">';
       if (a.trigger_type === 'manual' || a.status === 'idle') {
@@ -7914,7 +7914,7 @@
         html += '<div class="memory-section-label">Ongoing</div>';
         html += _matters.map(renderMatterCard).join('');
       } else if (_memoryFilter === 'matters') {
-        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in chat, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
+        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in a conversation, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
       }
 
       // Pinned facts, grouped. One flat list put a personal note next to a
@@ -7988,7 +7988,7 @@
 
       if (!html) {
         if (_memoryFilter === 'pinned') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">No pinned facts yet. Chat with ClosedHand or click "+ Add Note" to create one.</div>';
-        else if (_memoryFilter === 'knowledge') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing here yet, which means nothing has been condensed: ClosedHand still holds your conversations in full. When older chat is condensed into summaries, they land here for you to review and delete, because from then on the summary is what it remembers.</div>';
+        else if (_memoryFilter === 'knowledge') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing here yet, which means nothing has been condensed: ClosedHand still holds your conversations in full. When older conversation is condensed into Context Notes, they land here for you to review and delete, because from then on the Context Note is what it remembers.</div>';
       }
 
       el.innerHTML = html;
@@ -8055,7 +8055,7 @@
       var CAT = { profile: 'About you', preference: 'Preference', person: 'Person', business: 'Business or project', topic: 'Other' };
       var kind = (note.category === 'profile' && /^profile[-_]/.test(key)) ? key.replace(/^profile[-_]/, '').replace(/[-_]+/g, ' ') : '';
       var title = kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : (note.subject || (note.value || '').split(/[.;]/)[0].slice(0, 60) || key);
-      var who = note.source === 'chat' ? 'Pinned by ClosedHand from chat' : note.source === 'setup scan' ? 'Read from your mail by the setup scan' : note.source === 'you' ? 'Added by you' : 'Pinned earlier';
+      var who = note.source === 'chat' ? 'Pinned by ClosedHand from a conversation' : note.source === 'setup scan' ? 'Read from your mail by the setup scan' : note.source === 'you' ? 'Added by you' : 'Pinned earlier';
       var when = note.created ? new Date(note.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
       document.getElementById('brain-panel-title').innerHTML = '&#128204; ' + escapeHtml(title);
       document.getElementById('brain-panel-tags').innerHTML = '<span style="font-size:11px;color:#D0A652;">' + escapeHtml(CAT[note.category] || CAT.topic) + '</span>' +

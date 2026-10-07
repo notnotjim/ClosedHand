@@ -226,7 +226,7 @@ test("where they are: a guess from their calendar, and asked to guess, it says w
 test("a chat app linked after introductions says hello as the same assistant, never asks again", async () => {
   const flow = onboarding({ settings: { onboarding_step: "done", preferred_name: "Alex", bot_name: "Robin" } });
   const { hereTooLine } = flow.exports();
-  assert.equal(hereTooLine("Telegram"), "Hey Alex, it's Robin, here on Telegram too. Same memory as everywhere else, so carry on wherever suits.");
+  assert.equal(hereTooLine("Telegram"), "Hey Alex, it's Robin, here on Telegram too. Same conversation as everywhere else, so carry on wherever suits.");
 });
 
 test("the first scan reads the calendar's timezone from its events, never from the calendar itself", () => {

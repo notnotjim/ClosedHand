@@ -758,7 +758,7 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Chat apps</h2>
-            <p class="whisper">Recommended for talking to ClosedHand on the go. You can also chat on your dashboard.</p>
+            <p class="whisper">Recommended for talking to ClosedHand on the go. You can also use the web chat.</p>
             <p class="done-note" id="tg-done-note"></p>
           </span>
           <span class="state-chip">Recommended</span>
@@ -830,7 +830,7 @@
   <section class="finish" id="finish" hidden>
     <h2>All set. <span>ClosedHand is yours.</span></h2>
     <p id="finish-line">Your dashboard is the control room. Everything ClosedHand keeps lives there, yours to
-       read or delete, along with every connection and setting. Your chat app is where you talk to it.</p>
+       read or delete, along with every connection and setting. The web chat and your chat apps are where you talk to it.</p>
     <div class="finish-actions">
       <a class="go" href="/">Open ClosedHand</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
@@ -1083,7 +1083,7 @@
 
     var chatStep = (state.steps || []).find(function (s) { return s.key === "chat"; });
     $("#ready-line").textContent = chatStep && chatStep.done
-      ? "Mail and calendar are connected. Say hello in your chat app, or open the dashboard and ask your inbox something."
+      ? "Mail and calendar are connected. Say hello in your chat app, or open the web chat and ask your inbox something."
       : "Mail and calendar are connected and ClosedHand is reading them. Connect a chat app below and it will introduce itself.";
     // This banner is where people leave the wizard, so it must not invite
     // them out through a door that is still unlocked. Until the password step

@@ -165,7 +165,7 @@ function pageHtml(report) {
     hasTables(report.content) ? file("xlsx", "Excel") : "",
   ].join("");
   // Deleting asks first, in place, with no script: the page has none.
-  const remove = `<details class="end"><summary>Delete page</summary><form method="post" action="/api/pages/${id}/delete"><span>Delete this page for good? The answer in your chat stays where it is.</span><button type="submit">Delete</button></form></details>`;
+  const remove = `<details class="end"><summary>Delete page</summary><form method="post" action="/api/pages/${id}/delete"><span>Delete this page for good? The answer stays in the chat you asked in.</span><button type="submit">Delete</button></form></details>`;
   return shell(report.title, `<div class="bar">${brand}<div class="files">${files}</div></div>
 <h1>${esc(report.title)}</h1>
 <p class="when">${esc(dated(report.created_at) + edited)}</p>
@@ -176,7 +176,7 @@ ${remove}`);
 function deletedHtml(report) {
   return shell("Page deleted", `<div class="bar">${brand}</div>
 <h1>Page deleted</h1>
-<p>"${esc(report.title)}" is gone, with its PDF, Word and Excel versions. The answer in your chat is still there.</p>
+<p>"${esc(report.title)}" is gone, with its PDF, Word and Excel versions. The answer is still in the chat you asked in.</p>
 <p><a href="/dashboard#pages">Your other pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
 }
 

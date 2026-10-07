@@ -49,8 +49,8 @@ test("the page shows the report safely, with downloads that say so and a delete 
   }
   assert.doesNotMatch(page.pageHtml({ ...report, content: "No tables here." }), /xlsx/, "a spreadsheet only when there are tables");
   assert.match(html, /<details class="end"><summary>Delete page<\/summary><form method="post" action="\/api\/pages\/a1b2c3\/delete">/);
-  assert.match(html, /Delete this page for good\? The answer in your chat stays where it is\./);
-  assert.match(page.deletedHtml(report), /is gone, with its PDF, Word and Excel versions\. The answer in your chat is still there\./);
+  assert.match(html, /Delete this page for good\? The answer stays in the chat you asked in\./);
+  assert.match(page.deletedHtml(report), /is gone, with its PDF, Word and Excel versions\. The answer is still in the chat you asked in\./);
 });
 
 test("the Word document opens and says what the page says", async () => {
@@ -151,7 +151,7 @@ test("every page is under Pages, a week on the list then Archived, whichever cha
   const dashboard = read("webapp/views/dashboard.html");
   assert.match(dashboard, /<button class="tab" data-tab="pages" onclick="switchTab\('pages'\)">Pages<\/button>/);
   assert.match(dashboard, /fetch\('\/api\/pages\?archived=1'\)/);
-  assert.match(dashboard, /Delete this page for good\? The answer in your chat stays\./);
+  assert.match(dashboard, /Delete this page for good\? The answer stays in the chat you asked in\./);
   assert.match(dashboard, />A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing\. Open it here or download it as PDF or Word\.</, "says what a page is, plainly");
 });
 

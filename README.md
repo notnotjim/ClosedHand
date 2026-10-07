@@ -1,6 +1,6 @@
 # ClosedHand
 
-A personal AI assistant you actually own. It lives in your messaging apps, reads the email and calendar you already have, remembers what matters, and keeps working while you sleep, all from a box you control with keys you hold.
+A personal AI assistant you actually own. It lives in your chat apps, reads the email and calendar you already have, remembers what matters, and keeps working while you sleep, all from a box you control with keys you hold.
 
 > **Demo coming.** A 30-second ask-your-inbox GIF will sit here once it is recorded on the shipped build.
 <!-- DEMO GIF PLACEHOLDER: 30s of "ask your inbox anything", recorded on a live ClosedHand. -->
@@ -111,7 +111,7 @@ Single-tenant by construction, not by configuration: every request resolves to t
 
 ## Reporting a problem
 
-Send `/bug` followed by what went wrong in your ClosedHand chat. The report stays
+Send `/bug` followed by what went wrong in the web chat or a chat app. The report stays
 on your computer unless you agree to send it to ClosedHand. Before you decide,
 ClosedHand explains what is included and lets you review the saved conversation.
 

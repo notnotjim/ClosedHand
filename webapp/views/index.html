@@ -2679,7 +2679,7 @@
         .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
         .then(function(d) { settle(); render(d); })
         .catch(function() { settle('Couldn\u2019t finish, try again'); });
-    }, function() { settle('No problem, you can tell me in chat'); }, { timeout: 15000, maximumAge: 600000 });
+    }, function() { settle('No problem, you can just tell me where you are'); }, { timeout: 15000, maximumAge: 600000 });
   });
   // Moved on? The weather line orientates again.
   // The temperature flips the unit; the rest of the sentence ("and clear in
@@ -3516,7 +3516,7 @@
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
             '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.5);"> Enter your pairing code</span></span>' +
           '</a>' +
-          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open this dashboard on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
+          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open ClosedHand on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
         '</div>';
     }
   }
@@ -6590,7 +6590,7 @@ function escapeHtml(s) {
         +'</svg></div>'
         +'<h3>Connect a Mac</h3>'
         +'<p>'+BRIDGE_PITCH+'</p>'
-        +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open this dashboard on your Mac to download Bridge.</p>')
+        +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open ClosedHand on your Mac to download Bridge.</p>')
         +'<div class="bridge-cta-flow">'
         +'<div class="bridge-cta-step"><em>1</em> Download</div>'
         +'<span class="bridge-cta-arrow">\u2192</span>'
