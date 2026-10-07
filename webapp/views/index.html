@@ -2429,12 +2429,12 @@
             <div class="mon-bar-title">
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              Workspace
-                <span class="mon-info" data-tip="ClosedHand's sandboxed workspace keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
+              Sandbox computer
+                <span class="mon-info" data-tip="ClosedHand's sandbox computer keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Keep the computer running ClosedHand awake and online for work to continue.">i</span>
               </span>
               <span class="mon-subtitle">
-              <span class="mon-status off" id="monWorkspaceStatus" role="img" aria-label="Checking status" title="Checking status"></span>
-              <span>ClosedHand's sandbox computer</span>
+              <span class="mon-status off" id="monWorkspaceStatus" aria-hidden="true" title="Checking status"></span>
+              <span id="monWorkspaceStatusText">Checking status</span>
               </span>
             </div>
             <div class="mon-bar-right">
@@ -2447,7 +2447,7 @@
               <button class="mon-max-btn" id="monCloudMax" onclick="monMaximize('cloud')" title="Maximize"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
             </div>
           </div>
-          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files..." oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of Workspace</button></div></div></div>
+          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files..." oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of the sandbox computer</button></div></div></div>
           <div class="mon-screen" id="monCloudScreen"
             ondragover="event.preventDefault();if(!window._monDragOrigin)document.getElementById('monCloudDrop').classList.add('active')"
             ondragleave="if(!this.contains(event.relatedTarget))document.getElementById('monCloudDrop').classList.remove('active')"
@@ -2478,7 +2478,7 @@
           <div class="mon-term" id="monTerm">
             <div class="mon-term-log" id="monTermLog"></div>
             <div class="mon-term-input">
-              <span class="mon-term-prompt">cloud $&nbsp;</span>
+              <span class="mon-term-prompt">sandbox $&nbsp;</span>
               <input class="mon-term-cmd" id="monTermCmd" type="text" placeholder="type a command..." onkeydown="if(event.key==='Enter')monExecCmd()">
             </div>
           </div>
@@ -2498,7 +2498,7 @@
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
               Local Computer
-                <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; if you run ClosedHand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the Workspace to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
+                <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; if you run ClosedHand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the sandbox computer to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
               </span>
               <span class="mon-subtitle">
               <span class="mon-status off" id="monLocalStatus"></span>
@@ -2533,7 +2533,7 @@
   </div>
 
     <div class="mon-drag-hint" id="monDragHint">
-      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Drag a file into the Workspace to give ClosedHand its own copy to work on, and drag the result back. Right-click for more options.</span>
+      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Drag a file into the sandbox computer to give ClosedHand its own copy to work on, and drag the result back. Right-click for more options.</span>
       <button class="mon-drag-hint-dismiss" onclick="dismissDragHint()">&times;</button>
     </div>
 
@@ -5621,7 +5621,7 @@ async function ragAddSource() {
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'cloud\',\'/workspace\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
-    + 'Workspace</div>';
+    + 'Sandbox computer</div>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'bridge\',\'~\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D0A652" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
@@ -5630,7 +5630,7 @@ async function ragAddSource() {
   document.getElementById('ragModalBody').innerHTML = html;
 }
 
-var _originLabels = { cloud: 'Cloud', bridge: 'Local', gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox' };
+var _originLabels = { cloud: 'Sandbox computer', bridge: 'Local', gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox' };
 var _originRoots = { cloud: '/workspace', bridge: '~', gdrive: 'root', onedrive: '/', dropbox: '' };
 var _ragBreadcrumbs = []; // stack of {path, name} for back navigation (especially gdrive IDs)
 
@@ -6025,7 +6025,7 @@ async function ragSetResidency(level) {
 }
 
 function ragGetOriginLabel(origin) {
-  var map = { gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox', cloud: 'Cloud', bridge: 'Local' };
+  var map = { gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox', cloud: 'Sandbox computer', bridge: 'Local' };
   return map[origin] || origin || '';
 }
 
@@ -6406,7 +6406,7 @@ function escapeHtml(s) {
       e.ondragover=function(ev){ev.preventDefault();this.classList.add('dragover');};
       e.ondragleave=function(){this.classList.remove('dragover');};
       e.ondrop=function(ev){ev.preventDefault();this.classList.remove('dragover');if(ev.dataTransfer.files&&ev.dataTransfer.files.length>0)monHandleUpload(ev.dataTransfer.files);};
-      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg><div class="mon-empty-text">Your online workspace</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
+      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div class="mon-empty-text">ClosedHand’s sandbox computer</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
     }
     var sorted=monSort(visible);
     if(_monCloudView==='grid')monRenderGrid(sorted,el,'cloud');
@@ -6461,7 +6461,7 @@ function escapeHtml(s) {
       else if(side==='local'&&_syncedPaths.has(fp))html+='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html+='</span>';
-      if(side==='local'&&!isDir)html+='<span class="mon-row-upload" title="Copy to workspace" onclick="event.stopPropagation();monCopyToCloud(\''+esc+'\')">'+'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
+      if(side==='local'&&!isDir)html+='<span class="mon-row-upload" title="Copy to the sandbox computer" onclick="event.stopPropagation();monCopyToCloud(\''+esc+'\')">'+'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html+='<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size))+'</span>';
       html+='<span class="mon-row-meta" style="min-width:60px;text-align:right;">'+monFmtDate(f.modified)+'</span></div>';
       html+='<div class="mon-row-children" style="display:none" data-path="'+fp.replace(/"/g,'&quot;')+'" data-side="'+side+'"></div>';
@@ -6513,9 +6513,9 @@ function escapeHtml(s) {
     var response = await fetch('/api/sandbox/runtime', {method:'POST'});
     var state = await response.json();
     while (state.status !== 'running') {
-      if (!response.ok || state.error || state.status === 'error') throw new Error(state.error || 'Workspace could not start. Please try again.');
+      if (!response.ok || state.error || state.status === 'error') throw new Error(state.error || 'The sandbox computer could not start. Please try again.');
       if (!document.body.classList.contains('computers-active')) return false;
-      showProgress(state.message || 'Starting Workspace…');
+      showProgress(state.message || 'Starting the sandbox computer…');
       await new Promise(function(resolve){setTimeout(resolve,1500);});
       response = await fetch('/api/sandbox/runtime');
       state = await response.json();
@@ -6548,7 +6548,7 @@ function escapeHtml(s) {
     catch(e){
       clearTimeout(spinnerTimer);el.replaceChildren();
       var notice=document.createElement('div');notice.className='mon-offline';
-      var message=document.createElement('p');message.textContent=e.message || 'Could not open Workspace.';
+      var message=document.createElement('p');message.textContent=e.message || 'Could not open the sandbox computer.';
       var retry=document.createElement('button');retry.className='mon-btn';retry.textContent='Try again';retry.onclick=monLoadCloud;
       notice.append(message,retry);el.appendChild(notice);
     }
@@ -6823,7 +6823,7 @@ function escapeHtml(s) {
       if(isSynced){
         html+='<button onclick="monToggleSync(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Go Offline</button>';
       } else {
-        html+='<button onclick="monCopyToCloud(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>Copy to workspace</button>';
+        html+='<button onclick="monCopyToCloud(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>Copy to the sandbox computer</button>';
       }
       html+='<button onclick="monLocalOpen(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open</button>';
     } else {
@@ -7134,6 +7134,8 @@ function escapeHtml(s) {
       header.title = label;
       header.setAttribute('aria-label', label);
     }
+    var headerText = document.getElementById('monWorkspaceStatusText');
+    if (headerText) headerText.textContent = label.charAt(0).toUpperCase() + label.slice(1);
     var status = document.getElementById('monTermStatus');
     if (status) {
       status.textContent = label + (online === null ? '' : ' | ' + (data.storage || '0') + '/' + ((data.volume_size_mb || 5120) / 1024).toFixed(0) + 'GB');
@@ -7148,7 +7150,7 @@ function escapeHtml(s) {
   async function monLoadActivity() {
     try {
       var resp = await fetch('/api/sandbox/activity');
-      if (!resp.ok) throw new Error('Workspace status unavailable');
+      if (!resp.ok) throw new Error('Sandbox computer status unavailable');
       var data = await resp.json();
       var logEl = document.getElementById('monTermLog');
       monSetWorkspaceStatus(data);
@@ -7177,7 +7179,7 @@ function escapeHtml(s) {
       for (var k = 0; k < existing.length; k++) cmdHtml += existing[k].outerHTML;
 
       if (entries.length === 0 && !cmdHtml) {
-        logEl.innerHTML = monLogEntry('--', 'Workspace idle, no recent activity', 'idle');
+        logEl.innerHTML = monLogEntry('--', 'Sandbox computer idle, no recent activity', 'idle');
       } else {
         logEl.innerHTML = entries.map(function(e) { return e.html; }).join('') + cmdHtml;
       }
@@ -7280,7 +7282,7 @@ function escapeHtml(s) {
     var cur = side === 'cloud' ? _monCloudPath : _monLocalPath;
     return cur || _monRootPath(side);
   }
-  function _monPanelName(side) { return side === 'cloud' ? 'Workspace' : 'Local Computer'; }
+  function _monPanelName(side) { return side === 'cloud' ? 'Sandbox computer' : 'Local Computer'; }
   function _monPathLabel(side, p) {
     var root = _monRootPath(side);
     if (!p || p === root || p === root + '/') return _monPanelName(side);
@@ -7445,7 +7447,7 @@ function escapeHtml(s) {
       if (side==='cloud' && fp.indexOf('/workspace/synced/') === 0) html += '<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html += '<span style="color:rgba(239,230,214,0.5);font-size:11px;margin-left:8px;">'+escapeHtml(parent)+'</span>';
       html += '</span>';
-      if (side==='local' && !isDir) html += '<span class="mon-row-upload" title="Copy to workspace" onclick="event.stopPropagation();monCopyToCloud(\''+fpAttr+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
+      if (side==='local' && !isDir) html += '<span class="mon-row-upload" title="Copy to the sandbox computer" onclick="event.stopPropagation();monCopyToCloud(\''+fpAttr+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html += '<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size||0))+'</span>';
       html += '</div>';
     }
@@ -7692,7 +7694,7 @@ function escapeHtml(s) {
           }
         } catch (e) {}
       } else {
-        document.getElementById('monDesktopLoading').textContent = data.error || 'No sandbox available. Create one first.';
+        document.getElementById('monDesktopLoading').textContent = data.error || 'The sandbox computer isn’t running yet.';
         document.getElementById('monDesktopLoading').style.display = '';
       }
     } catch (e) {

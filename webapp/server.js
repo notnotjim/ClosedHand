@@ -7443,7 +7443,7 @@ async function syncUserFiles(userId) {
           const fname = sync.localPath.split("/").pop();
           await supabase.from("web_messages").insert({
             user_id: userId, direction: "outbound", status: "complete",
-            content: `Heads up: "${fname}" was edited on your computer and on your sandbox computer at the same time. Your local version won, so the sandbox computer's edit was overwritten. If ClosedHand was working on that file, ask it to redo the change.`,
+            content: `Heads up: "${fname}" was edited on your computer and on the sandbox computer at the same time. Your local version won, so the sandbox computer's edit was overwritten. If ClosedHand was working on that file, ask it to redo the change.`,
           });
         } catch (e) { console.log(`[Sync] conflict notice failed: ${e.message}`); }
       }

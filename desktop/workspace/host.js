@@ -42,14 +42,14 @@ function guestJSON(socketPath, token, route, method = 'GET', body, timeout = 500
       headers: { 'X-Sandbox-Token': token, 'Content-Type': 'application/json' } }, response => {
       let text = '';
       response.on('error', reject);
-      response.on('data', chunk => { text += chunk; if (text.length > 1024 * 1024) request.destroy(new Error('Workspace response is too large.')); });
+      response.on('data', chunk => { text += chunk; if (text.length > 1024 * 1024) request.destroy(new Error('The sandbox computer’s answer was too large.')); });
       response.on('end', () => {
-        try { const value = JSON.parse(text); if (response.statusCode >= 400) throw new Error(value.error || 'Workspace request failed.'); resolve(value); }
+        try { const value = JSON.parse(text); if (response.statusCode >= 400) throw new Error(value.error || 'The sandbox computer could not do that.'); resolve(value); }
         catch (error) { reject(error); }
       });
     });
     request.on('error', reject);
-    request.on('timeout', () => request.destroy(new Error('Workspace did not answer.')));
+    request.on('timeout', () => request.destroy(new Error('The sandbox computer did not answer.')));
     request.end(body === undefined ? undefined : JSON.stringify(body));
   });
 }
@@ -69,14 +69,14 @@ class Workspace {
   status() {
     return { status: this.state, isolation: 'virtual-machine', progress: this.progress,
       error: this.error || undefined, message: this.error || (this.state === 'downloading'
-        ? `Preparing Workspace, ${this.progress}%. You can keep using ClosedHand.`
-        : this.state === 'starting' ? 'Starting Workspace…' : this.state === 'running' ? 'Ready' : 'Workspace starts when you need it.') };
+        ? `Preparing the sandbox computer, ${this.progress}%. You can keep using ClosedHand.`
+        : this.state === 'starting' ? 'Starting the sandbox computer…' : this.state === 'running' ? 'Ready' : 'The sandbox computer starts when you need it.') };
   }
   start() {
     this.lastUse = Date.now();
     if (this.state === 'running') return Promise.resolve();
     if (this.pending) return this.pending;
-    if (this.stopping) return Promise.reject(new Error('Workspace is closing. Try again in a moment.'));
+    if (this.stopping) return Promise.reject(new Error('The sandbox computer is closing. Try again in a moment.'));
     this.error = '';
     this.pending = this.boot().catch(async error => {
       this.error = error.message;
@@ -91,7 +91,7 @@ class Workspace {
     this.state = 'downloading';
     const manifest = JSON.parse(await fsp.readFile(this.options.manifest, 'utf8'));
     const directory = await installRuntime(manifest, path.join(this.options.directory, 'runtime'), value => { this.progress = value; });
-    if (this.stopping) throw new Error('Workspace is closing.');
+    if (this.stopping) throw new Error('The sandbox computer is closing.');
     this.state = 'starting';
     const disk = path.join(this.options.directory, 'workspace.ext4');
     try {
@@ -99,7 +99,7 @@ class Workspace {
       try { await fd.truncate(16 * 1024 ** 3); } finally { await fd.close(); }
     } catch (error) { if (error.code !== 'EEXIST') throw error; }
     const stat = await fsp.lstat(disk);
-    if (!stat.isFile() || stat.size < 1024 ** 3) throw new Error('The Workspace disk could not be opened. Your files have been kept.');
+    if (!stat.isFile() || stat.size < 1024 ** 3) throw new Error('The sandbox computer’s disk could not be opened. Your files have been kept.');
     this.sockets = await fsp.mkdtemp(path.join(os.tmpdir(), 'ch-vm-'));
     await fsp.chmod(this.sockets, 0o700);
     this.gateway = http.createServer((request, response) => this.forwardGateway(request, response));
@@ -125,12 +125,12 @@ class Workspace {
       exited = true;
       if (this.child === child) this.child = null;
       if (!this.stopping && this.state === 'running') {
-        this.state = 'error'; this.error = 'Workspace stopped. Open it again to reconnect.';
+        this.state = 'error'; this.error = 'The sandbox computer stopped. Open it again to reconnect.';
       }
     });
     const deadline = Date.now() + 90000;
     while (Date.now() < deadline) {
-      if (exited) throw new Error('Workspace could not start. Your files have been kept.');
+      if (exited) throw new Error('The sandbox computer could not start. Your files have been kept.');
       let health;
       try {
         health = await guestJSON(this.agentSocket, this.options.token, '/health', 'GET', undefined, 1500);
@@ -143,7 +143,7 @@ class Workspace {
       }
       await new Promise(resolve => setTimeout(resolve, 400));
     }
-    throw new Error('Workspace took too long to start. Your files have been kept.');
+    throw new Error('The sandbox computer took too long to start. Your files have been kept.');
   }
   get agentSocket() { return path.join(this.sockets, 'agent.sock'); }
   forwardGateway(request, response) {
@@ -194,7 +194,7 @@ class Workspace {
       result.on('error', () => response.destroy());
     });
     upstream.on('error', () => {
-      this.state = 'error'; this.error = 'Workspace disconnected. Try again.';
+      this.state = 'error'; this.error = 'The sandbox computer disconnected. Try again.';
       if (!response.headersSent) json(response, 502, { error: this.error }); else response.destroy();
     });
     upstream.on('timeout', () => upstream.destroy(new Error('timeout')));

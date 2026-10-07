@@ -52,7 +52,7 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Context Brain.** ClosedHand continuously indexes your mail, calendar and files into a knowledge base that recalls by meaning, not just keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email"; ask for an invoice number and it matches the number itself.
 
-**A real computer, sandboxed.** ClosedHand browses and runs code on its own sandboxed computer, with its own Chrome and a workspace that survives restarts. It cannot see your files or the rest of the machine it runs on unless you connect them yourself. Watch it work live at `localhost:6080`.
+**A real computer, sandboxed.** ClosedHand browses and runs code on the sandbox computer, which has its own Chrome and files that survive restarts. It cannot see your files or the rest of the machine it runs on unless you connect them yourself. Watch it work live at `localhost:6080`.
 
 **Chat apps.** WhatsApp links your own number as a device, the way WhatsApp on a laptop does, and Telegram uses a bot you make with BotFather in three taps. Both work on a laptop behind your router. Discord, Slack and LINE are coming soon.
 

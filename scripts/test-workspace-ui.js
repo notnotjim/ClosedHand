@@ -55,7 +55,7 @@ function prepare(states, visible = true, isVM = true) {
   return { run: () => context.window.monPrepareWorkspace(message => messages.push(message)), calls, messages };
 }
 test('Computers shows preparation progress then continues, without a new setup step', async () => {
-  const ui = prepare([{ status: 'downloading', message: 'Preparing Workspace, 25%.' }, { status: 'starting', message: 'Starting Workspace…' }, { status: 'running' }]);
+  const ui = prepare([{ status: 'downloading', message: 'Preparing the sandbox computer, 25%.' }, { status: 'starting', message: 'Starting the sandbox computer…' }, { status: 'running' }]);
   assert.equal(await ui.run(), true); assert.equal(ui.messages.length, 2); assert.equal(ui.calls.length, 4);
   const docker = prepare([], true, false); assert.equal(await docker.run(), true); assert.equal(docker.calls.length, 1);
 });
