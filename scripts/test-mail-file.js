@@ -54,3 +54,11 @@ test('the bot serves a file only to a request signed for this person', async () 
   assert.equal(ok.sent, 'gmail-bytes');
   assert.equal(ok.headers['X-File-Name'], 'ticket.pdf');
 });
+
+test('the real modules export what the bot calls (the stubs above stand in for them)', () => {
+  const fs = require('node:fs');
+  const exportsOf = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').match(/module\.exports = \{([\s\S]*?)\};/)[1];
+  assert.match(exportsOf('lib/services/usi.js'), /\bfetchAttachmentBuffer\b/);
+  assert.match(exportsOf('lib/services/imap-mail.js'), /\bfetchImapAttachment\b/);
+  assert.match(exportsOf('lib/web-chat-ws.js'), /\bverifyToken\b/);
+});
