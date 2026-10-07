@@ -2430,7 +2430,7 @@
                 </div>
                 <div class="auto-template" onclick="loadAgentTemplate('shopify-sales')" style="padding:14px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:10px;cursor:pointer;text-align:left;transition:border-color 0.15s;" onmouseover="this.style.borderColor='rgba(239,230,214,0.28)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">
                   <div style="font-size:20px;margin-bottom:6px;">&#128722;</div>
-                  <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Shopify Sales Report</div>
+                  <div style="font-size:13px;font-weight:500;margin-bottom:3px;">Shopify Sales Summary</div>
                   <div style="font-size: 13px;color:#B6AFA4;line-height:1.4;">Daily sales summary with top products and revenue trends.</div>
                   <div style="font-size:9px;color:rgba(239,230,214,0.6);margin-top:4px;">&#128337; Daily at 6pm</div>
                 </div>
@@ -2799,12 +2799,12 @@
             <div class="account-action" id="action-clear-data">
               <div class="account-action-info">
                 <div class="account-action-title">Wipe all data</div>
-                <div class="account-action-desc">Deletes conversations, Context Notes, pinned facts, rules, schedules, datasets, automations and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
+                <div class="account-action-desc">Deletes conversations, Context Notes, Pinned facts, preferences, schedules, tables, routines and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
               </div>
               <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Wipe</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-data">
-              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, pinned facts, rules, schedules, datasets, automations and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
+              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, Pinned facts, preferences, schedules, tables, routines and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-clear-data" placeholder="Type WIPE" oninput="checkConfirmInput('clear-data','WIPE')">
                 <button class="confirm-go confirm-go-warn" id="go-clear-data" data-orig-text="Wipe everything" onclick="executeAccountAction('clear-data')">Wipe everything</button>
@@ -5868,7 +5868,7 @@
       },
       'research-analyst': {
         name: 'research-analyst',
-        prompt: "Research [REPLACE WITH: your topic]. Check relevant sources and answer directly with the key findings, sources and important caveats. Keep the answer concise unless I request a full report. Do not save research as personal Context Brain information unless I ask.",
+        prompt: "Research [REPLACE WITH: your topic]. Check relevant sources and answer directly with the key findings, sources and important caveats. Keep the answer concise unless I ask for a page. Do not save research as personal Context Brain information unless I ask.",
         trigger: 'manual',
         cron: null,
         humanSchedule: null,
@@ -6735,14 +6735,14 @@
           traceHtml += '</div></div>';
         }
 
-        overlay.innerHTML = '<div class="modal" style="max-width:650px;"><h3 style="margin-bottom:8px;">Run Report</h3>' +
+        overlay.innerHTML = '<div class="modal" style="max-width:650px;"><h3 style="margin-bottom:8px;">Run result</h3>' +
           '<div style="font-size:13px;color:#B6AFA4;margin-bottom:10px;">Model: ' + esc(run.model || '') + ' | Duration: ' + (run.duration_secs ? formatDuration(run.duration_secs) : 'n/a') + ' | ' + esc(run.triggered_by || '') + ' | Status: <span style="color:' + (run.status === 'success' ? '#8DBD79' : run.status === 'failed' ? '#D8624B' : '#D0A652') + '">' + esc(run.status) + '</span></div>' +
           '<div style="background:#100E0D;border:1px solid rgba(239,230,214,0.1);border-radius:8px;padding:14px;max-height:40vh;overflow-y:auto;font-size:13px;color:#EFE6D6;line-height:1.6;white-space:pre-wrap;">' + esc(String(run.full_report || run.output_summary || '(No output)').replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, '')) + '</div>' +
           (run.tools_used && run.tools_used.length ? '<div class="mc-tools" style="margin-top:10px;">' + run.tools_used.map(function(t) { return '<span class="mc-tool-pill">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
           traceHtml +
           '<div class="modal-actions" style="margin-top:14px;"><button class="btn-modal btn-modal-secondary" onclick="this.closest(\'.modal-overlay\').remove()">Close</button></div></div>';
         document.body.appendChild(overlay);
-      } catch (e) { showToast('Failed to load report', true); }
+      } catch (e) { showToast('Could not load this run', true); }
     }
 
     // Creation modal
@@ -6764,7 +6764,7 @@
 
     var _modelDescs = {
       haiku: 'Quick lookups, simple checks, basic summaries.',
-      sonnet: 'Good for most tasks. Email summaries, monitoring, reports.',
+      sonnet: 'Good for most tasks. Email summaries, monitoring, write-ups.',
       opus: 'Deep research, complex analysis, strategy. Slower but more thorough.',
     };
     function selectModel(model) {
@@ -7193,7 +7193,7 @@
 
     async function deleteCurrentDataset() {
       if (!_currentDatasetId) return;
-      if (!confirm('Delete dataset "' + _currentDatasetName + '" and all its rows?')) return;
+      if (!confirm('Delete table "' + _currentDatasetName + '" and all its rows?')) return;
       try {
         await fetch('/api/datasets/' + _currentDatasetId, { method: 'DELETE' });
         closeDatasetDetail();
@@ -8487,7 +8487,7 @@
         <option value="data-cruncher">Data Cruncher</option>
         <option value="weekly-review">Weekly Review</option>
         <option value="inbox-triage">Inbox Triage</option>
-        <option value="shopify-sales">Shopify Sales Report</option>
+        <option value="shopify-sales">Shopify Sales Summary</option>
       </select>
 
       </div>

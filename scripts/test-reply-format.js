@@ -49,7 +49,7 @@ test("links go on their words; dashboard links open the dashboard panel", () => 
   assert.equal(formatReply("See [the **listing**](https://example.com/a?b=1&c=2)"),
     `See <a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener" ${style}>the <strong>listing</strong></a>`);
   assert.equal(formatReply("Open https://example.com/x or /dashboard#workers"),
-    `Open <a href="https://example.com/x" target="_blank" rel="noopener" ${style}>https://example.com/x</a> or <a href="#" onclick="event.preventDefault();openDashSlide('#workers')" ${style}>Dashboard (Workers)</a>`);
+    `Open <a href="https://example.com/x" target="_blank" rel="noopener" ${style}>https://example.com/x</a> or <a href="#" onclick="event.preventDefault();openDashSlide('#workers')" ${style}>Agents at work</a>`);
   assert.match(formatReply("[chart](/canvas/abc)"), /<a href="\/canvas\/abc" target="_blank"/);
   assert.equal(formatReply("[x](javascript:alert(1))"), "[x](javascript:alert(1))", "only web and ClosedHand addresses become links");
 });

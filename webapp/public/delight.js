@@ -284,7 +284,7 @@ window.Delight = {
       localStorage.setItem("delight-first-extra-service", "1");
       setTimeout(function () {
         Delight.confetti();
-        Delight.toast("First integration connected. ClosedHand just got smarter.", "success");
+        Delight.toast("First connection made. ClosedHand just got smarter.", "success");
       }, 500);
     }
     // Three+ services

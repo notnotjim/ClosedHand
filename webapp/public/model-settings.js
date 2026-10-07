@@ -12,7 +12,7 @@
     "Support model": "Does routine work like naming conversations and writing summaries.",
     "Image model": "Understands photos and screenshots you send.",
     "Document summaries": "Summarises mail and documents as they are indexed.",
-    "Recall": "Recalls by meaning as well as keywords, across your files, past chats and everything you connect.",
+    "Recall": "Recalls by meaning, not just keywords, across your files, past chats and everything you connect.",
     "Search ranking": "Puts the closest matches first. Stays the same when you change your primary model."
   };
   var LOCAL_RECALL = " Runs locally, so no company sees what it searches.";

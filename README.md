@@ -9,7 +9,7 @@ A personal AI assistant you actually own. It lives in your chat apps, reads the 
 
 Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the Context Brain. There is no telemetry. The only ClosedHand account is the one on closedhand.com that holds your personal URL. You sign in to it with Google or Microsoft, and closedhand.com keeps only the email you sign in with.
 
-It is strictly single-tenant. One install serves one person, and the first account to message your bot becomes its owner. Everyone else is politely refused.
+It is strictly single-tenant. Each ClosedHand serves one person, and the first account to message your bot becomes its owner. Everyone else is politely refused.
 
 ## Quickstart
 
@@ -42,7 +42,7 @@ If you run ClosedHand with Docker, it can use a Mac’s files and apps through t
 
 Hacking on ClosedHand itself? Build from source with `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` (or `CLOSEDHAND_BUILD=1 sh install.sh`).
 
-The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, set an admin password, connect Google, Microsoft or both, then connect Telegram with a token from BotFather. Microsoft is a code you type on Microsoft's own page. Google takes six short steps inside the setup page that open the exact console pages you need: that part is yours to do because ClosedHand runs on a machine you control rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
+The installer opens the setup page in your browser when the stack is up (or tells you the address, **http://localhost:3000**, if it cannot). It walks you through the rest and lights each step up as it detects you have done it: paste one model provider key, choose a dashboard password, connect Google, Microsoft or both, then connect Telegram with a token from BotFather. Microsoft is a code you type on Microsoft's own page. Google takes six short steps inside the setup page that open the exact console pages you need: that part is yours to do because ClosedHand runs on a machine you control rather than on a company's, and the steps take you through it one at a time. By the time you say hello in Telegram, ClosedHand has already read your inbox and calendar, and the first conversation is usually about twenty minutes in.
 
 Bring whichever model provider you prefer. A single DeepInfra key is the golden path because one key covers chat plus the embedding model, but OpenAI, Anthropic, Gemini, Groq, xAI and any OpenAI-compatible endpoint (including a local Ollama) are all first-class.
 
@@ -50,13 +50,13 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Chat that can act.** Ask questions, but also send mail, create events, set reminders, track flights, and run multi-step background agents that report back when they finish.
 
-**Context Brain.** ClosedHand continuously indexes your mail, calendar and files into a knowledge base that recalls by meaning, not just keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email"; ask for an invoice number and it matches the number itself.
+**Context Brain.** ClosedHand continuously indexes your mail, calendar and files, and recalls by meaning, not just keywords. Ask "what did the accountant say about the deadline" and it finds the thread even though you never said "email"; ask for an invoice number and it matches the number itself.
 
 **A real computer, sandboxed.** ClosedHand browses and runs code on the sandbox computer, which has its own Chrome and files that survive restarts. It cannot see your files or the rest of the machine it runs on unless you connect them yourself. Watch it work live at `localhost:6080`.
 
 **Chat apps.** WhatsApp links your own number as a device, the way WhatsApp on a laptop does, and Telegram uses a bot you make with BotFather in three taps. Both work on a laptop behind your router. Discord, Slack and LINE are coming soon.
 
-**Any MCP server, any way it is published.** Paste a server's web address, the `npx` or `uvx` command from its README, or its JSON block into the dashboard and ClosedHand connects to it: remote servers with a key or a sign-in, servers that run on your machine, and servers that offer documents and ready-made prompts as well as tools. Everything is scanned for prompt injection and impersonation before it is switched on, an action that deletes or sends is put to you first, and the connection is there for agents, automations and the morning pulse, not only the chat window. Skill files work from the same box.
+**Any MCP server, any way it is published.** Paste a server's web address, the `npx` or `uvx` command from its README, or its JSON block into the dashboard and ClosedHand connects to it: remote servers with a key or a sign-in, servers that run on your machine, and servers that offer documents and ready-made prompts as well as tools. Everything is scanned for prompt injection and impersonation before it is switched on, an action that deletes or sends is put to you first, and the connection is there for agents, routines and Pulse, not only the chat window. Skill files work from the same box.
 
 **Calendar without Google, if you prefer.** A generic CalDAV client covers iCloud, Fastmail, Nextcloud and friends with an app-specific password, no OAuth consent screens involved.
 
@@ -107,7 +107,7 @@ Where you run it sets the tier. On a laptop it works while the lid is open and c
 
 ## Security posture
 
-Single-tenant by construction, not by configuration: every request resolves to the one admin. The first person to message it on a chat app becomes its owner and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted installs. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data goes only to the services you connect and the AI model provider you choose. Pages you open through your personal URL pass through ClosedHand's relay on Cloudflare, encrypted on the way and not kept.
+Single-tenant by construction, not by configuration: every request resolves to the one admin. The first person to message it on a chat app becomes its owner and strangers get one polite refusal; `ALLOWED_*` env lists can extend or restrict that. You choose the dashboard password on the setup page, and it locks every page but setup itself; `ADMIN_PASSWORD` in `.env` overrides it for scripted setups. OAuth tokens are encrypted at rest when `TOKEN_ENCRYPTION_KEY` is set. Your data goes only to the services you connect and the AI model provider you choose. Pages you open through your personal URL pass through ClosedHand's relay on Cloudflare, encrypted on the way and not kept.
 
 ## Reporting a problem
 

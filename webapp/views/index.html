@@ -2402,7 +2402,7 @@
   <div id="workerStatusBar" style="display:none;position:fixed;bottom:200px;left:260px;right:0;padding:8px 20px;background:rgba(216,98,75,0.06);border-bottom:1px solid rgba(216,98,75,0.1);font-size:13px;color:#B6AFA4;cursor:pointer;z-index:10;backdrop-filter:blur(10px);" onclick="if(window.openDashSlide)window.openDashSlide('#workers')">
     <div style="display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;">
       <span style="animation:typingBounce 1.4s ease-in-out infinite;color:#D8624B;font-size:14px;">&#9881;</span>
-      <span id="workerStatusText">Workers active</span>
+      <span id="workerStatusText">Agents at work</span>
       <span style="margin-left:auto;font-size:11px;color:rgba(239,230,214,0.5);">Tap to view</span>
     </div>
   </div>
@@ -4048,7 +4048,7 @@
     };
     var bare = function (t) {
       return t.replace(/(https?:\/\/[^\s<]+)|\/dashboard(#[\w-]+)?/g, function (m, url, hash) {
-        return url ? link(url, url) : link(m, hash === '#workers' ? 'Dashboard (Workers)' : 'Dashboard');
+        return url ? link(url, url) : link(m, hash === '#workers' ? 'Agents at work' : 'Dashboard');
       });
     };
     var inline = function (t) {
@@ -5279,7 +5279,7 @@ function pollWorkerStatus() {
     if (running.length > 0) {
       var t = running[0];
       var name = t.name || 'Project';
-      text.textContent = name + ' - workers active';
+      text.textContent = name + ': agents at work';
       bar.style.display = 'block';
     } else {
       bar.style.display = 'none';

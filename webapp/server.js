@@ -1926,7 +1926,7 @@ app.get("/bot-connect", (req, res) => {
 
     const payload = JSON.parse(payloadStr);
     if (!payload.userId || !payload.service || !payload.exp) return res.status(400).send("Malformed token.");
-    if (Date.now() > payload.exp) return res.status(410).send("This link has expired. Ask the bot for a new one.");
+    if (Date.now() > payload.exp) return res.status(410).send("This link has expired. Ask ClosedHand for a new one.");
 
     const svc = SERVICES[payload.service];
     if (!svc) return res.status(400).send(`Unknown service: ${payload.service}`);
@@ -1937,7 +1937,7 @@ app.get("/bot-connect", (req, res) => {
     res.redirect(`/auth/${payload.service}${params}`);
   } catch (e) {
     console.error("bot-connect error:", e.message);
-    res.status(500).send("Something went wrong. Ask the bot for a new link.");
+    res.status(500).send("Something went wrong. Ask ClosedHand for a new link.");
   }
 });
 
