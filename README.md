@@ -97,13 +97,21 @@ Two Node services (bot and dashboard) that share a Postgres with pgvector and ne
 
 The Mac app, or Docker with the compose plugin, and at least one model provider key. Docker supports amd64 and arm64, including Apple Silicon and ARM VPSes.
 
-Setup gives ClosedHand a personal URL, straight after you choose your dashboard password, to open it from any device, wherever you are (see below). Your dashboard and data stay on the computer running ClosedHand. Keep it awake and online, and sign in with your dashboard password. Temporary addresses are also available, but change when the connection restarts.
+Setup gives ClosedHand a personal URL, straight after you choose your dashboard password, to open it from any device, wherever you are (see below). Your dashboard and data stay on the computer running ClosedHand, and the personal URL reaches them whenever that computer is awake and online, behind your dashboard password. Temporary addresses are also available, but change when the connection restarts.
 
 If you run ClosedHand with Docker on your own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
 
 RAM needs depend on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so recall works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
-Where you run it sets the tier. On a laptop it works while the lid is open and catches up when you return. On an always-on box (an old mini PC, a small VPS) the background sync, scheduled agents and proactive messages run around the clock, which is the full product.
+## Where it lives
+
+ClosedHand lives on one computer and you reach it from anywhere. On a laptop it is there while the laptop is awake. When it wakes, it fetches the mail and calendar changes it missed and answers WhatsApp messages sent in the last 12 hours, but a schedule due while it slept is skipped. On a computer that stays on (a desktop, a Mac mini, an old PC or a small VPS), Pulse, schedules and agents run day and night.
+
+With the Mac app, turn on Keep Mac Awake and Launch at Login in the menu bar. Keep Mac Awake can't stop a laptop sleeping when its lid is closed. After a restart, ClosedHand starts again when someone logs in, and a Mac with FileVault turned on waits for that login. With Docker, ClosedHand restarts by itself whenever Docker starts, so set Docker to start with the computer.
+
+There is no supported way to move ClosedHand's data to another computer. Setting it up again elsewhere can take your personal URL with it, but starts with an empty Context Brain, no connections and no history, so choose its home before you set it up.
+
+**On a rented server.** Rent a small Linux server (2 GB of RAM with a full-service key, 4 GB otherwise), install [Docker Engine](https://docs.docker.com/engine/install/) on it, connect over SSH and run the install command above. The installer then prints an `ssh -N -L 3000:127.0.0.1:3000 user@server` command: run it on your own computer, keep it open and open http://localhost:3000 there to finish setup. After setup your personal URL reaches ClosedHand from any device, so the tunnel is only needed for setup. The hosting company provides the machine, so choose one you trust and turn on disk encryption where it offers it.
 
 ## Security posture
 
@@ -153,7 +161,7 @@ Your dashboard and data stay on the computer running ClosedHand. Your ClosedHand
 account on closedhand.com keeps only your personal URL, the Google or Microsoft
 sign-in that claimed it, and what Cloudflare needs to carry the connection to
 that computer. Open the
-address from any device while the computer running ClosedHand is awake and
+address from any device whenever the computer running ClosedHand is awake and
 online; your dashboard password is always required. Pausing the link stops the
 connection and resuming keeps the same address. Change the name in **Settings →
 Personal URL**: the old address sends people to the new one for 30 days, then

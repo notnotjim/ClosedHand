@@ -342,6 +342,7 @@
     .finish h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin: 0 0 8px; }
     .finish h2 span { color: var(--accent); }
     .finish p { color: var(--text-secondary); max-width: 60ch; margin: 0 0 16px; }
+    .finish p.hint { border-left: 2px solid var(--accent-dim); padding-left: 12px; font-size: 13px; color: var(--text-tertiary); }
     .finish-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
     .finish-actions .deep { margin: 0; }
     .finish-actions .deep[hidden] { display: none; }
@@ -715,7 +716,7 @@
         <div class="card-body">
             <section id="setup-personal-url" aria-labelledby="personal-url-heading">
               <p id="url-password-note">Connect Google or Microsoft above first.</p>
-              <p>Use ClosedHand’s web chat and dashboard from any device at a personal URL like amber-fox-42.closedhand.ai, while this computer is on. Claiming one creates your ClosedHand account, which stores your email and nothing else.</p>
+              <p>Use ClosedHand’s web chat and dashboard from any device at a personal URL like amber-fox-42.closedhand.ai. It reaches ClosedHand whenever the computer running it is awake and online. Claiming one creates your ClosedHand account, which stores your email and nothing else.</p>
               <p id="url-auto" hidden>Your Microsoft sign-in above claimed it.</p>
               <div id="url-controls" hidden>
                 <form id="url-form">
@@ -831,6 +832,7 @@
     <h2>All set. <span>ClosedHand is yours.</span></h2>
     <p id="finish-line">Your dashboard is the control room. Everything ClosedHand keeps lives there, yours to
        read or delete, along with every connection and setting. The web chat and your chat apps are where you talk to it.</p>
+    <p class="hint" id="finish-home" hidden></p>
     <div class="finish-actions">
       <a class="go" href="/">Open ClosedHand</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
@@ -1139,6 +1141,13 @@
       var num = state.waLinked && state.waLinked.linked && state.waLinked.number;
       wa.hidden = !num; if (num) wa.href = "https://wa.me/" + num;
       tg.hidden = !!num || !state.botUsername; if (state.botUsername) tg.href = "https://t.me/" + state.botUsername;
+      // How to keep the computer it runs on there day and night, for the
+      // way it was set up: the Mac app's menu bar, or Docker's own start-up.
+      var home = $("#finish-home");
+      home.textContent = state.desktop
+        ? "ClosedHand answers whenever this Mac is awake. If this Mac stays on, turn on Keep Mac Awake and Launch at Login in the menu bar: ClosedHand is then there day and night, and starts again when you log in after a restart. A laptop still sleeps when its lid closes."
+        : "ClosedHand answers whenever the computer running it is awake. On a computer that stays on, set Docker to start with the computer and ClosedHand starts with it.";
+      home.hidden = false;
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
       // Show the welcome once per install when the last step lands.
       if (lastAllDone === false && !celebrated()) celebrate();

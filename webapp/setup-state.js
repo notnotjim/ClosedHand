@@ -152,6 +152,8 @@ async function getSetupState() {
     chatProviderLabel: settings.model_config ? new URL(settings.model_config.connections.primary.baseUrl).hostname : conf.CHAT_PROVIDER_LABEL ||
       ({ anthropic: "Anthropic", openai: "OpenAI", gemini: "Google Gemini" })[settings.llm_provider] || null,
     botUsername: conf.TELEGRAM_BOT_USERNAME || null,
+    // The Mac app, rather than Docker: setup says how to keep it running.
+    desktop: !!process.env.CLOSEDHAND_DESKTOP,
     // Identifies THIS install, so the page can keep per-install UI state
     // (skipped steps) instead of one browser's choices leaking across every
     // install that has ever answered on this address. NOT the admin user id:
