@@ -20,10 +20,17 @@ up Safari-only on the app side while the server offered them for Chrome too.
 
 ## Build
 
+The dashboard's download is `webapp/public/download/ClosedHandBridge.dmg`, made
+by the build script and then notarised:
+
 ```sh
-cd bridge-app
-swift build -c release
+VERSION=1.7.0 IDENTITY="Developer ID Application: <name> (<team id>)" bridge-app/build.sh
+desktop/notarize.sh webapp/public/download/ClosedHandBridge.dmg
 ```
+
+Without `IDENTITY` the app is ad hoc signed, which only checks that it builds
+(`swift build -c release` alone builds just the executable). The ClosedHand Mac
+app carries the same Bridge code, so this download is for Docker setups.
 
 ## Install over an existing copy
 

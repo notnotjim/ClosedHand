@@ -84,7 +84,7 @@ struct SettingsView: View {
                             .foregroundColor(deleteMessage.contains("Error") ? .red : .green)
                     }
 
-                    Text("To wipe all ClosedHand data (conversations, memory, etc.), use the dashboard Settings tab.")
+                    Text("To delete everything ClosedHand keeps (conversations, pinned facts, Context Notes and the rest), use Delete account in the dashboard's Settings.")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.7))
                 }

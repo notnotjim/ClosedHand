@@ -1,4 +1,5 @@
 import Foundation
+import EventKit
 
 enum CalendarBridge {
     /// Run AppleScript via ShellBridge (proven TCC-compatible path)
@@ -21,6 +22,7 @@ enum CalendarBridge {
     static func listEvents(params: [String: Any]) async -> Any {
         let daysBack = params["days_back"] as? Int ?? 0
         let daysAhead = params["days_ahead"] as? Int ?? 7
+        if let events = eventKitEvents(daysBack: daysBack, daysAhead: daysAhead) { return events }
 
         let script = """
         tell application "Calendar"
@@ -72,6 +74,45 @@ enum CalendarBridge {
                 dict["attendees"] = parts[6].components(separatedBy: ", ")
             }
             return dict
+        }
+    }
+
+    /// Events read straight from the calendar store: fast, no Calendar app
+    /// launch, exact times with their offset. Nil when Calendar access isn't
+    /// granted, so the AppleScript path above still answers.
+    private static func eventKitEvents(daysBack: Int, daysAhead: Int) -> [[String: Any]]? {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return nil }
+        let store = EKEventStore()
+        let now = Date()
+        guard let from = Calendar.current.date(byAdding: .day, value: -daysBack, to: now),
+              let to = Calendar.current.date(byAdding: .day, value: daysAhead, to: now) else { return nil }
+        // Birthdays, suggestions and public holiday calendars are not the person's plans.
+        let calendars = store.calendars(for: .event).filter { cal in
+            cal.type != .birthday && !cal.title.localizedCaseInsensitiveContains("holiday")
+                && !["Siri Suggestions", "Scheduled Reminders"].contains(cal.title)
+        }
+        if calendars.isEmpty { return [] }
+        let iso = ISO8601DateFormatter()
+        iso.timeZone = .current
+        let predicate = store.predicateForEvents(withStart: from, end: to, calendars: calendars)
+        return store.events(matching: predicate).map { e in
+            var event: [String: Any] = [
+                // Stable across syncs: the same event keeps the same id.
+                "id": (e.calendarItemExternalIdentifier ?? e.eventIdentifier ?? "") + "@" + iso.string(from: e.startDate),
+                "title": e.title ?? "",
+                "start": iso.string(from: e.startDate),
+                "end": iso.string(from: e.endDate),
+                "all_day": e.isAllDay,
+                "location": e.location ?? "",
+                "calendar": e.calendar.title,
+                "notes": String((e.notes ?? "").prefix(2000)),
+            ]
+            if let attendees = e.attendees, !attendees.isEmpty {
+                event["attendees"] = attendees.map { a in
+                    a.name ?? a.url.absoluteString.replacingOccurrences(of: "mailto:", with: "")
+                }
+            }
+            return event
         }
     }
 
