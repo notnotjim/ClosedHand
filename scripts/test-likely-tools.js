@@ -30,6 +30,14 @@ test("a follow-up keeps the tools the last turns used", () => {
   assert.deepEqual(pick("Move it to 7:30pm", convo), ["gcal_create_event", "gcal_update_event"]);
 });
 
+test("a question about what a background run found loads its saved result", () => {
+  const tools = [{ name: "agent_report_read" }, { name: "agent_report_update" }, { name: "agent_status" }];
+  assert.deepEqual([...box.likely("what did it find?", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
+  assert.deepEqual([...box.likely("can you find the receipt", [], tools)], [], "finding something new is not about a run");
+  assert.deepEqual([...box.likely("so what has the agent found", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
+  assert.deepEqual([...box.likely("reword the report's second section", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
+});
+
 test("anything else leaves every tool on demand", () => {
   assert.deepEqual(pick("What's the weather like?"), []);
   assert.deepEqual(pick("Thanks!"), []);
