@@ -7,7 +7,7 @@ A personal AI assistant you actually own. It lives in your chat apps, reads the 
 
 ## Why this exists
 
-Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the memory. There is no telemetry. The only ClosedHand account is the one on closedhand.com that holds your personal URL. You sign in to it with Google or Microsoft, and closedhand.com keeps only the email you sign in with.
+Most AI assistants are a tab you visit, rented from a company that holds your data. ClosedHand flips both parts. It comes to where you already talk (WhatsApp and Telegram, with Discord, Slack and LINE coming soon), and everything about it is yours: the server, the database, the model keys, the Context Brain. There is no telemetry. The only ClosedHand account is the one on closedhand.com that holds your personal URL. You sign in to it with Google or Microsoft, and closedhand.com keeps only the email you sign in with.
 
 It is strictly single-tenant. One install serves one person, and the first account to message your bot becomes its owner. Everyone else is politely refused.
 
@@ -60,7 +60,7 @@ Bring whichever model provider you prefer. A single DeepInfra key is the golden 
 
 **Calendar without Google, if you prefer.** A generic CalDAV client covers iCloud, Fastmail, Nextcloud and friends with an app-specific password, no OAuth consent screens involved.
 
-**A dashboard that tells the truth.** Connections, agents, memory, and a usage tab that shows where your key money goes, token by token, feature by feature, from your providers' own numbers.
+**A dashboard that tells the truth.** Connections, agents, routines, Context Brain and a usage tab that shows where your key money goes, token by token, feature by feature, from your providers' own numbers.
 
 ## How it compares
 
@@ -101,7 +101,7 @@ Setup gives ClosedHand a personal URL, straight after you choose your dashboard 
 
 If you run ClosedHand with Docker on your own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
 
-Memory depends on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so memory works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
+RAM needs depend on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), ClosedHand fetches a compact local embedding model (~300 MB, once, with progress shown) so recall works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
 Where you run it sets the tier. On a laptop it works while the lid is open and catches up when you return. On an always-on box (an old mini PC, a small VPS) the background sync, scheduled agents and proactive messages run around the clock, which is the full product.
 

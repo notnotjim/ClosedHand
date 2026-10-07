@@ -2840,21 +2840,21 @@
       <div class="tab-content" id="tab-brain">
         <div style="padding-top:12px;">
           <div class="brain-toolbar">
-            <input type="text" id="brain-search" placeholder="Search memory..." oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;">
+            <input type="text" id="brain-search" placeholder="Search Context Brain..." oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;">
             <div style="display:flex;gap:2px;">
               <button onclick="switchBrainView('list')" class="brain-view-btn active" data-view="list" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:rgba(239,230,214,0.16);color:#EFE6D6;border-radius:6px 0 0 6px;cursor:pointer;font-size:12px;font-family:inherit;">List</button>
               <button onclick="switchBrainView('graph')" class="brain-view-btn" data-view="graph" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:transparent;color:#B6AFA4;border-radius:0 6px 6px 0;cursor:pointer;font-size:12px;font-family:inherit;">Graph</button>
             </div>
-            <button onclick="openAddPinnedNote()" style="padding:6px 14px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">+ Add Note</button>
+            <button onclick="openAddPinnedNote()" style="padding:6px 14px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">+ Pin a fact</button>
           </div>
           <div id="memory-filters">
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
-            <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned Facts</button>
+            <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned facts</button>
             <button class="memory-filter" data-filter="knowledge" onclick="setMemoryFilter('knowledge')">Context Notes</button>
             <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">Ongoing</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
-              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows ClosedHand's working memory; only then are older stretches condensed into notes here. Empty means nothing has been condensed, not that anything is missing.</div>
+              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows ClosedHand's working memory; only then are older stretches condensed into Context Notes here. Empty means nothing has been condensed, not that anything is missing.</div>
             </span>
             <span id="context-gauge" style="font-size:11px;color:rgba(239,230,214,0.6);margin-left:auto;align-self:center;"></span>
           </div>
@@ -2874,7 +2874,7 @@
           </div>
           <div id="brain-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(239,230,214,0.6);">
             <div style="font-size:32px;margin-bottom:12px;">&#129504;</div>
-            <p style="margin:0;font-size:14px;">Context Brain is empty. Chat with ClosedHand and it will start building your memory automatically.</p>
+            <p style="margin:0;font-size:14px;">Context Brain is empty. Talk to ClosedHand and it will start pinning facts and writing Context Notes.</p>
           </div>
           <!-- Files the user sent in chat. They live with the memory because that is
                what they are: things ClosedHand keeps so it can re-read them later. -->
@@ -7981,13 +7981,13 @@
           html += _renderNodeList(organic);
         }
         if (pulseNodes.length > 0) {
-          html += '<div class="memory-section-label" style="color:rgba(239,230,214,0.6);margin-top:16px;">Pulse Reports</div>';
+          html += '<div class="memory-section-label" style="color:rgba(239,230,214,0.6);margin-top:16px;">Pulse summaries</div>';
           html += _renderNodeList(pulseNodes);
         }
       }
 
       if (!html) {
-        if (_memoryFilter === 'pinned') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">No pinned facts yet. Chat with ClosedHand or click "+ Add Note" to create one.</div>';
+        if (_memoryFilter === 'pinned') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">No Pinned facts yet. Chat with ClosedHand or click "+ Pin a fact" to add one.</div>';
         else if (_memoryFilter === 'knowledge') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing here yet, which means nothing has been condensed: ClosedHand still holds your conversations in full. When older conversation is condensed into Context Notes, they land here for you to review and delete, because from then on the Context Note is what it remembers.</div>';
       }
 
@@ -8078,7 +8078,7 @@
       modal.classList.add('visible');
       document.getElementById('note-title-input').value = key;
       document.getElementById('note-title-input').disabled = true;
-      document.getElementById('note-modal-heading').textContent = 'Edit Pinned Note';
+      document.getElementById('note-modal-heading').textContent = 'Edit Pinned fact';
       var tagsInput = document.getElementById('note-tags-input');
       if (tagsInput) tagsInput.parentElement.style.display = 'none';
       document.getElementById('note-content-input').value = note.value || '';
@@ -8093,8 +8093,8 @@
       modal.classList.add('visible');
       document.getElementById('note-title-input').value = '';
       document.getElementById('note-title-input').disabled = false;
-      document.getElementById('note-title-input').placeholder = 'Note key (e.g. boss-email, preference-food)';
-      document.getElementById('note-modal-heading').textContent = 'New Pinned Note';
+      document.getElementById('note-title-input').placeholder = 'Fact name (e.g. boss-email, preference-food)';
+      document.getElementById('note-modal-heading').textContent = 'New Pinned fact';
       var tagsInput = document.getElementById('note-tags-input');
       if (tagsInput) tagsInput.parentElement.style.display = 'none';
       document.getElementById('note-content-input').value = '';
@@ -8104,7 +8104,7 @@
     }
 
     function deletePinnedNote(key) {
-      if (!confirm('Delete pinned note "' + key + '"?')) return;
+      if (!confirm('Delete Pinned fact "' + key + '"?')) return;
       fetch('/api/notes/' + encodeURIComponent(key), { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function() {
         closeBrainPanel();
         loadUnifiedMemory();
@@ -8117,7 +8117,7 @@
       document.getElementById('note-content-input').value = content || '';
       document.getElementById('note-tags-input').value = (tags || []).join(', ');
       document.getElementById('note-error').style.display = 'none';
-      document.getElementById('note-modal-heading').textContent = title ? 'Edit Note' : 'New Note';
+      document.getElementById('note-modal-heading').textContent = title ? 'Edit Context Note' : 'New Context Note';
       document.getElementById('note-title-input').disabled = !!title;
       document.getElementById('note-modal').classList.add('visible');
       if (!title) setTimeout(function() { document.getElementById('note-title-input').focus(); }, 100);
@@ -8136,7 +8136,7 @@
       if (window._savePinnedMode) {
         var pKey = window._savePinnedNoteKey || document.getElementById('note-title-input').value.trim();
         var pVal = document.getElementById('note-content-input').value.trim();
-        if (!pKey || !pVal) { document.getElementById('note-error').textContent = 'Key and value are required'; document.getElementById('note-error').style.display = 'block'; return; }
+        if (!pKey || !pVal) { document.getElementById('note-error').textContent = 'Fact name and value are required'; document.getElementById('note-error').style.display = 'block'; return; }
         fetch('/api/notes/' + encodeURIComponent(pKey), { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ value: pVal }) })
           .then(function(r) { return r.json(); })
           .then(function(data) {
@@ -8174,7 +8174,7 @@
           return;
         }
         closeNoteModal();
-        showToast('Note saved');
+        showToast('Context Note saved');
         loadBrainGraph();
         if (_currentNoteTitle === title) openBrainNode(title);
       } catch (e) {
@@ -8202,7 +8202,7 @@
         var res = await fetch('/api/knowledge/' + encodeURIComponent(_currentNoteTitle), { method: 'DELETE' });
         if (!res.ok) { showToast('Failed to delete', true); return; }
         closeBrainPanel();
-        showToast('Note deleted');
+        showToast('Context Note deleted');
         loadBrainGraph();
       } catch (e) { showToast('Failed to delete', true); }
     }
@@ -8688,8 +8688,8 @@
   </div>
   <div class="modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
     <div class="modal" style="max-width:600px;">
-      <h3 id="note-modal-heading">New Note</h3>
-      <p class="modal-desc">Markdown supported. Use [[Title]] to link to other notes.</p>
+      <h3 id="note-modal-heading">New Context Note</h3>
+      <p class="modal-desc">Markdown supported. Use [[Title]] to link to other Context Notes.</p>
       <label for="note-title-input">Title</label>
       <input type="text" id="note-title-input" placeholder="My-Note-Title" autocomplete="off">
       <label for="note-tags-input" style="margin-top:10px;">Tags (comma-separated)</label>

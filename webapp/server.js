@@ -1091,7 +1091,7 @@ app.post("/api/setup/memory-key", async (req, res) => {
       const { data: dv } = await supabase.from("data_vectors").select("id").limit(1);
       const { data: rc } = await supabase.from("rag_chunks").select("id").limit(1);
       if ((dv && dv.length) || (rc && rc.length)) {
-        return res.status(400).json({ error: "Memory is already indexed with the local embedder; switching now means re-indexing everything, which lands as a Settings action. The key was not saved." });
+        return res.status(400).json({ error: "Your data is already indexed with the local embedding model; switching now means re-indexing everything, which lands as a Settings action. The key was not saved." });
       }
       // Nothing indexed yet: the switch is free. Hosted defaults take over
       // (embeddings, reranker, vision on DeepInfra).
