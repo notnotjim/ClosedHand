@@ -170,7 +170,8 @@ test("ClosedHand sets goals up the researched way and records progress from the 
   const defs = require("../lib/tools/definitions.js");
   const tools = defs.TOOLS || defs.tools || Object.values(defs).find(Array.isArray);
   const set = tools.find((t) => t.name === "goal_set"), progress = tools.find((t) => t.name === "goal_progress");
-  assert.ok(set.core && progress.core);
+  assert.ok(!set.core && !progress.core, "loaded when a message is about goals, not with every message");
+  assert.equal(progress.coreWithGoals, true, "with every message for someone who has goals");
   for (const want of [/why it matters to them/, /what is most likely to get in the way/, /one if-then plan for that obstacle/, /a specific version of the goal with a finish line they can check/, /the habit that gets them there/, /3 to 7 small, dated steps/, /the cue it follows/, /a check-in time/, /Call this only once they agree/, /Never infer a goal/, /Offer a reward, theirs to choose or skip/, /Never set a reward they did not choose/]) assert.match(set.description, want);
   for (const field of ["done_when", "habit", "reward"]) assert.ok(set.input_schema.properties[field], field);
   assert.match(progress.description, /from their own words only/);
@@ -207,4 +208,37 @@ test("goals have their own tab, after Schedules, that says how it helps", () => 
   assert.match(server, /\.eq\("id", id\)\.eq\("user_id", userId\)\.maybeSingle\(\)/, "every goal route checks it is the person's own");
   assert.match(read("webapp/views/index.html"), /e\.data\.type === 'chat-prefill' && e\.origin === location\.origin/, "a goal handed to chat only fills the box, from this page only");
   assert.equal(read("lib/goals-time.js"), read("webapp/goals-time.js"), "chat and dashboard share the check-in maths");
+});
+
+// Goal tools load by what the message says, the way mail and calendar do
+// (lib/engine.js TOOL_FAMILIES), and goal_progress rides along for people
+// who have goals, since progress comes up in passing.
+test("goal tools load for goal talk, the Goals tab's plan button and a yes to a proposed goal", () => {
+  const vm = require("node:vm");
+  const src = read("lib/engine.js");
+  const box = {};
+  vm.runInNewContext(src.slice(src.indexOf("const TOOL_FAMILIES"), src.indexOf("\n}\n", src.indexOf("function likelyOnDemandTools")) + 3) + "\nthis.likely = likelyOnDemandTools;", box);
+  const available = [{ name: "goal_set" }, { name: "goal_progress" }, { name: "gmail_send" }];
+  const loads = (msg, convo = []) => [...box.likely(msg, convo, available)].sort().join(",");
+  for (const msg of ["My goal is to run 5k by March", "I want to build a reading habit", "I'm trying to learn Portuguese",
+    "Working towards a promotion this year", "I want to save £5,000 by Christmas",
+    "Help me set up my goal: Run 5k under 30 minutes", "Help me set up my habit: Spanish most days"]) {
+    assert.equal(loads(msg), "goal_progress,goal_set", msg);
+  }
+  const proposal = [{ role: "user", content: "my goal is to run 5k" }, { role: "assistant", content: "Here's the goal: done when you run 5k in under 30 minutes by 1 March, with three easy runs a week after work. Shall I save it?" }];
+  assert.equal(loads("yes, save it", proposal), "goal_progress,goal_set", "a short yes to a proposed goal");
+  assert.equal(loads("What's the weather like in Lisbon this weekend, do I need a coat for the walk to the station?", proposal), "", "a new subject is not a reply");
+  assert.equal(loads("what should I cook tonight?"), "", "everything else leaves them on demand");
+});
+
+test("goal_progress is sent with every message only to someone who has goals", () => {
+  const vm = require("node:vm");
+  const src = read("lib/engine.js");
+  const start = src.indexOf("function isCoreNow(");
+  const fn = src.slice(start, src.indexOf("\n}\n", start) + 3);
+  const defs = require("../lib/tools/definitions.js").INTERNAL_TOOLS;
+  const progress = defs.find((t) => t.name === "goal_progress"), set = defs.find((t) => t.name === "goal_set");
+  const core = (goals) => { const box = { ctx: { store: { goals }, activePlatform: "web" } }; vm.runInNewContext(fn + "\nthis.f = isCoreNow;", box); return [box.f(progress), box.f(set)]; };
+  assert.deepEqual(core([{ id: "aaaaaaaa", title: "Run 5k" }]), [true, false]);
+  assert.deepEqual(core([]), [false, false]);
 });

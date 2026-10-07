@@ -38,6 +38,12 @@ test("a question about what a background run found loads its saved result", () =
   assert.deepEqual([...box.likely("reword the report's second section", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
 });
 
+test("a short reply carries the subject of ClosedHand's last message", () => {
+  const convo = [{ role: "user", content: "write to Sam about dinner" }, { role: "assistant", content: "Here's a draft email to Sam: ... Want me to send it?" }];
+  assert.deepEqual(pick("make it a bit warmer", convo), ["gmail_create_draft", "gmail_reply", "gmail_send", "outlook_send"]);
+  assert.deepEqual(pick("Separately, what is the weather going to do on Saturday afternoon around Hampstead Heath for the picnic?", convo), [], "a long new message brings its own subject");
+});
+
 test("changing a setting loads the settings tools", () => {
   const tools = [{ name: "update_settings" }, { name: "pulse_toggle" }, { name: "pulse_check" }, { name: "gmail_send" }];
   assert.deepEqual([...box.likely("turn pulse off for the weekend", [], tools)].sort(), ["pulse_check", "pulse_toggle", "update_settings"]);
