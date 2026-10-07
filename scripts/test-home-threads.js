@@ -1,5 +1,5 @@
-// From the home page, the open conversation is carried on only while recent,
-// and a thread has one name everywhere.
+// A message from the home page starts a new conversation; an older one is
+// carried on by picking it under the box. A thread has one name everywhere.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -19,13 +19,12 @@ test('a thread without a title is named by the start of what was asked', () => {
   assert.doesNotMatch(server, /"Untitled conversation"/);
 });
 
-test('the home page carries on only a recent conversation, and says so', () => {
+test('the home page box always starts a new conversation; older ones are picked under it', () => {
   const page = fs.readFileSync(path.join(root, 'webapp', 'views', 'index.html'), 'utf8');
-  assert.match(page, /<div class="hero-continuing" id="heroContinuing" hidden>Continuing <span id="heroContinuingName"><\/span>/);
-  assert.match(page, /Date\.now\(\) - Date\.parse\(openT\.updated_at\) < 3 \* 3600000/);
-  assert.match(page, /var startFresh = fromHome && window\._homeContinue === null;/);
-  assert.match(page, /if \(fromHome && !startFresh\) drawEarlierMessages\(text\);/);
-  assert.match(page, /if \(startFresh\) \{[\s\S]{0,200}fetch\('\/api\/threads\/new', \{ method: 'POST' \}\)/);
+  assert.match(page, /var fromHome = !hasMessages;[\s\S]{0,400}var startFresh = fromHome;/);
+  assert.match(page, /if \(startFresh\) \{\s*fetch\('\/api\/threads\/new', \{ method: 'POST' \}\)/);
+  assert.doesNotMatch(page, /heroContinuing|_homeContinue|Start fresh|drawEarlierMessages/, 'no "Continuing" line or quiet-hours carry-on');
+  assert.match(page, /or pick up where you left off/);
   assert.doesNotMatch(page, /\|\| 'Untitled'/);
   const conv = fs.readFileSync(path.join(root, 'lib', 'conversation.js'), 'utf8');
   assert.match(conv, /if \(!asked\.length && conversation\.filter\(m => m\.role === "user"\)\.length < 3\) return;/);

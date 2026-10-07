@@ -625,10 +625,6 @@
     text-wrap: pretty;
   }
   /* Recent conversations: thin rows, no boxes, the box's width. */
-  .hero-continuing { margin: -6px auto 14px; font-size: 12px; color: rgba(239,230,214,0.5); text-align: center; max-width: 900px; padding: 0 16px; }
-  .hero-continuing #heroContinuingName { color: rgba(239,230,214,0.75); }
-  .hero-continuing button { background: none; border: 0; padding: 0; font: inherit; color: rgba(232,164,147,0.85); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-  .hero-continuing button:hover { color: #E8A493; }
   .hero-recent { width: 100%; max-width: 900px; margin: 40px auto 0; opacity: 0; animation: heroIn 0.6s ease forwards 0.9s; }
   /* A tab on the underside of the box, in the box's own border, and a
      drawer that slides the rows out from under it. Closed by default. */
@@ -2286,7 +2282,6 @@
     <h1 class="hero-heading" id="chatGreeting">How can I help?</h1>
     <!-- Sending from here carries on the open conversation only while it is
          recent, and says so; after a few quiet hours it starts a new one. -->
-    <div class="hero-continuing" id="heroContinuing" hidden>Continuing <span id="heroContinuingName"></span> <span aria-hidden="true">&middot;</span> <button type="button" id="heroStartFresh">Start fresh</button></div>
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -3870,14 +3865,11 @@
 
     lastUserMessage = text;
     var fromHome = !hasMessages;
-    // From the home page: carry on the open conversation while it is recent
-    // (with its history drawn above), otherwise start a new one first. Until
-    // the list has loaded (undefined) it carries on, as it always did.
-    var startFresh = fromHome && window._homeContinue === null;
+    // A message from the home page starts a new conversation. An older one is
+    // carried on by picking it under the box ("or pick up where you left off").
+    var startFresh = fromHome;
     enterChatMode();
-    var contLine = document.getElementById('heroContinuing'); if (contLine) contLine.hidden = true;
     addMessage(displayText, 'user', pendingFiles.length > 0 ? pendingFiles : null);
-    if (fromHome && !startFresh) drawEarlierMessages(text);
 
     // Clear preview area
     var previewArea = document.getElementById('file-preview-area');
@@ -3914,7 +3906,6 @@
       }
     };
     if (startFresh) {
-      window._homeContinue = undefined;
       fetch('/api/threads/new', { method: 'POST' })
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) { if (d && d.thread_id) _activeThreadId = d.thread_id; })
@@ -5087,17 +5078,6 @@
         // for someone with no history.
         fetch('/api/threads').then(function(r) { return r.json(); }).then(function(threads) {
           if (!Array.isArray(threads)) return;
-          // The open conversation is carried on only while recent: three
-          // quiet hours and the next message starts a new one.
-          var openT = threads.filter(function(t) { return t.is_active; })[0];
-          var recent = openT && openT.resumable && (Date.now() - Date.parse(openT.updated_at) < 3 * 3600000);
-          window._homeContinue = recent ? openT : null;
-          var cont = document.getElementById('heroContinuing');
-          if (cont && recent) {
-            document.getElementById('heroContinuingName').textContent = '\u201c' + (openT.display_title || openT.title || 'your last conversation') + '\u201d';
-            cont.hidden = false;
-            document.getElementById('heroStartFresh').onclick = function() { window._homeContinue = null; cont.hidden = true; var ci = document.getElementById('chatInput'); if (ci) ci.focus(); };
-          }
           var withMsgs = threads.filter(function(t) { return t.resumable !== undefined ? t.resumable : (t.message_count || 0) > 0; });
           if (!withMsgs.length) return;
           var esc = function(x) { return String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
@@ -5162,30 +5142,6 @@
           if (typeof fitMobileHero === 'function') fitMobileHero();
         }).catch(function() {});
       }
-    }).catch(function() {});
-  }
-
-  // Sending from the home screen carries on the open conversation, so the
-  // chat shows that conversation, not only the newest message: its earlier
-  // messages go above the one just sent, as when it is opened from the list.
-  function drawEarlierMessages(sent) {
-    fetch('/api/threads').then(function(r) { return r.ok ? r.json() : []; }).then(function(threads) {
-      var active = (threads || []).find(function(t) { return t.is_active; });
-      return active ? fetch('/api/threads/' + active.id).then(function(r) { return r.ok ? r.json() : null; }) : null;
-    }).then(function(thread) {
-      if (!thread || !thread.messages) return;
-      var earlier = shownInThread(thread.messages);
-      // Once answered, the message just sent is saved at the end with its reply.
-      for (var i = earlier.length - 1; i >= Math.max(0, earlier.length - 4); i--) {
-        if (earlier[i].role === 'user' && String(earlier[i].content).trim() === String(sent).trim()) { earlier = earlier.slice(0, i); break; }
-      }
-      var first = messagesEl.querySelector('.message');
-      if (!earlier.length || !first) return;
-      var before = messagesEl.querySelectorAll('.message').length;
-      earlier.forEach(function(msg) { addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null); });
-      var all = messagesEl.querySelectorAll('.message');
-      for (var j = before; j < all.length; j++) messagesEl.insertBefore(all[j], first);
-      scrollToBottom();
     }).catch(function() {});
   }
 
