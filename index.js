@@ -158,6 +158,8 @@ ctx._lastMessageTime = Date.now();
 ctx.expressApp.get("/health", (req, res) => {
   res.json({ status: "ok", platform: "closedhand-bot", uptime: process.uptime() });
 });
+// The files on emails ClosedHand keeps, asked for by the dashboard (lib/mail-file.js).
+require("./lib/mail-file").register(ctx.expressApp);
 
 // Keepalive: prevent Railway container sleep, warm DB connection
 setInterval(async () => {

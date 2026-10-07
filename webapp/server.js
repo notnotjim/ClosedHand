@@ -3743,13 +3743,7 @@ app.post("/api/chat/activity/delete", async (req, res) => {
 app.get("/api/chat/ws-token", async (req, res) => {
   try {
     let userId = getUserIdFromRequest(req);
-    const WS_AUTH_SECRET = process.env.WS_AUTH_SECRET || "fallback-dev-secret";
-    const exp = Date.now() + 60000; // 60s validity
-    const payload = `${userId}.${exp}`;
-    const hmac = crypto.createHmac("sha256", WS_AUTH_SECRET);
-    hmac.update(payload);
-    const sig = hmac.digest("hex");
-    const token = `${payload}.${sig}`;
+    const token = botToken(userId); // 60 s validity
     res.setHeader("Cache-Control", "no-store");
     res.json({ token, wsUrl: "/chat" });
   } catch (err) {
@@ -5744,14 +5738,37 @@ app.delete("/api/matters/:id", async (req, res) => {
 });
 
 // Where a flight or booking came from: the email ClosedHand read it in, to
-// open in Gmail, and the files attached to the mail about it. A booking is
-// often spread over several emails (an order confirmation with the details,
-// the airline's e-ticket with the PDF), so the files come from every cached
-// email that names the booking reference as well as the source one. Gmail
-// only: the Outlook and IMAP copies keep neither a web link nor attachment ids.
-const MAIL_SOURCE = /^gmail(_[a-z0-9]+)?$/;
-const MAIL_ID = /^[A-Za-z0-9_-]{6,64}$/;
-const mailFiles = (data) => (data?.attachments || []).filter((a) => !a.inline && a.attachmentId && a.filename);
+// open, and the files attached to the mail about it. A booking is often spread
+// over several emails (an order confirmation with the details, the airline's
+// e-ticket with the PDF), so the files come from every cached email that names
+// the booking reference as well as the source one. Gmail and Outlook emails
+// open in their own web mail; an IMAP email has no web address, so it opens in
+// ClosedHand's copy (/mail). Files come through the bot (lib/mail-file.js).
+const MAIL_SOURCE = /^(gmail|outlook)(_[a-z0-9]+)?$|^imap$/;
+const MAIL_ID = /^[A-Za-z0-9_=+\/.-]{3,300}$/;
+const mailFiles = (data) => (data?.attachments || []).filter((a) => !a.inline && a.attachmentId != null && a.filename);
+const mailQuery = (source, id) => `source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`;
+
+// A short-lived token the bot accepts as this person (lib/web-chat-ws.js).
+function botToken(userId) {
+  const exp = Date.now() + 60000;
+  const payload = `${userId}.${exp}`;
+  const sig = crypto.createHmac("sha256", process.env.WS_AUTH_SECRET || "fallback-dev-secret").update(payload).digest("hex");
+  return `${payload}.${sig}`;
+}
+async function askBot(userId, path) {
+  return fetch(`${BOT_INTERNAL_URL}${path}`, { headers: { "x-closedhand-token": botToken(userId) }, signal: AbortSignal.timeout(60000) });
+}
+
+// Every cached email carries its own web address, or none (IMAP), in the
+// shape every mailbox shares (lib/services/email-record.js). Only Gmail's and
+// Outlook's own addresses are trusted; anything else opens ClosedHand's copy.
+function openUrlFor(row) {
+  const link = String(row.data?.webLink || "");
+  if (/^https:\/\/(mail\.google\.com|outlook\.(office|office365|live)\.com)\//i.test(link)) return link;
+  return "/mail?" + mailQuery(row.source, row.external_id);
+}
+
 async function sourceMail(userId, { emailId, reference } = {}) {
   const rows = [];
   const add = (list) => { for (const r of list || []) if (MAIL_SOURCE.test(r.source) && !rows.some((x) => x.source === r.source && x.external_id === r.external_id)) rows.push(r); };
@@ -5774,16 +5791,11 @@ async function sourceMail(userId, { emailId, reference } = {}) {
   for (const r of rows) {
     mailFiles(r.data).forEach((f, n) => {
       if (documents.some((d) => d.name === f.filename)) return;
-      documents.push({ name: f.filename, type: f.mimeType || "", url: `/api/mail/attachment?source=${r.source}&id=${encodeURIComponent(r.external_id)}&n=${n}` });
+      documents.push({ name: f.filename, type: f.mimeType || "", url: "/api/mail/attachment?" + mailQuery(r.source, r.external_id) + "&n=" + n });
     });
   }
   if (!source && !documents.length) return null;
-  const thread = source ? String(source.data?.threadId || source.external_id) : null;
-  const account = source?.data?.account;
-  return {
-    open_url: source ? "https://mail.google.com/mail/" + (account ? "?authuser=" + encodeURIComponent(account) : "") + "#all/" + encodeURIComponent(thread) : null,
-    documents,
-  };
+  return { open_url: source ? openUrlFor(source) : null, documents };
 }
 
 // A booking is over once it ends. Most don't say when they end (a table at
@@ -5795,44 +5807,62 @@ function bookingOver(b, now = Date.now()) {
   return !isNaN(end) && end < now;
 }
 
-// A file attached to an email ClosedHand keeps, fetched from Gmail for the
-// person signed in to this dashboard. PDFs and pictures open in the browser;
-// anything else downloads, and nothing served here may run script.
+// A file attached to an email ClosedHand keeps, fetched by the bot from the
+// mail it came from, for the person signed in to this dashboard. PDFs and
+// pictures open in the browser; anything else downloads, and nothing served
+// here may run script.
 app.get("/api/mail/attachment", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const source = String(req.query.source || ""), id = String(req.query.id || ""), n = Number(req.query.n);
   if (!MAIL_SOURCE.test(source) || !MAIL_ID.test(id) || !Number.isInteger(n) || n < 0) return res.status(400).json({ error: "That file link isn't valid." });
   try {
-    const { data: row, error } = await supabase.from("data_cache").select("data").eq("user_id", userId).eq("type", "email").eq("source", source).eq("external_id", id).maybeSingle();
-    if (error) throw new Error(error.message);
-    const file = mailFiles(row?.data)[n];
-    if (!file) return res.status(404).json({ error: "That file is no longer in your mail." });
-    const service = source === "gmail" ? "google" : "google_extra_" + source.slice("gmail_".length);
-    const { data: conn, error: connErr } = await supabase.from("connections").select("tokens").eq("user_id", userId).eq("service", service).maybeSingle();
-    if (connErr) throw new Error(connErr.message);
-    const toks = require("./crypto-tokens").decryptTokens(conn?.tokens) || {};
-    const signIn = "Sign in to that Google account again on the dashboard to open its files.";
-    if (!toks.refresh_token) return res.status(409).json({ error: signIn });
-    const tok = await (await fetch("https://oauth2.googleapis.com/token", { method: "POST", body: new URLSearchParams({
-      ...require("./google-app").clientFor(toks, SERVICES.google.clientId, SERVICES.google.clientSecret),
-      refresh_token: toks.refresh_token, grant_type: "refresh_token" }) })).json();
-    if (!tok.access_token) return res.status(409).json({ error: signIn });
-    const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}/attachments/${encodeURIComponent(file.attachmentId)}`, { headers: { Authorization: "Bearer " + tok.access_token } });
-    if (!r.ok) return res.status(502).json({ error: "Gmail didn't send the file. Try again." });
-    const body = Buffer.from((await r.json()).data || "", "base64url");
-    const type = String(file.mimeType || "").toLowerCase();
+    const r = await askBot(userId, `/internal/mail-file?${mailQuery(source, id)}&n=${n}`);
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      return res.status(r.status === 401 ? 502 : r.status).json({ error: body.error || "Could not open that file. Try again." });
+    }
+    const body = Buffer.from(await r.arrayBuffer());
+    const type = String(r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     const viewable = /^(application\/pdf|image\/(png|jpeg|gif|webp))$/.test(type);
-    const name = String(file.filename).replace(/["\\\r\n]/g, "");
+    let name = "file";
+    try { name = decodeURIComponent(r.headers.get("x-file-name") || "file"); } catch (_) {}
+    name = name.replace(/["\\\r\n]/g, "");
     res.set({
       "Content-Type": viewable ? type : "application/octet-stream",
-      "Content-Disposition": `${viewable ? "inline" : "attachment"}; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      "Content-Disposition": `${viewable ? "inline" : "attachment"}; filename="${name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
       "Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store",
     });
     res.send(body);
   } catch (e) {
     console.error("[mail] attachment error:", e.message);
-    res.status(500).json({ error: "Could not open that file. Try again." });
+    res.status(502).json({ error: "Could not open that file. Try again." });
+  }
+});
+
+// ClosedHand's own copy of one email, for mail with no web address of its
+// own (IMAP): who sent it, when, what it says and its files.
+app.get("/mail", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/"));
+  const source = String(req.query.source || ""), id = String(req.query.id || "");
+  if (!MAIL_SOURCE.test(source) || !MAIL_ID.test(id)) return res.status(400).send("That email link isn't valid.");
+  try {
+    const { data: row, error } = await supabase.from("data_cache").select("data").eq("user_id", userId)
+      .eq("type", "email").eq("source", source).eq("external_id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return res.status(404).send("That email is no longer in what ClosedHand keeps.");
+    const m = row.data || {};
+    const e = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const when = m.date && !isNaN(Date.parse(m.date)) ? new Date(m.date).toUTCString() : e(m.date);
+    const files = mailFiles(m).map((f, n) => `<a class="file" href="/api/mail/attachment?${e(mailQuery(source, id))}&amp;n=${n}" target="_blank" rel="noopener">${e(f.filename)}</a>`).join("");
+    res.set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'" });
+    res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>${e(m.subject || "Email")}</title>
+<style>body{margin:0;background:#111;color:#EFE6D6;font:15px/1.55 -apple-system,system-ui,sans-serif}main{max-width:760px;margin:0 auto;padding:24px 16px 48px}h1{font-size:20px;line-height:1.3;margin:0 0 12px}.meta{color:#B6AFA4;font-size:13px;margin:0 0 4px}.files{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.file{border:1px solid rgba(239,230,214,.16);border-radius:6px;padding:4px 10px;color:#EFE6D6;text-decoration:none;font-size:13px}.body{white-space:pre-wrap;word-wrap:break-word;margin-top:20px;border-top:1px solid rgba(239,230,214,.12);padding-top:16px}</style></head>
+<body><main><h1>${e(m.subject || "(no subject)")}</h1><p class="meta">From ${e(m.from)}</p>${m.to ? `<p class="meta">To ${e(m.to)}</p>` : ""}<p class="meta">${when}</p>${files ? `<div class="files">${files}</div>` : ""}<div class="body">${e(m.body || m.snippet || "")}</div></main></body></html>`);
+  } catch (err) {
+    console.error("[mail] view error:", err.message);
+    res.status(500).send("Could not open that email. Try again.");
   }
 });
 
