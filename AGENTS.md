@@ -69,6 +69,15 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   mean either kind. The sandbox is "ClosedHand's sandbox computer", as on the Computers tab,
   or "the sandbox computer"; never "cloud computer", since on self-host it runs on the
   person's own machine.
+- Where ClosedHand lives and where it is used from have separate names. Its home is "its
+  computer" or "the computer running ClosedHand": a laptop, a computer left on or a rented
+  server. The ways in are "your phone", "any device" or "this device". "Your computer" only
+  where the point is ownership ("stays on your computer"). Availability is what the chosen home
+  gives ("whenever the computer running it is awake and online"), never a chore ("keep it
+  awake"). On closedhand.com it is explained once, in the home page's "Where ClosedHand lives";
+  only Terms, Privacy and the offline page repeat the caveat. Never imply its data can move to
+  another computer (there is no supported way) or that a schedule due while it slept runs later
+  (it is skipped). `scripts/test-agreed-names.js` checks this and the names above.
 - The recall design is the "Preemptive Context Layer" (PCL), defined at closedhand.com/pcl, first
   published there on 2026-09-29. It is free for anyone to use: no trademark sign. Describe it as
   one live picture of the person's world searched once before the model reads a message, never
