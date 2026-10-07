@@ -66,9 +66,11 @@ function asSam({ platform = "web", bridge = false, goals = [], location = LONDON
 }
 const toolChars = (tools) => tools.reduce((n, t) => n + JSON.stringify({ name: t.name, description: t.description, input_schema: t.input_schema }).length, 0);
 
-// Measured on 7 October 2026 after the prompt pass: system prompt 40,600
-// characters, tools 15,700. Each budget is about ten per cent above that.
-const BUDGET = { system: 44700, tools: 17300, quick: 4100 };
+// Measured on 7 October 2026 after the prompt pass: system prompt 40,911
+// characters, tool definitions 15,739, the short prompt 3,612 (before the
+// pass: 54,082, 22,452 and the full prompt). Each budget is about ten per
+// cent above. Raise one only for something worth its cost on every message.
+const BUDGET = { system: 45000, tools: 17300, quick: 4000 };
 
 test("a typical message's system prompt and tool definitions stay within budget", () => {
   asSam();
