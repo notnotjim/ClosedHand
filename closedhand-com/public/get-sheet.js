@@ -13,9 +13,9 @@
   sheet.setAttribute('aria-labelledby', 'getSheetTitle');
   sheet.innerHTML =
     '<button type="button" class="get-sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
-    '<svg class="get-sheet-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="11" rx="1.6"/><path d="M2 19h20"/></svg>' +
+    '<svg class="get-sheet-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>' +
     '<h2 id="getSheetTitle">On your phone?</h2>' +
-    '<p class="get-sheet-text">ClosedHand runs on your computer or server, so needs to be downloaded there.</p>' +
+    '<p class="get-sheet-text">Your ClosedHand assistant lives on a computer or a server you rent, and you use it from here. Set it up there first.</p>' +
     '<button type="button" class="get-sheet-send" hidden>Send link</button>' +
     '<button type="button" class="get-sheet-copy"><span>closedhand.com</span><strong>Copy link</strong></button>' +
     '<form class="get-sheet-mail" novalidate hidden>' +

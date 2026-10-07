@@ -192,6 +192,6 @@ test('the website sizes everything in rem, so computers get their density from o
   assert.match(root, /html \{ font-size: 100%; \}\n@media \(hover: hover\) and \(pointer: fine\) \{ html \{ font-size: 87\.5%; \} \}/);
   // The phone sheet: one line, and nothing more under the email note.
   const sheet = fs.readFileSync(path.join(site, 'public', 'get-sheet.js'), 'utf8');
-  assert.match(sheet, /ClosedHand runs on your computer or server, so needs to be downloaded there\./);
+  assert.match(sheet, /Your ClosedHand assistant lives on a computer or a server you rent, and you use it from here\. Set it up there first\./);
   assert.doesNotMatch(sheet, /Note:/);
 });
