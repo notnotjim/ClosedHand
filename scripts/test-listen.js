@@ -55,3 +55,26 @@ test('the model is pinned and prepared at build time for Docker and the Mac app'
   assert.match(read('desktop/build.sh'), /prepare-voice\.js" --listening/);
   assert.match(read('lib/speech/listen-worker.js'), /env\.allowRemoteModels = false/);
 });
+
+test('voice notes are written out on this computer when no Groq key is set', async () => {
+  const listenPath = require.resolve('../lib/services/listen');
+  const audioPath = require.resolve('../lib/speech/audio');
+  const real = require(listenPath);
+  const got = [];
+  require.cache[listenPath].exports = { ...real, transcribe: async (samples) => { got.push(samples.length); return { language: 'en', lines: [], text: 'call me back' }; } };
+  require(audioPath);
+  const realAudio = require.cache[audioPath].exports;
+  require.cache[audioPath].exports = { ...realAudio, oggOpusSamples: () => new Float32Array(16000) };
+  const saved = process.env.GROQ_API_KEY; delete process.env.GROQ_API_KEY;
+  delete require.cache[require.resolve('../lib/voice')];
+  try {
+    const { transcribeAudio } = require('../lib/voice');
+    assert.equal(await transcribeAudio(Buffer.from('OggS....'), 'voice.ogg'), 'call me back');
+    assert.deepEqual(got, [16000]);
+    await assert.rejects(transcribeAudio(Buffer.from('....ftypM4A '), 'voice.m4a'), /can't be written out on this computer yet/);
+  } finally {
+    require.cache[listenPath].exports = real; require.cache[audioPath].exports = realAudio;
+    if (saved !== undefined) process.env.GROQ_API_KEY = saved;
+    delete require.cache[require.resolve('../lib/voice')];
+  }
+});
