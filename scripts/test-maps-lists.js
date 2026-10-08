@@ -89,3 +89,26 @@ test('each run counts as progress, so a long list keeps a background task alive'
   await saveToList({ userId: 'u1', list: 'Trip', places: ['A, X', 'B, X'] });
   assert.deepEqual(touched, ['u1', 'u1']);
 });
+
+test('a place Google only has under another name is asked about, not saved', async () => {
+  answer = (args) => ({ ok: true, results: [{ query: args.places[0], status: 'unsure', google_has: ['Other Bakery'] }] });
+  const r = await saveToList({ userId: 'u1', list: 'Trip', places: ['Pastry Corner, Testville'] });
+  assert.deepEqual(r.unsure, [{ asked: 'Pastry Corner, Testville', google_has: ['Other Bakery'] }]);
+  assert.equal(r.saved.length, 0);
+});
+
+test('a browser that does not answer says what to do, instead of hanging', async () => {
+  answer = () => ({ ok: false, kind: 'browser' });
+  await assert.rejects(saveToList({ userId: 'u1', list: 'Trip', places: ['A, X'] }), (e) => e.userFacing && /isn't responding/.test(e.message));
+  assert.match(fs.readFileSync(lib('maps-list-sandbox.py'), 'utf8'), /connect_over_cdp\(.*timeout=30000\)/);
+});
+
+test('names are matched before saving: spelling variants pass, other places do not', { skip: !hasPython() }, () => {
+  const pairs = [['Pastry Corner, Testville', 'Pastry Corner - Bakery', true], ['Ginjinha do Largo', 'Ginginha do Largo', true], ["Sam Cafe, Testville", "Sam's Café", true],
+    ['the old mill, Testville', 'The Old Mill', true], ['Pastry Corner, Testville', 'Other Bakery', false], ['Taco Wharf', 'Burrito Factory', false]];
+  const out = execFileSync('python3', ['-c', `
+import importlib.util, json
+spec = importlib.util.spec_from_file_location("m", ${JSON.stringify(lib('maps-list-sandbox.py'))}); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(json.dumps([m.same_place(a, f) for a, f in ${JSON.stringify(pairs.map(([a, f]) => [a, f]))}]))`]).toString();
+  assert.deepEqual(JSON.parse(out), pairs.map((p) => p[2]));
+});
