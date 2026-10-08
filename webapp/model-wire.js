@@ -324,8 +324,27 @@ function markCache(body) {
 function identity(conn, model) {
   return createHash("sha256").update([conn.baseUrl, conn.apiKey || "", model].join("|")).digest("hex");
 }
+// API keys have shapes model IDs never have: a provider's key prefix, or a
+// long unbroken run of letters and digits. A key pasted where a model ID goes
+// is never sent as a model name (providers repeat the name in their errors),
+// and nothing key-shaped from a provider's error reaches the log.
+const KEY_PREFIX = /^(?:sk-|sk_|xai-|gsk_|AIza|pplx-|hf_|r8_|nvapi-|fw_|csk-)/;
+const KEY_RUN = /[A-Za-z0-9]{32,}/g;
+const longRunIsKey = (run) => /\d/.test(run) && /[A-Za-z]/.test(run);
+function looksLikeKey(text) {
+  const s = String(text || "").trim();
+  return KEY_PREFIX.test(s) || (s.match(KEY_RUN) || []).some(longRunIsKey);
+}
+function hideKeys(text, conn) {
+  let out = String(text || "");
+  if (conn?.apiKey) out = out.split(conn.apiKey).join("<hidden>");
+  return out.replace(/\b(?:sk-|sk_|xai-|gsk_|AIza|pplx-|hf_|r8_|nvapi-|fw_|csk-)[A-Za-z0-9_-]{8,}/g, "<hidden>")
+    .replace(KEY_RUN, (run) => (longRunIsKey(run) ? "<hidden>" : run));
+}
+const KEY_AS_MODEL = "That looks like an API key, not a model ID, so ClosedHand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
 async function request(conn, params, options = {}) {
   const model = params.model || conn.model;
+  if (looksLikeKey(model)) throw Object.assign(new Error(KEY_AS_MODEL), { status: 400, code: "model_id_is_key" });
   const cap = conn.capabilities || policy.capabilities(conn, model);
   const id = identity(conn, model);
   const effort = params.effort || (params.thinking?.type === "enabled" ? "strong" : "default");
@@ -379,7 +398,7 @@ async function request(conn, params, options = {}) {
     }
     // The provider's own message goes to the log, trimmed, so a 400 can be
     // diagnosed; never to the user, and never the body, which can carry the request.
-    if (detail.error?.message) console.warn(`[model-wire] ${conn.provider || conn.backend} HTTP ${response.status}: ${String(detail.error.message).slice(0, 200)}`);
+    if (detail.error?.message) console.warn(`[model-wire] ${conn.provider || conn.backend} HTTP ${response.status}: ${hideKeys(detail.error.message, conn).slice(0, 200)}`);
     const error = new Error("The model provider returned HTTP " + response.status + ". " + providerProblem(response.status, "Check the model, access and balance."));
     error.status = response.status; throw error;
   }
@@ -402,4 +421,4 @@ async function listModels(conn) {
   return (data.data || data.models || []).map(m => ({ id: (m.id || m.name || "").replace(/^models\//, ""), metadata: m })).filter(m => m.id);
 }
 function responseText(response) { return (response?.content || []).filter(b => b.type === "text").map(b => b.text || "").join("\n"); }
-module.exports = { responseText, request, listModels, convertToolToOpenAI, convertMessagesToOpenAI, convertResponseFromOpenAI, convertToolToGemini, convertMessagesToGemini, convertResponseFromGemini };
+module.exports = { responseText, request, listModels, looksLikeKey, hideKeys, KEY_AS_MODEL, convertToolToOpenAI, convertMessagesToOpenAI, convertResponseFromOpenAI, convertToolToGemini, convertMessagesToGemini, convertResponseFromGemini };

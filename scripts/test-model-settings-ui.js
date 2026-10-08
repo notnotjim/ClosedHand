@@ -43,6 +43,7 @@ async function mount(respond = () => ({ config: null, runtime: 'docker' })) {
   vm.runInNewContext(source, context); context.window.ClosedHandModels.mount(root); await tick();
   return { field, calls, result: element('.model-result'), region: name => element('[data-region="' + name + '"]'),
     action: name => element('[data-action="' + name + '"]'),
+    picker: name => element('[data-picker="' + name + '"]'),
     choose(name, value) { field(name).value = value; listeners.change({ target: field(name) }); },
     type(name, value) { field(name).value = value; listeners.input({ target: field(name) }); },
     pick(name, value) { const picker = element('[data-picker="' + name + '"]'); picker.value = value; listeners.change({ target: picker }); },
@@ -223,4 +224,33 @@ test('support work on the primary model says it runs at low effort', () => {
   assert.match(source, /<option value="same">Use the primary model \(low effort\)<\/option>/);
   assert.match(source, /cap\.reasoning \? "The primary model, at low effort" : "Same as the primary model"/);
   assert.match(fs.readFileSync(require.resolve('../lib/llm.js'), 'utf8'), /effort: role === "background" \? "fast"/);
+});
+
+// A saved setup someone is changing, with invented models: the primary model
+// reads images itself and has been checked.
+const savedSetup = () => ({ config: { version: 1,
+  connections: { primary: { provider: 'deepseek', backend: 'openai', baseUrl: '', hasKey: true } },
+  roles: { chat: { connection: 'primary', model: 'chat', capabilities: { tools: true, vision: true, reasoning: 'deepseek', contextWindow: 1048576 } },
+    background: { connection: 'primary', model: 'chat' }, vision: { connection: 'primary', model: 'chat', capabilities: { vision: true } } } }, runtime: 'docker' });
+const panel = (ui) => { const rows = ui.region('check-rows').children.map((n) => n.textContent); return (label) => rows[rows.indexOf(label) + 1]; };
+
+test('while a new image model is chosen, the unchanged primary keeps its checked results', async () => {
+  const ui = await mount((call) => call.path === '' ? savedSetup() : call.path === '/models' ? catalog : { config: null });
+  await ui.timers();
+  ui.choose('visionMode', 'separate'); ui.choose('visionProvider', 'xai'); ui.type('visionKey', 'image-key'); await ui.timers();
+  const row = panel(ui);
+  assert.equal(row('Tool calls'), 'Works', 'not "Not checked yet" for a primary model that is in use and unchanged');
+  assert.equal(row('Images'), 'Choose an image model', "not the primary model's own image result");
+  assert.equal(ui.region('check-title').textContent, 'Choose an image model to check these models', 'the title names what is missing');
+});
+
+test('an image model whose abilities are unknown is not offered for images, but can still be typed in', async () => {
+  const listing = { models: [{ id: 'grok-4.7', capabilities: { tools: true, vision: true } }, { id: 'grok-imagine-image', capabilities: { tools: null, vision: null } }] };
+  const ui = await mount((call) => call.path === '/models' ? (call.body.connection === 'vision' ? listing : catalog) : { config: null });
+  ui.choose('provider', 'deepseek'); ui.type('apiKey', 'chat-key'); await ui.timers();
+  ui.choose('visionMode', 'separate'); ui.choose('visionProvider', 'xai'); ui.type('visionKey', 'image-key'); await ui.timers();
+  const ids = ui.picker('visionModel').children.map((o) => o.value);
+  assert.ok(ids.includes('grok-4.7'));
+  assert.ok(!ids.includes('grok-imagine-image'), 'a model that makes pictures is not offered for reading them');
+  assert.ok(ids.includes('__manual__'));
 });

@@ -242,7 +242,7 @@ test("separate image provider gets only its own key; old keys cannot survive the
 });
 test("invalid summaries model rejects the whole proposal", async () => {
   mockProvider({ reject: "missing" });
-  await assert.rejects(config.prepare({ primary: { provider: "custom", baseUrl: "https://new.example/v1" }, model: "chat", backgroundModel: "missing", visionMode: "off" }, {}), /HTTP 404/);
+  await assert.rejects(config.prepare({ primary: { provider: "custom", baseUrl: "https://new.example/v1" }, model: "chat", backgroundModel: "missing", visionMode: "off" }, {}), /doesn't list a model with that ID/);
 });
 test("new user clients and internal work never fall through to old environment credentials", async () => {
   const calls = mockProvider();

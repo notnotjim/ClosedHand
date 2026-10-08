@@ -66,14 +66,14 @@
       '<div data-region="background-connection" class="model-fields" hidden><label data-region="background-address" hidden>Service URL<input type="url" data-field="backgroundBaseUrl" spellcheck="false"></label>' +
       '<label data-region="background-key">API key<input data-field="backgroundKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-background" hidden>Retry loading support models</button>' +
-      '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false"></label></div>' +
+      '<label>Model<select data-picker="backgroundModel"></select></label><label data-manual="backgroundModel" hidden>Model ID<input data-field="backgroundModel" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label></div>' +
       '</section><section class="model-role model-fields"><header><h3>Image model</h3><p class="model-hint">Understands photos and screenshots you send.</p></header>' +
       '<label>Model choice<select data-field="visionMode"><option value="same">Use the primary model</option><option value="separate">Choose another image model</option><option value="off">Continue without image understanding</option></select></label>' +
       '<div data-region="vision" class="model-fields" hidden><label>Provider<select data-field="visionProvider"><option value="">Use the same provider</option>' + options.replace('<option value="">Choose a provider</option>', '') + '</select></label>' +
       '<div data-region="vision-connection" class="model-fields" hidden><label data-region="vision-address" hidden>Service URL<input type="url" data-field="visionBaseUrl" spellcheck="false"></label>' +
       '<label data-region="vision-key">API key<input data-field="visionKey" type="password" autocomplete="off" spellcheck="false"></label></div>' +
       '<button type="button" data-action="load-vision" hidden>Retry loading image models</button>' +
-      '<label>Model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Model ID<input data-field="visionModel" spellcheck="false"></label></div>' +
+      '<label>Model<select data-picker="visionModel"></select></label><label data-manual="visionModel" hidden>Model ID<input data-field="visionModel" spellcheck="false" placeholder="Enter the provider\'s exact model ID"></label></div>' +
       '</section></div></details>' +
       '<p class="model-hint">You can change any of these models later in Settings.</p>' +
       '<section class="model-check" data-region="check" hidden aria-live="polite"><h3 data-region="check-title"></h3><dl class="model-role-list" data-region="check-rows"></dl>' +
@@ -154,10 +154,15 @@
       hint.textContent = current ? "Model ID: " + current : "";
       hint.hidden = !current;
     }
+    // Only models known to read images are offered for them: from what the
+    // provider publishes, a family ClosedHand knows, or an earlier check. A
+    // model whose abilities are unknown can still be entered by its ID, and the
+    // check proves it before anything is saved.
+    function readsImages(model) { return model.capabilities?.vision === true; }
     function refreshPickers() {
       refreshPicker("model", models, value("provider"));
       refreshPicker("backgroundModel", value("backgroundProvider") ? supportModels : models, value("backgroundProvider") || value("provider"));
-      var images = value("visionProvider") ? imageModels : models.filter(function (model) { return model.capabilities?.vision !== false; });
+      var images = value("visionProvider") ? imageModels : models.filter(readsImages);
       refreshPicker("visionModel", images, value("visionProvider") || value("provider"));
     }
     function show(message, error) { result.textContent = message; result.classList.toggle("is-error", !!error); }
@@ -253,15 +258,16 @@
         var body = input(); body.connection = kind;
         var data = await call("/models", body);
         if (token !== loads[kind]) return;
-        if (vision) imageModels = data.models.filter(function (model) { return model.capabilities.vision !== false; });
+        if (vision) imageModels = data.models.filter(readsImages);
         else if (support) supportModels = data.models;
         else models = data.models;
-        retry.hidden = !!(vision ? imageModels : support ? supportModels : models).length;
+        retry.hidden = !!data.models.length;
         refreshPickers();
         region("selection").hidden = false;
         if (kind === "primary") renderCheck();
         if (!quiet) {
-          show((vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
+          show(vision && data.models.length && !imageModels.length ? "None of this provider's listed models is known to read images. Enter a model ID below, and ClosedHand checks it before saving."
+            : (vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
             : "The service returned no models. Check that a model is available or enter its model ID below.");
           scheduleCheck();
         }
@@ -291,11 +297,25 @@
       check = chosen("model") ? { kind: "idle" } : null; renderCheck();
       checkTimer = setTimeout(runCheck, 800);
     }
+    // Mirrors looksLikeKey in model-wire.js, which refuses the same on the
+    // server: an API key typed as a model ID is caught before it leaves this page.
+    function looksLikeKey(text) {
+      var s = String(text || "").trim();
+      return /^(?:sk-|sk_|xai-|gsk_|AIza|pplx-|hf_|r8_|nvapi-|fw_|csk-)/.test(s) ||
+        (s.match(/[A-Za-z0-9]{32,}/g) || []).some(function (run) { return /\d/.test(run) && /[A-Za-z]/.test(run); });
+    }
+    var KEY_AS_MODEL = "That looks like an API key, not a model ID, so ClosedHand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
     async function runCheck() {
       clearTimeout(checkTimer);
       var token = ++checks;
       ticket = null;
       if (!complete()) { check = chosen("model") ? { kind: "idle" } : null; renderCheck(); return; }
+      var keyField = ["model", "backgroundModel", "visionModel"].find(function (key) { return looksLikeKey(chosen(key)); });
+      if (keyField) {
+        check = { kind: "failed", error: KEY_AS_MODEL, visionNeeded: keyField === "visionModel" };
+        if (keyField !== "model") region("extras").open = true;
+        renderCheck(); return;
+      }
       show(""); check = { kind: "checking" }; renderCheck();
       try {
         var data = await call("/check", input());
@@ -312,6 +332,26 @@
       if (providers[conn.provider]) return providers[conn.provider];
       try { return new URL(conn.baseUrl).hostname; } catch (e) { return ""; }
     }
+    // The saved setup has been checked already. While a new choice is being
+    // made, the parts left as they were keep the results that check found.
+    function savedChat() {
+      var chat = saved?.roles?.chat;
+      return chat && chat.model === chosen("model") && savedKey("primary", value("provider"), value("baseUrl"), value("apiKey")) ? chat.capabilities || null : null;
+    }
+    function savedVision() {
+      var vision = saved?.roles?.vision;
+      if (!vision || vision.model !== chosen("visionModel")) return false;
+      return value("visionProvider") ? vision.connection === "vision" && savedKey("vision", value("visionProvider"), value("visionBaseUrl"), value("visionKey"))
+        : vision.connection === "primary" && !!savedChat();
+    }
+    // What the check still waits for, named, rather than always "connection details".
+    function stillNeeded() {
+      if (value("provider") && ready("primary") && chosen("model")) {
+        if (value("backgroundMode") === "separate" && (!value("backgroundProvider") || ready("background")) && !chosen("backgroundModel")) return "Choose a support model to check these models";
+        if (value("visionMode") === "separate" && (!value("visionProvider") || ready("vision")) && !chosen("visionModel")) return "Choose an image model to check these models";
+      }
+      return "Complete the connection details to check these models";
+    }
     function catalogCaps(key) {
       var id = chosen(key), m = models.find(function (x) { return x.id === id; });
       return m ? m.capabilities : null;
@@ -324,7 +364,8 @@
       panel.hidden = false;
       var kind = check.kind, cfg = check.config || null;
       var chat = cfg ? cfg.roles.chat : null, support = cfg ? cfg.roles.background : null, vision = cfg ? cfg.roles.vision : null;
-      var cap = chat ? chat.capabilities || {} : catalogCaps("model") || {};
+      var known = chat ? null : savedChat();
+      var cap = chat ? chat.capabilities || {} : known || catalogCaps("model") || {};
       var chatProvider = cfg ? cfg.connections[chat.connection].provider : value("provider");
       var chatName = modelName({ id: chat ? chat.model : chosen("model") }, chatProvider);
       var provName = cfg ? providerLabel(cfg.connections.primary) : providers[value("provider")] || "";
@@ -334,19 +375,27 @@
         rows.append(dt, dd);
       }
       title.textContent = kind === "checking" ? "Checking " + chatName + "..." : kind === "passed" ? "Checked and working"
-        : kind === "failed" ? "The check did not pass" : kind === "saved" ? "These models are in use" : complete() ? "Preparing model check..." : "Complete the connection details to check these models";
+        : kind === "failed" ? "The check did not pass" : kind === "saved" ? "These models are in use" : complete() ? "Preparing model check..." : stillNeeded();
       row("Primary model", chatName + (provName ? " via " + provName : ""));
       var settled = kind === "passed" || kind === "saved" || (kind === "failed" && check.visionNeeded);
       if (kind === "failed" && !check.visionNeeded) row("Problem", check.error, "fail");
-      row("Tool calls", settled ? "Works" : kind === "checking" ? "Checking" : cap.tools === false ? "Not offered by this model" : "Not checked yet",
-        settled ? "ok" : kind === "checking" ? "wait" : cap.tools === false ? "fail" : "wait");
+      var toolsKnown = !settled && kind !== "checking" && known && known.tools === true;
+      row("Tool calls", settled || toolsKnown ? "Works" : kind === "checking" ? "Checking" : cap.tools === false ? "Not offered by this model" : "Not checked yet",
+        settled || toolsKnown ? "ok" : kind === "checking" ? "wait" : cap.tools === false ? "fail" : "wait");
       var mode = value("visionMode");
-      if (kind === "failed" && check.visionNeeded) row("Images", check.error, "fail");
+      // A separately chosen image model is named, so its failure isn't read as the primary model's.
+      var visionId = chosen("visionModel"), visionProv = value("visionProvider") || chatProvider;
+      if (kind === "failed" && check.visionNeeded) row("Images", (mode === "separate" && visionId && !looksLikeKey(visionId) ? modelName({ id: visionId }, visionProv) + " via " + (providers[visionProv] || visionProv) + ": " : "") + check.error, "fail");
       else if (mode === "off" || ((kind === "passed" || kind === "saved") && !vision)) row("Images", "Off");
       else if (kind === "passed" || kind === "saved") {
         var same = vision.connection === "primary" && vision.model === chat.model;
         row("Images", same ? "Accepts images" : "Read by " + modelName({ id: vision.model }, cfg.connections[vision.connection].provider) + " via " + providerLabel(cfg.connections[vision.connection]), "ok");
       } else if (kind === "checking") row("Images", "Checking", "wait");
+      else if (mode === "separate") {
+        var visionDone = savedVision();
+        if (looksLikeKey(visionId)) row("Images", KEY_AS_MODEL, "fail");
+        else row("Images", !visionId ? "Choose an image model" : (visionDone ? "Read by " : "") + modelName({ id: visionId }, visionProv) + " via " + (providers[visionProv] || visionProv) + (visionDone ? "" : ", not checked yet"), visionDone ? "ok" : "wait");
+      }
       else row("Images", cap.vision === true ? "Accepts images" : cap.vision === false ? "Text only, choose an image model below or turn images off" : "Not checked yet", cap.vision === true ? "ok" : cap.vision === false ? "fail" : "wait");
       row("Thinking effort", cap.reasoning ? "ClosedHand sets it per task" : "Fixed by the model", cap.reasoning ? "ok" : "");
       row("Context limit", cap.contextWindow ? cap.contextWindow.toLocaleString() + " tokens" : "Not published by the provider");

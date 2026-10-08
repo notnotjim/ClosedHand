@@ -25,7 +25,16 @@ function resolveConnection(input, saved, id) {
   if (!conn.apiKey && !["ollama", "custom"].includes(conn.provider)) throw new Error("Paste your provider's API key.");
   return conn;
 }
+// A provider's 400 or 404 for a model its own list doesn't include is almost
+// always a mistyped ID, so the person is told that rather than a bare status.
+function unlisted(error, catalog, model) {
+  if (![400, 404].includes(error.status) || error.code === "model_id_is_key" || !catalog.length || catalog.some(m => m.id === model)) return error;
+  return Object.assign(new Error("This provider doesn't list a model with that ID. Choose one from the list, or copy the exact ID from the provider's documentation."), { status: error.status });
+}
 async function checkModel(conn, model, purpose, catalog) {
+  try { return await probeModel(conn, model, purpose, catalog); } catch (e) { throw unlisted(e, catalog, model); }
+}
+async function probeModel(conn, model, purpose, catalog) {
   if (!model || model.length > 200) throw new Error("Choose a model for " + purpose + ".");
   const meta = catalog.find(m => m.id === model)?.metadata || {};
   const cap = policy.capabilities(conn, model, meta);
@@ -79,7 +88,7 @@ async function prepare(input, settings) {
   const mode = input.visionMode || "same";
   if (!["same", "separate", "off"].includes(mode)) throw new Error("Choose how ClosedHand should read images.");
   if (mode !== "off") {
-    let conn = connections.primary, visionModel = model, visionCap = chat, connectionId = "primary";
+    let conn = connections.primary, visionModel = model, visionCap = chat, connectionId = "primary", visionCatalog = catalog;
     if (mode === "separate") {
       if (input.vision?.provider) {
         connections.vision = resolveConnection(input.vision, saved, "vision");
@@ -87,15 +96,15 @@ async function prepare(input, settings) {
       }
       visionModel = String(input.visionModel || "").trim();
       if (!visionModel) throw new Error("Choose a model for images.");
-      const models = connectionId === "primary" ? catalog : await wire.listModels(conn).catch(() => []);
-      visionCap = policy.capabilities(conn, visionModel, models.find(m => m.id === visionModel)?.metadata);
+      if (connectionId !== "primary") visionCatalog = await wire.listModels(conn).catch(() => []);
+      visionCap = policy.capabilities(conn, visionModel, visionCatalog.find(m => m.id === visionModel)?.metadata);
     }
     if (visionCap.vision === false) throw Object.assign(new Error("This model does not accept images. Choose an image model from this provider or another provider, or continue without images."), { visionNeeded: true });
     // An advertised capability is checked against the actual endpoint before saving.
     const imageReply = await wire.request({ ...conn, capabilities: visionCap }, { model: visionModel, effort: "fast", max_tokens: 1024,
       messages: [{ role: "user", content: [{ type: "text", text: "What is the main colour in this image? Answer in one word." },
         { type: "image", source: { type: "base64", media_type: "image/png", data: RED_IMAGE } }] }],
-    }, { signal: AbortSignal.timeout(45000) }).catch(error => { throw Object.assign(error, { visionNeeded: true }); });
+    }, { signal: AbortSignal.timeout(45000) }).catch(error => { throw Object.assign(unlisted(error, visionCatalog, visionModel), { visionNeeded: true }); });
     if (!imageReply.content?.some(b => b.type === "text" && /\bred\b/i.test(b.text))) throw Object.assign(new Error("The image check did not pass. Retry, choose another image model, or continue without images."), { visionNeeded: true });
     roles.vision = { connection: connectionId, model: visionModel, capabilities: { ...visionCap, vision: true } };
     if (connectionId === "primary" && visionModel === model) roles.chat.capabilities.vision = true;
@@ -142,11 +151,18 @@ function install(app, deps) {
   app.post("/api/model-config/models", route(async (req, res, id) => {
     const settings = await profile(id);
     const connectionId = ["vision", "background"].includes(req.body.connection) ? req.body.connection : "primary";
-    const conn = resolveConnection(req.body[connectionId] || {}, settings.model_config || legacyConfig(settings), connectionId);
+    const savedConfig = settings.model_config || legacyConfig(settings);
+    const conn = resolveConnection(req.body[connectionId] || {}, savedConfig, connectionId);
     const models = await wire.listModels(conn);
-    res.json({ models: models.map(m => ({ id: m.id,
-      name: m.metadata?.display_name || m.metadata?.displayName || m.metadata?.name || m.id,
-      capabilities: policy.capabilities(conn, m.id, m.metadata) })) });
+    // A model this person's saved setup has already checked with an image
+    // reads images, whatever the provider's list says about it.
+    const proven = new Set(Object.values(savedConfig?.roles || {})
+      .filter(r => r?.capabilities?.vision === true && savedConfig.connections[r.connection]?.baseUrl === conn.baseUrl).map(r => r.model));
+    res.json({ models: models.map(m => {
+      const capabilities = policy.capabilities(conn, m.id, m.metadata);
+      if (proven.has(m.id)) capabilities.vision = true;
+      return { id: m.id, name: m.metadata?.display_name || m.metadata?.displayName || m.metadata?.name || m.id, capabilities };
+    }) });
   }));
   app.post("/api/model-config/check", route(async (req, res, id) => {
     const settings = await profile(id);
