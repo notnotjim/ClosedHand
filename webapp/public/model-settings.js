@@ -173,7 +173,7 @@
       region("key").hidden = local;
       region("provider-help").textContent = !provider
         ? "Choose the service that runs your models. For models on your own hardware, choose Ollama or Other compatible service."
-        : local ? "Ollama runs models on your own hardware. It must already be running with a model installed."
+        : local ? "Ollama runs models on your own hardware. It must already be running with a model installed. Set its context length to at least 32,000, in the Ollama app's settings or with OLLAMA_CONTEXT_LENGTH: its default of 4,096 cuts ClosedHand's longer requests short."
         : custom ? "Connect a service that supports the OpenAI-compatible API. Where requests are processed depends on that service."
         : "Your requests are processed by " + providers[provider] + " under its own terms. Its usage charges are separate from ClosedHand.";
       region("connection-help").textContent = local

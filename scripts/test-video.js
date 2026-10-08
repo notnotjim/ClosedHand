@@ -227,3 +227,23 @@ test('watching counts as progress at each stage, so a long video keeps a backgro
   assert.ok(progress.length >= 3, 'after fetching, before writing out speech and before the model watches');
   assert.match(fs.readFileSync(lib('video.js'), 'utf8'), /effort: "fast"/, 'quick effort, so long reasoning cannot crowd out the account');
 });
+
+test('a model whose window is too small gets fewer frames and less transcript until it fits', async () => {
+  reset(downloaded({ meta: { frames: Array.from({ length: 12 }, (_, i) => ({ time: i * 2, offset: 0, size: 4 })), captions: { source: 'written', lines: Array.from({ length: 30 }, (_, i) => ({ start: i * 2, text: 'y'.repeat(2000) })) } } }));
+  const store = setup({ chat: { model: 'vision-model', cap: { vision: true } }, vision: 'same' });
+  const wireStub = require.cache[require.resolve(lib('model-wire.js'))].exports;
+  const real = wireStub.request; let tries = 0;
+  wireStub.request = async (conn, params) => {
+    calls.requests.push({ model: conn.model, content: params.messages[0].content });
+    if (++tries === 1) throw Object.assign(new Error('window'), { code: 'context_length_exceeded', limit: 4000, used: 8000 });
+    return { content: [{ type: 'text', text: 'fits now' }] };
+  };
+  try {
+    const r = await video.watchVideo({ userId: 'u1', store, url: 'https://vimeo.com/1' });
+    assert.equal(r.account, 'fits now');
+    const images = (c) => c.filter((b) => b.type === 'image').length;
+    assert.equal(images(calls.requests[0].content), 12);
+    assert.equal(images(calls.requests[1].content), 3, 'scaled to a quarter: half the window over what was sent');
+    assert.ok(calls.requests[1].content.at(-1).text.length < calls.requests[0].content.at(-1).text.length);
+  } finally { wireStub.request = real; }
+});

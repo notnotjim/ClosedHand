@@ -405,8 +405,13 @@ async function request(conn, params, options = {}) {
     signal: options.signal || AbortSignal.timeout(90000), redirect: "error" });
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}));
-    if (response.status === 400 && /context.*(?:length|window)|maximum.*(?:prompt|tokens)/i.test(detail.error?.message || "")) {
-      throw Object.assign(new Error("The model context window was exceeded."), { status: 400, code: "context_length_exceeded" });
+    const said = String(detail.error?.message || "");
+    if (response.status === 400 && (/context.*(?:length|window|size)|maximum.*(?:prompt|tokens)/i.test(said) || /exceed_context/i.test(String(detail.error?.type || "")))) {
+      // How much the model could take and how much was sent, when the
+      // provider says (Ollama does), so a caller can trim to fit.
+      const limit = Number(detail.error?.n_ctx) || Number((said.match(/context size \((\d+) tokens\)/i) || [])[1]) || null;
+      const used = Number(detail.error?.n_prompt_tokens) || Number((said.match(/request \((\d+) tokens\)/i) || [])[1]) || null;
+      throw Object.assign(new Error("The model context window was exceeded."), { status: 400, code: "context_length_exceeded", limit, used });
     }
     // The provider's own message goes to the log, trimmed, so a 400 can be
     // diagnosed; never to the user, and never the body, which can carry the request.
@@ -430,7 +435,26 @@ async function listModels(conn) {
   const response = await fetch(conn.baseUrl + "/models", { headers, signal: AbortSignal.timeout(12000), redirect: "error" });
   if (!response.ok) { const e = new Error("Could not load models (HTTP " + response.status + "). " + providerProblem(response.status, "You can enter the model ID.")); e.status = response.status; throw e; }
   const data = await response.json();
-  return (data.data || data.models || []).map(m => ({ id: (m.id || m.name || "").replace(/^models\//, ""), metadata: m })).filter(m => m.id);
+  const models = (data.data || data.models || []).map(m => ({ id: (m.id || m.name || "").replace(/^models\//, ""), metadata: m })).filter(m => m.id);
+  if (conn.provider === "ollama") await describeOllama(conn, models);
+  return models;
+}
+// Ollama's model list says nothing about what each model can do, but its own
+// /api/show does ("vision", "tools"), so local image models can be offered
+// for images like any other, and the check still proves them before saving.
+async function describeOllama(conn, models) {
+  const root = conn.baseUrl.replace(/\/v1$/, "");
+  await Promise.all(models.slice(0, 50).map(async (m) => {
+    try {
+      const response = await fetch(root + "/api/show", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m.id }), signal: AbortSignal.timeout(5000), redirect: "error" });
+      if (!response.ok) return;
+      const abilities = (await response.json()).capabilities;
+      if (!Array.isArray(abilities)) return;
+      m.metadata = { ...m.metadata, input_modalities: abilities.includes("vision") ? ["text", "image"] : ["text"],
+        supported_parameters: abilities.includes("tools") ? ["tools"] : [] };
+    } catch { /* the model stays listed, its abilities unknown */ }
+  }));
 }
 function responseText(response) { return (response?.content || []).filter(b => b.type === "text").map(b => b.text || "").join("\n"); }
 module.exports = { responseText, request, listModels, looksLikeKey, hideKeys, KEY_AS_MODEL, convertToolToOpenAI, convertMessagesToOpenAI, convertResponseFromOpenAI, convertToolToGemini, convertMessagesToGemini, convertResponseFromGemini };
