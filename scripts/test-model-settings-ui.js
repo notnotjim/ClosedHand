@@ -270,3 +270,12 @@ test('the panel says how videos are handled, from what the checked models can do
     assert.match(panel(ui)('Videos'), expected);
   }
 });
+
+test("an Ollama image model with a small window is shown with what that means for videos", async () => {
+  const respond = () => { const s = savedSetup(); s.config.roles.chat.capabilities = { tools: true, vision: false };
+    s.config.connections.vision = { provider: 'ollama', backend: 'custom', baseUrl: 'http://host.docker.internal:11434/v1', hasKey: false };
+    s.config.roles.vision = { connection: 'vision', model: 'local-vl', capabilities: { vision: true, video: false, contextWindow: 4096 } }; return s; };
+  const ui = await mount((call) => call.path === '' ? respond() : call.path === '/models' ? catalog : { config: null });
+  await ui.timers();
+  assert.match(panel(ui)('Videos'), /^local-vl via .* sees frames, and ClosedHand writes out what's said\. Ollama gives it 4,096 tokens, so only a few frames fit; raise its context length for more$/);
+});

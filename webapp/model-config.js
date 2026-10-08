@@ -31,6 +31,43 @@ function unlisted(error, catalog, model) {
   if (![400, 404].includes(error.status) || error.code === "model_id_is_key" || !catalog.length || catalog.some(m => m.id === model)) return error;
   return Object.assign(new Error("This provider doesn't list a model with that ID. Choose one from the list, or copy the exact ID from the provider's documentation."), { status: error.status });
 }
+// Ollama's default window is 4,096 tokens and its OpenAI-style interface cuts
+// longer text to fit without saying so, so a model there can pass every other
+// check and still lose most of ClosedHand's instructions. Once the check has
+// loaded the model, Ollama reports the window it actually gives it (/api/ps)
+// and the most the model itself can take (/api/show).
+const OLLAMA_MIN_WINDOW = 32000;
+async function ollamaWindow(conn, model) {
+  if (conn.provider !== "ollama") return null;
+  const root = conn.baseUrl.replace(/\/v1$/, "");
+  try {
+    const ps = await fetch(root + "/api/ps", { signal: AbortSignal.timeout(5000), redirect: "error" }).then(r => r.json());
+    const given = Number((ps.models || []).find(m => m.name === model || m.model === model)?.context_length) || null;
+    if (!given) return null;
+    let most = null;
+    try {
+      const show = await fetch(root + "/api/show", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model }),
+        signal: AbortSignal.timeout(5000), redirect: "error" }).then(r => r.json());
+      const key = Object.keys(show.model_info || {}).find(k => k.endsWith(".context_length"));
+      most = key ? Number(show.model_info[key]) || null : null;
+    } catch { /* the model's own limit stays unknown */ }
+    return { given, most };
+  } catch { return null; }
+}
+function windowProblem(window, model) {
+  if (!window || window.given >= OLLAMA_MIN_WINDOW) return null;
+  const tokens = (n) => n.toLocaleString("en-US");
+  return window.most && window.most < OLLAMA_MIN_WINDOW
+    ? `${model} can take at most ${tokens(window.most)} tokens, too few for ClosedHand's instructions. Choose a model in Ollama that takes at least 32,000.`
+    : `Ollama gives ${model} a window of ${tokens(window.given)} tokens, too small for ClosedHand's instructions, and it cuts longer requests short without saying so. Set Ollama's context length to at least 32,000, in the Ollama app's settings or with OLLAMA_CONTEXT_LENGTH, restart Ollama, then check again.`;
+}
+async function fitsInstructions(conn, model, cap) {
+  const window = await ollamaWindow(conn, model);
+  if (!window) return;
+  cap.contextWindow = window.given;
+  const problem = windowProblem(window, model);
+  if (problem) throw new Error(problem);
+}
 async function checkModel(conn, model, purpose, catalog) {
   try { return await probeModel(conn, model, purpose, catalog); } catch (e) { throw unlisted(e, catalog, model); }
 }
@@ -69,6 +106,7 @@ async function prepare(input, settings) {
   const catalog = await wire.listModels(connections.primary).catch(() => []);
   const model = String(input.model || "").trim();
   const chat = await checkModel(connections.primary, model, "chat", catalog);
+  await fitsInstructions(connections.primary, model, chat);
   const supportMode = input.backgroundMode || (input.backgroundModel ? "separate" : "same");
   if (!["same", "separate"].includes(supportMode)) throw new Error("Choose how ClosedHand should handle support work.");
   let supportConnection = "primary", supportCatalog = catalog;
@@ -80,6 +118,7 @@ async function prepare(input, settings) {
   const backgroundModel = supportMode === "same" ? model : String(input.backgroundModel || "").trim();
   const background = supportConnection === "primary" && backgroundModel === model ? chat
     : await checkModel(connections[supportConnection], backgroundModel, "support", supportCatalog);
+  if (background !== chat) await fitsInstructions(connections[supportConnection], backgroundModel, background);
   const roles = {
     chat: { connection: "primary", model, capabilities: chat },
     background: { connection: supportConnection, model: backgroundModel, capabilities: background },
@@ -107,6 +146,10 @@ async function prepare(input, settings) {
     }, { signal: AbortSignal.timeout(45000) }).catch(error => { throw Object.assign(unlisted(error, visionCatalog, visionModel), { visionNeeded: true }); });
     if (!imageReply.content?.some(b => b.type === "text" && /\bred\b/i.test(b.text))) throw Object.assign(new Error("The image check did not pass. Retry, choose another image model, or continue without images."), { visionNeeded: true });
     roles.vision = { connection: connectionId, model: visionModel, capabilities: { ...visionCap, vision: true } };
+    // An image model needs no room for instructions, so a small window only
+    // means fewer frames from a video; the panel says so.
+    const visionWindow = await ollamaWindow(conn, visionModel);
+    if (visionWindow) roles.vision.capabilities.contextWindow = visionWindow.given;
     if (connectionId === "primary" && visionModel === model) roles.chat.capabilities.vision = true;
   }
   // Video is checked for each model that claims it, with a made-up clip that
@@ -215,6 +258,6 @@ function install(app, deps) {
   }));
 }
 const RED_IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAb0lEQVR4nO3PAQkAAAyEwO9feoshgnABdLep8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3IPanc8OLDQitxAAAAAElFTkSuQmCC";
-module.exports = { install, prepare, withConfig, legacyConfig };
+module.exports = { install, prepare, withConfig, legacyConfig, ollamaWindow, windowProblem };
 // Four seconds at 128 pixels square: two red, then two blue (H.264, made with PyAV).
 const CHECK_VIDEO = "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAABCptZGF0AAACqgYF//+m3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjUgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0xNiBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgzOjB4MTMzIG1lPXVtaCBzdWJtZT0xMCBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTI0IGNocm9tYV9tZT0xIHRyZWxsaXM9MiA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTIgbG9va2FoZWFkX3RocmVhZHM9MiBzbGljZWRfdGhyZWFkcz0xIHNsaWNlcz0yIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz04IGJfcHlyYW1pZD0yIGJfYWRhcHQ9MiBiX2JpYXM9MCBkaXJlY3Q9MyB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTIgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD02MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTMwLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAvZYiBAAK3//7jq/gUze9hzqR8UEYF0Y0/PFJds8hM3PunvDt790q81EsZWjiABK0AAAAwZQQiIEAArf/+46v4FM3vYc6kfFBGBdGNPzxSXbPITNz7p7w7e/dKvNRLGVo4gAStAAAAFkGaCOxjQfBuD4BqA+AZaCV//oywW8AAAAAXQQQmgjsY0Hwbg+AagPgGWglf/oywW8AAAAAbQZ4QZxBS//Fv7LOoCdn19lYoXTxJAZcAI7H9AAAAHEEEJ4QZxBS/8W/ss6gJ2fX2VihdPEkBlwAjsf0AAAAJAZ4YLoglfwJ+AAAACgEEJ4YLoglfAn4AAAAJAZ4YToglfwJ/AAAACgEEJ4YToglfAn8AAAAMAZ4YjUglf/IwglzpAAAADQEEJ4YjUglf8jCCXOkAAAAMAZ4YrUglf/IwglzpAAAADQEEJ4YrUglf8jCCXOkAAAAMAZ4YzUglf/IwglzpAAAADQEEJ4YzUglf8jCCXOkAAANzbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAD6AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAp50cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAD6AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAIAAAACAAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAA+gAABAAAABAAAAAAIWbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAABAABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABwW1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAYFzdGJsAAAAsXN0c2QAAAAAAAAAAQAAAKFhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAIAAgABIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAAN2F2Y0MBZAAM/+EAGWdkAAyscgRCBGhAAAADAEAAAAMBA8UKYRgBAAdo6EOESyLA/fj4AAAAABRidHJ0AAAAAAAACEQAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAgAACAAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAAA4Y3R0cwAAAAAAAAAFAAAAAQAAQAAAAAABAAEAAAAAAAEAAGAAAAAAAgAAAAAAAAADAAAgAAAAABxzdHNjAAAAAAAAAAEAAAABAAAACAAAAAEAAAA0c3RzegAAAAAAAAAAAAAACAAAAxUAAAA1AAAAPwAAABsAAAAbAAAAIQAAACEAAAAhAAAAFHN0Y28AAAAAAAAAAQAAADAAAABhdWR0YQAAAFltZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAACxpbHN0AAAAJKl0b28AAAAcZGF0YQAAAAEAAAAATGF2ZjYzLjEuMTAy";

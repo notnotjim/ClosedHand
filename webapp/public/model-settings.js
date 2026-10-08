@@ -173,7 +173,7 @@
       region("key").hidden = local;
       region("provider-help").textContent = !provider
         ? "Choose the service that runs your models. For models on your own hardware, choose Ollama or Other compatible service."
-        : local ? "Ollama runs models on your own hardware. It must already be running with a model installed. Set its context length to at least 32,000, in the Ollama app's settings or with OLLAMA_CONTEXT_LENGTH: its default of 4,096 cuts ClosedHand's longer requests short."
+        : local ? "Ollama runs models on your own hardware. It must already be running with a model installed."
         : custom ? "Connect a service that supports the OpenAI-compatible API. Where requests are processed depends on that service."
         : "Your requests are processed by " + providers[provider] + " under its own terms. Its usage charges are separate from ClosedHand.";
       region("connection-help").textContent = local
@@ -362,8 +362,13 @@
       var links = function (c) { return c.videoLinks ? ", and opens YouTube links itself" : ""; };
       if (chatCap.video === true) return ["Watches them whole" + links(chatCap), "ok"];
       if (separate && visionCap.video === true) return ["Watched whole by " + visionLabel + links(visionCap), "ok"];
-      if (chatCap.vision === true && vision) return ["Sees frames and reads what's said", "ok"];
-      if (separate) return [visionLabel + " sees frames, and ClosedHand writes out what's said", "ok"];
+      // Ollama's own window, when small, keeps a video to a few frames.
+      var narrow = function (role) {
+        var w = role && role.capabilities && role.capabilities.contextWindow, conn = role && setup.connections[role.connection];
+        return conn && conn.provider === "ollama" && w && w < 32000 ? ". Ollama gives it " + w.toLocaleString("en-US") + " tokens, so only a few frames fit; raise its context length for more" : "";
+      };
+      if (chatCap.vision === true && vision) return ["Sees frames and reads what's said" + narrow(chat), "ok"];
+      if (separate) return [visionLabel + " sees frames, and ClosedHand writes out what's said" + narrow(vision), "ok"];
       return ["Reads what's said only, since images are off", ""];
     }
     function catalogCaps(key) {

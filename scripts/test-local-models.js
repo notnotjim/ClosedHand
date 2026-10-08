@@ -49,5 +49,42 @@ test('a local model gets nearly five minutes and the task stays alive while it w
   assert.match(src, /AbortSignal\.timeout\(isLocal\(target\.conn\) \? 290000 : 180000\)/);
   assert.match(src, /const beat = setInterval\(\(\) => progressed\(userId\), 60000\);/);
   assert.match(src, /if \(e\.code !== "context_length_exceeded"/, 'a too-small window is retried with fewer frames');
-  assert.match(fs.readFileSync(path.join(__dirname, '../webapp/public/model-settings.js'), 'utf8'), /Set its context length to at least 32,000/);
+});
+
+// The check with Ollama and the model stood in for: the model passes every
+// other check, and Ollama reports the window it gives it and the model's own most.
+async function checkWithOllama({ given, most, role = 'chat' }) {
+  const wirePath = require.resolve('../webapp/model-wire');
+  const realWire = require(wirePath), realFetch = global.fetch;
+  require.cache[wirePath].exports = { ...realWire, listModels: async () => [],
+    request: async (conn, params) => {
+      const last = params.messages.at(-1).content;
+      if (params.tools) return params.messages.length > 1 ? { content: [{ type: 'text', text: 'done' }] } : { content: [{ type: 'tool_use', id: 't', name: 'capability_check', input: { value: 4 } }] };
+      if (Array.isArray(last) && last.some((b) => b.type === 'image')) return { content: [{ type: 'text', text: 'Red' }] };
+      return { content: [{ type: 'text', text: 'ready' }] };
+    } };
+  global.fetch = async (url) => ({ json: async () => (url.endsWith('/api/ps')
+    ? { models: [{ name: 'local-model', context_length: given }] }
+    : { model_info: { 'arch.context_length': most } }) });
+  delete require.cache[require.resolve('../webapp/model-config')];
+  try {
+    const { prepare } = require('../webapp/model-config');
+    const ollama = { provider: 'ollama', baseUrl: 'http://host.docker.internal:11434/v1' };
+    return await (role === 'chat'
+      ? prepare({ primary: ollama, model: 'local-model', visionMode: 'off' }, {})
+      : prepare({ primary: { provider: 'deepseek', apiKey: 'k' }, model: 'chat-model', visionMode: 'separate', vision: ollama, visionModel: 'local-model' }, {}));
+  } finally { require.cache[wirePath].exports = realWire; global.fetch = realFetch; delete require.cache[require.resolve('../webapp/model-config')]; }
+}
+
+test("the check fails an Ollama chat model whose window can't hold ClosedHand's instructions, and says how to fix it", async () => {
+  await assert.rejects(checkWithOllama({ given: 4096, most: 40960 }), /Ollama gives local-model a window of 4,096 tokens[\s\S]*Set Ollama's context length to at least 32,000/);
+  await assert.rejects(checkWithOllama({ given: 8192, most: 8192 }), /local-model can take at most 8,192 tokens[\s\S]*Choose a model in Ollama that takes at least 32,000/);
+  const ok = await checkWithOllama({ given: 32768, most: 40960 });
+  assert.equal(ok.roles.chat.capabilities.contextWindow, 32768, 'the real window, so long conversations are trimmed to fit');
+});
+
+test('an Ollama image model with a small window still passes, with its window recorded for the panel', async () => {
+  const cfg = await checkWithOllama({ given: 4096, most: 262144, role: 'vision' });
+  assert.equal(cfg.roles.vision.capabilities.contextWindow, 4096);
+  assert.match(fs.readFileSync(path.join(__dirname, '../webapp/public/model-settings.js'), 'utf8'), /Ollama gives it " \+ w\.toLocaleString\("en-US"\) \+ " tokens, so only a few frames fit; raise its context length for more"/);
 });
