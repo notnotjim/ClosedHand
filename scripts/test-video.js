@@ -81,6 +81,8 @@ stub('sandbox.js', {
 stub('services/listen.js', { transcribe: async (pcm) => { calls.heard.push(pcm.length); return { language: 'en', lines: [{ start: 1, text: 'hello' }] }; } });
 stub('llm.js', { settingsOf: (store) => store.profile.settings });
 stub('usage.js', { recordUsage() {} });
+const progress = [];
+stub('user-mutex.js', { touchMutexProgress: (u) => progress.push(u) });
 stub('model-wire.js', { ...wire, request: async (conn, params) => {
   calls.requests.push({ model: conn.model, content: params.messages[0].content });
   if (failWhole && params.messages[0].content.some((b) => b.type === 'video')) throw new Error('too big');
@@ -215,4 +217,13 @@ function hasPython() { try { execFileSync('python3', ['--version']); return true
 test('the sandbox images and the Mac Workspace install the same video tools', () => {
   assert.match(read('sandbox-image/Dockerfile'), /yt-dlp av\n/);
   assert.match(read('sandbox-image/agent/server.js'), /"yt-dlp", "av"\]/);
+});
+
+test('watching counts as progress at each stage, so a long video keeps a background task alive', async () => {
+  reset(downloaded({ parts: { speech: ['speech-0.pcm'] }, meta: { speech_parts: ['speech-0.pcm'], speech_seconds: 3 } }));
+  progress.length = 0;
+  const store = setup({ chat: { model: 'vision-model', cap: { vision: true } }, vision: 'same' });
+  await video.watchVideo({ userId: 'u1', store, url: 'https://vimeo.com/1' });
+  assert.ok(progress.length >= 3, 'after fetching, before writing out speech and before the model watches');
+  assert.match(fs.readFileSync(lib('video.js'), 'utf8'), /effort: "fast"/, 'quick effort, so long reasoning cannot crowd out the account');
 });
