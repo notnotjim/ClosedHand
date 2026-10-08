@@ -127,7 +127,7 @@ test("replies and delivered results get the fallback before they are saved or se
 test("web research in the foreground moves to the background after 40 seconds, other work after 100", () => {
   const engine = read("lib/engine.js");
   assert.match(engine, /const RESEARCH_HANDOVER_MS = 40 \* 1000;/);
-  assert.match(engine, /const RESEARCH_TOOLS = \/\^\(web_search\|web_fetch\|sandbox_browse\)\$\/;/);
+  assert.match(engine, /const RESEARCH_TOOLS = \/\^\(web_search\|web_fetch\|watch_video\|sandbox_browse\)\$\/;/);
   // Research time counts from the first research step, the whole reply from its start.
   assert.match(engine, /Date\.now\(\) - responseStartTime > HANDOVER_MS\n\s*\|\| \(firstResearchAt !== null && Date\.now\(\) - firstResearchAt > RESEARCH_HANDOVER_MS\)/);
   assert.match(engine, /if \(firstResearchAt === null && RESEARCH_TOOLS\.test\(block\.name\)\) firstResearchAt = Date\.now\(\);/);

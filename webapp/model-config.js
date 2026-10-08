@@ -109,7 +109,26 @@ async function prepare(input, settings) {
     roles.vision = { connection: connectionId, model: visionModel, capabilities: { ...visionCap, vision: true } };
     if (connectionId === "primary" && visionModel === model) roles.chat.capabilities.vision = true;
   }
+  // Video is checked for each model that claims it, with a made-up clip that
+  // turns from red to blue. A model that fails still saves: its videos are
+  // watched through frames instead, so this never blocks the setup.
+  const watched = new Map();
+  for (const role of [roles.chat, roles.vision]) {
+    if (!role || role.capabilities?.video !== true) continue;
+    const key = role.connection + "|" + role.model;
+    if (!watched.has(key)) watched.set(key, await watchesVideo({ ...connections[role.connection], capabilities: role.capabilities }, role.model));
+    role.capabilities = { ...role.capabilities, video: watched.get(key), videoLinks: watched.get(key) && role.capabilities.videoLinks === true };
+  }
   return { version: 1, connections, roles };
+}
+async function watchesVideo(conn, model) {
+  try {
+    const reply = await wire.request(conn, { model, effort: "fast", max_tokens: 1024,
+      messages: [{ role: "user", content: [{ type: "text", text: "This short video changes colour once. What colour is it at the start, and what colour at the end? Answer in two words." },
+        { type: "video", source: { type: "base64", media_type: "video/mp4", data: CHECK_VIDEO } }] }],
+    }, { signal: AbortSignal.timeout(60000) });
+    return /\bred\b[\s\S]*\bblue\b/i.test(wire.responseText(reply));
+  } catch { return false; }
 }
 function withConfig(settings, config) {
   const next = { ...settings, model_config: config };
@@ -197,3 +216,5 @@ function install(app, deps) {
 }
 const RED_IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAb0lEQVR4nO3PAQkAAAyEwO9feoshgnABdLep8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3IPanc8OLDQitxAAAAAElFTkSuQmCC";
 module.exports = { install, prepare, withConfig, legacyConfig };
+// Four seconds at 128 pixels square: two red, then two blue (H.264, made with PyAV).
+const CHECK_VIDEO = "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";

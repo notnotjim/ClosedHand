@@ -101,6 +101,9 @@ fi
 "$NODE_DIR/bin/node" "$ROOT/scripts/prepare-voice.js" "$CACHE/voice/kokoro-v1"
 mkdir -p "$APP_SRC/assets/voice"
 cp -R "$CACHE/voice/kokoro-v1" "$APP_SRC/assets/voice/"
+"$NODE_DIR/bin/node" "$ROOT/scripts/prepare-voice.js" --listening "$CACHE/listen/whisper-base"
+mkdir -p "$APP_SRC/assets/listen"
+cp -R "$CACHE/listen/whisper-base" "$APP_SRC/assets/listen/"
 
 say "Building the app"
 (cd "$HERE" && swift build -c release --arch "$ARCH")

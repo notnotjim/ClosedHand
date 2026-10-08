@@ -8,6 +8,7 @@ node_modules
 data
 attachments
 assets/voice/kokoro-v1
+assets/listen/whisper-base
 config.json
 .DS_Store
 

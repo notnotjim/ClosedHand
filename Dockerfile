@@ -46,7 +46,7 @@ ENV npm_config_cache=/data/storage/cache/npm \
 
 # App source (see .dockerignore for exclusions).
 COPY . .
-RUN node scripts/prepare-voice.js
+RUN node scripts/prepare-voice.js && node scripts/prepare-voice.js --listening
 # The commit this image was built from, for bug reports.
 ARG GIT_SHA=""
 ENV CLOSEDHAND_SHA=$GIT_SHA

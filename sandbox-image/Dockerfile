@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir \
     pandas numpy requests matplotlib beautifulsoup4 pillow openpyxl \
     playwright lxml scipy scikit-learn seaborn tabulate \
-    python-dateutil pytz httpx pydantic chardet
+    python-dateutil pytz httpx pydantic chardet \
+    yt-dlp av
 
 # Browser (user-facing + automation target via CDP). Stock Google Chrome on
 # amd64 (Chrome for Testing showed a permanent "automated testing only"

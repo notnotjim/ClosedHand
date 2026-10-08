@@ -54,7 +54,7 @@ async function callFallbackModel(systemPrompt, userContent) {
 // Built-in tool names (for impersonation detection)
 const BUILTIN_TOOLS = [
   "add_schedule","list_schedules","remove_schedule","pin_fact","get_facts","delete_fact",
-  "view_attachment","list_attachments","send_file","web_search","web_fetch","weather_lookup",
+  "view_attachment","list_attachments","send_file","web_search","web_fetch","watch_video","weather_lookup",
   "gmail_search","gmail_read","gmail_send","gmail_reply","gmail_send_attachment",
   "gcal_list_events","gcal_search_events","gcal_create_event","gcal_list_calendars",
   "gmail_attachment_to_drive","drive_search","drive_list_recent","drive_read","drive_send_file",

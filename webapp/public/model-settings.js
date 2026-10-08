@@ -352,6 +352,20 @@
       }
       return "Complete the connection details to check these models";
     }
+    // The best way the chosen models can take in a video: watching it whole,
+    // looking at frames with what's said written out, or what's said alone.
+    function videoHandling(setup) {
+      var chat = setup.roles.chat, vision = setup.roles.vision;
+      var chatCap = chat.capabilities || {}, visionCap = vision ? vision.capabilities || {} : {};
+      var separate = vision && !(vision.connection === chat.connection && vision.model === chat.model);
+      var visionLabel = separate ? modelName({ id: vision.model }, setup.connections[vision.connection].provider) + " via " + providerLabel(setup.connections[vision.connection]) : "";
+      var links = function (c) { return c.videoLinks ? ", and opens YouTube links itself" : ""; };
+      if (chatCap.video === true) return ["Watches them whole" + links(chatCap), "ok"];
+      if (separate && visionCap.video === true) return ["Watched whole by " + visionLabel + links(visionCap), "ok"];
+      if (chatCap.vision === true && vision) return ["Sees frames and reads what's said", "ok"];
+      if (separate) return [visionLabel + " sees frames, and ClosedHand writes out what's said", "ok"];
+      return ["Reads what's said only, since images are off", ""];
+    }
     function catalogCaps(key) {
       var id = chosen(key), m = models.find(function (x) { return x.id === id; });
       return m ? m.capabilities : null;
@@ -397,6 +411,11 @@
         else row("Images", !visionId ? "Choose an image model" : (visionDone ? "Read by " : "") + modelName({ id: visionId }, visionProv) + " via " + (providers[visionProv] || visionProv) + (visionDone ? "" : ", not checked yet"), visionDone ? "ok" : "wait");
       }
       else row("Images", cap.vision === true ? "Accepts images" : cap.vision === false ? "Text only, choose an image model below or turn images off" : "Not checked yet", cap.vision === true ? "ok" : cap.vision === false ? "fail" : "wait");
+      // How videos are handled follows from what the checked models can do.
+      var videoSetup = cfg && (kind === "passed" || kind === "saved") ? cfg
+        : kind !== "checking" && !(kind === "failed") && savedChat() && (mode !== "separate" || savedVision()) && mode !== "off" ? saved : null;
+      if (videoSetup) { var how = videoHandling(videoSetup); row("Videos", how[0], how[1]); }
+      else row("Videos", kind === "checking" ? "Checking" : "Not checked yet", "wait");
       row("Thinking effort", cap.reasoning ? "ClosedHand sets it per task" : "Fixed by the model", cap.reasoning ? "ok" : "");
       row("Context limit", cap.contextWindow ? cap.contextWindow.toLocaleString() + " tokens" : "Not published by the provider");
       var supportId = support ? support.model : chosen("backgroundModel");

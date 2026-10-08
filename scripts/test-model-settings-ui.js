@@ -254,3 +254,19 @@ test('an image model whose abilities are unknown is not offered for images, but 
   assert.ok(!ids.includes('grok-imagine-image'), 'a model that makes pictures is not offered for reading them');
   assert.ok(ids.includes('__manual__'));
 });
+
+test('the panel says how videos are handled, from what the checked models can do', async () => {
+  const withRoles = (chatCap, vision) => () => { const s = savedSetup(); s.config.roles.chat.capabilities = chatCap; s.config.roles.vision = vision; if (vision?.connection === 'vision') s.config.connections.vision = { provider: 'xai', backend: 'custom', baseUrl: '', hasKey: true }; return s; };
+  const cases = [
+    [{ tools: true, vision: true, video: true, videoLinks: true }, { connection: 'primary', model: 'chat', capabilities: { vision: true } }, /^Watches them whole, and opens YouTube links itself$/],
+    [{ tools: true, vision: true }, { connection: 'primary', model: 'chat', capabilities: { vision: true } }, /^Sees frames and reads what's said$/],
+    [{ tools: true, vision: false }, { connection: 'vision', model: 'grok-4.7', capabilities: { vision: true } }, /^grok-4\.7 via xAI sees frames, and ClosedHand writes out what's said$/],
+    [{ tools: true, vision: false }, null, /^Reads what's said only, since images are off$/],
+  ];
+  for (const [chatCap, vision, expected] of cases) {
+    const respond = withRoles(chatCap, vision);
+    const ui = await mount((call) => call.path === '' ? respond() : call.path === '/models' ? catalog : { config: null });
+    await ui.timers();
+    assert.match(panel(ui)('Videos'), expected);
+  }
+});

@@ -27,6 +27,9 @@ function capabilities(conn, model, metadata = {}) {
   const modalities = metadata.architecture?.input_modalities || metadata.input_modalities;
   const supported = metadata.supported_parameters;
   let vision = Array.isArray(modalities) ? modalities.includes("image") : null;
+  // Video goes the same way: a model takes it only when its provider says so,
+  // or it belongs to a family known to, and the model check confirms it.
+  let video = Array.isArray(modalities) ? modalities.includes("video") : null;
   let tools = Array.isArray(supported) ? supported.includes("tools") : null;
   const context = Number(metadata.context_length || metadata.context_window || metadata.inputTokenLimit);
   let reasoning = null;
@@ -47,7 +50,10 @@ function capabilities(conn, model, metadata = {}) {
     (host === "api.openai.com" && /^(?:gpt-4o|gpt-4\.1|gpt-[56]|o[34])/.test(model)) ||
     (host === "api.x.ai" && /^grok-(?:4|.*vision)/.test(model))
   )) vision = true;
-  return { vision, tools, contextWindow: Number.isFinite(context) && context >= 4096 ? context : null, reasoning };
+  if (video === null && conn.backend === "gemini" && /^gemini-(?:[23]|flash|pro)/.test(model)) video = true;
+  // Opening a YouTube link itself, so ClosedHand never has to fetch the video.
+  const videoLinks = conn.backend === "gemini" && video === true;
+  return { vision, video, videoLinks, tools, contextWindow: Number.isFinite(context) && context >= 4096 ? context : null, reasoning };
 }
 function effortOptions(cap, effort = "default", maxTokens = 4096) {
   const low = effort === "fast", high = effort === "strong";

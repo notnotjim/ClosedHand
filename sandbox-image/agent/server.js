@@ -33,7 +33,7 @@ const BROWSER_CMD = process.env.BROWSER_CMD || "";
 const SANDBOX_PROFILE = process.env.SANDBOX_PROFILE || "";
 const BROWSER_PROFILE = path.join(WORKSPACE, ".chromium-profile");
 // What the container image pre-installs, so code written for one runs on the other.
-const PY_PACKAGES = ["pandas", "numpy", "requests", "matplotlib", "beautifulsoup4", "pillow", "openpyxl", "playwright", "lxml", "scipy", "scikit-learn", "seaborn", "tabulate", "python-dateutil", "pytz", "httpx", "pydantic", "chardet", "plotly"];
+const PY_PACKAGES = ["pandas", "numpy", "requests", "matplotlib", "beautifulsoup4", "pillow", "openpyxl", "playwright", "lxml", "scipy", "scikit-learn", "seaborn", "tabulate", "python-dateutil", "pytz", "httpx", "pydantic", "chardet", "plotly", "yt-dlp", "av"];
 const MAX_TIMEOUT = 120000; // 120s absolute max
 const DEFAULT_TIMEOUT = 30000; // 30s default
 const MAX_OUTPUT = 8000; // chars
