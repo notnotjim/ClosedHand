@@ -43,45 +43,79 @@ def same_place(asked, found):
     return difflib.SequenceMatcher(None, a, f).ratio() >= 0.8
 
 
+# Whether the list exists already: made in an earlier run, or in this one. A
+# list Google has only just made takes a few seconds to show in the Save menu,
+# so once it exists the menu is looked at again rather than a second list
+# with the same name being made.
+CREATED = bool(ARGS.get("created"))
+
+
+def open_lists(page):
+    page.locator(SAVE).first.click()
+    page.get_by_role("menuitemradio").first.wait_for(timeout=10000)
+    return page.get_by_role("menuitemradio")
+
+
+def find_list(page, list_name):
+    for attempt in range(6 if CREATED else 1):
+        if attempt:
+            page.keyboard.press("Escape")
+            time.sleep(3)
+        items = open_lists(page)
+        for i in range(items.count()):
+            if list_title(items.nth(i).inner_text()) == list_name:
+                return items.nth(i)
+    return None
+
+
 def save_one(page, query, list_name):
+    global CREATED
     # English, so the steps below read the same buttons whatever the browser's language.
     page.goto("https://www.google.com/maps/search/?api=1&hl=en&query=" + urllib.parse.quote(query),
               wait_until="domcontentloaded", timeout=45000)
-    try:
-        page.wait_for_selector(SAVE + ', div[role="feed"]', timeout=20000)
-    except Exception:
+    # Either a page of results or a single place. A page of results first
+    # shows its "Results" heading and fills in its list a moment later, so
+    # nothing is read until the page is clearly one or the other.
+    kind = None
+    for _ in range(40):
+        if page.locator('div[role="feed"] a[href*="/maps/place/"]').count():
+            kind = "results"; break
+        heading = page.locator('div[role="main"] h1')
+        if heading.count() and heading.first.inner_text().strip() not in ("", "Results") and page.locator(SAVE).count():
+            kind = "place"; break
+        time.sleep(0.5)
+    if kind is None:
         return {"query": query, "status": "not_found"}
-    if not page.locator(SAVE).count():
-        # Several matches: the first whose name is the one asked for. When
-        # none is, nothing is saved and the nearest names go back to ask about.
+    if kind == "results":
+        # The result whose name is the one asked for. When none is, or more
+        # than one is (two branches with one name), nothing is saved and the
+        # names go back to ask about.
         results = page.locator('div[role="feed"] a[href*="/maps/place/"]')
         names = [results.nth(i).get_attribute("aria-label") or "" for i in range(min(results.count(), 8))]
-        pick = next((i for i, n in enumerate(names) if same_place(query, n)), None)
-        if pick is None:
-            return {"query": query, "status": "unsure", "google_has": [n for n in names if n][:3]}
-        results.nth(pick).click()
-        page.wait_for_selector(SAVE, timeout=15000)
+        matches = [i for i, n in enumerate(names) if same_place(query, n)]
+        if len(matches) != 1:
+            return {"query": query, "status": "unsure", "google_has": [names[i] for i in matches][:4] or [n for n in names if n][:3],
+                    "why": "several places have this name" if matches else "no place has this name"}
+        results.nth(matches[0]).click()
+        page.wait_for_selector('div[role="main"] h1', timeout=15000)
     time.sleep(1.5)
-    found = page.locator("h1").first.inner_text().strip()
+    found = page.locator('div[role="main"] h1').first.inner_text().strip() if page.locator('div[role="main"] h1').count() else page.locator("h1").first.inner_text().strip()
     if not same_place(query, found):
         # Google went straight to one place, but under another name: asked
         # about rather than saved.
         return {"query": query, "status": "unsure", "google_has": [found]}
     address = (page.locator('button[data-item-id="address"]').first.get_attribute("aria-label") or "") if page.locator('button[data-item-id="address"]').count() else ""
-    page.locator(SAVE).first.click()
-    page.get_by_role("menuitemradio").first.wait_for(timeout=10000)
-    items = page.get_by_role("menuitemradio")
-    target = None
-    for i in range(items.count()):
-        if list_title(items.nth(i).inner_text()) == list_name:
-            target = items.nth(i)
-            break
+    target = find_list(page, list_name)
+    if target is None and CREATED:
+        page.keyboard.press("Escape")
+        return {"query": query, "status": "waiting"}
     if target is None:
         page.get_by_role("button", name="New list").click()
         box = page.locator('[role="dialog"] input').first
         box.wait_for(timeout=10000)
         box.fill(list_name)
         page.get_by_role("button", name="Create").click()
+        CREATED = True
         status = "saved_new_list"
     elif target.get_attribute("aria-checked") == "true":
         status = "already_saved"
@@ -136,14 +170,23 @@ def main():
         cdp = context.new_cdp_session(page)
         cdp.send("Network.enable")
         cdp.send("Network.setBlockedURLs", {"urls": ["*/maps/vt*", "*/kh/v=*", "*.png*", "*.jpg*", "*.jpeg*", "*.webp*", "*.gif*", "*.woff*", "*/maps/preview/photo*", "*googleusercontent.com/p/*", "*streetviewpixels*"]})
-        started, results, left = time.time(), [], list(ARGS["places"])
+        started, results, left, waits = time.time(), [], list(ARGS["places"]), {}
         while left and time.time() - started < BUDGET:
             query = left.pop(0)
             try:
-                results.append(save_one(page, query, ARGS["list"]))
+                result = save_one(page, query, ARGS["list"])
             except Exception as e:
-                results.append({"query": query, "status": "failed", "error": str(e).splitlines()[0][:200]})
-        out({"ok": True, "results": results, "left": left})
+                result = {"query": query, "status": "failed", "error": str(e).splitlines()[0][:200]}
+            # A list Google has only just made can take a minute to show: the
+            # place goes to the back of the queue, a few times, before failing.
+            if result["status"] == "waiting":
+                waits[query] = waits.get(query, 0) + 1
+                if waits[query] <= 4:
+                    left.append(query)
+                    continue
+                result = {"query": query, "status": "failed", "error": "the new list hasn't appeared in Google Maps yet"}
+            results.append(result)
+        out({"ok": True, "results": results, "left": left, "created": CREATED})
     finally:
         if page:
             page.close()

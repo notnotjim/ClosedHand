@@ -93,7 +93,7 @@ test('each run counts as progress, so a long list keeps a background task alive'
 test('a place Google only has under another name is asked about, not saved', async () => {
   answer = (args) => ({ ok: true, results: [{ query: args.places[0], status: 'unsure', google_has: ['Other Bakery'] }] });
   const r = await saveToList({ userId: 'u1', list: 'Trip', places: ['Pastry Corner, Testville'] });
-  assert.deepEqual(r.unsure, [{ asked: 'Pastry Corner, Testville', google_has: ['Other Bakery'] }]);
+  assert.deepEqual(r.unsure, [{ asked: 'Pastry Corner, Testville', google_has: ['Other Bakery'], why: '' }]);
   assert.equal(r.saved.length, 0);
 });
 
@@ -111,4 +111,19 @@ import importlib.util, json
 spec = importlib.util.spec_from_file_location("m", ${JSON.stringify(lib('maps-list-sandbox.py'))}); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print(json.dumps([m.same_place(a, f) for a, f in ${JSON.stringify(pairs.map(([a, f]) => [a, f]))}]))`]).toString();
   assert.deepEqual(JSON.parse(out), pairs.map((p) => p[2]));
+});
+
+test('once a run has made the list, the next run looks for it instead of making another', async () => {
+  runs.length = 0;
+  answer = (args) => ({ ok: true, results: [{ query: args.places[0], found: 'x', status: args.created ? 'saved' : 'saved_new_list' }], left: args.places.slice(1), created: true });
+  await saveToList({ userId: 'u1', list: 'Trip', places: ['A, X', 'B, X', 'C, X'] });
+  assert.deepEqual(runs.map((a) => a.created), [false, true, true]);
+});
+
+test('the save step reads a results page as one, asks about same-name branches, and waits for a new list', () => {
+  const script = fs.readFileSync(lib('maps-list-sandbox.py'), 'utf8');
+  assert.match(script, /heading\.first\.inner_text\(\)\.strip\(\) not in \("", "Results"\)/, 'the "Results" heading is never read as a place');
+  assert.match(script, /if len\(matches\) != 1:/, 'two branches with one name are asked about');
+  assert.match(script, /if target is None and CREATED:[\s\S]*?"waiting"/, 'never a second list with the same name');
+  assert.match(script, /if waits\[query\] <= 4:\n\s*left\.append\(query\)/, 'a place waiting for its new list goes to the back of the queue');
 });
