@@ -8632,6 +8632,76 @@ app.post("/api/sandbox/browser", async (req, res) => {
   catch (e) { res.status(503).json({ error: e.message }); }
 });
 
+// Sites people sign in to on the sandbox computer so ClosedHand can use them
+// for them, and what each sign-in unlocks. Whether they're signed in is read
+// from the names of each site's session cookie in the sandbox browser, never
+// the values, and only a yes or no leaves the sandbox. Any other site works
+// too: the person signs in to it in the same browser.
+const SIGN_IN_SITES = [
+  { id: "google", name: "Google", url: "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fwww.google.com%2Fmaps", domain: "google.com", cookies: ["SID", "__Secure-1PSID"], unlocks: "Saving places to your Google Maps lists" },
+  { id: "instagram", name: "Instagram", url: "https://www.instagram.com/accounts/login/", domain: "instagram.com", cookies: ["sessionid"], unlocks: "Reels and posts that only show when you're signed in" },
+  { id: "tiktok", name: "TikTok", url: "https://www.tiktok.com/login", domain: "tiktok.com", cookies: ["sessionid"], unlocks: "Videos TikTok only shows when you're signed in" },
+  { id: "x", name: "X", url: "https://x.com/i/flow/login", domain: "x.com", cookies: ["auth_token"], unlocks: "Posts and videos on X that need a sign-in" },
+  { id: "facebook", name: "Facebook", url: "https://www.facebook.com/login", domain: "facebook.com", cookies: ["c_user"], unlocks: "Videos and posts on Facebook that need a sign-in" },
+];
+const signInCache = new Map();
+app.get("/api/sandbox/sign-ins", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const sites = SIGN_IN_SITES.map(({ id, name, unlocks }) => ({ id, name, unlocks }));
+  const cached = signInCache.get(userId);
+  // Every page load asks once, for the tab's dot, so an unforced answer lasts
+  // ten minutes; the open browser view asks afresh as the person signs in.
+  if (cached && cached.at > Date.now() - 600000 && !req.query.fresh) return res.json({ sites: sites.map((s) => ({ ...s, signedIn: cached.state[s.id] ?? null })) });
+  const info = await getSandboxInfo(userId).catch(() => null);
+  if (!info) return res.json({ sites: sites.map((s) => ({ ...s, signedIn: null })) });
+  const wanted = JSON.stringify(SIGN_IN_SITES.map(({ id, domain, cookies }) => ({ id, domain, cookies })));
+  const code = [
+    "import json",
+    "from browser_helper import _get_browser",
+    "pw, browser, context = _get_browser()",
+    "try:",
+    "    seen = [((c.get('domain') or '').lstrip('.'), c.get('name')) for c in context.cookies()]",
+    `    sites = json.loads(${JSON.stringify(wanted)})`,
+    "    print('SIGNINS ' + json.dumps({s['id']: any((d == s['domain'] or d.endswith('.' + s['domain'])) and n in s['cookies'] for d, n in seen) for s in sites}))",
+    "finally:",
+    "    browser.close(); pw.stop()",
+  ].join("\n");
+  try {
+    const out = await sandboxFetch(info, "POST", "/exec", { language: "python", code, timeout_ms: 30000 }, 40000);
+    const line = String(out.stdout || "").split("\n").find((l) => l.startsWith("SIGNINS "));
+    if (!line) throw new Error("no answer");
+    const state = JSON.parse(line.slice(8));
+    signInCache.set(userId, { at: Date.now(), state });
+    res.json({ sites: sites.map((s) => ({ ...s, signedIn: !!state[s.id] })) });
+  } catch {
+    // The browser may be asleep; the list still shows, without ticks.
+    res.json({ sites: sites.map((s) => ({ ...s, signedIn: null })) });
+  }
+});
+// Opens one listed site's sign-in page in the sandbox browser, in a new tab
+// at the front. Only the listed addresses: this never opens a page it is given.
+app.post("/api/sandbox/sign-in", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const site = SIGN_IN_SITES.find((s) => s.id === String(req.body?.site || ""));
+  if (!site) return res.status(400).json({ error: "Unknown site" });
+  const info = await getSandboxInfo(userId).catch(() => null);
+  if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
+  try {
+    const started = await sandboxFetch(info, "POST", "/desktop/browser", { url: site.url, focus: true }, 15000);
+    if (started?.status !== "launched") {
+      const code = `import json, os, urllib.parse, urllib.request\nbase = os.environ.get("CDP_URL", "http://127.0.0.1:9222")\ntab = json.load(urllib.request.urlopen(urllib.request.Request(base + "/json/new?" + urllib.parse.quote(${JSON.stringify(site.url)}, safe=":/?&=%"), method="PUT"), timeout=10))\nurllib.request.urlopen(base + "/json/activate/" + tab["id"], timeout=10)\nprint("OPENED")\n`;
+      const out = await sandboxFetch(info, "POST", "/exec", { language: "python", code, timeout_ms: 20000 }, 30000);
+      if (!String(out.stdout || "").includes("OPENED")) throw new Error(String(out.stderr || "").trim().split("\n").pop() || "The browser didn't open the page");
+    }
+    signInCache.delete(userId);
+    res.json({ ok: true, name: site.name });
+  } catch (e) {
+    res.status(503).json({ error: `Couldn't open ${site.name}'s sign-in page on the sandbox computer. Open the browser there and go to it yourself.` });
+  }
+});
+
 app.get("/api/sandbox/vnc-token", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

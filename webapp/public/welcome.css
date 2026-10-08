@@ -13,6 +13,9 @@
 .ch-welcome-primary:hover { background: #D8624B; }
 .ch-welcome-status { margin: 12px 0 0; font-size: var(--ui-small); line-height: 1.5; color: var(--ui-muted); }
 .ch-welcome-status.is-error { color: #D8624B; }
+.done-signins { margin: 20px 0 0; font-size: var(--ui-small); line-height: 1.6; color: var(--ui-muted); }
+.done-signins-link { color: var(--ui-text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(239,230,214,0.35); }
+.done-signins-link:hover { text-decoration-color: currentColor; }
 dialog.done-screen { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; margin: 0; padding: 32px 24px; overflow-y: auto; background: #1A1817; color: var(--ui-text); }
 dialog.done-screen[open] { display: flex; flex-direction: column; align-items: center; }
 dialog.done-screen::backdrop { background: #1A1817; }

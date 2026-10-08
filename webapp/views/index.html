@@ -1919,6 +1919,18 @@
   .mon-tile { cursor:default; }
   .mon-row { cursor:default; }
   .mon-crumb-row { display:flex; align-items:center; gap:6px; padding:5px 10px; min-height:40px; }
+  /* Sites to sign in to on the sandbox browser, attached to the top of it:
+     what each sign-in lets ClosedHand do, and a tick once it's done. */
+  .mon-signins { display:flex; align-items:center; gap:12px; padding:6px 12px; min-height:40px; background:rgba(26,24,23,0.95); border-bottom:1px solid rgba(239,230,214,0.06); flex-shrink:0; }
+  .mon-signins[hidden] { display:none; }
+  .mon-signins-text { flex:1 1 auto; min-width:0; font-size:12px; line-height:1.4; color:rgba(239,230,214,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mon-signins-sites { display:flex; gap:6px; flex:none; }
+  .mon-signin { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; border:1px solid rgba(239,230,214,0.16); background:transparent; color:#B6AFA4; font:500 12px/1.3 inherit; font-family:inherit; cursor:pointer; white-space:nowrap; }
+  .mon-signin:hover, .mon-signin:focus-visible { border-color:rgba(208,86,63,0.6); color:#EFE6D6; outline:none; }
+  .mon-signin.is-done { color:rgba(141,189,121,0.95); border-color:rgba(141,189,121,0.28); }
+  .mon-signin.is-done::before { content:"\2713"; }
+  #tabComputers.needs-signin::after { content:""; display:inline-block; vertical-align:middle; width:6px; height:6px; border-radius:50%; background:#D0563F; margin-left:2px; }
+  @media (max-width: 899px) { .mon-signins { flex-wrap:wrap; } .mon-signins-text { flex-basis:100%; white-space:normal; } .mon-signins-sites { overflow-x:auto; max-width:100%; } }
   .mon-crumb-row .mon-crumb { flex:1; min-width:0; }
   .mon-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.06); border-radius:6px; padding:3px 8px; color:#B6AFA4; font-size:11px; font-family:inherit; width:80px; outline:none; flex-shrink:0; transition:border-color 0.2s,width 0.2s; }
   .mon-search:focus { border-color:rgba(208,86,63,0.3); width:130px; }
@@ -2460,6 +2472,7 @@
             <div id="monCloudFiles"></div>
           </div>
           <!-- Desktop VNC view (hidden by default, shown when Desktop toggle is clicked) -->
+          <div class="mon-signins" id="monSignins" hidden><div class="mon-signins-text" role="status"></div><div class="mon-signins-sites"></div></div>
           <div id="monDesktop" style="display:none;flex:1;position:relative;background:#100E0D;">
             <iframe id="monVncFrame" style="width:100%;height:100%;border:none;" allow="clipboard-read; clipboard-write"></iframe>
             <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;line-height:1.5;color:rgba(239,230,214,0.7);font-size:14px;">Starting browser...</div>
@@ -7653,6 +7666,7 @@ function escapeHtml(s) {
       if (filesTabBtn) filesTabBtn.classList.add('active');
       monShowFileControls(true);
       window._monDesktopActive = false;
+      monShowSignins(false);
       return;
     }
 
@@ -7664,6 +7678,7 @@ function escapeHtml(s) {
     if (filesTabBtn) filesTabBtn.classList.remove('active');
     monShowFileControls(false);
     window._monDesktopActive = true;
+    monShowSignins(true);
 
     // Older native clients use screenshots; VM and Docker use interactive VNC.
     if (window._monDesktopMode === undefined) {
@@ -7789,8 +7804,67 @@ function escapeHtml(s) {
   window.monLoadCloud = monLoadCloud;
   window.monLoadStorage = monLoadStorage;
 
+  // Sites to sign in to on the sandbox browser (/api/sandbox/sign-ins). The
+  // ticks refresh while the browser is on screen, so they follow the person
+  // signing in; the Computers tab carries a dot until any site is signed in.
+  var _monSignins = null, _monSigninPoll = null;
+  var MON_SIGNIN_INTRO = 'Sign in to sites here so ClosedHand can use them for you. Any other site works too.';
+  async function monLoadSignins(fresh) {
+    try {
+      var r = await fetch('/api/sandbox/sign-ins' + (fresh ? '?fresh=1' : ''));
+      if (!r.ok) return;
+      _monSignins = (await r.json()).sites || [];
+      monRenderSignins();
+    } catch (e) {}
+  }
+  function monRenderSignins() {
+    var bar = document.getElementById('monSignins');
+    if (!bar || !_monSignins) return;
+    var known = _monSignins.some(function (s) { return s.signedIn !== null; });
+    var any = _monSignins.some(function (s) { return s.signedIn; });
+    var tab = document.getElementById('tabComputers');
+    if (tab) tab.classList.toggle('needs-signin', known && !any);
+    var text = bar.querySelector('.mon-signins-text'), list = bar.querySelector('.mon-signins-sites');
+    if (!bar._busy) text.textContent = MON_SIGNIN_INTRO;
+    list.replaceChildren();
+    _monSignins.forEach(function (site) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mon-signin' + (site.signedIn ? ' is-done' : '');
+      b.textContent = site.name;
+      b.setAttribute('aria-label', (site.signedIn ? site.name + ', signed in. ' : 'Sign in to ' + site.name + '. ') + site.unlocks + '.');
+      var explain = function () { if (!bar._busy) text.textContent = site.name + ': ' + site.unlocks.charAt(0).toLowerCase() + site.unlocks.slice(1) + (site.signedIn ? '. Signed in.' : '.'); };
+      var reset = function () { if (!bar._busy) text.textContent = MON_SIGNIN_INTRO; };
+      b.addEventListener('mouseenter', explain); b.addEventListener('focus', explain);
+      b.addEventListener('mouseleave', reset); b.addEventListener('blur', reset);
+      b.onclick = function () { monOpenSignin(site); };
+      list.appendChild(b);
+    });
+  }
+  async function monOpenSignin(site) {
+    var bar = document.getElementById('monSignins'), text = bar.querySelector('.mon-signins-text');
+    bar._busy = true;
+    text.textContent = 'Opening ' + site.name + '...';
+    try {
+      var r = await fetch('/api/sandbox/sign-in', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site: site.id }) });
+      var d = await r.json().catch(function () { return {}; });
+      text.textContent = r.ok ? 'Sign in to ' + site.name + ' in the browser below. It stays signed in for later.' : (d.error || 'That didn\'t open. Try again.');
+    } catch (e) { text.textContent = 'That didn\'t open. Try again.'; }
+    setTimeout(function () { bar._busy = false; }, 15000);
+  }
+  function monShowSignins(on) {
+    var bar = document.getElementById('monSignins');
+    if (bar) bar.hidden = !on;
+    clearInterval(_monSigninPoll); _monSigninPoll = null;
+    if (!on) return;
+    monLoadSignins(true);
+    _monSigninPoll = setInterval(function () { if (!document.hidden) monLoadSignins(true); }, 30000);
+  }
+  window.monLoadSignins = monLoadSignins;
+
   // Init
   setTimeout(function(){monLoadCloud();monLoadLocal();monLoadStorage();},300);
+  setTimeout(function(){monLoadSignins(false);},3000);
 
 
 })();
