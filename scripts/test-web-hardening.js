@@ -117,3 +117,31 @@ test('the Bridge relay needs a real secret, compared in constant time', () => {
   assert.match(relay, /if \(!secret \|\| !relaySecrets\.some\(/);
   assert.match(relay, /crypto\.timingSafeEqual/);
 });
+
+test('a link opened through Telegram cannot end the page script and run its own', () => {
+  const src = server.slice(server.indexOf('function telegramTarget(to) {'), server.indexOf('app.get("/tg/open"'));
+  const { telegramTarget, scriptJson } = new Function(src + '; return { telegramTarget, scriptJson };')();
+  assert.equal(telegramTarget('/dashboard?</script><script>alert(1)</script>'), '/');
+  assert.equal(telegramTarget('/dashboard#"onload=x'), '/');
+  assert.equal(telegramTarget('/dashboard#agents'), '/dashboard#agents');
+  assert.equal(telegramTarget('/page/0b8f2c1e-6d1a-4c55-9a3e-2f1d4b7c9e10'), '/page/0b8f2c1e-6d1a-4c55-9a3e-2f1d4b7c9e10');
+  const written = scriptJson('</script><script>alert(1)</script>\u2028&');
+  assert.doesNotMatch(written, /<|>|&|\u2028/);
+  assert.equal(JSON.parse(written), '</script><script>alert(1)</script>\u2028&');
+  const route = server.slice(server.indexOf('app.get("/tg/open"'), server.indexOf('app.post("/api/telegram/session"'));
+  assert.match(route, /var to = \$\{scriptJson\(to\)\};/);
+  assert.doesNotMatch(server, /= \$\{JSON\.stringify\(/, 'a value in a page script goes through scriptJson');
+});
+
+test('a search reaches the Google command-line tool as data, never through a shell', async () => {
+  const gws = read('lib/services/gws.js');
+  assert.doesNotMatch(gws, /\bexecSync\b|\bexec\(/);
+  assert.match(gws, /execFileSync\(gwsBin, args, \{/);
+  for (const f of ['lib/services/data-access.js', 'lib/tools/handlers.js']) {
+    const calls = read(f).match(/gwsCommand\(\s*[^\s]/g) || [];
+    assert.ok(calls.length > 0, f);
+    for (const c of calls) assert.match(c, /gwsCommand\(\s*\[$/, `${f}: ${c} passes a list`);
+  }
+  const { gwsCommand } = require('../lib/services/gws');
+  await assert.rejects(gwsCommand("gmail users messages list --params '{}'"), /list of strings/);
+});

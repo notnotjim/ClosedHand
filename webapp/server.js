@@ -1501,7 +1501,12 @@ const _usedTelegramProofs = new Map(); // sha256 of a proof -> when it would exp
 // Only pages Closedhand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
-  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[^\s/?#]+|dashboard)([?#][^\s]*)?$/.test(path) ? path : "/";
+  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[\w.~%-]+|dashboard)([?#][\w.~%&=+\/:,@-]*)?$/.test(path) ? path : "/";
+}
+// A value written into an inline <script>. JSON alone leaves "</script>" able
+// to end the script early and start one of the caller's own.
+function scriptJson(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 app.get("/tg/open", (req, res) => {
   const to = telegramTarget(req.query.to);
@@ -1511,7 +1516,7 @@ app.get("/tg/open", (req, res) => {
 <script src="https://telegram.org/js/telegram-web-app.js"></script></head>
 <body style="margin:0;background:#141010"><script>
 (function () {
-  var to = ${JSON.stringify(to)};
+  var to = ${scriptJson(to)};
   var app = window.Telegram && window.Telegram.WebApp;
   var proof = app && app.initData;
   if (!proof) { location.replace(to); return; }
@@ -2049,7 +2054,7 @@ app.post("/logout", async (req, res) => {
   res.set("Clear-Site-Data", '"cache", "storage"');
   res.append("Set-Cookie", sessionCookie(req, "", 0));
   for (const c of ["ch_user=; Path=/", "ch_wa_link=; Path=/", "ch_connect_queue=; Path=/", "ch_wallet_ok=; Path=/api"]) {
-    res.append("Set-Cookie", `${c}; HttpOnly; SameSite=Lax; Max-Age=0`);
+    res.append("Set-Cookie", `${c}; HttpOnly; SameSite=Lax; Max-Age=0${browserAccess.publicHttps(req) ? "; Secure" : ""}`);
   }
   res.redirect(303, "/");
 });
