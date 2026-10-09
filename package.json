@@ -14,7 +14,7 @@
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@supabase/supabase-js": "^2.97.0",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "cheerio": "^1.2.0",
     "cron-parser": "^4.9.0",
     "discord.js": "^14.25.1",
@@ -25,16 +25,20 @@
     "node-cron": "^3.0.3",
     "node-ical": "^0.27.1",
     "node-telegram-bot-api": "^0.66.0",
-    "nodemailer": "^8.0.2",
+    "nodemailer": "^10.0.16",
     "opusscript": "0.1.1",
     "pdf-parse": "^1.1.1",
     "pg": "^8.22.0",
     "phonemizer": "1.2.1",
     "tsdav": "^2.1.8",
     "ws": "^8.19.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "optionalDependencies": {
-    "@googleworkspace/cli": "^0.22.3"
+    "@googleworkspace/cli": "^0.22.5"
+  },
+  "overrides": {
+    "request": "npm:@cypress/request@^3.0.10",
+    "qs": "^6.16.0"
   }
 }
