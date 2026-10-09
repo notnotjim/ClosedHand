@@ -7,7 +7,7 @@ function publicHttps(req) {
 }
 function sessionName(req) { return publicHttps(req) ? '__Host-ch_admin' : 'ch_admin'; }
 function sessionAttributes(req) {
-  return `Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${publicHttps(req) ? '; Secure' : ''}`;
+  return `Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${publicHttps(req) ? '; Secure' : ''}`;
 }
 function allowBrowserWrite(req) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return true;

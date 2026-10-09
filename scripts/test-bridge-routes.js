@@ -21,7 +21,7 @@ test('only the Bridge-signed POST routes pass the dashboard gate', () => {
   assert.ok(set, 'the list exists');
   const routes = set[1].split(',').map((s) => s.trim().replace(/"/g, ''));
   assert.deepEqual(routes.sort(), ['/api/bridge/disconnect', '/api/bridge/file-upload', '/api/bridge/sync-cache', '/api/bridge/thumb-upload']);
-  assert.match(server, /if \(hasAdminSession\(req\)\) return next\(\);\n\s*if \(req\.method === "POST" && SIGNED_BY_BRIDGE\.has\(req\.path\)\) return next\(\);/);
+  assert.match(server, /if \(await hasAdminSession\(req, res\)\) return next\(\);\n\s*if \(req\.method === "POST" && SIGNED_BY_BRIDGE\.has\(req\.path\)\) return next\(\);/);
 });
 
 test('each of those routes refuses a missing or wrong token before doing anything', () => {

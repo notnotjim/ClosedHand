@@ -52,7 +52,7 @@ test("the session needs a fresh proof from the linked account, lasts 12 hours, a
   assert.match(route, /validateTelegramInitData\(\(req\.body \|\| \{\}\)\.initData, await telegramBotToken\(\), TELEGRAM_PROOF_MAX_AGE_SEC\)/);
   assert.match(route, /\.eq\("platform", "telegram"\)\.eq\("platform_user_id", String\(tgUser\.id\)\)/);
   assert.match(route, /link\[0\]\.user_id !== getAdminUserId\(\)/, "only the account linked to this ClosedHand");
-  assert.match(route, /setAdminSessionCookie\(res, TELEGRAM_SESSION_SEC\);/);
+  assert.match(route, /await startAdminSession\(req, res, \{ kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC \}\);/);
   assert.match(server, /const TELEGRAM_SESSION_SEC = 12 \* 60 \* 60;\nconst TELEGRAM_PROOF_MAX_AGE_SEC = 60 \* 60;/);
   assert.ok(server.indexOf('app.post("/api/telegram/session"') < server.indexOf("// --- The gate: everything registered below needs the session"), "reachable before a session exists");
   const page = server.slice(server.indexOf('app.get("/tg/open"'), server.indexOf('app.post("/api/telegram/session"'));

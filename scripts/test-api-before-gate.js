@@ -18,7 +18,7 @@ const PUBLIC = new Set([
   "/api/login",           // signing in
   "/api/telegram/session",// Telegram's own signed proof
 ]);
-const GUARDS = /requireSetupAccess\(req, res\)|hasAdminSession\(req\)|hereHeaders\(req, res\)|checkDashboardPassword\(|validateTelegramInitData\(/;
+const GUARDS = /requireSetupAccess\(req, res\)|hasAdminSession\(req, res\)|hereHeaders\(req, res\)|checkDashboardPassword\(|validateTelegramInitData\(/;
 
 test("every API route before the login gate checks access, or is public by design", () => {
   const gate = server.indexOf("// --- The gate: everything registered below needs the session");

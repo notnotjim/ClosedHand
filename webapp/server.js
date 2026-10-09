@@ -483,7 +483,7 @@ app.get("/api/setup/hello", async (req, res) => {
 app.get("/setup", async (req, res) => {
   res.set("Cache-Control", "no-cache, must-revalidate");
   try {
-    if ((await passwordConfigured()) && !hasAdminSession(req)) {
+    if ((await passwordConfigured()) && !(await hasAdminSession(req, res))) {
       return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/setup"));
     }
     assets.sendPage(res, "setup.html");
@@ -535,7 +535,14 @@ async function checkDashboardPassword(pw) {
   return stored ? verifyPasswordHash(pw || "", stored) : false;
 }
 
-const ADMIN_SESSION_VALUE = "admin-session";
+// Each sign-in is its own session that logging out or a new password ends
+// (dashboard-sessions.js). The cookie holds only the session's random value.
+const dashboardSessions = require("./dashboard-sessions").createSessions({
+  db: supabase,
+  password: async () => process.env.ADMIN_PASSWORD
+    ? { envPassword: process.env.ADMIN_PASSWORD }
+    : { storedHash: (await getRuntimeConf("DASHBOARD_PASSWORD_HASH")) || "" },
+});
 function readCookie(req, name) {
   for (const part of String(req.headers.cookie || "").split(";")) {
     const [k, ...v] = part.trim().split("=");
@@ -543,19 +550,30 @@ function readCookie(req, name) {
   }
   return null;
 }
-function setAdminSessionCookie(res, maxAgeSec) {
-  const attributes = browserAccess.sessionAttributes(res.req);
-  res.append("Set-Cookie", `${browserAccess.sessionName(res.req)}=${encodeURIComponent(signUserId(ADMIN_SESSION_VALUE))}; ${maxAgeSec ? attributes.replace(/Max-Age=\d+/, `Max-Age=${maxAgeSec}`) : attributes}`);
+function sessionCookie(req, value, maxAgeSec) {
+  return `${browserAccess.sessionName(req)}=${value}; ${browserAccess.sessionAttributes(req).replace(/Max-Age=\d+/, `Max-Age=${maxAgeSec}`)}`;
 }
-function hasAdminSession(req) {
-  return verifySignedCookie(readCookie(req, browserAccess.sessionName(req))) === ADMIN_SESSION_VALUE;
+async function startAdminSession(req, res, opts) {
+  const { token, maxAgeSec } = await dashboardSessions.start(opts);
+  res.append("Set-Cookie", sessionCookie(req, token, maxAgeSec));
+}
+// res, when given, gets the cookie again if the session was stretched.
+async function hasAdminSession(req, res) {
+  try {
+    const token = readCookie(req, browserAccess.sessionName(req));
+    const r = await dashboardSessions.check(token);
+    if (r.ok && r.refreshSec && res) res.append("Set-Cookie", sessionCookie(req, token, r.refreshSec));
+    return r.ok;
+  } catch (_) {
+    return false;
+  }
 }
 
 // Wizard write APIs: open until a password exists (first run on localhost),
 // session-only after. Returns false after sending the 401 itself.
 async function requireSetupAccess(req, res) {
   if (!(await passwordConfigured())) return true;
-  if (hasAdminSession(req)) return true;
+  if (await hasAdminSession(req, res)) return true;
   res.status(401).json({ error: "Login required" });
   return false;
 }
@@ -581,7 +599,12 @@ app.post("/api/login", async (req, res) => {
     if (rec.until > Date.now()) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (await checkDashboardPassword((req.body || {}).password)) {
       _loginFails.delete(ip);
-      setAdminSessionCookie(res);
+      try {
+        await startAdminSession(req, res);
+      } catch (e) {
+        console.error("[login] could not start a session:", e.message);
+        return res.status(503).json({ error: "Could not sign you in just now. Try again in a moment." });
+      }
       return res.json({ success: true });
     }
     rec.n += 1;
@@ -825,7 +848,7 @@ app.post("/api/settings/spend-limits", async (req, res) => {
 });
 
 app.get("/keep", async (req, res) => {
-  if (await passwordConfigured() && !hasAdminSession(req)) return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl));
+  if (await passwordConfigured() && !(await hasAdminSession(req, res))) return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl));
   assets.sendPage(res, "keep.html", { "Cache-Control": "no-store" });
 });
 app.get("/api/keep", async (req, res) => {
@@ -981,7 +1004,9 @@ app.post("/api/setup/password", async (req, res) => {
     if (!pw) return res.status(400).json({ error: "Type a password first" });
     if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD setting in your .env file" });
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
-    setAdminSessionCookie(res);
+    // A new password signs every browser out, then this one back in.
+    await dashboardSessions.endAll();
+    await startAdminSession(req, res);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "could not save the password" });
@@ -1391,7 +1416,7 @@ app.post("/api/telegram/session", async (req, res) => {
     if (error) throw error;
     const { getAdminUserId } = require("./admin");
     if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account isn't the one linked to your ClosedHand." });
-    setAdminSessionCookie(res, TELEGRAM_SESSION_SEC);
+    await startAdminSession(req, res, { kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC });
     res.status(204).end();
   } catch (e) {
     console.error("[telegram] in-app sign-in failed:", e.message);
@@ -1412,7 +1437,7 @@ const SIGNED_BY_BRIDGE = new Set(["/api/bridge/file-upload", "/api/bridge/thumb-
 app.use(async (req, res, next) => {
   try {
     if (!(await passwordConfigured())) return next();
-    if (hasAdminSession(req)) return next();
+    if (await hasAdminSession(req, res)) return next();
     if (req.method === "POST" && SIGNED_BY_BRIDGE.has(req.path)) return next();
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
     if (scheme === "Basic" && encoded) {
@@ -1897,8 +1922,15 @@ app.get("/line-setup-complete", (req, res) => {
 </body></html>`);
 });
 
-app.get("/logout", (req, res) => {
-  res.setHeader("Set-Cookie", "ch_user=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+// Logging out ends this browser's session on the server, not just its cookie.
+app.get("/logout", async (req, res) => {
+  try {
+    await dashboardSessions.end(readCookie(req, browserAccess.sessionName(req)));
+  } catch (e) {
+    console.error("[logout] could not end the session:", e.message);
+  }
+  res.append("Set-Cookie", sessionCookie(req, "", 0));
+  res.append("Set-Cookie", "ch_user=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
   res.redirect("/");
 });
 
