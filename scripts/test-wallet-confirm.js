@@ -36,7 +36,8 @@ test("adding a card and loosening the rules are guarded on the server, where the
   const del = server.slice(server.indexOf('app.delete("/api/wallet/:id"'), server.indexOf('app.delete("/api/wallet/:id"') + 600);
   assert.doesNotMatch(del, /walletConfirmed/, "removing a card never asks");
   const confirm = server.slice(server.indexOf('app.post("/api/wallet/confirm"'), server.indexOf("function walletAvailable()"));
-  assert.match(confirm, /if \(rec\.n >= 5\) \{ rec\.until = Date\.now\(\) \+ LOGIN_LOCK_MS;/, "the same lockout as signing in");
+  assert.match(confirm, /if \(lockedOut\(ip\)\) return res\.status\(429\)/, "the same lockout as signing in");
+  assert.match(confirm, /noteWrongPassword\(ip\);/, "wrong passwords here count towards it");
   assert.match(confirm, /ch_wallet_ok=\$\{token\}; Path=\/api; HttpOnly; SameSite=Strict; Max-Age=\$\{WALLET_CONFIRM_MS \/ 1000\}/, "a browser token, not shared between sessions");
   assert.match(server, /const WALLET_CONFIRM_MS = 5 \* 60 \* 1000;/);
   assert.match(server, /async function walletConfirmed\(req\) \{\n\s*if \(!\(await passwordConfigured\(\)\)\) return true;/, "nothing to check against without a password");
