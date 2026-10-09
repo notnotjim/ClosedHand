@@ -20,7 +20,7 @@ struct MenuBarView: View {
                         .frame(width: 20, height: 20)
                         .opacity(0.9)
                 }
-                Text("ClosedHand Bridge")
+                Text("Closedhand Bridge")
                     .font(.headline)
                 Spacer()
                 if bridge.isActive {
@@ -41,7 +41,7 @@ struct MenuBarView: View {
                     Circle()
                         .fill(.orange)
                         .frame(width: 6, height: 6)
-                    Text("ClosedHand is using: \(bridge.lastAction)")
+                    Text("Closedhand is using: \(bridge.lastAction)")
                         .font(.caption2)
                         .foregroundColor(.orange)
                 }
@@ -62,7 +62,7 @@ struct MenuBarView: View {
                             .textSelection(.enabled)
                     }
                 } else {
-                    Button("Pair with ClosedHand...") {
+                    Button("Pair with Closedhand...") {
                         bridge.startPairing()
                     }
                 }
@@ -184,7 +184,7 @@ struct MenuBarView: View {
                 bridge.saveSettings()
             }
         } message: {
-            Text("ClosedHand will be able to access your files, control your browser, and run terminal commands. You can turn this off at any time.")
+            Text("Closedhand will be able to access your files, control your browser, and run terminal commands. You can turn this off at any time.")
         }
     }
 
@@ -300,7 +300,7 @@ struct AppToggleRow: View {
                 .frame(height: 24)
             }
             .buttonStyle(.plain)
-            .help("Opens System Settings. If ClosedHand Bridge isn't listed, restart your Mac and try again.")
+            .help("Opens System Settings. If Closedhand Bridge isn't listed, restart your Mac and try again.")
         } else {
             // Normal toggle row
             HStack(spacing: 6) {

@@ -1,4 +1,4 @@
-// webapp/microsoft-device.js -- Microsoft sign-in by code, through ClosedHand's own Microsoft app.
+// webapp/microsoft-device.js -- Microsoft sign-in by code, through Closedhand's own Microsoft app.
 //
 // The setup page shows a short code; the person enters it on Microsoft's own
 // page and picks an account. This computer asks Microsoft every few seconds

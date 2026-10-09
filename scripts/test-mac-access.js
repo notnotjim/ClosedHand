@@ -39,7 +39,7 @@ test('Mac app uses built-in access for connected, reconnecting and unpaired stat
     const { context, get } = ui({ desktop: true, status });
     await context.loadBridgeStatus();
     const html = get('bridge-standalone-card').innerHTML;
-    assert.match(html, /Included in the ClosedHand app/);
+    assert.match(html, /Included in the Closedhand app/);
     assert.doesNotMatch(html, /disconnectBridge|>Shared<|Set up &#/);
     if (status !== 'connected') assert.doesNotMatch(html, />Connected</);
     await context.openAppleModal();

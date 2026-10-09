@@ -107,7 +107,7 @@ test("unknown provider summaries do not disclose URL credentials, paths or query
 test("preference origins distinguish chat, Settings and unknown sources", () => {
   const state = vm.createContext({});
   vm.runInContext(block("    function ruleOrigin(", "    async function loadUserRules"), state);
-  assert.match(state.ruleOrigin({ source: "assistant", created_at: "2026-09-10" }), /Saved by ClosedHand.*2026/);
+  assert.match(state.ruleOrigin({ source: "assistant", created_at: "2026-09-10" }), /Saved by Closedhand.*2026/);
   assert.equal(state.ruleOrigin({ source: "user" }), "Added in Settings");
   assert.equal(state.ruleOrigin({ source: null }), "Source not recorded");
 });

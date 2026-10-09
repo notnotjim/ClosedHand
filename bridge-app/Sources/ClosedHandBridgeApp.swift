@@ -8,7 +8,7 @@ struct ClosedHandBridgeApp: App {
     @StateObject private var bridge = BridgeManager.shared
 
     var body: some Scene {
-        MenuBarExtra("ClosedHand Bridge", systemImage: bridge.isActive ? "eye.fill" : (bridge.isConnected ? "link.circle.fill" : "link.circle")) {
+        MenuBarExtra("Closedhand Bridge", systemImage: bridge.isActive ? "eye.fill" : (bridge.isConnected ? "link.circle.fill" : "link.circle")) {
             MenuBarView()
         }
         .menuBarExtraStyle(.window)
@@ -17,7 +17,7 @@ struct ClosedHandBridgeApp: App {
             SettingsView()
         }
 
-        Window("Welcome to ClosedHand Bridge", id: "onboarding") {
+        Window("Welcome to Closedhand Bridge", id: "onboarding") {
             OnboardingContentView()
         }
         .windowStyle(.titleBar)

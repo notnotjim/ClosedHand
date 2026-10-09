@@ -16,7 +16,7 @@ const SANDBOX_TOKEN = process.env.SANDBOX_TOKEN;
 // Inside the container the workspace is /workspace and every tool is on PATH.
 // The desktop app runs this same agent on the Mac and says where things are:
 // a workspace folder in its data directory, a Python it sets up with uv, a
-// Chrome of the user's own launched with ClosedHand's profile.
+// Chrome of the user's own launched with Closedhand's profile.
 const DESKTOP = process.env.SANDBOX_MODE === "desktop";
 const VM = process.env.SANDBOX_MODE === "vm";
 const WORKSPACE = process.env.WORKSPACE || "/workspace";

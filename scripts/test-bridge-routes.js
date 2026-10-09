@@ -42,10 +42,10 @@ test('Remove deletes only what the Bridge synced, then the pairing', () => {
   assert.match(remove, /from\("user_bridges"\)\.delete\(\)\.eq\("user_id", userId\)/);
 });
 
-test('the Bridge app and README describe this version: no ClosedHand servers, no end-to-end claim', () => {
+test('the Bridge app and README describe this version: no Closedhand servers, no end-to-end claim', () => {
   for (const file of ['bridge-app/Sources/OnboardingView.swift', 'bridge-app/Sources/SettingsView.swift']) {
     const text = read(file);
-    assert.doesNotMatch(text, /ClosedHand's servers|end to end|ClosedHand account/, file);
+    assert.doesNotMatch(text, /Closedhand's servers|end to end|Closedhand account/, file);
   }
   assert.doesNotMatch(read('README.md'), /never transits anyone's infrastructure/);
   assert.match(read('README.md'), /relay on Cloudflare, encrypted on the way and not kept/);

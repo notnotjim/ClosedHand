@@ -10,7 +10,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const server = read('webapp/server.js');
-const helpers = server.slice(server.indexOf('const MAIL_SOURCE ='), server.indexOf('// A file attached to an email ClosedHand keeps'));
+const helpers = server.slice(server.indexOf('const MAIL_SOURCE ='), server.indexOf('// A file attached to an email Closedhand keeps'));
 
 const CACHE = [
   { source: 'gmail', external_id: 'order11', data: { subject: 'Your order', body: 'Booking QZX7KP confirmed', threadId: 'thr11', account: 'pat@example.com', attachments: [],
@@ -48,7 +48,7 @@ test('a flight opens its own email in the right account, with files from every e
   assert.equal(sm.documents[1].url, '/api/mail/attachment?source=outlook&id=AAMk33%3D&n=0');
 });
 
-test('Outlook opens in Outlook; IMAP, with no web address, opens ClosedHand\'s copy; a strange link is not trusted', async () => {
+test('Outlook opens in Outlook; IMAP, with no web address, opens Closedhand\'s copy; a strange link is not trusted', async () => {
   const box = load(Date.now());
   assert.equal((await box.sourceMail('u1', { emailId: 'AAMk33=' })).open_url, 'https://outlook.office.com/owa/?ItemID=AAMk33');
   const imap = JSON.parse(JSON.stringify(await box.sourceMail('u1', { emailId: 'imap-7-42' })));
@@ -81,7 +81,7 @@ test('the file route is behind the login, checks its inputs, asks the bot and ne
   assert.match(route, /viewable \? type : "application\/octet-stream"/);
   const view = server.slice(server.indexOf('app.get("/mail"'), server.indexOf('app.get("/api/bookings"'));
   assert.match(view, /if \(!userId\) return res\.redirect\("\/login/);
-  assert.match(view, /"Content-Security-Policy": "default-src 'none'/, 'ClosedHand\'s copy of an email runs no script');
+  assert.match(view, /"Content-Security-Policy": "default-src 'none'/, 'Closedhand\'s copy of an email runs no script');
 });
 
 test('the dashboard opens the email from the card, lists the files and moves finished bookings to Past', () => {

@@ -58,7 +58,7 @@ function onboarding({ env = { DB_DRIVER: "pg" }, engineFails = false, sendFails 
   };
 }
 
-// The account says Alex, so ClosedHand checks it: a name for itself, yes,
+// The account says Alex, so Closedhand checks it: a name for itself, yes,
 // then where they are, which they skip.
 async function finish(flow, botName = "Robin") {
   await flow.message(botName);
@@ -231,7 +231,7 @@ test("a chat app linked after introductions says hello as the same assistant, ne
 
 test("the first scan reads the calendar's timezone from its events, never from the calendar itself", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "lib", "onboarding.js"), "utf8");
-  // Reading calendars/primary needs a calendar scope ClosedHand does not request (calendar.events.owned only).
+  // Reading calendars/primary needs a calendar scope Closedhand does not request (calendar.events.owned only).
   assert.doesNotMatch(src, /calendar\/v3\/calendars\/primary["'`]/);
   assert.match(src, /saveProfileSetting\("calendar_timezone", calData\.timeZone\)/);
 });

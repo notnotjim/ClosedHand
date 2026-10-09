@@ -1,9 +1,9 @@
-// A Microsoft sign-in that ClosedHand on someone's computer passes on, after
-// connecting their mail through ClosedHand's own Microsoft app. A sign-in on
+// A Microsoft sign-in that Closedhand on someone's computer passes on, after
+// connecting their mail through Closedhand's own Microsoft app. A sign-in on
 // closedhand.com itself comes straight from Microsoft's token endpoint, so
 // its claims can be read as they are (see signin.js); this one arrives from
 // elsewhere, so it counts only when Microsoft's published keys show
-// Microsoft signed it, for one of ClosedHand's apps, and it has not expired.
+// Microsoft signed it, for one of Closedhand's apps, and it has not expired.
 const crypto = require('node:crypto');
 
 const KEYS = 'https://login.microsoftonline.com/common/discovery/v2.0/keys';
@@ -24,7 +24,7 @@ function part(text) {
 }
 
 // The token's claims when it checks out, otherwise null. appIds are the
-// ClosedHand Microsoft apps a computer signs in through.
+// Closedhand Microsoft apps a computer signs in through.
 async function verifyMicrosoftToken(idToken, { appIds, request = fetch, now = Date.now() }) {
   const pieces = typeof idToken === 'string' ? idToken.split('.') : [];
   if (pieces.length !== 3 || idToken.length > 16384) return null;

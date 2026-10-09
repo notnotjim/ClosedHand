@@ -18,7 +18,7 @@ async function reportDnsRecords(db, env, count, request = fetch) {
       try {
         await sendEmail(mail, {
           to: env.ALERT_EMAIL,
-          subject: `ClosedHand: personal URL DNS records passed ${threshold}`,
+          subject: `Closedhand: personal URL DNS records passed ${threshold}`,
           text: [
             `Personal URLs now use ${count} DNS records on closedhand.ai, past the ${threshold} alert.`,
             '',

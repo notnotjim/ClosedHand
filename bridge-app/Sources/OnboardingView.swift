@@ -16,25 +16,25 @@ struct OnboardingView: View {
         OnboardingStep(
             icon: "hand.raised.circle.fill",
             title: "Where your data goes",
-            body: "Bridge lets ClosedHand use this Mac's apps and files. What it reads goes only to ClosedHand, and to the AI model you chose when ClosedHand answers you. If ClosedHand runs on another computer, it travels there through ClosedHand's relay on Cloudflare, encrypted on the way and not kept. Choose what Bridge can reach with the toggles in the menu bar.",
+            body: "Bridge lets Closedhand use this Mac's apps and files. What it reads goes only to Closedhand, and to the AI model you chose when Closedhand answers you. If Closedhand runs on another computer, it travels there through Closedhand's relay on Cloudflare, encrypted on the way and not kept. Choose what Bridge can reach with the toggles in the menu bar.",
             action: nil
         ),
         OnboardingStep(
             icon: "accessibility.fill",
             title: "Enable Accessibility",
-            body: "Bridge needs Accessibility permission to interact with apps on your behalf. This lets it read screens, press buttons, and fill forms, all invisibly in the background while you keep working.\n\nA System Settings window will open. Find ClosedHand Bridge in the list and toggle it on.",
+            body: "Bridge needs Accessibility permission to interact with apps on your behalf. This lets it read screens, press buttons, and fill forms, all invisibly in the background while you keep working.\n\nA System Settings window will open. Find Closedhand Bridge in the list and toggle it on.",
             action: "accessibility"
         ),
         OnboardingStep(
             icon: "rectangle.dashed.badge.record",
             title: "Enable Screen Access",
-            body: "Bridge needs Screen Recording permission to take screenshots of your screen so ClosedHand can see what you see and help you with what's on screen.\n\nA System Settings window will open. Find ClosedHand Bridge and toggle it on.",
+            body: "Bridge needs Screen Recording permission to take screenshots of your screen so Closedhand can see what you see and help you with what's on screen.\n\nA System Settings window will open. Find Closedhand Bridge and toggle it on.",
             action: "screen_recording"
         ),
         OnboardingStep(
             icon: "app.badge.checkmark.fill",
             title: "Connect your apps",
-            body: "Bridge will now connect to your apps. macOS will show a series of permission prompts. Tap Allow on each one to let ClosedHand work with that app.\n\nThis is a one-time setup. After this, you won't see these prompts again. Apps you don't have installed will be skipped automatically.",
+            body: "Bridge will now connect to your apps. macOS will show a series of permission prompts. Tap Allow on each one to let Closedhand work with that app.\n\nThis is a one-time setup. After this, you won't see these prompts again. Apps you don't have installed will be skipped automatically.",
             action: "automation"
         ),
     ]

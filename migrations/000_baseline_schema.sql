@@ -1,4 +1,4 @@
--- ClosedHand — consolidated baseline schema for a fresh self-hosted install.
+-- Closedhand — consolidated baseline schema for a fresh self-hosted install.
 --
 -- This single file creates the entire current schema on vanilla Postgres +
 -- pgvector. It is the canonical schema for a new install; the numbered

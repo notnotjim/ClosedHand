@@ -1,6 +1,6 @@
 // Models on the person's own computer through Ollama: offered by what they
 // can do, and given room to work. Ollama's model list says nothing about
-// abilities and its default window is 4,096 tokens, so ClosedHand asks
+// abilities and its default window is 4,096 tokens, so Closedhand asks
 // Ollama what each model does and shrinks a video's frames to fit.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -76,7 +76,7 @@ async function checkWithOllama({ given, most, role = 'chat' }) {
   } finally { require.cache[wirePath].exports = realWire; global.fetch = realFetch; delete require.cache[require.resolve('../webapp/model-config')]; }
 }
 
-test("the check fails an Ollama chat model whose window can't hold ClosedHand's instructions, and says how to fix it", async () => {
+test("the check fails an Ollama chat model whose window can't hold Closedhand's instructions, and says how to fix it", async () => {
   await assert.rejects(checkWithOllama({ given: 4096, most: 40960 }), /Ollama gives local-model a window of 4,096 tokens[\s\S]*Set Ollama's context length to at least 32,000/);
   await assert.rejects(checkWithOllama({ given: 8192, most: 8192 }), /local-model can take at most 8,192 tokens[\s\S]*Choose a model in Ollama that takes at least 32,000/);
   const ok = await checkWithOllama({ given: 32768, most: 40960 });

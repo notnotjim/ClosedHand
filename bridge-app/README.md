@@ -1,6 +1,6 @@
-# ClosedHand Bridge (macOS app)
+# Closedhand Bridge (macOS app)
 
-The Mac app that lets ClosedHand act on the user's own computer: calendar, files,
+The Mac app that lets Closedhand act on the user's own computer: calendar, files,
 shell, browser, accessibility, and raw input. It connects out to the bot over a
 WebSocket and waits for actions, so it needs no inbound network access.
 
@@ -29,7 +29,7 @@ desktop/notarize.sh webapp/public/download/ClosedHandBridge.dmg
 ```
 
 Without `IDENTITY` the app is ad hoc signed, which only checks that it builds
-(`swift build -c release` alone builds just the executable). The ClosedHand Mac
+(`swift build -c release` alone builds just the executable). The Closedhand Mac
 app carries the same Bridge code, so this download is for Docker setups.
 
 ## Install over an existing copy
@@ -56,7 +56,7 @@ consistent: reading Safari after opening a page in Chrome shows a different
 browser with different sessions, which looks like the user is signed out.
 
 Chrome refuses JavaScript from AppleScript unless a hidden Develop-menu option
-is ticked, and sending users hunting through menus is not something ClosedHand
+is ticked, and sending users hunting through menus is not something Closedhand
 does. `BrowserBridge` treats that refusal as a routing signal instead:
 
 - Reading a page falls back to Chrome's accessibility tree automatically, using

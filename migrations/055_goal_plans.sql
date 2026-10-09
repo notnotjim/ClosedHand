@@ -1,4 +1,4 @@
--- 055_goal_plans.sql: goals become plans ClosedHand helps the person carry out.
+-- 055_goal_plans.sql: goals become plans Closedhand helps the person carry out.
 --
 -- A goal was a line in the preferences list (054). It is now its own record,
 -- shaped by what research shows gets goals done: why it matters (the person's

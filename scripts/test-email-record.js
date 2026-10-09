@@ -1,4 +1,4 @@
-// Every email ClosedHand keeps has one shape, whatever mailbox it came from,
+// Every email Closedhand keeps has one shape, whatever mailbox it came from,
 // so everything that reads mail reads it one way. Outlook's copies used to
 // lack the thread, the account, the attachment list and the web address that
 // Gmail's and IMAP's had, which is why a booking from Outlook mail could not

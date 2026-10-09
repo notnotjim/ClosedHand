@@ -53,7 +53,7 @@ export async function handleRequest(request, env, upstream = fetch) {
     response = await upstream(new Request(request, { redirect: 'manual' }));
     if (!document || !unreachable.has(response.status)) return response;
   } catch (_) {
-    if (!document) return new Response('ClosedHand is temporarily unreachable.', { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    if (!document) return new Response('Closedhand is temporarily unreachable.', { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
   return new Response(request.method === 'HEAD' ? null : offlineHtml, {
     status: 503,

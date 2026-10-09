@@ -1,6 +1,6 @@
 # Automatic recall for connections
 
-ClosedHand uses one ingestion protocol for connected APIs, MCP collections and
+Closedhand uses one ingestion protocol for connected APIs, MCP collections and
 enumerated resources. It keeps useful records in `data_cache`, embeds their
 passages in `data_vectors`, and retrieves them alongside existing sources and
 indexed files before the primary LLM responds.

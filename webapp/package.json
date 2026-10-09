@@ -2,7 +2,7 @@
   "name": "closedhand-webapp",
   "version": "1.0.0",
   "license": "MIT",
-  "description": "ClosedHand onboarding web application",
+  "description": "Closedhand onboarding web application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -109,7 +109,7 @@ async function start() {
       proc = null; url = null;
       if (permanent) recheck = true;
       state = error.code === "ENOENT" ? "unavailable" : "error";
-      lastError = error.code === "ENOENT" ? "Update ClosedHand to use a personal URL." : error.message;
+      lastError = error.code === "ENOENT" ? "Update Closedhand to use a personal URL." : error.message;
       save({ PHONE_ACCESS_URL: null }).catch(e => console.error("[Phone] Could not clear address:", e.message));
       if (wanted && state !== "unavailable") {
         clearTimeout(retryTimer);

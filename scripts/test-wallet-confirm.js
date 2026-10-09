@@ -1,5 +1,5 @@
 // The Wallet asks for the dashboard password again before anything that lets
-// ClosedHand spend more, or more without asking: adding a card, raising or
+// Closedhand spend more, or more without asking: adding a card, raising or
 // removing a limit, turning off "ask me before every purchase", or raising
 // the amount it may spend without asking. Looking, tightening a rule and
 // removing a card never ask. One check trusts that browser for five minutes.
@@ -13,7 +13,7 @@ const server = read("webapp/server.js");
 const dashboard = read("webapp/views/dashboard.html");
 const fn = (src, name) => { const a = src.indexOf(`function ${name}(`); return src.slice(a, src.indexOf("\n}\n", a) + 3); };
 
-test("only a change that lets ClosedHand spend more, or more without asking, counts as loosening", () => {
+test("only a change that lets Closedhand spend more, or more without asking, counts as loosening", () => {
   const { loosensLimits } = vm.runInNewContext(fn(server, "loosensLimits") + "\n({ loosensLimits })");
   const now = { per_purchase: 100, per_day: 200, always_ask: true };
   assert.equal(loosensLimits(now, { per_purchase: 150, per_day: 200, always_ask: true }), true, "a higher limit");

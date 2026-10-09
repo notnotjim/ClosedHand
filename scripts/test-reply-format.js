@@ -80,7 +80,7 @@ test("the web chat prompt puts dashboard links on words and names memory as the 
   for (const name of ["Pinned facts", "Context Notes", "<h2>Preferences</h2>", ">Goals</button>"]) assert.ok(dashboard.includes(name), `the dashboard still says ${name}`);
 });
 
-test("a reopened conversation shows what was said, not ClosedHand's bookkeeping", () => {
+test("a reopened conversation shows what was said, not Closedhand's bookkeeping", () => {
   const start = page.indexOf("  function shownInThread(messages) {");
   const box = {};
   vm.runInNewContext(page.slice(start, page.indexOf("\n  }\n", start) + 4) + "\nthis.f = shownInThread;", box);

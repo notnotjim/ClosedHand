@@ -1,6 +1,6 @@
 # Assistant email
 
-Settings contains an optional email address for ClosedHand itself, using its existing name. This is separate from personal inboxes in Connections. Confirm the Google account you will email it from. The address stays the same when you rename ClosedHand. Managed address activation waits for the delivery service to have production approval.
+Settings contains an optional email address for Closedhand itself, using its existing name. This is separate from personal inboxes in Connections. Confirm the Google account you will email it from. The address stays the same when you rename Closedhand. Managed address activation waits for the delivery service to have production approval.
 
 Email it directly or forward a message to make a private request. Private replies go only to the verified owner. Copying it into an email does not give another participant access to your private information. In Settings, or by asking in a private email, approve the conversation's task, participants and exact details it may share. That approval lasts seven days. Guests must address the assistant directly to request replies. They receive only replies based on the shared brief; bookings, purchases and other new actions require the owner through the normal private task engine. A separate custom mailbox is not implemented.
 
@@ -30,7 +30,7 @@ an arbitrary Reply-To or a CC recipient. Disconnected accounts and accounts mark
 for reconnection no longer supply additional owner identities. The separately
 verified account used to enable assistant email remains an owner address.
 
-For delegated correspondence, ClosedHand drafts the purpose and permitted details
+For delegated correspondence, Closedhand drafts the purpose and permitted details
 from the owner's request and returns the existing confirmation privately. The
 owner need not manually fill in the Settings form. Shared replies currently go
 to each approved sender individually; group reply-all is not yet supported.

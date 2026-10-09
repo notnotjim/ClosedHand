@@ -31,8 +31,8 @@ test('matters are saved without em dashes, and a goal that ends closes its matte
   assert.match(server, /if \(!error && \(patch\.status === "achieved" \|\| patch\.status === "dropped"\)\) await closeGoalMatters\(userId, goal\.title\);/);
 });
 
-test('the name ClosedHand uses can be changed in Preferences', () => {
-  assert.match(dash, /<label for="preferred-name">ClosedHand calls you<\/label>/);
+test('the name Closedhand uses can be changed in Preferences', () => {
+  assert.match(dash, /<label for="preferred-name">Closedhand calls you<\/label>/);
   assert.match(dash, /fetch\('\/api\/settings\/preferred-name'/);
   assert.match(server, /app\.post\("\/api\/settings\/preferred-name"/);
   assert.match(server, /if \(!name \|\| name\.length > 40\)/);

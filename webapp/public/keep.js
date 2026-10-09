@@ -64,7 +64,7 @@
     catch (e) { message(e.message, true); } finally { $('send').disabled = false; }
   };
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); prompt = e; renderDevice(); });
-  $('install').onclick = async () => { if (!canInstall()) return; const p = prompt; prompt = null; renderDevice(); await p.prompt(); const answer = await p.userChoice; message(answer.outcome === 'accepted' ? 'Follow your browser’s confirmation to finish adding ClosedHand.' : 'You can add ClosedHand later from your browser’s menu.'); };
-  window.addEventListener('appinstalled', () => { appInstalled = true; prompt = null; renderDevice(); message('ClosedHand has been added.'); });
+  $('install').onclick = async () => { if (!canInstall()) return; const p = prompt; prompt = null; renderDevice(); await p.prompt(); const answer = await p.userChoice; message(answer.outcome === 'accepted' ? 'Follow your browser’s confirmation to finish adding Closedhand.' : 'You can add Closedhand later from your browser’s menu.'); };
+  window.addEventListener('appinstalled', () => { appInstalled = true; prompt = null; renderDevice(); message('Closedhand has been added.'); });
   load();
 })();

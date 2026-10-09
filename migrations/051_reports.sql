@@ -1,4 +1,4 @@
--- Reports: a fuller document ClosedHand writes only when one helps the
+-- Reports: a fuller document Closedhand writes only when one helps the
 -- person (they asked for a document, it is something to keep, share or come
 -- back to, or it needs layout chat cannot show). The chat answer is always
 -- complete without it. A report made by a background run goes with that run.

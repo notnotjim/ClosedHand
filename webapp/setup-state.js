@@ -85,9 +85,9 @@ async function getSetupState() {
   // An account that needs signing in again still finished this step: setup
   // and the dashboard stay open, and its card asks for the sign-in.
   const accountSaved = google || microsoft || signInAgain.some((s) => s.startsWith("google") || s === "microsoft" || s.startsWith("microsoft_extra_"));
-  // Signing in by code through ClosedHand's app needs no setup of its own;
+  // Signing in by code through Closedhand's app needs no setup of its own;
   // an app of the person's own in .env is used by the dashboard instead.
-  // Google through ClosedHand's own app: only in builds that carry one, and
+  // Google through Closedhand's own app: only in builds that carry one, and
   // only where Google can hand the sign-in back to this computer.
   const googleApp = require("./google-app");
   const googleQuick = !!googleApp.app() && googleApp.canReturnTo(process.env.BASE_URL || "http://localhost:3000");
@@ -117,7 +117,7 @@ async function getSetupState() {
 
   return {
     // Ready = a database, a model provider, a password and a Google or
-    // Microsoft account (or both). Without mail and calendar ClosedHand is a
+    // Microsoft account (or both). Without mail and calendar Closedhand is a
     // chat window round a model, so one of them is part of the floor, not an
     // extra. Without a password the dashboard is open to anyone on the same
     // network, so it is part of the floor too. Chat apps can follow.

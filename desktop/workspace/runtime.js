@@ -24,7 +24,7 @@ function validateManifest(manifest) {
 function openDownload(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (new URL(url).protocol !== 'https:' || redirects > 5) return reject(new Error('Unsafe Workspace download redirect.'));
-    const request = https.get(url, { headers: { 'User-Agent': 'ClosedHand-Workspace' }, timeout: 30000 }, response => {
+    const request = https.get(url, { headers: { 'User-Agent': 'Closedhand-Workspace' }, timeout: 30000 }, response => {
       if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
         response.resume();
         resolve(openDownload(new URL(response.headers.location, url).href, redirects + 1));

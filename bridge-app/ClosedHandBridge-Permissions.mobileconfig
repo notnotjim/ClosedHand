@@ -103,13 +103,13 @@
         </dict>
     </array>
     <key>PayloadDescription</key>
-    <string>Grants ClosedHand Bridge access to Accessibility, Screen Recording, Contacts, Calendar, Reminders, and Apple Events. Install this profile to skip manual permission prompts.</string>
+    <string>Grants Closedhand Bridge access to Accessibility, Screen Recording, Contacts, Calendar, Reminders, and Apple Events. Install this profile to skip manual permission prompts.</string>
     <key>PayloadDisplayName</key>
-    <string>ClosedHand Bridge Permissions</string>
+    <string>Closedhand Bridge Permissions</string>
     <key>PayloadIdentifier</key>
     <string>com.closedhand.bridge.permissions</string>
     <key>PayloadOrganization</key>
-    <string>ClosedHand</string>
+    <string>Closedhand</string>
     <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadUUID</key>

@@ -21,15 +21,15 @@ const marks = body => JSON.stringify(body).split('"cache_control"').length - 1;
 
 test('a first message: the system prompt (and the tools before it) is marked, the conversation is not', async () => {
   const sent = capture({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} });
-  await wire.request(anthropic, { system: 'You are ClosedHand.', messages: [{ role: 'user', content: 'hi' }], tools });
+  await wire.request(anthropic, { system: 'You are Closedhand.', messages: [{ role: 'user', content: 'hi' }], tools });
   const { body } = sent[0];
-  assert.deepEqual(body.system, [{ type: 'text', text: 'You are ClosedHand.', cache_control: { type: 'ephemeral' } }]);
+  assert.deepEqual(body.system, [{ type: 'text', text: 'You are Closedhand.', cache_control: { type: 'ephemeral' } }]);
   assert.equal(marks(body), 1);
 });
 test('mid-task, after tool results, the conversation so far is marked too, without touching the caller\'s messages', async () => {
   const sent = capture({ content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} });
   const messages = toolLoop();
-  await wire.request(anthropic, { system: 'You are ClosedHand.', messages, tools });
+  await wire.request(anthropic, { system: 'You are Closedhand.', messages, tools });
   const last = sent[0].body.messages.at(-1).content.at(-1);
   assert.deepEqual(last.cache_control, { type: 'ephemeral' });
   assert.equal(marks(sent[0].body), 2);
@@ -54,9 +54,9 @@ test('OpenAI-style services and Gemini get the same prompt with no caching marks
     [{ backend: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', apiKey: 'k', model: 'gemini-x' }, { candidates: [{ content: { parts: [{ text: 'ok' }] }, finishReason: 'STOP' }] }],
   ]) {
     const sent = capture(reply);
-    await wire.request(conn, { system: [{ type: 'text', text: 'You are ClosedHand.', cache_control: { type: 'ephemeral' } }], messages: toolLoop(), tools });
+    await wire.request(conn, { system: [{ type: 'text', text: 'You are Closedhand.', cache_control: { type: 'ephemeral' } }], messages: toolLoop(), tools });
     assert.equal(marks(sent[0].body), 0, conn.backend);
-    assert.ok(JSON.stringify(sent[0].body).includes('You are ClosedHand.'), conn.backend);
+    assert.ok(JSON.stringify(sent[0].body).includes('You are Closedhand.'), conn.backend);
   }
 });
 
@@ -68,7 +68,7 @@ const vm = require('node:vm');
 const engineSrc = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'lib', 'engine.js'), 'utf8');
 const box = {};
 vm.runInNewContext(engineSrc.slice(engineSrc.indexOf('const CACHE_MARK = '), engineSrc.indexOf('\n}\n', engineSrc.indexOf('function withTurnContext(')) + 3) + '\nthis.place = withTurnContext;', box);
-const SYSTEM = [{ type: 'text', text: 'You are ClosedHand.', cache_control: { type: 'ephemeral' } }];
+const SYSTEM = [{ type: 'text', text: 'You are Closedhand.', cache_control: { type: 'ephemeral' } }];
 const contextFor = (minute) => `Current time: 09:0${minute}. LANGUAGE: reply in English.`;
 const firstMessage = [{ role: 'user', content: 'Book the usual table' }, { role: 'assistant', content: 'Done, 7pm at Rosa\'s.' }, { role: 'user', content: 'Thanks, and remind me at 6' }];
 const nextMessage = [...firstMessage, { role: 'assistant', content: 'Reminder set for 6pm.' }, { role: 'user', content: 'What about Friday?' }];
@@ -79,7 +79,7 @@ test('the per-message part goes in front of the newest request, the user\'s word
   assert.equal(JSON.stringify(nextMessage), before);
   const last = placed.at(-1);
   assert.equal(last.role, 'user');
-  assert.match(last.content[0].text, /^\[ClosedHand context for this message, not written by the user\]\nCurrent time: 09:01/);
+  assert.match(last.content[0].text, /^\[Closedhand context for this message, not written by the user\]\nCurrent time: 09:01/);
   assert.equal(JSON.stringify(last.content.at(-1)), JSON.stringify({ type: 'text', text: 'What about Friday?' }));
   assert.equal(JSON.stringify(placed.at(-2).content.at(-1).cache_control), JSON.stringify({ type: 'ephemeral' }), 'the end of the earlier conversation is marked');
   assert.equal(placed.slice(0, -2).some(m => JSON.stringify(m).includes('cache_control')), false);
@@ -92,7 +92,7 @@ test('mid-task the context stays on the request, after tool calls, and Anthropic
   await wire.request(anthropic, { system: SYSTEM, messages: box.place(loop, contextFor(1)), tools });
   const body = sent[0].body;
   assert.equal(marks(body), 3, 'system, the earlier conversation, the step so far');
-  assert.match(body.messages[2].content[0].text, /ClosedHand context/);
+  assert.match(body.messages[2].content[0].text, /Closedhand context/);
   assert.equal(body.system.length, 1, 'the system prompt alone');
 });
 
@@ -115,7 +115,7 @@ test('two messages in a row share the system prompt and the earlier conversation
     assert.deepEqual(turns(b).slice(0, shared), turns(a).slice(0, shared), conn.backend);
     assert.deepEqual(strip(b.system || b.systemInstruction), strip(a.system || a.systemInstruction), conn.backend);
     const lastTurn = JSON.stringify(turns(b).at(-1));
-    assert.ok(lastTurn.indexOf('ClosedHand context') < lastTurn.indexOf('What about Friday?'), conn.backend + ': the user\'s words come last');
+    assert.ok(lastTurn.indexOf('Closedhand context') < lastTurn.indexOf('What about Friday?'), conn.backend + ': the user\'s words come last');
     assert.ok(!JSON.stringify(turns(b).slice(0, -1)).includes('09:07'), conn.backend + ': the clock is only on the newest request');
     if (conn.backend !== 'anthropic') assert.equal(marks(b), 0, conn.backend);
   }

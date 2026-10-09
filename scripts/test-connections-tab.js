@@ -87,7 +87,7 @@ test("the tab is laid out as Connected, then Add a connection", () => {
     assert.ok(add.includes(want), want);
   }
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
-  assert.match(dashboard, /Connect your Mac and choose what ClosedHand has access to/);
+  assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
   assert.match(dashboard, /placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill"/, "one box takes a server or a skill");
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");

@@ -199,7 +199,7 @@ test('changing support back to chat cancels pending provider loading', async () 
   assert.equal(ui.region('background').hidden, true);
 });
 
-// A localhost provider is not necessarily one of ClosedHand's bundled models.
+// A localhost provider is not necessarily one of Closedhand's bundled models.
 test('only bundled recall and ranking models receive the built-in badge', async () => {
   const ui = await mount(() => ({ config: { connections: { primary: { provider: 'custom' } } }, activeModels: [
     { label: 'Chat model', model: 'local:primary', provider: 'On your computer' },
@@ -260,7 +260,7 @@ test('the panel says how videos are handled, from what the checked models can do
   const cases = [
     [{ tools: true, vision: true, video: true, videoLinks: true }, { connection: 'primary', model: 'chat', capabilities: { vision: true } }, /^Watches them whole, and opens YouTube links itself$/],
     [{ tools: true, vision: true }, { connection: 'primary', model: 'chat', capabilities: { vision: true } }, /^Sees frames and reads what's said$/],
-    [{ tools: true, vision: false }, { connection: 'vision', model: 'grok-4.7', capabilities: { vision: true } }, /^grok-4\.7 via xAI sees frames, and ClosedHand writes out what's said$/],
+    [{ tools: true, vision: false }, { connection: 'vision', model: 'grok-4.7', capabilities: { vision: true } }, /^grok-4\.7 via xAI sees frames, and Closedhand writes out what's said$/],
     [{ tools: true, vision: false }, null, /^Reads what's said only, since images are off$/],
   ];
   for (const [chatCap, vision, expected] of cases) {
@@ -277,5 +277,5 @@ test("an Ollama image model with a small window is shown with what that means fo
     s.config.roles.vision = { connection: 'vision', model: 'local-vl', capabilities: { vision: true, video: false, contextWindow: 4096 } }; return s; };
   const ui = await mount((call) => call.path === '' ? respond() : call.path === '/models' ? catalog : { config: null });
   await ui.timers();
-  assert.match(panel(ui)('Videos'), /^local-vl via .* sees frames, and ClosedHand writes out what's said\. Ollama gives it 4,096 tokens, so only a few frames fit; raise its context length for more$/);
+  assert.match(panel(ui)('Videos'), /^local-vl via .* sees frames, and Closedhand writes out what's said\. Ollama gives it 4,096 tokens, so only a few frames fit; raise its context length for more$/);
 });

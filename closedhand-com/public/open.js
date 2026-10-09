@@ -12,9 +12,9 @@
   // The page shows one screen, whichever fits the visitor (see
   // navigation.openScreen): on the way to their personal URL ("found"),
   // signed in without one ("not-set-up"), not signed in ("find", with "New
-  // to ClosedHand?" under it), or, with no sign of ClosedHand at all, how to
+  // to Closedhand?" under it), or, with no sign of Closedhand at all, how to
   // get it ("new"). Nothing shows until it knows which. Where the page can't
-  // see ClosedHand here, a plain link opens it on this computer.
+  // see Closedhand here, a plain link opens it on this computer.
   $('local-open').href = navigation.LOCAL + (next === '/' ? '/' : next);
   function show(screen) {
     $('intro-new').hidden = screen !== 'new';
@@ -25,7 +25,7 @@
     $('local-link').hidden = !['new', 'find', 'not-set-up'].includes(screen);
   }
   // A personal URL this device has opened from here before: a sign they
-  // have ClosedHand, and the address to offer again. Kept in this browser
+  // have Closedhand, and the address to offer again. Kept in this browser
   // only, and only ever an address.
   const KNOWN = 'closedhand-personal-url';
   const remember = url => { try { localStorage.setItem(KNOWN, new URL(url).origin); } catch (_) {} };
@@ -46,13 +46,13 @@
     location.assign(next === '/' ? url : new URL(next, url).href);
   });
 
-  // On the computer running ClosedHand, open it there. Docker uses 3000; the
+  // On the computer running Closedhand, open it there. Docker uses 3000; the
   // Mac app takes 3000 or the next free port beside a Docker one. Phones and
   // tablets never run it. Chrome asks once before a website may look for
   // programs on this computer, and only when something is running there
   // (checked in Chrome 2026-09-26: with nothing listening the request just
-  // fails, no question). Arriving here means "open my ClosedHand", so it
-  // asks now; allowing it opens ClosedHand straight away, and after that
+  // fails, no question). Arriving here means "open my Closedhand", so it
+  // asks now; allowing it opens Closedhand straight away, and after that
   // Chrome remembers and it is automatic.
   const desktop = !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   const PORTS = [3000, 3002, 3001, 3003, 3004, 3005];
@@ -62,7 +62,7 @@
       .then(d => (d && d.closedhand === true ? 'http://localhost:' + port : Promise.reject(new Error('not here'))));
     return Promise.any(PORTS.map(ask)).catch(() => null);
   }
-  function openLocal(base) { show(null); say('Opening ClosedHand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
+  function openLocal(base) { show(null); say('Opening Closedhand on this computer…'); location.replace(base + (next === '/' ? '/' : next)); }
   async function permission() {
     if (!navigator.permissions?.query) return null;
     for (const name of ['loopback-network', 'local-network-access']) {
@@ -73,9 +73,9 @@
   // Settles when the look on this computer is over: the requests that make
   // Chrome ask have all come back (or there were none to make).
   let probed = Promise.resolve();
-  // Settles quickly: where ClosedHand answers on this computer, or null.
+  // Settles quickly: where Closedhand answers on this computer, or null.
   // While Chrome is still asking it settles null, so a personal URL still
-  // opens; allowing afterwards opens ClosedHand here instead.
+  // opens; allowing afterwards opens Closedhand here instead.
   const lookingHere = (async () => {
     if (!desktop || !automatic) return null;
     const status = await permission();
@@ -88,7 +88,7 @@
       if (found && automatic) openLocal(found);
     }, { once: true });
     // These requests are what make Chrome ask. Ports with nothing on them
-    // fail at once; one with ClosedHand waits for the answer. If none waits,
+    // fail at once; one with Closedhand waits for the answer. If none waits,
     // or the question is closed unanswered, the note goes away.
     probed = Promise.allSettled(PORTS.map(port => fetch('http://localhost:' + port + '/closedhand-here', { cache: 'no-store' })))
       .then(() => { if (status.state === 'prompt') $('here-note').hidden = true; });
@@ -107,7 +107,7 @@
       const found = navigation.registeredAddress(data.url);
       const who = data.email || 'your ' + providerName(data.provider) + ' account';
       findNote = data.available ? '' : 'Looking up personal URLs isn’t working right now. You can still type yours.';
-      // No sign of ClosedHand: not signed in, not arriving from it, never
+      // No sign of Closedhand: not signed in, not arriving from it, never
       // opened from this device, and nothing answering on this computer.
       // Chrome still asking after a moment means something is running here,
       // so that is not a newcomer either.
@@ -132,8 +132,8 @@
         $('found-open').href = url;
         $('found-who').textContent = 'Linked to ' + who;
         remember(data.url);
-        say(automatic ? 'Opening your ClosedHand…' : '');
-        // On the computer running ClosedHand, opening it there comes first.
+        say(automatic ? 'Opening your Closedhand…' : '');
+        // On the computer running Closedhand, opening it there comes first.
         if (automatic && !(await lookingHere) && automatic) location.replace(url);
       } else {
         show('not-set-up');

@@ -18,7 +18,7 @@ struct MenuView: View {
                 if let url = Bundle.module.url(forResource: "logo", withExtension: "png"), let img = NSImage(contentsOf: url) {
                     Image(nsImage: img).resizable().frame(width: 20, height: 20).opacity(0.9)
                 }
-                Text("ClosedHand").font(.headline)
+                Text("Closedhand").font(.headline)
                 Spacer()
                 if bridge.isActive {
                     Image(systemName: "eye.fill").foregroundColor(.orange).font(.caption).symbolEffect(.pulse)
@@ -30,7 +30,7 @@ struct MenuView: View {
             if bridge.isActive {
                 HStack(spacing: 4) {
                     Circle().fill(.orange).frame(width: 6, height: 6)
-                    Text("ClosedHand is using: \(bridge.lastAction)").font(.caption2).foregroundColor(.orange)
+                    Text("Closedhand is using: \(bridge.lastAction)").font(.caption2).foregroundColor(.orange)
                 }
             }
 
@@ -39,7 +39,7 @@ struct MenuView: View {
             SectionLabel(text: "RUNNING HERE")
             VStack(alignment: .leading, spacing: 5) {
                 row("Database", stack.database)
-                row("ClosedHand", stack.bot)
+                row("Closedhand", stack.bot)
                 row("Dashboard", stack.web)
                 row("Sandbox computer", stack.agent)
                 row("This Mac", bridge.isConnected ? .running : (stack.web == .running ? .starting : .stopped))
@@ -48,7 +48,7 @@ struct MenuView: View {
             Button(action: { stack.openDashboard() }) {
                 HStack(spacing: 6) {
                     Image(systemName: "safari").font(.system(size: 11))
-                    Text("Open ClosedHand").font(.subheadline)
+                    Text("Open Closedhand").font(.subheadline)
                     Spacer()
                     if !stack.address.isEmpty { Text(stack.address).font(.caption2.monospaced()).foregroundColor(.secondary) }
                 }
@@ -120,7 +120,7 @@ struct MenuView: View {
 
             HStack {
                 Spacer()
-                Button("Quit ClosedHand") { NSApp.terminate(nil) }
+                Button("Quit Closedhand") { NSApp.terminate(nil) }
                     .font(.caption).foregroundColor(.secondary).keyboardShortcut("q")
             }
         }
@@ -132,7 +132,7 @@ struct MenuView: View {
             Button("Cancel", role: .cancel) {}
             Button("Enable") { bridge.unrestrictedMode = true; bridge.saveSettings() }
         } message: {
-            Text("ClosedHand will be able to access your files, control your browser, and run terminal commands. You can turn this off at any time.")
+            Text("Closedhand will be able to access your files, control your browser, and run terminal commands. You can turn this off at any time.")
         }
     }
 

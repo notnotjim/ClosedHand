@@ -1,6 +1,6 @@
-// The ClosedHand account page: which sign-in it is, the personal URL it
+// The Closedhand account page: which sign-in it is, the personal URL it
 // holds, and deleting it. Deleting here can't reach the computer running
-// ClosedHand, so it says plainly what stays there.
+// Closedhand, so it says plainly what stays there.
 (() => {
   const $ = id => document.getElementById(id);
   const say = (text, warn) => { $('status').textContent = text || ''; $('status').classList.toggle('warn', !!warn); };
@@ -17,7 +17,7 @@
     if (!data.signedIn) return show('signed-out');
     show('details');
     $('acct-address').textContent = data.address || 'No personal URL yet';
-    $('acct-address-note').textContent = data.address ? 'Your personal URL' : 'Setup on your computer gives ClosedHand one.';
+    $('acct-address-note').textContent = data.address ? 'Your personal URL' : 'Setup on your computer gives Closedhand one.';
     $('acct-who').textContent = providerName(data.provider) + (data.email ? ': ' + data.email : '');
   }
   $('delete').addEventListener('click', () => {
@@ -26,8 +26,8 @@
     if (data.address) {
       const name = document.createElement('strong');
       name.className = 'nowrap'; name.textContent = data.address;
-      text.append('This deletes your ClosedHand account. ', name, ' stops working and closedhand.com forgets your sign-in. Nobody can take the name for six months, and nothing links it to you. ClosedHand keeps everything on your computer; to delete that too, use Delete account in its Settings.');
-    } else text.textContent = 'This deletes your ClosedHand account, and closedhand.com forgets your sign-in.';
+      text.append('This deletes your Closedhand account. ', name, ' stops working and closedhand.com forgets your sign-in. Nobody can take the name for six months, and nothing links it to you. Closedhand keeps everything on your computer; to delete that too, use Delete account in its Settings.');
+    } else text.textContent = 'This deletes your Closedhand account, and closedhand.com forgets your sign-in.';
     $('delete').hidden = true; $('confirm').hidden = false; $('delete-go').focus();
   });
   $('delete-cancel').addEventListener('click', () => { $('confirm').hidden = true; $('delete').hidden = false; $('delete').focus(); });

@@ -1,5 +1,5 @@
 // closedhand.com: the public website, personal URLs and bug report intake
-// for copies of ClosedHand. It holds no one's mail, files or conversations.
+// for copies of Closedhand. It holds no one's mail, files or conversations.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -36,7 +36,7 @@ function page(name) {
 }
 
 // request is the fetch used to reach Google, Microsoft and copies of
-// ClosedHand; tests pass a stand-in. startMailWorker starts the assistant
+// Closedhand; tests pass a stand-in. startMailWorker starts the assistant
 // email worker (it does nothing unless email is switched on); tests pass a
 // stand-in too.
 function createApp({ db, env = process.env, request = fetch, startMailWorker = require('./lib/assistant-mail-worker').start }) {

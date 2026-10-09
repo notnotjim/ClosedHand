@@ -1,4 +1,4 @@
-// Re-running the installer is how ClosedHand updates. Each update replaces its
+// Re-running the installer is how Closedhand updates. Each update replaces its
 // images, and the replaced ones used to stay on disk for good (3 to 5 GB a
 // time) until the disk filled. The installer notes the images it runs on
 // before the update and removes exactly those once the new version answers.

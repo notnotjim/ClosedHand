@@ -101,7 +101,7 @@ test("a habit counts this week, with no streak to break", async () => {
     await goals.recordProgress("u1", { id: g.id, action: "habit_done" });
     const [active] = await goals.activeGoals("u1", "Europe/Lisbon");
     assert.equal(active.this_week, 2);
-    assert.match(goals.promptLines([active])[0], /^- \[goal [0-9a-f]{8}, ongoing habit\] Spanish most days\. Habit: after breakfast, 15 minutes on Duolingo, 5x a week; 2 so far this week/, "ClosedHand knows which kind it is");
+    assert.match(goals.promptLines([active])[0], /^- \[goal [0-9a-f]{8}, ongoing habit\] Spanish most days\. Habit: after breakfast, 15 minutes on Duolingo, 5x a week; 2 so far this week/, "Closedhand knows which kind it is");
   });
 });
 
@@ -157,7 +157,7 @@ test("check-ins come at the chosen time, once, and say where things stand", asyn
   assert.equal(prompts.length, 1, "only the goal that is due checks in");
   assert.match(prompts[0], /\[goal aaaaaaaa\] Run 5k\. Next: First easy run/);
   assert.match(prompts[0], /no judgement and no guilt: suggest a smaller next step or a fresh start/);
-  assert.deepEqual(sent.map((s) => s.slice(0, 2)), [["telegram", "chat-1"]], "sent where ClosedHand's other updates go");
+  assert.deepEqual(sent.map((s) => s.slice(0, 2)), [["telegram", "chat-1"]], "sent where Closedhand's other updates go");
   const byId = Object.fromEntries(tables.goals.map((g) => [g.id, g]));
   assert.equal(byId["aaaaaaaa-due"].check_in.next_at, "2026-10-18T12:00:00.000Z", "moved to next Sunday before running, so never sent twice");
   assert.equal(byId["bbbbbbbb-later"].check_in.next_at, "2026-10-14T12:00:00.000Z");
@@ -166,7 +166,7 @@ test("check-ins come at the chosen time, once, and say where things stand", asyn
   assert.deepEqual((tables.goal_events || []).map((e) => [e.goal_id, e.kind]), [["aaaaaaaa-due", "check_in"]], "the check-in is in the goal's history");
 });
 
-test("ClosedHand sets goals up the researched way and records progress from the person's own words", () => {
+test("Closedhand sets goals up the researched way and records progress from the person's own words", () => {
   const defs = require("../lib/tools/definitions.js");
   const tools = defs.TOOLS || defs.tools || Object.values(defs).find(Array.isArray);
   const set = tools.find((t) => t.name === "goal_set"), progress = tools.find((t) => t.name === "goal_progress");
@@ -189,9 +189,9 @@ test("ClosedHand sets goals up the researched way and records progress from the 
 test("goals have their own tab, after Schedules, that says how it helps", () => {
   const dashboard = read("webapp/views/dashboard.html");
   assert.match(dashboard, /data-tab="automations"[^\n]*>Schedules<\/button>\n\s*<button class="tab" data-tab="goals" onclick="switchTab\('goals'\)">Goals<\/button>/);
-  assert.match(dashboard, /ClosedHand helps you reach your goals with methods proven in peer-reviewed research\.<br>Tell ClosedHand a goal or add one here\./);
+  assert.match(dashboard, /Closedhand helps you reach your goals with methods proven in peer-reviewed research\.<br>Tell Closedhand a goal or add one here\./);
   const tab = read("webapp/public/goals.js");
-  for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "ClosedHand"}`']) assert.ok(tab.includes(label), label);
+  for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "Closedhand"}`']) assert.ok(tab.includes(label), label);
   assert.match(dashboard, /id="goal-new-milestone"[\s\S]*id="goal-new-done"[\s\S]*id="goal-new-by"[\s\S]*id="goal-new-habit" hidden[\s\S]*id="goal-new-per"[\s\S]*id="goal-new-cue"/, "each kind asks the one thing it needs");
   assert.match(read("webapp/server.js"), /if \(shape === "habit"\) fields\.habit = \{/, "a habit made on the dashboard counts its week from the start");
   assert.match(tab, /\(state\.achieved \|\| \[\]\)\.forEach\(\(g\) => done\.append\(card\(g\)\)\)/, "an achieved goal opens like any other");

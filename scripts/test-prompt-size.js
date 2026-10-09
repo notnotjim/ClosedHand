@@ -84,7 +84,7 @@ test("a short social message gets the short prompt, which keeps their facts and 
   asSam();
   const quick = engine.buildQuickSystemPrompt();
   assert.ok(quick.length <= BUDGET.quick, `quick prompt is ${quick.length} characters, budget ${BUDGET.quick}`);
-  assert.match(quick, /You are ClosedHand, Sam's personal AI/);
+  assert.match(quick, /You are Closedhand, Sam's personal AI/);
   assert.match(quick, /PINNED FACTS/);
   assert.match(quick, /Sam is allergic to peanuts/);
   assert.match(quick, /YOUR RULES \(set by this user, follow these always\):\n- Never use emojis/);

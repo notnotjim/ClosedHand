@@ -25,7 +25,7 @@ function candidates(text) {
   return [...found.values()].slice(0,12);
 }
 async function readPublic(url, fetcher) {
-  const response = await fetcher(url, {redirect:'error',signal:AbortSignal.timeout(15000),headers:{Accept:'application/vnd.github.raw+json','User-Agent':'ClosedHand'}});
+  const response = await fetcher(url, {redirect:'error',signal:AbortSignal.timeout(15000),headers:{Accept:'application/vnd.github.raw+json','User-Agent':'Closedhand'}});
   if (!response.ok) throw new Error(response.status === 429 || response.status === 403
     ? 'GitHub is limiting requests. Try again shortly, or paste the connection configuration.'
     : 'Could not read this public GitHub file. Check the link, or paste its connection configuration.');

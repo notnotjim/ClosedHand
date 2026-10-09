@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Refuse to push details from your own ClosedHand: booking references, the
+// Refuse to push details from your own Closedhand: booking references, the
 // names of hotels and trips, flight codes, page and task ids, your name and
 // email, the addresses that write to you. Tests and examples written while
 // fixing a real bug tend to copy the real case; this compares what is about
 // to be pushed (the added lines and the commit messages) with what your own
-// ClosedHand database holds, and lists every match so it can be swapped for an
+// Closedhand database holds, and lists every match so it can be swapped for an
 // invented value of the same shape before the push goes.
 //
 // Reads the database of the Docker setup on this computer through `docker
@@ -135,10 +135,10 @@ function main() {
     catch { range = "origin/main..HEAD"; }
   }
   const rows = readOwnData();
-  if (!rows) { console.log(`OK: no local ClosedHand database (${CONTAINER}) to compare against, skipped.`); return; }
+  if (!rows) { console.log(`OK: no local Closedhand database (${CONTAINER}) to compare against, skipped.`); return; }
   const hits = findMatches(distinctive(rows), outgoing(range));
-  if (!hits.length) { console.log("OK: nothing from your own ClosedHand in what is being pushed."); return; }
-  console.error("Details from your own ClosedHand are about to be pushed. Swap each for an invented value of the same shape:");
+  if (!hits.length) { console.log("OK: nothing from your own Closedhand in what is being pushed."); return; }
+  console.error("Details from your own Closedhand are about to be pushed. Swap each for an invented value of the same shape:");
   for (const h of hits) console.error(`  ${h.where}: ${h.kind} "${h.value}"`);
   process.exitCode = 1;
 }

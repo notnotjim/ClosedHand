@@ -1,4 +1,4 @@
-// Speech to text runs on the computer running ClosedHand, in its own process
+// Speech to text runs on the computer running Closedhand, in its own process
 // like the voice, and is unloaded when idle. The model files are pinned and
 // checked at build time; nothing is fetched while it runs.
 const { test } = require('node:test');

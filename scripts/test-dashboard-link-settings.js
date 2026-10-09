@@ -188,7 +188,7 @@ test("the optional dashboard QR encodes the same address as Copy while preservin
   await handler({ query: { destination: "//untrusted.example" } }, response);
   assert.equal(encoded, address + "/keep");
 });
-test("the dashboard offers a personal URL to a ClosedHand without one, and nothing more", async () => {
+test("the dashboard offers a personal URL to a Closedhand without one, and nothing more", async () => {
   const code = region(html, "    async function loadPersonalUrlPrompt()", "    async function loadScopeWarnings()");
   const els = {}, calls = [];
   const el = id => els[id] ||= { hidden: true, scrollIntoView() {} };
@@ -216,7 +216,7 @@ test("the dashboard offers a personal URL to a ClosedHand without one, and nothi
   assert.doesNotMatch(source, /PHONE_ADDRESS_NOTICE|api\/phone\/notice/, "no start-up offer for existing installs");
 });
 
-// Settings > Account: the ClosedHand account, and Delete account.
+// Settings > Account: the Closedhand account, and Delete account.
 function accountPage(respond) {
   const elements = {};
   const el = id => elements[id] ||= { id, hidden: true, disabled: false, textContent: "", dataset: {}, classList: { add() {}, remove() {} },
@@ -231,17 +231,17 @@ function accountPage(respond) {
   vm.runInContext(region(html, "    function cancelAccountAction(action)", "    function switchTab(tabName)"), state);
   return { state, el, calls };
 }
-test("Settings > Account says what the ClosedHand account holds, and Delete account says exactly what goes", async () => {
+test("Settings > Account says what the Closedhand account holds, and Delete account says exactly what goes", async () => {
   const withAccount = accountPage(() => ({ body: { account: { provider: "google", email: "a@example.com", url: "https://amber-fox-42.closedhand.ai" } } }));
   await withAccount.state.loadAccountSummary();
   assert.equal(withAccount.el("account-summary").hidden, false);
   assert.equal(withAccount.el("account-summary-text").textContent,
     "Signed in withGoogle \u00b7 a@example.comUsed forYour personal URL, amber-fox-42.closedhand.aiclosedhand.com storesYour email and nothing elseYour dataStays on your own computer", "labelled facts, not a sentence");
-  assert.match(withAccount.el("delete-account-text").textContent, /^This deletes your ClosedHand account: amber-fox-42\.closedhand\.ai stops working and closedhand\.com forgets your sign-in\. It also permanently deletes everything ClosedHand keeps for you on your own computer/);
+  assert.match(withAccount.el("delete-account-text").textContent, /^This deletes your Closedhand account: amber-fox-42\.closedhand\.ai stops working and closedhand\.com forgets your sign-in\. It also permanently deletes everything Closedhand keeps for you on your own computer/);
   const without = accountPage(() => ({ body: { account: null } }));
   await without.state.loadAccountSummary();
-  assert.match(without.el("account-summary-text").textContent, /^Signed in withNothing yet\. Claiming a personal URL creates your ClosedHand account, which you sign in to with Google or Microsoft\./);
-  assert.match(without.el("delete-account-text").textContent, /^This permanently deletes everything ClosedHand keeps for you on your own computer/);
+  assert.match(without.el("account-summary-text").textContent, /^Signed in withNothing yet\. Claiming a personal URL creates your Closedhand account, which you sign in to with Google or Microsoft\./);
+  assert.match(without.el("delete-account-text").textContent, /^This permanently deletes everything Closedhand keeps for you on your own computer/);
   const offline = accountPage(() => ({ body: { account: null, unreachable: true } }));
   await offline.state.loadAccountSummary();
   assert.equal(offline.el("account-summary").hidden, true, "nothing claimed when closedhand.com can't say");
@@ -258,15 +258,15 @@ test("Delete account stops when closedhand.com can't be reached, and deletes any
   await page.state.executeAccountAction("delete-account", true);
   assert.deepEqual(page.calls.at(-1), ["DELETE", "/api/account?anyway=1"]);
   assert.equal(page.state.window.location.href, "/");
-  // The route deletes the ClosedHand account before anything on this computer.
+  // The route deletes the Closedhand account before anything on this computer.
   const route = region(source, 'app.delete("/api/account"', "// SUPABASE HELPERS");
   assert.ok(route.indexOf("deleteAccount()") > 0 && route.indexOf("deleteAccount()") < route.indexOf("WIPE_TABLES"));
   assert.match(route, /req\.query\.anyway !== "1"/);
   assert.ok(route.indexOf("phoneAccess.disable()") < route.indexOf("WIPE_TABLES"), "the personal URL connection stops too");
 });
 
-test("ClosedHand's two addresses are two matching cards side by side: its personal URL and its email address", () => {
-  assert.match(html, /<section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">\n\s*<h2 id="addresses-heading">ClosedHand Addresses<\/h2>\n\s*<div class="address-parts">\n\s*<div class="address-card" id="phone-block" style="display:none;">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="phone-heading">Personal URL<\/h3><\/div>/);
+test("Closedhand's two addresses are two matching cards side by side: its personal URL and its email address", () => {
+  assert.match(html, /<section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">\n\s*<h2 id="addresses-heading">Closedhand Addresses<\/h2>\n\s*<div class="address-parts">\n\s*<div class="address-card" id="phone-block" style="display:none;">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="phone-heading">Personal URL<\/h3><\/div>/);
   assert.match(html, /<div class="address-card">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="assistant-email-heading">Email address<\/h3><\/div>\n\s*<div id="assistant-email"><\/div>/);
   assert.match(html, /<div class="address-foot">\n\s*<p id="phone-change-line" hidden>[\s\S]*?<details id="phone-options" hidden>/, "Change URL and Link options share the card's footer");
   assert.match(html, /getElementById\('phone-block'\)\.style\.display = '';/, "shown as a card, not forced to block");
@@ -288,7 +288,7 @@ test("location is set where it shows, not in a Settings card", () => {
   assert.match(chat, /if \(t\) \{ flipUnit\(t\); return; \}\n\s*if \(!e\.target\.closest\('\.wx-place'\)\) return;\n\s*wx\.hidden = true; btn\.hidden = false; btn\.click\(\);/, "the temperature flips the unit; the rest of the sentence sets the place again after a move");
   assert.match(chat, /' <button type="button" class="wx-place" data-tip="Moved\? Click to update your location\." aria-label="[^"]*">and ' \+ esc\(w\.label\) \+ ' in ' \+ esc\(d\.location\.name\) \+ '<\/button>/, "the whole rest of the sentence is the one control");
   const defs = fs.readFileSync(require.resolve("../lib/tools/definitions.js"), "utf8");
-  assert.match(defs, /name: "save_location"/, "and ClosedHand saves it when told in chat");
+  assert.match(defs, /name: "save_location"/, "and Closedhand saves it when told in chat");
 });
 
 test("the weather line's tip shows at once, in the page's own quiet style", () => {
@@ -317,6 +317,6 @@ test("clicking the temperature flips it between Celsius and Fahrenheit, and the 
   assert.match(chat, /fetch\('\/api\/here\/unit', \{ method: 'POST'/);
   assert.match(chat, /if \(still\) swap\(\); else \{ num\.classList\.add\('out'\); setTimeout\(swap, 160\); \}/, "no roll for people who turn motion off");
   const handlers = fs.readFileSync(require.resolve("../lib/tools/handlers.js"), "utf8");
-  assert.match(handlers, /const chosenUnit = \(ctx\.activeUserStore \|\| ctx\.store\)\?\.profile\?\.settings\?\.temperature_unit;/, "ClosedHand's weather answers use the same choice");
+  assert.match(handlers, /const chosenUnit = \(ctx\.activeUserStore \|\| ctx\.store\)\?\.profile\?\.settings\?\.temperature_unit;/, "Closedhand's weather answers use the same choice");
   assert.match(handlers, /temperature: deg\(current\.temperature_2m\)/);
 });

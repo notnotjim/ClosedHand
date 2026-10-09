@@ -1,6 +1,6 @@
 // End-to-end check of the closedhand.com service against a real Postgres.
 // Run: DATABASE_URL=postgres://... node --test closedhand-com/test/e2e.js
-// Google, Microsoft and the copy of ClosedHand are stand-ins; nothing leaves
+// Google, Microsoft and the copy of Closedhand are stand-ins; nothing leaves
 // this machine.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,7 +13,7 @@ const env = {
   BASE_URL: 'https://closedhand.com', SESSION_SECRET: crypto.randomBytes(32).toString('hex'),
   TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY, PHONE_ENROLLMENT_ENABLED: '1', PHONE_PROVISIONER_SECRET: 'p'.repeat(40),
   GOOGLE_CLIENT_ID: 'google-client', GOOGLE_CLIENT_SECRET: 'g-secret', MICROSOFT_CLIENT_ID: 'ms-client', MICROSOFT_CLIENT_SECRET: 'm-secret',
-  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'ClosedHand <download@assist.closedhand.ai>', MAIL_AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', MAIL_AWS_SECRET_ACCESS_KEY: 'x', ALERT_EMAIL: 'operator@example.com', ADDRESS_RATE_PER_MINUTE: '1000',
+  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'Closedhand <download@assist.closedhand.ai>', MAIL_AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', MAIL_AWS_SECRET_ACCESS_KEY: 'x', ALERT_EMAIL: 'operator@example.com', ADDRESS_RATE_PER_MINUTE: '1000',
 };
 const mails = [];
 const idToken = claims => 'x.' + Buffer.from(JSON.stringify(claims)).toString('base64url') + '.y';
@@ -88,7 +88,7 @@ test('the website pages answer and old dashboard links lead to the finder', asyn
   assert.equal((await fetch(base + '/site.css?v=000000000000')).headers.get('cache-control'), 'no-cache', 'a stale fingerprint is never kept');
   const missing = await fetch(base + '/nope');
   assert.equal(missing.status, 404); assert.match(await missing.text(), /site\.css\?v=/);
-  // Signing out from My ClosedHand comes back to it, and never leaves the site.
+  // Signing out from My Closedhand comes back to it, and never leaves the site.
   assert.equal((await fetch(base + '/logout?return_to=%2Fopen', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');
   assert.equal((await fetch(base + '/logout?return_to=https%3A%2F%2Fevil.example', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/open');
   assert.equal((await fetch(base + '/logout', { method: 'POST', redirect: 'manual' })).headers.get('location'), '/');
@@ -136,7 +136,7 @@ test('an owner carried over from the old service is claimed only by the same ver
   assert.ok(unverified.cookie && ms.cookie && verified.cookie);
 });
 
-// A copy of ClosedHand, as the service sees it: a secret and the port it runs on.
+// A copy of Closedhand, as the service sees it: a secret and the port it runs on.
 const newCopy = (port = 3000) => {
   const secret = crypto.randomBytes(32).toString('hex');
   return { secret, port, hash: crypto.createHash('sha256').update(secret).digest('hex'), auth: { Authorization: `Bearer ${crypto.randomUUID()}.${secret}` } };
@@ -163,7 +163,7 @@ test('personal URL: request, confirm, type the code, build, connect, and every r
   challengeSecret = copy.secret;
   const outdated = await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000 }, copy.auth);
   assert.equal(outdated.status, 400);
-  assert.match((await outdated.json()).error, /Update ClosedHand/, 'a copy from before codes is told to update');
+  assert.match((await outdated.json()).error, /Update Closedhand/, 'a copy from before codes is told to update');
   const ticket = await ask(copy, 'alex');
   assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'admin', port: 3000, confirm: 'code' }, copy.auth)).status, 400, 'reserved name');
   assert.equal((await json('POST', '/api/phone-enrollment/register', { name: 'alex', port: 3000, confirm: 'code' })).status, 401, 'no installation');
@@ -248,7 +248,7 @@ test('a confirmation link sent by somebody else cannot point your address at the
   const attacker = newCopy();
   const approved = await (await json('POST', '/api/phone-enrollment/approve', { ticket: await ask(attacker, 'target') }, signedIn(victim.cookie))).json();
   assert.equal(approved.state, 'awaiting-code');
-  // The victim types the code into their own ClosedHand: it does not finish the attacker's request.
+  // The victim types the code into their own Closedhand: it does not finish the attacker's request.
   assert.equal((await json('POST', '/api/phone-enrollment/claim', { code: approved.code }, newCopy().auth)).status, 409);
   // The attacker guesses, many at once: only five tries ever count, then the code is gone.
   const guesses = Array.from({ length: 30 }, (_, i) => 'ZZZ' + String(200 + i).slice(-3).replace(/[01]/g, '2'));
@@ -491,7 +491,7 @@ test('the operator is emailed once when personal URL DNS records pass 150, and a
 });
 const freeNameOf = () => require('../lib/addresses').freeName(db);
 
-test('deleting a ClosedHand account from its computer: the sign-in is forgotten, the route comes down, the names are held for nobody', async () => {
+test('deleting a Closedhand account from its computer: the sign-in is forgotten, the route comes down, the names are held for nobody', async () => {
   const copy = newCopy();
   const owner = await signIn('google', google('g-deleter', 'deleter@example.com'));
   await working(copy, owner, await ask(copy, 'keeper'));
@@ -530,7 +530,7 @@ test('deleting a ClosedHand account from its computer: the sign-in is forgotten,
   assert.match(await working(copy, other, await askPicked(copy)), picked);
 });
 
-test('deleting a ClosedHand account on closedhand.com: signed in, from the site itself, then signed out', async () => {
+test('deleting a Closedhand account on closedhand.com: signed in, from the site itself, then signed out', async () => {
   const copy = newCopy();
   const owner = await signIn('microsoft', microsoft('9188040d-6c67-4c5b-b112-36a304b66dad', '00000000-0000-0000-aaaa-0000000000d1', 'web@example.com'));
   const url = await working(copy, owner, await askPicked(copy));
@@ -595,7 +595,7 @@ test('a sign-in holding nothing is forgotten after a day; one with a held name i
   assert.equal((await db.query("SELECT 1 FROM held_names WHERE hostname = 'held-over.closedhand.ai'")).rowCount, 0, 'a hold ends on time');
 });
 
-test('connecting Microsoft mail through ClosedHand\'s app claims the personal URL in one step, and only a genuine sign-in does', async () => {
+test('connecting Microsoft mail through Closedhand\'s app claims the personal URL in one step, and only a genuine sign-in does', async () => {
   const DEVICE_APP = '4f57d28c-dabb-4369-9874-f7c72262859b';
   const { app } = createApp({ db, env: { ...env, MICROSOFT_ASSOCIATED_APP_IDS: '526c0b07-ae5c-46a2-9911-f7220b9f96d0,' + DEVICE_APP, MICROSOFT_CLIENT_ID: '526c0b07-ae5c-46a2-9911-f7220b9f96d0' }, request });
   const srv = await new Promise(r => { const s = app.listen(0, () => r(s)); });
@@ -618,7 +618,7 @@ test('connecting Microsoft mail through ClosedHand\'s app claims the personal UR
     const done = await (await post({ idToken: signedToken(claims()), port: 3000 }, copy.auth)).json();
     assert.equal(done.state, 'pending'); assert.match(done.url, /^https:\/\/[a-z]+-[a-z]+-\d+\.closedhand\.ai$/, 'a picked name');
     assert.deepEqual(await (await post({ idToken: signedToken(claims()), port: 3000 }, copy.auth)).json(), done, 'asking again changes nothing');
-    // The same Microsoft account signing in on closedhand.com is the same ClosedHand account.
+    // The same Microsoft account signing in on closedhand.com is the same Closedhand account.
     const web = await signIn('microsoft', microsoft(tid, oid, 'sam@contoso.example'));
     const seen = await account(web.cookie);
     assert.equal(seen.signedIn, true); assert.equal(seen.address, new URL(done.url).hostname, 'the same account, holding the same address');

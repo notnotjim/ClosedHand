@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds ClosedHand.app: the Swift shell plus everything it runs.
+# Builds Closedhand.app: the Swift shell plus everything it runs.
 #
 #   desktop/build.sh                 ad-hoc signed, for this Mac
 #   IDENTITY="Developer ID Application: ..." desktop/build.sh
@@ -9,7 +9,7 @@
 #   node   the Node 22 runtime for this architecture (official tarball)
 #   pg     relocatable Postgres 16 + pgvector (built from source, see pg.sh)
 #   app    the repo at HEAD with production node_modules for this architecture
-# Output: desktop/dist/ClosedHand.app
+# Output: desktop/dist/Closedhand.app
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
@@ -20,7 +20,7 @@ NODE_VERSION="${NODE_VERSION:-v22.23.2}"
 VERSION="${VERSION:-2.0.17}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
 DIST="$HERE/dist"
-APP="$DIST/ClosedHand.app"
+APP="$DIST/Closedhand.app"
 mkdir -p "$CACHE"
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }
@@ -118,7 +118,7 @@ rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ClosedHand"
 [ -d "$BUNDLE_RES" ] && cp -R "$BUNDLE_RES" "$APP/Contents/Resources/"
 cp "$HERE/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-# ClosedHand's own Google app (see lib/google-app.js): from the environment,
+# Closedhand's own Google app (see lib/google-app.js): from the environment,
 # or from a file kept outside the repository on the machine that builds
 # releases. Without either the app connects Google through the person's own
 # project. The file is read only when CLOSEDHAND_GOOGLE_QUICK=1: until Google

@@ -51,7 +51,7 @@ struct SettingsView: View {
                     Text("Disconnect and remove Bridge data")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("Unpairs this Mac from ClosedHand and deletes the copy of this Mac's calendar that ClosedHand keeps. Your conversations, pinned facts, Context Notes and everything else in ClosedHand stay.")
+                    Text("Unpairs this Mac from Closedhand and deletes the copy of this Mac's calendar that Closedhand keeps. Your conversations, pinned facts, Context Notes and everything else in Closedhand stay.")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -84,7 +84,7 @@ struct SettingsView: View {
                             .foregroundColor(deleteMessage.contains("Error") ? .red : .green)
                     }
 
-                    Text("To delete everything ClosedHand keeps (conversations, pinned facts, Context Notes and the rest), use Delete account in the dashboard's Settings.")
+                    Text("To delete everything Closedhand keeps (conversations, pinned facts, Context Notes and the rest), use Delete account in the dashboard's Settings.")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.7))
                 }
@@ -92,7 +92,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 420, height: 400)
-        .navigationTitle("ClosedHand Bridge Settings")
+        .navigationTitle("Closedhand Bridge Settings")
     }
 
     private func wipeData() {

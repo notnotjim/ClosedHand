@@ -37,7 +37,7 @@ test('Google and Microsoft identities come from their permanent IDs, never the e
   assert.equal(PROVIDERS.google.scope, 'openid email', 'Google is asked for the email only');
 });
 
-test('a ClosedHand account keeps only the email: no name from the sign-in, and no page says otherwise', () => {
+test('a Closedhand account keeps only the email: no name from the sign-in, and no page says otherwise', () => {
   const tid = '11111111-2222-4333-8444-555555555555', oid = '66666666-7777-4888-9999-000000000000';
   const g = PROVIDERS.google.identity({ iss: 'https://accounts.google.com', aud: 'c', sub: '1', email: 'a@b.c', email_verified: true, name: 'Pat Example', picture: 'https://p' }, 'c');
   const m = PROVIDERS.microsoft.identity({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: 'c', tid, oid, email: 'a@b.c', name: 'Pat Example' }, 'c');
@@ -51,13 +51,13 @@ test('a ClosedHand account keeps only the email: no name from the sign-in, and n
   }
 });
 
-// The ClosedHand account is an account on closedhand.com that you sign in to
+// The Closedhand account is an account on closedhand.com that you sign in to
 // with Google or Microsoft. Pages once said it was the Google account itself,
 // which reads as nonsense: they are two accounts, and one signs in to the other.
-test('no page says the ClosedHand account is the Google or Microsoft account or its sign-in', () => {
+test('no page says the Closedhand account is the Google or Microsoft account or its sign-in', () => {
   const pages = ['closedhand-com/views', 'webapp/views'].flatMap(dir => fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.html')).map(f => path.join(dir, f)));
   const sources = [...pages, 'README.md', 'closedhand-com/public/account.js', 'lib/platforms/telegram.js'];
-  const said = /ClosedHand account (is|was) (the|your) (Google|Microsoft|sign-in)|(sign-in|account) (is|becomes) your ClosedHand account|becomes your ClosedHand account|ClosedHand account ID|It.s the Google or Microsoft account/i;
+  const said = /Closedhand account (is|was) (the|your) (Google|Microsoft|sign-in)|(sign-in|account) (is|becomes) your Closedhand account|becomes your Closedhand account|Closedhand account ID|It.s the Google or Microsoft account/i;
   for (const file of sources) {
     const text = fs.readFileSync(path.join(__dirname, '..', file), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
     assert.doesNotMatch(text, said, file);
@@ -101,11 +101,11 @@ test("the confirmation page never presents the owner's own address as the assist
   const view = fs.readFileSync(path.join(__dirname, '../closedhand-com/views/assistant-email-confirm.html'), 'utf8');
   const script = fs.readFileSync(path.join(__dirname, '../closedhand-com/public/assistant-email-confirm.js'), 'utf8');
   assert.match(view, /<p class="address" id="address" hidden><\/p>\s*<p class="address-note" id="address-note" hidden>/, 'the assistant address appears only once it exists');
-  assert.match(view, /<p class="fine" id="who-label">When ClosedHand emails you first, it writes to<\/p>\s*<div class="who">/, 'the signed-in account is labelled for what it is');
-  assert.match(view, /from any Google or Microsoft account connected to your ClosedHand\.<\/p>/, 'the owner may write from any connected account, not only the one signed in');
+  assert.match(view, /<p class="fine" id="who-label">When Closedhand emails you first, it writes to<\/p>\s*<div class="who">/, 'the signed-in account is labelled for what it is');
+  assert.match(view, /from any Google or Microsoft account connected to your Closedhand\.<\/p>/, 'the owner may write from any connected account, not only the one signed in');
   assert.doesNotMatch(view + script, /account you’ll email it from|private replies go/);
-  assert.match(script, /'Your ClosedHand assistant, ' \+ name \+ ', is getting its own email address\./);
-  assert.match(view, />Create ClosedHand’s email address<\/button>/);
+  assert.match(script, /'Your Closedhand assistant, ' \+ name \+ ', is getting its own email address\./);
+  assert.match(view, />Create Closedhand’s email address<\/button>/);
   assert.match(script, /\$\('approve'\)\.textContent = 'Create ' \+ whose \+ ' email address';/);
   assert.match(script, /if \(!account\.signedIn \|\| !account\.emailVerified\) \{/, 'an older or unverified sign-in is asked to sign in again before confirming');
 });
@@ -145,7 +145,7 @@ test('a typed name is tidied into one an address can use', () => {
   assert.equal(cleanName(null), ''); assert.equal(cleanName(undefined), '');
 });
 
-test('My ClosedHand: signed in without a personal URL means Setup is not finished', () => {
+test('My Closedhand: signed in without a personal URL means Setup is not finished', () => {
   const base = { signedIn: true, found: false, available: true, choosing: false, failedSignIn: false, newcomer: false };
   assert.equal(navigation.openScreen(base), 'not-set-up');
   assert.equal(navigation.openScreen({ ...base, found: true }), 'found');
@@ -159,11 +159,11 @@ test('My ClosedHand: signed in without a personal URL means Setup is not finishe
   for (const change of [{ signedIn: true }, { choosing: true }, { failedSignIn: true }, { next: '/dashboard' }, { known: 'https://a-b-3.closedhand.ai/' }, { nothingHere: false }]) {
     assert.equal(navigation.isNewcomer({ ...fresh, ...change }), false, JSON.stringify(change));
   }
-  // The page offers ClosedHand on this computer wherever it can't see it, on computers only.
+  // The page offers Closedhand on this computer wherever it can't see it, on computers only.
   const html = fs.readFileSync(path.join(__dirname, '..', 'closedhand-com', 'views', 'open.html'), 'utf8');
-  assert.match(html, /id="not-set-up"[\s\S]*Finish Setup on the computer you installed ClosedHand on\./);
+  assert.match(html, /id="not-set-up"[\s\S]*Finish Setup on the computer you installed Closedhand on\./);
   assert.doesNotMatch(html, /id="not-here"/, 'the old branch is gone');
-  assert.match(html, /class="aside computer-only" id="local-link"[^>]*><a id="local-open" href="http:\/\/localhost:3000\/">Open ClosedHand on this computer<\/a>/);
+  assert.match(html, /class="aside computer-only" id="local-link"[^>]*><a id="local-open" href="http:\/\/localhost:3000\/">Open Closedhand on this computer<\/a>/);
   const js = fs.readFileSync(path.join(__dirname, '..', 'closedhand-com', 'public', 'open.js'), 'utf8');
   assert.match(js, /\$\('local-link'\)\.hidden = !\['new', 'find', 'not-set-up'\]\.includes\(screen\)/);
   assert.equal(navigation.LOCAL, 'http://localhost:3000');
@@ -192,6 +192,6 @@ test('the website sizes everything in rem, so computers get their density from o
   assert.match(root, /html \{ font-size: 100%; \}\n@media \(hover: hover\) and \(pointer: fine\) \{ html \{ font-size: 87\.5%; \} \}/);
   // The phone sheet: one line, and nothing more under the email note.
   const sheet = fs.readFileSync(path.join(site, 'public', 'get-sheet.js'), 'utf8');
-  assert.match(sheet, /Your ClosedHand assistant lives on a computer or a server you rent, and you use it from here\. Set it up there first\./);
+  assert.match(sheet, /Your Closedhand assistant lives on a computer or a server you rent, and you use it from here\. Set it up there first\./);
   assert.doesNotMatch(sheet, /Note:/);
 });

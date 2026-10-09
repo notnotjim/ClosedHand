@@ -35,6 +35,6 @@ test('an account holding the broader Calendar grant is not told to reconnect', (
   assert.match(server, /const missing = REQUIRED\.filter\(r => !granted\.includes\(r\) && !\(GRANT_COVERS\[r\] \|\| \[\]\)\.some\(\(b\) => granted\.includes\(b\)\)\);/);
 });
 
-test('a Mac build offers ClosedHand\'s Google app only when asked to', () => {
+test('a Mac build offers Closedhand\'s Google app only when asked to', () => {
   assert.match(read('desktop/build.sh'), /\[ "\$\{CLOSEDHAND_GOOGLE_QUICK:-\}" = "1" \] && \[ -f "\$GOOGLE_APP_ENV" \]; then \. "\$GOOGLE_APP_ENV"; fi/);
 });

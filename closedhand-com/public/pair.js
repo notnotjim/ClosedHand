@@ -1,6 +1,6 @@
 (() => {
   // The link is "#<ticket>" from older ClosedHands, or "#t=<ticket>&..." with:
-  //   state  a one-time value the ClosedHand made, handed back with the code;
+  //   state  a one-time value the Closedhand made, handed back with the code;
   //   back   where setup is, on the computer this browser is on;
   //   via    google or microsoft: the mail sign-in setup just did, to repeat
   //          here without the choice; hint names its account;
@@ -57,12 +57,12 @@
   }
 
   // Confirmed, then connecting, then ready. Only an address the exact
-  // ClosedHand has answered at is ever opened.
+  // Closedhand has answered at is ever opened.
   function progress(data) {
     confirmedAt = confirmedAt || Date.now();
     show('progress');
     $('heading').textContent = 'Personal URL claimed';
-    $('lede').textContent = 'Keep ClosedHand running while it connects.';
+    $('lede').textContent = 'Keep Closedhand running while it connects.';
     const ready = data.state === 'active' && validUrl(data.url);
     $('step-confirmed').className = 'done';
     $('step-connecting').className = ready ? 'done' : 'now';
@@ -70,11 +70,11 @@
     if (ready) {
       clearTimeout(timer);
       $('open').href = data.url + '/'; $('open').hidden = false;
-      if (!leaving) { leaving = true; say('Opening your ClosedHand…'); timer = setTimeout(() => location.replace(data.url + '/'), 1200); }
+      if (!leaving) { leaving = true; say('Opening your Closedhand…'); timer = setTimeout(() => location.replace(data.url + '/'), 1200); }
       return;
     }
     say(data.state === 'error' ? 'Connecting is taking longer than usual. It will keep retrying on its own.'
-      : Date.now() - confirmedAt > 90000 ? 'Still connecting. Check ClosedHand is running; you can close this page and carry on there.' : '');
+      : Date.now() - confirmedAt > 90000 ? 'Still connecting. Check Closedhand is running; you can close this page and carry on there.' : '');
     timer = setTimeout(check, 3000);
   }
 
@@ -86,13 +86,13 @@
     location.replace(auto.back + '#' + new URLSearchParams({ claim: code, state: auto.state, ...(auto.popup ? { close: '1' } : {}) }));
   }
 
-  // Confirmed here; finished by typing the code into the ClosedHand that
+  // Confirmed here; finished by typing the code into the Closedhand that
   // asked. Keep checking so the page moves on once it has been typed.
   function awaitCode(data) {
     if (auto.back) { handBack(data.code); return; }
     show('code-step');
-    $('heading').textContent = 'Now paste this code in ClosedHand';
-    $('lede').textContent = 'Copy it, then go back to the ClosedHand tab you came from and paste it. It finishes by itself.';
+    $('heading').textContent = 'Now paste this code in Closedhand';
+    $('lede').textContent = 'Copy it, then go back to the Closedhand tab you came from and paste it. It finishes by itself.';
     $('code').textContent = data.code.slice(0, 3) + ' ' + data.code.slice(3);
     $('copy-code').dataset.code = data.code;
     say('');
@@ -104,7 +104,7 @@
     if (busy || leaving) return;
     try {
       const account = await request('/api/account');
-      if (!account.available) throw new Error('Personal URLs aren’t available right now. ClosedHand still works on the computer running it.');
+      if (!account.available) throw new Error('Personal URLs aren’t available right now. Closedhand still works on the computer running it.');
       const address = await request('/api/phone-enrollment/details', { ticket });
       const name = new URL(address.url).hostname;
       $('address').textContent = name;
@@ -113,11 +113,11 @@
         progress(address); return;
       }
       if (account.signedIn && address.state === 'awaiting-code' && /^[A-Z0-9]{6}$/.test(address.code || '')) { awaitCode(address); return; }
-      if (address.state === 'revoked') throw new Error('This personal URL was removed. Claim a new one in ClosedHand’s Settings.');
+      if (address.state === 'revoked') throw new Error('This personal URL was removed. Claim a new one in Closedhand’s Settings.');
       if (validUrl(account.url) && new URL(account.url).hostname !== name) {
         show(null);
         $('address-note').textContent = 'Already owns ' + new URL(account.url).hostname;
-        $('open').href = account.url + '/dashboard#dashboard-link'; $('open').textContent = 'Open your ClosedHand'; $('open').hidden = false;
+        $('open').href = account.url + '/dashboard#dashboard-link'; $('open').textContent = 'Open your Closedhand'; $('open').hidden = false;
         say('This account already has a personal URL. Each account has one.', true);
         return;
       }
@@ -147,15 +147,15 @@
       }
       show('confirm');
       $('approve').disabled = false;
-      // The account's address already opens a ClosedHand set up before: a
+      // The account's address already opens a Closedhand set up before: a
       // plain question, which only switches it when the answer is yes. Never
-      // put as "computer": the address is for opening ClosedHand on any device.
+      // put as "computer": the address is for opening Closedhand on any device.
       if (address.move) {
         $('heading').textContent = 'You already have a personal URL linked to this email';
-        $('lede').textContent = 'It opens a ClosedHand you set up before. Want to switch it to the one you’re setting up now? The earlier one stops opening there.';
+        $('lede').textContent = 'It opens a Closedhand you set up before. Want to switch it to the one you’re setting up now? The earlier one stops opening there.';
       }
       $('approve').textContent = address.move ? 'Switch to the new one' : 'Claim ' + name;
-      $('confirm-note').textContent = address.move ? '' : 'Only claim it if you’re setting up ClosedHand on your own computer.';
+      $('confirm-note').textContent = address.move ? '' : 'Only claim it if you’re setting up Closedhand on your own computer.';
       $('confirm-note').hidden = !!address.move;
       say('');
     } catch (e) {
@@ -194,6 +194,6 @@
   if (!ticket) {
     show(null);
     $('address').textContent = 'yourname.closedhand.ai';
-    say('Open this page from ClosedHand’s Setup or Settings.', true);
+    say('Open this page from Closedhand’s Setup or Settings.', true);
   } else check();
 })();

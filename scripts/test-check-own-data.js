@@ -1,4 +1,4 @@
-// The push check finds details from the person's own ClosedHand in what is
+// The push check finds details from the person's own Closedhand in what is
 // about to be pushed, and leaves ordinary code alone. All values invented.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

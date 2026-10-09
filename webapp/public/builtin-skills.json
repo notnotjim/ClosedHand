@@ -2,7 +2,7 @@
   {
     "id": "instagram-web",
     "name": "Instagram (sandbox computer)",
-    "description": "Read and comment on Instagram posts through the browser on ClosedHand's sandbox computer, where you are signed in",
+    "description": "Read and comment on Instagram posts through the browser on Closedhand's sandbox computer, where you are signed in",
     "requires_service": null,
     "always_active": false
   },

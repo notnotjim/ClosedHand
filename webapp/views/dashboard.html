@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-  <title>ClosedHand - Dashboard</title>
+  <title>Closedhand - Dashboard</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1517,7 +1517,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* The personal URL prompt, above every tab, for a ClosedHand without one. */
+    /* The personal URL prompt, above every tab, for a Closedhand without one. */
     .personal-url-notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 20px; padding: 14px 18px; border: 1px solid var(--ui-border); border-radius: 12px; background: rgba(239,230,214,0.04); }
     .personal-url-notice[hidden] { display: none; }
     .personal-url-notice p { flex: 1 1 320px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--ui-muted); }
@@ -2094,7 +2094,7 @@
       <!-- Header -->
       <div class="header-row" style="margin-bottom:4px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <a class="ch-brand" href="/" target="_top"><img id="dashboard-logo" src="/fist.png" alt=""><span>ClosedHand</span></a>
+          <a class="ch-brand" href="/" target="_top"><img id="dashboard-logo" src="/fist.png" alt=""><span>Closedhand</span></a>
           <h1 style="margin-bottom:0;">Welcome, <span id="user-name">...</span></h1>
         </div>
         <a href="/logout" class="logout-link">Log out</a>
@@ -2130,16 +2130,16 @@
         <summary aria-label="Dashboard help" title="Dashboard help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2"/><path d="M12 16h.01"/></svg></summary>
         <div class="dashboard-help-menu">
           <button id="dashboard-welcome-replay" type="button">Take a quick tour</button>
-          <a href="/keep" target="_top">Keep ClosedHand handy</a>
+          <a href="/keep" target="_top">Keep Closedhand handy</a>
           <a href="/setup" target="_top">Back to setup</a>
         </div>
       </details>
       </div>
 
-      <!-- For a ClosedHand that skipped its personal URL in Setup, because
+      <!-- For a Closedhand that skipped its personal URL in Setup, because
            closedhand.com couldn't be reached then: a way to get it now. -->
       <section class="personal-url-notice" id="personal-url-notice" hidden aria-live="polite">
-        <p><strong>Your ClosedHand doesn’t have a personal URL yet.</strong> Claim one to open it from any device, wherever you are.</p>
+        <p><strong>Your Closedhand doesn’t have a personal URL yet.</strong> Claim one to open it from any device, wherever you are.</p>
         <div class="personal-url-notice-actions">
           <button class="account-action-btn" id="personal-url-notice-go" type="button" onclick="getPersonalUrlFromPrompt()">Claim your personal URL</button>
         </div>
@@ -2174,11 +2174,11 @@
           <div class="integrations-grid" id="mcp-list"></div>
         </div>
 
-        <!-- Skills: how ClosedHand does a kind of job. The built-in ones, and
+        <!-- Skills: how Closedhand does a kind of job. The built-in ones, and
              any added by pasting a link into the box under Connect anything. -->
         <div class="section" id="skills-section">
           <h2>Skills</h2>
-          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">A skill is a package of instructions and resources that ClosedHand follows to complete a particular type of task. Add one in the Connect box below.</p>
+          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">A skill is a package of instructions and resources that Closedhand follows to complete a particular type of task. Add one in the Connect box below.</p>
           <div class="integrations-grid" id="skills-connected"></div>
         </div>
 
@@ -2200,7 +2200,7 @@
           .furl-handle:hover .furl-chev { color:#EFE6D6; }
           .furl-handle:focus-visible { outline:2px solid #D8624B; outline-offset:-2px; border-radius:12px; }
           .wallet-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#B6AFA4; }
-          /* The password check before ClosedHand may spend more freely. */
+          /* The password check before Closedhand may spend more freely. */
           .wallet-confirm { margin:0 0 16px; padding:14px 16px; border:1px solid rgba(208,166,82,0.3); border-radius:10px; background:rgba(208,166,82,0.06); }
           .wallet-confirm[hidden] { display:none; }
           .wallet-confirm p { margin:0 0 10px; font-size:13px; line-height:1.5; color:#EFE6D6; }
@@ -2246,7 +2246,7 @@
           }
           .mcp-connect-btn:hover { background: rgba(208,86,63,0.25); border-color: rgba(208,86,63,0.5); box-shadow: 0 0 20px rgba(208,86,63,0.15); }
         </style>
-        <!-- Add a connection: the apps ClosedHand has built in (only those not
+        <!-- Add a connection: the apps Closedhand has built in (only those not
              yet connected), then anything at all, pasted as an MCP server. -->
         <div class="section" id="mcp-section">
           <h2>Add a connection</h2>
@@ -2317,7 +2317,7 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">ClosedHand sends out agents when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Closedhand sends out agents when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
@@ -2461,11 +2461,11 @@
       </div>
 
       <!-- Settings Tab Content -->
-      <!-- Goals: what the person is working towards, as plans ClosedHand helps
+      <!-- Goals: what the person is working towards, as plans Closedhand helps
            them carry out (webapp/public/goals.js, lib/goals.js). -->
       <div class="tab-content" id="tab-goals">
         <div style="padding-top:16px;">
-          <p class="goals-intro">ClosedHand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell ClosedHand a goal or add one here.</p>
+          <p class="goals-intro">Closedhand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell Closedhand a goal or add one here.</p>
           <p id="goals-cheer" role="status" hidden></p>
           <div class="goals-head"><button type="button" class="goals-new" id="goal-new-toggle">+ New goal</button></div>
           <form id="goal-new" hidden>
@@ -2495,11 +2495,11 @@
 
       <div class="tab-content" id="tab-pages">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here or download it as PDF or Word.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something Closedhand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here or download it as PDF or Word.</p>
           <div id="pages-list"></div>
           <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
           <!-- Files sent in chat and tables kept up to date: the rest of what
-               ClosedHand makes, shown only when there are any. -->
+               Closedhand makes, shown only when there are any. -->
           <div style="margin-top:24px;">
           <!-- Files: what has come in and gone out -->
           <div id="files-section" class="mc-subsection" style="display:none;">
@@ -2510,22 +2510,22 @@
               <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="files-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files ClosedHand has sent you: things it made, and documents it pulled from your email or Drive. Each says which.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files Closedhand has sent you: things it made, and documents it pulled from your email or Drive. Each says which.</p>
               <div id="files-list"></div>
             </div>
           </div>
 
-          <!-- Tables ClosedHand keeps up to date (the datasets table) -->
+          <!-- Tables Closedhand keeps up to date (the datasets table) -->
           <div id="datasets-section" class="mc-subsection" style="display:none;">
             <div onclick="toggleDatasetsSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
               <span id="datasets-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
               <div class="mc-subsection-label">Tables</div>
             </div>
             <div id="datasets-body" style="display:none;">
-            <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables ClosedHand keeps up to date as it works, so it remembers what it has already done.</p>
+            <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables Closedhand keeps up to date as it works, so it remembers what it has already done.</p>
             <div id="datasets-list"></div>
             <div id="datasets-empty" style="display:none;padding:16px;text-align:center;color:rgba(239,230,214,0.6);font-size:13px;">
-              Nothing here yet. Ask ClosedHand to keep track of something in a table, a list of ad campaigns or a content calendar for instance, and it will build one and keep it up to date.
+              Nothing here yet. Ask Closedhand to keep track of something in a table, a list of ad campaigns or a content calendar for instance, and it will build one and keep it up to date.
             </div>
             </div>
           </div>
@@ -2555,18 +2555,18 @@
         <div style="padding-top:16px;">
 
           <!-- Personal access and contact addresses -->
-          <!-- Addresses: ClosedHand's own addresses, for reaching it from
+          <!-- Addresses: Closedhand's own addresses, for reaching it from
                anywhere: its personal URL in a browser and its email address.
                Each is claimed once through closedhand.com. -->
           <section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">
-            <h2 id="addresses-heading">ClosedHand Addresses</h2>
+            <h2 id="addresses-heading">Closedhand Addresses</h2>
             <div class="address-parts">
           <div class="address-card" id="phone-block" style="display:none;">
             <div class="address-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><h3 class="address-title" id="phone-heading">Personal URL</h3></div>
             <p id="phone-desc" role="status">Loading your link…</p>
             <div id="phone-live" hidden>
               <div class="dashboard-copy-box">
-                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open ClosedHand"></a>
+                <a id="phone-url" href="#" target="_blank" rel="noopener" aria-label="Open Closedhand"></a>
                 <button id="phone-copy" onclick="copyDashboardLink()">Copy</button>
               </div>
               <p id="phone-copy-status" class="dashboard-link-feedback" role="status"></p>
@@ -2580,14 +2580,14 @@
               </div>
             </div>
             <div id="phone-setup" hidden>
-              <p>Your personal URL, like amber-fox-42.closedhand.ai, opens the web chat and the dashboard from any device. To claim the address, you sign in with Google or Microsoft on closedhand.com, which creates your ClosedHand account to hold it. closedhand.com keeps only the email you sign in with, linked to your address. You can change the name afterwards. Connecting your mail and calendar is separate: that access goes to ClosedHand on your computer, not to closedhand.com. Your dashboard password is separate too.</p>
-              <p>ClosedHand and Cloudflare connect the address to the computer running ClosedHand, so it works whenever that computer is awake and online.</p>
+              <p>Your personal URL, like amber-fox-42.closedhand.ai, opens the web chat and the dashboard from any device. To claim the address, you sign in with Google or Microsoft on closedhand.com, which creates your Closedhand account to hold it. closedhand.com keeps only the email you sign in with, linked to your address. You can change the name afterwards. Connecting your mail and calendar is separate: that access goes to Closedhand on your computer, not to closedhand.com. Your dashboard password is separate too.</p>
+              <p>Closedhand and Cloudflare connect the address to the computer running Closedhand, so it works whenever that computer is awake and online.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Claim your personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Claim your personal URL</a>
               <div id="phone-code" hidden>
                 <label for="phone-code-input">Paste the code from closedhand.com</label>
                 <input id="phone-code-input" oninput="codeTypedInSettings()" class="settings-input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234">
-                <p>After you claim it on closedhand.com, it shows a code with a Copy button. Paste it here and it finishes by itself. Only your ClosedHand can finish it, so your address can never be pointed at somebody else's computer.</p>
+                <p>After you claim it on closedhand.com, it shows a code with a Copy button. Paste it here and it finishes by itself. Only your Closedhand can finish it, so your address can never be pointed at somebody else's computer.</p>
                 <button class="account-action-btn" id="phone-code-submit" onclick="claimDashboardLink()">Finish</button>
                 <p id="phone-code-status" role="status"></p>
               </div>
@@ -2604,7 +2604,7 @@
                   <img id="phone-qr" alt="Scan to open your dashboard" width="132" height="132" loading="lazy">
                 </div>
                 <div class="dashboard-link-control">
-                  <p id="phone-pause-help">Pausing stops your personal URL from opening ClosedHand. Resume it from Settings on the computer running ClosedHand.</p>
+                  <p id="phone-pause-help">Pausing stops your personal URL from opening Closedhand. Resume it from Settings on the computer running Closedhand.</p>
                   <button class="account-action-btn" id="phone-btn" onclick="togglePhoneAccess()">Pause link</button>
                 </div>
               </div>
@@ -2634,7 +2634,7 @@
           <div class="settings-group" style="border-color:rgba(239,230,214,0.16);flex:1;min-width:280px;">
             <div class="settings-group-header">
               <h2>Pulse</h2>
-              <p class="section-desc">ClosedHand monitors your email, calendar and other connections in the background. When something needs your attention, it reaches out proactively.</p>
+              <p class="section-desc">Closedhand monitors your email, calendar and other connections in the background. When something needs your attention, it reaches out proactively.</p>
             </div>
             <div class="settings-group-body">
               <div class="segmented-control" id="pulse-level" style="margin-bottom:10px;">
@@ -2658,14 +2658,14 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Choose which cards ClosedHand can use at checkout and when it must ask.<br>Purchases need your approval unless you change the rules here.</p>
+              <p class="section-desc">Choose which cards Closedhand can use at checkout and when it must ask.<br>Purchases need your approval unless you change the rules here.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
-              <p class="section-desc">Card numbers are encrypted with a key stored only on your own computer. ClosedHand uses them at checkout; the AI model never sees them.</p>
+              <p class="section-desc">Card numbers are encrypted with a key stored only on your own computer. Closedhand uses them at checkout; the AI model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
                 <div class="wallet-confirm" id="wallet-confirm" hidden>
-                  <p>Enter your dashboard password to let ClosedHand spend more freely. It is asked again after five minutes.</p>
+                  <p>Enter your dashboard password to let Closedhand spend more freely. It is asked again after five minutes.</p>
                   <div class="wallet-confirm-row">
                     <input type="password" id="wallet-confirm-pw" autocomplete="current-password" aria-label="Dashboard password">
                     <button type="button" class="account-action-btn" id="wallet-confirm-go">Confirm</button>
@@ -2721,16 +2721,16 @@
             </div>
           </div>
 
-          <!-- Preferences: how ClosedHand should act, added here or in chat.
+          <!-- Preferences: how Closedhand should act, added here or in chat.
                Goals have their own tab. -->
           <div class="settings-group" id="rules-section">
             <div class="settings-group-header">
               <h2>Preferences</h2>
-              <p class="section-desc">How you want ClosedHand to work. Add them here or tell ClosedHand, and turn them off or remove them at any time.</p>
+              <p class="section-desc">How you want Closedhand to work. Add them here or tell Closedhand, and turn them off or remove them at any time.</p>
             </div>
             <div class="settings-group-body">
               <div class="name-row">
-                <label for="preferred-name">ClosedHand calls you</label>
+                <label for="preferred-name">Closedhand calls you</label>
                 <input type="text" id="preferred-name" maxlength="40" autocomplete="given-name" placeholder="Your name">
                 <button type="button" id="preferred-name-save" onclick="savePreferredName()">Save</button>
               </div>
@@ -2770,7 +2770,7 @@
               <p class="section-desc">Your data is yours. Clear any of it whenever you like.</p>
             </div>
 
-            <!-- The ClosedHand account: the Google or Microsoft sign-in that
+            <!-- The Closedhand account: the Google or Microsoft sign-in that
                  owns this computer's personal URL. closedhand.com keeps only its
                  email; everything below is on this computer. -->
             <div class="account-summary" id="account-summary" hidden>
@@ -2787,7 +2787,7 @@
               <button class="account-action-btn" onclick="startAccountAction('clear-conversations')">Clear</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-conversations">
-              <div class="account-confirm-text">This permanently deletes your entire conversation history everywhere ClosedHand keeps it, including the Context Notes distilled from past conversations. Pinned facts, schedules and connected services are not affected.</div>
+              <div class="account-confirm-text">This permanently deletes your entire conversation history everywhere Closedhand keeps it, including the Context Notes distilled from past conversations. Pinned facts, schedules and connected services are not affected.</div>
               <div class="account-confirm-actions">
                 <button class="confirm-go confirm-go-neutral enabled" id="go-clear-conversations" data-orig-text="Clear history" onclick="executeAccountAction('clear-conversations')">Clear history</button>
               </div>
@@ -2804,7 +2804,7 @@
               <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Wipe</button>
             </div>
             <div class="account-confirm-inline" id="confirm-clear-data">
-              <div class="account-confirm-text warn">This permanently erases everything ClosedHand has built up for you: conversations, Context Notes, Pinned facts, preferences, schedules, tables, routines and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
+              <div class="account-confirm-text warn">This permanently erases everything Closedhand has built up for you: conversations, Context Notes, Pinned facts, preferences, schedules, tables, routines and indexed files. Your profile and connected services are kept, and mail and calendar keep syncing. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-clear-data" placeholder="Type WIPE" oninput="checkConfirmInput('clear-data','WIPE')">
                 <button class="confirm-go confirm-go-warn" id="go-clear-data" data-orig-text="Wipe everything" onclick="executeAccountAction('clear-data')">Wipe everything</button>
@@ -2817,12 +2817,12 @@
             <div class="account-action" id="action-delete-account">
               <div class="account-action-info">
                 <div class="account-action-title danger">Delete account</div>
-                <div class="account-action-desc">Deletes your ClosedHand account and everything ClosedHand keeps for you on your own computer. This cannot be undone.</div>
+                <div class="account-action-desc">Deletes your Closedhand account and everything Closedhand keeps for you on your own computer. This cannot be undone.</div>
               </div>
               <button class="account-action-btn account-action-btn-danger" onclick="startAccountAction('delete-account')">Delete</button>
             </div>
             <div class="account-confirm-inline" id="confirm-delete-account">
-              <div class="account-confirm-text danger" id="delete-account-text">This permanently deletes everything ClosedHand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
+              <div class="account-confirm-text danger" id="delete-account-text">This permanently deletes everything Closedhand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-delete-account" placeholder="Type DELETE" oninput="checkConfirmInput('delete-account','DELETE')">
                 <button class="confirm-go confirm-go-danger" id="go-delete-account" data-orig-text="Delete my account" onclick="executeAccountAction('delete-account')">Delete my account</button>
@@ -2854,7 +2854,7 @@
             <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">Ongoing</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
-              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows ClosedHand's working memory; only then are older stretches condensed into Context Notes here. Empty means nothing has been condensed, not that anything is missing.</div>
+              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows Closedhand's working memory; only then are older stretches condensed into Context Notes here. Empty means nothing has been condensed, not that anything is missing.</div>
             </span>
             <span id="context-gauge" style="font-size:11px;color:rgba(239,230,214,0.6);margin-left:auto;align-self:center;"></span>
           </div>
@@ -2874,10 +2874,10 @@
           </div>
           <div id="brain-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(239,230,214,0.6);">
             <div style="font-size:32px;margin-bottom:12px;">&#129504;</div>
-            <p style="margin:0;font-size:14px;">Context Brain is empty. Talk to ClosedHand and it will start pinning facts and writing Context Notes.</p>
+            <p style="margin:0;font-size:14px;">Context Brain is empty. Talk to Closedhand and it will start pinning facts and writing Context Notes.</p>
           </div>
           <!-- Files the user sent in chat. They live with the memory because that is
-               what they are: things ClosedHand keeps so it can re-read them later. -->
+               what they are: things Closedhand keeps so it can re-read them later. -->
           <div id="uploads-section" style="display:none;margin-top:20px;border-top:1px solid rgba(239,230,214,0.1);padding-top:14px;">
             <div onclick="toggleUploadsSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:8px;">
               <span id="uploads-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
@@ -2886,7 +2886,7 @@
               <button id="uploads-clear-all" onclick="event.stopPropagation();clearAllUploads()" title="Delete every stored copy in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="uploads-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent ClosedHand, kept so it can re-read them when you refer back. Deleting one removes ClosedHand's copy only; whatever you sent it from is untouched.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent Closedhand, kept so it can re-read them when you refer back. Deleting one removes Closedhand's copy only; whatever you sent it from is untouched.</p>
               <div id="uploads-list"></div>
             </div>
           </div>
@@ -2923,7 +2923,7 @@
           <div class="usage-prices" id="usage-prices"></div>
           <div class="usage-table" id="usage-table"></div>
           <div class="usage-empty" id="usage-empty" style="display:none;">
-            No usage recorded yet. Numbers appear here after ClosedHand's first model call.
+            No usage recorded yet. Numbers appear here after Closedhand's first model call.
           </div>
         </div>
       </div>
@@ -2932,7 +2932,7 @@
     </div>
 
     <div class="footer">
-      <p>&copy; 2026 ClosedHand. All rights reserved. <a href="/privacy" style="color: #B6AFA4; text-decoration: none;">Privacy</a> · <a href="/terms" style="color: #B6AFA4; text-decoration: none;">Terms</a></p>
+      <p>&copy; 2026 Closedhand. All rights reserved. <a href="/privacy" style="color: #B6AFA4; text-decoration: none;">Privacy</a> · <a href="/terms" style="color: #B6AFA4; text-decoration: none;">Terms</a></p>
     </div>
   </div>
 
@@ -3453,7 +3453,7 @@
     }
 
     async function disconnect(service) {
-      var answer = await askDisconnect('Disconnect ' + service + '?', 'ClosedHand will lose access to this service.');
+      var answer = await askDisconnect('Disconnect ' + service + '?', 'Closedhand will lose access to this service.');
       if (!answer.ok) return;
 
       const res = await fetch("/api/disconnect", {
@@ -3504,7 +3504,7 @@
       // On a line of their own under the email, so the email shows in full
       // and the person can tell which account stopped.
       return `<span style="display:flex;align-items:center;gap:8px;flex-basis:100%;">`
-        + `<span class="conn-badge-warn" style="flex-shrink:0;" title="Its provider stopped accepting ClosedHand's sign-in, so its mail and calendar are not updating.">Stopped working</span>`
+        + `<span class="conn-badge-warn" style="flex-shrink:0;" title="Its provider stopped accepting Closedhand's sign-in, so its mail and calendar are not updating.">Stopped working</span>`
         + `<button class="conn-btn conn-btn-manage" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();(window.top||window).location.href='${signInUrl}'">Sign in again</button>` + remove + `</span>`;
     }
 
@@ -3514,7 +3514,7 @@
       // Its provider stopped accepting the sign-in: say so first, with the way back.
       if (m.reconnect_required) {
         const provider = escHtml(c.name || c.service);
-        rows.push(`<p class="conn-again">${provider} stopped accepting ClosedHand's sign-in for ${escHtml(m.email || "this account")}. Until you sign in again, ClosedHand can't read or change anything there.</p>`
+        rows.push(`<p class="conn-again">${provider} stopped accepting Closedhand's sign-in for ${escHtml(m.email || "this account")}. Until you sign in again, Closedhand can't read or change anything there.</p>`
           + `<button class="conn-btn conn-btn-manage" onclick="event.stopPropagation();(window.top||window).location.href='/auth/${c.service}'">Sign in again</button>`);
       }
 
@@ -3775,7 +3775,7 @@
           if (toolCount) bits.push(toolCount + (toolCount === 1 ? ' tool' : ' tools'));
           if (caps.resources) bits.push(caps.resources + (caps.resources === 1 ? ' resource' : ' resources'));
           if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
-          if (m.transport === 'stdio') bits.push('runs alongside ClosedHand');
+          if (m.transport === 'stdio') bits.push('runs alongside Closedhand');
           var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
             : m.status === 'needs_auth'
@@ -3961,7 +3961,7 @@
     function renderMcpChoices(data) {
       var panel = document.getElementById('mcp-auth-status');
       panel.style.display = 'block'; panel.replaceChildren();
-      var intro = document.createElement('p'); intro.textContent = 'Choose the connection to add. Commands run on the computer running ClosedHand.';
+      var intro = document.createElement('p'); intro.textContent = 'Choose the connection to add. Commands run on the computer running Closedhand.';
       var source = document.createElement('a'); source.href = data.source; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = 'View project instructions';
       panel.append(intro); if (data.source) panel.append(source);
       data.setup_choices.forEach(function(choice) {
@@ -4173,8 +4173,8 @@
 
     async function disconnectFromSettings(service, name, isSignin) {
       const msg = isSignin
-        ? `This revokes ClosedHand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in.`
-        : `ClosedHand will lose access to this service.`;
+        ? `This revokes Closedhand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in.`
+        : `Closedhand will lose access to this service.`;
       var answer = await askDisconnect('Disconnect ' + name + '?', msg);
       if (!answer.ok) return;
       const res = await fetch("/api/disconnect", {
@@ -4382,11 +4382,11 @@
         : `<button class="pill pill-add-more" id="pill-add-more" aria-expanded="false"><span class="int-more-plus" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>Link another app</button>`;
       const businessWhatsApp = connected.some(([key, info]) => key === "whatsapp" && !info.linkedDevice);
       const note = businessWhatsApp && pulseState.deliveryPlatforms.includes("whatsapp")
-        ? '<p class="pulse-no-platforms">WhatsApp accepts these updates within 24 hours of your last message there. Outside that window, ClosedHand uses your other selected apps.</p>'
+        ? '<p class="pulse-no-platforms">WhatsApp accepts these updates within 24 hours of your last message there. Outside that window, Closedhand uses your other selected apps.</p>'
         : "";
       const help = pulseState.deliveryPlatforms.length
         ? "Choose the apps where you want to receive updates and scheduled results."
-        : "No apps selected. ClosedHand will not send updates or scheduled results to your chat apps.";
+        : "No apps selected. Closedhand will not send updates or scheduled results to your chat apps.";
       container.innerHTML = '<p class="notification-help">' + help + '</p><div class="notification-options">' + pills + adds + '</div>' + note;
       const more = container.querySelector("#pill-add-more");
       if (more) more.addEventListener("click", () => { container.dataset.showAdds = "1"; renderPlatformPills(platforms); });
@@ -4564,13 +4564,13 @@
       }
     }
 
-    // Settings > Account starts with the ClosedHand account: the Google or
+    // Settings > Account starts with the Closedhand account: the Google or
     // Microsoft sign-in that owns this computer's personal URL, which is all
     // it holds. Delete account then says exactly what goes.
     async function loadAccountSummary() {
       const box = document.getElementById("account-summary"), divider = document.getElementById("account-summary-divider");
       const text = document.getElementById("account-summary-text"), confirmText = document.getElementById("delete-account-text");
-      const local = "everything ClosedHand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
+      const local = "everything Closedhand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
       const row = (label, value) => {
         const dt = document.createElement("dt"); dt.textContent = label;
         const dd = document.createElement("dd"); dd.textContent = value;
@@ -4587,9 +4587,9 @@
         row("Used for", "Your personal URL, " + host);
         row("closedhand.com stores", "Your email and nothing else");
         row("Your data", "Stays on your own computer");
-        confirmText.textContent = "This deletes your ClosedHand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
+        confirmText.textContent = "This deletes your Closedhand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
-        row("Signed in with", "Nothing yet. Claiming a personal URL creates your ClosedHand account, which you sign in to with Google or Microsoft.");
+        row("Signed in with", "Nothing yet. Claiming a personal URL creates your Closedhand account, which you sign in to with Google or Microsoft.");
         row("Your data", "Stays on your own computer");
         confirmText.textContent = "This permanently deletes " + local;
       }
@@ -4752,8 +4752,8 @@
         if (!w.available) {
           un.style.display = 'block';
           un.textContent = w.reason === 'no encryption key'
-            ? 'ClosedHand has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
-            : 'The Wallet is for a ClosedHand you run yourself.';
+            ? 'Closedhand has no encryption key, so a card cannot be kept safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does this) and restart.'
+            : 'The Wallet is for a Closedhand you run yourself.';
           main.style.display = 'none';
           return;
         }
@@ -4789,7 +4789,7 @@
             (c.is_default ? '' : '<button class="conn-btn conn-btn-manage" onclick="setDefaultCard(\'' + c.id + '\')">Make default</button>') +
             '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletCard(\'' + c.id + '\')">Remove</button>' +
             '</div>';
-        }).join('') : '<div style="font-size:13px;color:#B6AFA4;">No cards yet. Until you add one, ClosedHand can only pay on sites that already have a card saved, and still asks you first.</div>';
+        }).join('') : '<div style="font-size:13px;color:#B6AFA4;">No cards yet. Until you add one, Closedhand can only pay on sites that already have a card saved, and still asks you first.</div>';
         var led = w.ledger || [];
         document.getElementById('wallet-ledger').innerHTML = led.length ? led.slice(0, 15).map(function(r) {
           var when = new Date(r.created_at);
@@ -4932,8 +4932,8 @@
       document.getElementById('phone-copy').textContent = 'Copy';
       document.getElementById('phone-qr-details').hidden = !p.enabled || !p.url;
       document.getElementById('phone-pause-help').textContent = p.enabled
-        ? 'Pausing stops your personal URL from opening ClosedHand. Resume it from Settings on the computer running ClosedHand.'
-        : 'Resume it to open ClosedHand from other devices.';
+        ? 'Pausing stops your personal URL from opening Closedhand. Resume it from Settings on the computer running Closedhand.'
+        : 'Resume it to open Closedhand from other devices.';
       if (base) {
         var url = new URL('/', base).href;
         document.getElementById('phone-url').textContent = new URL(url).host;
@@ -4945,7 +4945,7 @@
         ? 'Bookmark this link, pin it in a chat app or save it to your home screen. You can use it on any device.'
         : 'This is a temporary link and changes when the connection restarts. Claim your personal URL before saving it.';
       if (p.state === 'unavailable') {
-        desc.textContent = 'Update ClosedHand to use it on other devices.';
+        desc.textContent = 'Update Closedhand to use it on other devices.';
         setup.hidden = true;
       } else if (!p.enabled) {
         desc.textContent = base ? 'This link is paused. Resume it in Link options below.'
@@ -4961,7 +4961,7 @@
           : 'Connecting. Your personal URL will appear here when it is ready.';
         _phonePoll = setTimeout(loadPhoneAccess, 2000);
       } else {
-        desc.textContent = 'Open this link from any device and sign in with your dashboard password. It works whenever the computer running ClosedHand is awake and online.';
+        desc.textContent = 'Open this link from any device and sign in with your dashboard password. It works whenever the computer running Closedhand is awake and online.';
       }
     }
     // A typed name tidied as closedhand.com tidies it (webapp/phone-registration.js).
@@ -4981,7 +4981,7 @@
       var name = cleanAddressName(document.getElementById('phone-new-name').value);
       document.getElementById('phone-new-preview').textContent = name ? name + '.closedhand.ai' : '';
     }
-    // Rename: the old address sends people on for thirty days, and ClosedHand
+    // Rename: the old address sends people on for thirty days, and Closedhand
     // reconnects at the new name, which takes about a minute.
     async function renameDashboardLink() {
       var btn = document.getElementById('phone-rename-save'), status = document.getElementById('phone-rename-status');
@@ -4992,7 +4992,7 @@
         if (!r.ok) throw new Error(data.error || 'Could not change the name. Please try again.');
         document.getElementById('phone-rename').hidden = true;
         loadPhoneAccess();
-        document.getElementById('phone-desc').textContent = 'Your ClosedHand is now at ' + new URL(data.renamedTo).hostname + '. It takes about a minute to connect there, and the old address sends people to it for 30 days.';
+        document.getElementById('phone-desc').textContent = 'Your Closedhand is now at ' + new URL(data.renamedTo).hostname + '. It takes about a minute to connect there, and the old address sends people to it for 30 days.';
       } catch (e) { status.textContent = e.message; }
       finally { btn.disabled = false; }
     }
@@ -5051,7 +5051,7 @@
     }
     async function togglePhoneAccess() {
       var on = !!(_phone && _phone.enabled);
-      if (on && !confirm('Pause this personal URL? You will need to open Settings on the computer running ClosedHand to resume it.')) return;
+      if (on && !confirm('Pause this personal URL? You will need to open Settings on the computer running Closedhand to resume it.')) return;
       var btn = document.getElementById('phone-btn'); btn.disabled = true;
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });
@@ -5239,7 +5239,7 @@
       if (byFeature.chat && byFeature.chat.calls) {
         const avg = (byFeature.chat.tin + byFeature.chat.tout) / byFeature.chat.calls;
         const inShare = byFeature.chat.tin / (byFeature.chat.tin + byFeature.chat.tout);
-        if (avg >= 10000 && inShare >= 0.9) notes.push('Most of your chat spend is what each message carries with it, the conversation so far and what ClosedHand recalls for you, about ' + fmtTokens(Math.round(avg)) + ' tokens a message. Starting a new conversation once a topic is done keeps that down.');
+        if (avg >= 10000 && inShare >= 0.9) notes.push('Most of your chat spend is what each message carries with it, the conversation so far and what Closedhand recalls for you, about ' + fmtTokens(Math.round(avg)) + ' tokens a message. Starting a new conversation once a topic is done keeps that down.');
       }
       const dayTotals = Object.keys(byDay).map(d => [d, Object.values(byDay[d]).reduce((a, b) => a + b, 0)]).sort((a, b) => b[1] - a[1]);
       if (dayTotals.length > 2 && dayTotals[0][1] / grand >= 0.4) {
@@ -5479,7 +5479,7 @@
       if (det.cancel_by) details.push('<span class="flight-detail">Free cancellation until <span>' + escHtml(fmtBookingDate(det.cancel_by, b.timezone)) + '</span></span>');
       if (det.check_in_url) details.push('<span class="flight-detail"><a href="' + escHtml(det.check_in_url) + '" target="_blank" rel="noopener" style="color:#D8624B;">Check in</a></span>');
       var cancelled = b.status === 'cancelled';
-      // ClosedHand moved it: say from when, so the change is visible at a glance.
+      // Closedhand moved it: say from when, so the change is visible at a glance.
       var movedFrom = det.moved_from ? fmtBookingTime(det.moved_from, b.timezone) : '';
       var moved = movedFrom && movedFrom !== when ? ' <span class="booking-moved">moved from ' + escHtml(movedFrom) + '</span>' : '';
       // The venue's name is often the provider's too; say it once.
@@ -5610,7 +5610,7 @@
     }
 
     // A reminder's name says what it is for. Older ones were saved as a slug
-    // ("plumber-visit-14mar") and read here as words. The note ClosedHand left
+    // ("plumber-visit-14mar") and read here as words. The note Closedhand left
     // itself for when it fires is its own working, so it is not shown.
     function reminderTitle(name) {
       var t = String(name || '').trim();
@@ -5757,7 +5757,7 @@
 
     // === Cloud Workspace / Sandbox ===
     function ruleOrigin(rule) {
-      const labels = { assistant: 'Saved by ClosedHand', observed: 'Suggested by ClosedHand', user: 'Added in Settings' };
+      const labels = { assistant: 'Saved by Closedhand', observed: 'Suggested by Closedhand', user: 'Added in Settings' };
       const label = labels[rule.source] || 'Source not recorded';
       const date = rule.created_at && new Date(rule.created_at);
       return label + (date && !Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -5769,7 +5769,7 @@
         const res = await fetch('/api/rules');
         if (!res.ok) throw new Error('Could not load preferences');
         const rules = (await res.json()).filter(function(r) { return r.kind !== 'goal'; });
-        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask ClosedHand to remember a preference or add one below.</p>';
+        list.innerHTML = rules.length ? rules.map(ruleRow).join('') : '<p>Ask Closedhand to remember a preference or add one below.</p>';
       } catch (e) {
         list.innerHTML = '<p>Could not load preferences. <button class="notification-retry" onclick="loadUserRules()">Try again</button></p>';
       }
@@ -5826,8 +5826,8 @@
       try {
         var r = await fetch('/api/assistant-email');
         var d = r.ok ? await r.json() : {};
-        _assistantEmail = { on: !!(d.available && d.enabled && d.address), name: d.name || 'ClosedHand' };
-      } catch (e) { _assistantEmail = { on: false, name: 'ClosedHand' }; }
+        _assistantEmail = { on: !!(d.available && d.enabled && d.address), name: d.name || 'Closedhand' };
+      } catch (e) { _assistantEmail = { on: false, name: 'Closedhand' }; }
       var btn = document.querySelector('.auto-dest-btn[data-dest="email"]');
       if (!btn) return;
       btn.classList.toggle('unavailable', !_assistantEmail.on);
@@ -6168,7 +6168,7 @@
     // Permission drift is invisible: a scope change does not touch grants already
     // issued, and each extra Google account holds its own. Surfacing it here is
     // the difference between a one-click fix and a mystery failure days later.
-    // The prompt above the tabs for a ClosedHand without a lasting personal
+    // The prompt above the tabs for a Closedhand without a lasting personal
     // URL (Setup skipped it because closedhand.com couldn't be reached). It
     // goes once one is on its way.
     async function loadPersonalUrlPrompt() {
@@ -6218,7 +6218,7 @@
         if (!res.ok) throw new Error('Tasks unavailable');
         var agents = await res.json();
         document.getElementById('auto-active-error').hidden = true;
-        // The runs ClosedHand started from a chat that still need a look:
+        // The runs Closedhand started from a chat that still need a look:
         // running, waiting on the person, or finished without a sure delivery
         // (the server leaves out the rest, whose answers are in the chat).
         // Running and waiting first, each card saying which it is.
@@ -6253,7 +6253,7 @@
       try {
         var res = await fetch('/api/agents/' + id + '/stop', { method: 'POST' });
         if (res.ok) {
-          showToast('Stopping. ClosedHand will say so in the chat you asked in once it stops.');
+          showToast('Stopping. Closedhand will say so in the chat you asked in once it stops.');
           loadRunningAgents();
         } else {
           var d = await res.json().catch(function() { return {}; });
@@ -6282,7 +6282,7 @@
       buttons[1].focus();
     }
 
-    // Pages: every page ClosedHand made, whichever chat or agent made it. A
+    // Pages: every page Closedhand made, whichever chat or agent made it. A
     // week on the list, then Archived, loaded when it is opened.
     var _archivedPages = null;
     function renderPageCard(p) {
@@ -6482,7 +6482,7 @@
       // Raw statuses read as machine output; say it as a person would.
       // A finished card says how it ended in the person's terms: the first line
       // of the answer it sent, or why it could not finish, in the words the
-      // chat used. The quality check's notes are ClosedHand's own working.
+      // chat used. The quality check's notes are Closedhand's own working.
       var detail = running
         ? (last || 'Working on it') + ' \u00b7 running ' + when
         : runOutcome(a);
@@ -6533,7 +6533,7 @@
       var toolsHtml = areas.length
         ? '<div class="agent-step">Worked across: ' + escapeHtml(areas.join(', ')) + '</div>' : '';
 
-      // The finished work itself. ClosedHand tells the user in chat to see the
+      // The finished work itself. Closedhand tells the user in chat to see the
       // full report here when it trims a long one, and until now the card
       // showed the steps and the tool list and never the report, so that
       // sentence pointed at nothing. Markdown stays as written apart from
@@ -6572,7 +6572,7 @@
       var displayStatus = hasActiveRun ? 'running' : a.status;
       var statusClass = displayStatus === 'active' ? 'active' : displayStatus === 'paused' ? 'paused' : displayStatus === 'running' ? 'active' : 'idle';
       var triggerText = a.trigger_human_schedule || (a.trigger_type === 'event' ? 'When ' + (a.trigger_event_condition || a.trigger_event_source) : 'Run manually');
-      var triggerTitle = a.trigger_type === 'manual' ? 'Ask ClosedHand to run it or tap Run' : '';
+      var triggerTitle = a.trigger_type === 'manual' ? 'Ask Closedhand to run it or tap Run' : '';
 
       var actionsHtml = '<div class="auto-card-actions">';
       if (a.trigger_type === 'manual' || a.status === 'idle') {
@@ -6985,7 +6985,7 @@
           var out = f.direction === 'out';
           var when = f.created_at ? new Date(f.created_at).toLocaleDateString() : '';
           return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:8px;margin-bottom:6px;">' +
-            '<span title="' + (out ? 'From ClosedHand' : 'You sent this') + '" style="font-size:12px;color:' + (out ? '#D8624B' : '#D8624B') + ';flex-shrink:0;">' + (out ? '\u2193' : '\u2191') + '</span>' +
+            '<span title="' + (out ? 'From Closedhand' : 'You sent this') + '" style="font-size:12px;color:' + (out ? '#D8624B' : '#D8624B') + ';flex-shrink:0;">' + (out ? '\u2193' : '\u2191') + '</span>' +
             '<div style="flex:1;min-width:0;">' +
               '<div style="font-size:13px;color:#EFE6D6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(f.file_name || 'file') + '</div>' +
               '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + escapeHtml(fileSize(f.size_bytes)) + (when ? ' \u00b7 ' + escapeHtml(when) : '') + (f.description ? ' \u00b7 ' + escapeHtml(f.description) : '') + '</div>' +
@@ -6998,7 +6998,7 @@
     }
 
     async function deleteFile(id) {
-      if (!confirm('Delete this file? This removes ClosedHand\'s copy, not anything in Drive.')) return;
+      if (!confirm('Delete this file? This removes Closedhand\'s copy, not anything in Drive.')) return;
       try {
         var res = await fetch('/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
         if (res.ok) loadFiles();
@@ -7036,14 +7036,14 @@
               '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + escapeHtml(fileSize(f.size_bytes)) + (when ? ' · ' + escapeHtml(when) : '') + (f.description ? ' · ' + escapeHtml(f.description) : '') + '</div>' +
             '</div>' +
             '<a href="/api/files/' + encodeURIComponent(f.attachment_id) + '/download" style="font-size:12px;color:#D8624B;text-decoration:none;flex-shrink:0;">Download</a>' +
-            '<button onclick="deleteUpload(\'' + f.attachment_id + '\')" title="Delete ClosedHand&#39;s copy" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
+            '<button onclick="deleteUpload(\'' + f.attachment_id + '\')" title="Delete Closedhand&#39;s copy" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
           '</div>';
         }).join('');
       } catch (e) { console.error('Load uploads error:', e); }
     }
 
     async function deleteUpload(id) {
-      if (!confirm('Delete ClosedHand\'s copy of this file? It can no longer re-read it if you refer back; whatever you sent it from is untouched.')) return;
+      if (!confirm('Delete Closedhand\'s copy of this file? It can no longer re-read it if you refer back; whatever you sent it from is untouched.')) return;
       try {
         var res = await fetch('/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
         if (res.ok) loadUploads();
@@ -7053,7 +7053,7 @@
     async function clearAllUploads() {
       var badge = document.getElementById('uploads-count-badge');
       var n = badge && badge.textContent ? badge.textContent : 'all';
-      if (!confirm('Delete ClosedHand\'s stored copies of all ' + n + ' files you\'ve sent? It can no longer re-read them if you refer back; your own copies are untouched.')) return;
+      if (!confirm('Delete Closedhand\'s stored copies of all ' + n + ' files you\'ve sent? It can no longer re-read them if you refer back; your own copies are untouched.')) return;
       try {
         var res = await fetch('/api/uploads', { method: 'DELETE' });
         if (res.ok) { loadUploads(); showToast('Stored copies cleared'); }
@@ -7064,7 +7064,7 @@
     async function clearAllFiles() {
       var badge = document.getElementById('files-count-badge');
       var n = badge && badge.textContent ? badge.textContent : 'all';
-      if (!confirm('Delete all ' + n + ' files in this list? Documents pulled from your email or Drive still exist there and can be fetched again; files ClosedHand made are only stored here, so asking for one again later means remaking it.')) return;
+      if (!confirm('Delete all ' + n + ' files in this list? Documents pulled from your email or Drive still exist there and can be fetched again; files Closedhand made are only stored here, so asking for one again later means remaking it.')) return;
       try {
         var res = await fetch('/api/files', { method: 'DELETE' });
         if (res.ok) { loadFiles(); showToast('Files cleared'); }
@@ -7086,7 +7086,7 @@
 
         // Nobody wants a dataset for its own sake, so an empty one is not a
         // feature to advertise, it is a heading explaining something that has
-        // not happened. Show the section once ClosedHand has actually built
+        // not happened. Show the section once Closedhand has actually built
         // one, which is also the first moment it is worth looking at.
         var sectionEl = document.getElementById('datasets-section');
         if (!datasets || datasets.length === 0) {
@@ -7236,14 +7236,14 @@
               '<div onclick="toggleBridgeUnfurl()" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(239,230,214,0.1);border:1px solid rgba(208,86,63,0.2);border-radius:10px;cursor:pointer;">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
                 '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">' + (data.desktop ? 'Included in the ClosedHand app running on your Mac.' : 'ClosedHand can use the Mac apps and files you allow.') + '</div></div>' +
+                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">' + (data.desktop ? 'Included in the Closedhand app running on your Mac.' : 'Closedhand can use the Mac apps and files you allow.') + '</div></div>' +
                 '<span style="font-size:13px;color:#B6AFA4;font-weight:500;">' + (data.status === 'connected' ? 'Connected' : data.status === 'reconnecting' ? 'Reconnecting' : 'Not connected') + '</span>' +
                 '<span class="int-chevron" id="bridge-chevron"><span class="chevron-down"></span></span>' +
               '</div>' +
               '<div class="int-unfurl' + (expanded ? ' open' : '') + '" id="bridge-unfurl">' +
                 '<div class="int-unfurl-inner">' +
                   '<p style="font-size:14px;color:#B6AFA4;line-height:1.6;margin:0;">' +
-                    (data.desktop ? 'Choose what ClosedHand may use from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions. File changes and terminal commands also need Computer Control enabled.' : 'Choose what ClosedHand may use from the ClosedHand Bridge menu on your Mac. Keep Bridge open while you want access to that Mac.') +
+                    (data.desktop ? 'Choose what Closedhand may use from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions. File changes and terminal commands also need Computer Control enabled.' : 'Choose what Closedhand may use from the Closedhand Bridge menu on your Mac. Keep Bridge open while you want access to that Mac.') +
                   '</p>' +
                   (data.desktop ? '' : '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(239,230,214,0.1);"><button onclick="disconnectBridge()" class="conn-btn conn-btn-disconnect">Disconnect</button></div>') +
                 '</div>' +
@@ -7264,7 +7264,7 @@
                 'onmouseout="this.style.borderColor=\'rgba(208,86,63,0.2)\';this.style.boxShadow=\'0 0 8px rgba(208,86,63,0.04)\';this.style.transform=\'translateY(0)\'">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
                 '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect your Mac and choose what ClosedHand has access to</div></div>' +
+                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect your Mac and choose what Closedhand has access to</div></div>' +
                 '<span style="font-size: 14px;color:#D8624B;font-weight:500;">Set up &#8250;</span>' +
               '</div>';
           }
@@ -7410,7 +7410,7 @@
       setTimeout(function() { var a = bar.querySelector('.tab.active'); if (a && a.scrollIntoView) a.scrollIntoView({ inline: 'nearest', block: 'nearest' }); mark(); }, 300);
     })();
 
-    // What ClosedHand calls the person, shown and changed in Preferences.
+    // What Closedhand calls the person, shown and changed in Preferences.
     async function loadPreferredName() {
       try {
         var r = await fetch('/api/status');
@@ -7426,7 +7426,7 @@
       if (!name) { showToast('Type the name you want to be called', true); return; }
       var r = await fetch('/api/settings/preferred-name', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) });
       var d = await r.json().catch(function() { return {}; });
-      if (r.ok) showToast('ClosedHand will call you ' + d.name + '.'); else showToast(d.error || 'Could not save the name', true);
+      if (r.ok) showToast('Closedhand will call you ' + d.name + '.'); else showToast(d.error || 'Could not save the name', true);
     }
     window.savePreferredName = savePreferredName;
     loadPreferredName();
@@ -7879,8 +7879,8 @@
       var done = m.status === 'resolved';
       return '<div style="background:rgba(239,230,214,0.03);border:1px solid rgba(239,230,214,0.16);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;color:#EFE6D6;' + (done ? 'opacity:0.55;' : '') + '">' +
         '<div style="display:flex;align-items:center;gap:10px;"><span style="font-weight:600;color:#EFE6D6;">' + escHtml(m.title) + '</span><span style="color:#B6AFA4;font-size:12px;">' + (done ? 'concluded' : 'updated ' + when) + (m.expected_end ? ' · until ' + new Date(m.expected_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '') + '</span><span style="flex:1;"></span>' +
-        (done ? '' : '<button class="conn-btn conn-btn-manage" title="ClosedHand marks this done itself when it sees the plan has concluded. Use this if it has not noticed." onclick="resolveMatter(\'' + m.id + '\')">Done</button>') +
-        '<button class="conn-btn conn-btn-disconnect" style="opacity:0.55;" title="Forget it entirely: for something ClosedHand should never have treated as a plan." onclick="deleteMatter(\'' + m.id + '\')">Remove</button></div>' +
+        (done ? '' : '<button class="conn-btn conn-btn-manage" title="Closedhand marks this done itself when it sees the plan has concluded. Use this if it has not noticed." onclick="resolveMatter(\'' + m.id + '\')">Done</button>') +
+        '<button class="conn-btn conn-btn-disconnect" style="opacity:0.55;" title="Forget it entirely: for something Closedhand should never have treated as a plan." onclick="deleteMatter(\'' + m.id + '\')">Remove</button></div>' +
         (m.summary ? '<div style="color:#B6AFA4;margin-top:8px;line-height:1.5;">' + escHtml(m.summary) + '</div>' : '') + (rows ? '<div class="matter-rows">' + rows + '</div>' : '') + '</div>';
     }
     async function resolveMatter(id) { await fetch('/api/matters/' + id + '/resolve', { method: 'POST' }); loadMatters(); }
@@ -7896,7 +7896,7 @@
         html += '<div class="memory-section-label">Ongoing</div>';
         html += _matters.map(renderMatterCard).join('');
       } else if (_memoryFilter === 'matters') {
-        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in a conversation, ClosedHand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
+        html += '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in a conversation, Closedhand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
       }
 
       // Pinned facts, grouped. One flat list put a personal note next to a
@@ -7969,8 +7969,8 @@
       }
 
       if (!html) {
-        if (_memoryFilter === 'pinned') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">No Pinned facts yet. Chat with ClosedHand or click "+ Pin a fact" to add one.</div>';
-        else if (_memoryFilter === 'knowledge') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing here yet, which means nothing has been condensed: ClosedHand still holds your conversations in full. When older conversation is condensed into Context Notes, they land here for you to review and delete, because from then on the Context Note is what it remembers.</div>';
+        if (_memoryFilter === 'pinned') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">No Pinned facts yet. Chat with Closedhand or click "+ Pin a fact" to add one.</div>';
+        else if (_memoryFilter === 'knowledge') html = '<div style="text-align:center;padding:24px;color:rgba(239,230,214,0.6);font-size:13px;">Nothing here yet, which means nothing has been condensed: Closedhand still holds your conversations in full. When older conversation is condensed into Context Notes, they land here for you to review and delete, because from then on the Context Note is what it remembers.</div>';
       }
 
       el.innerHTML = html;
@@ -8037,11 +8037,11 @@
       var CAT = { profile: 'About you', preference: 'Preference', person: 'Person', business: 'Business or project', topic: 'Other' };
       var kind = (note.category === 'profile' && /^profile[-_]/.test(key)) ? key.replace(/^profile[-_]/, '').replace(/[-_]+/g, ' ') : '';
       var title = kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : (note.subject || (note.value || '').split(/[.;]/)[0].slice(0, 60) || key);
-      var who = note.source === 'chat' ? 'Pinned by ClosedHand from a conversation' : note.source === 'setup scan' ? 'Read from your mail by the setup scan' : note.source === 'you' ? 'Added by you' : 'Pinned earlier';
+      var who = note.source === 'chat' ? 'Pinned by Closedhand from a conversation' : note.source === 'setup scan' ? 'Read from your mail by the setup scan' : note.source === 'you' ? 'Added by you' : 'Pinned earlier';
       var when = note.created ? new Date(note.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
       document.getElementById('brain-panel-title').innerHTML = '&#128204; ' + escapeHtml(title);
       document.getElementById('brain-panel-tags').innerHTML = '<span style="font-size:11px;color:#D0A652;">' + escapeHtml(CAT[note.category] || CAT.topic) + '</span>' +
-        '<span style="font-size:11px;color:#B6AFA4;margin-left:10px;">' + escapeHtml(who + (when ? ', ' + when : '')) + '. Always in front of ClosedHand.</span>';
+        '<span style="font-size:11px;color:#B6AFA4;margin-left:10px;">' + escapeHtml(who + (when ? ', ' + when : '')) + '. Always in front of Closedhand.</span>';
       document.getElementById('brain-panel-content').textContent = note.value || '';
       // Set handlers as properties, never by rewriting onclick attributes: an
       // attribute selector for the original onclick stops matching after the
@@ -8298,23 +8298,23 @@
       whatsapp: { name: 'WhatsApp', icon: '/logos/whatsapp.svg', color: '#25D366',
         deepLink: function(code) { return 'https://wa.me/15551799854?text=' + code; },
         deepLinkLabel: 'Open WhatsApp',
-        instructions: 'Tap the button to open a chat with ClosedHand. The code is already filled in. Just hit send.' },
+        instructions: 'Tap the button to open a chat with Closedhand. The code is already filled in. Just hit send.' },
       telegram: { name: 'Telegram', icon: '/logos/telegram.svg', color: '#D8624B',
         deepLink: function(code) { return 'https://t.me/ClosedHand_Bot?start=' + code; },
         deepLinkLabel: 'Open Telegram',
-        instructions: 'Tap the button to open ClosedHand in Telegram. Send the code as your first message.' },
+        instructions: 'Tap the button to open Closedhand in Telegram. Send the code as your first message.' },
       discord: { name: 'Discord', icon: '/logos/discord.svg', color: '#5865F2',
-        deepLink: function() { return 'https://discord.com/users/ClosedHand'; },
+        deepLink: function() { return 'https://discord.com/users/Closedhand'; },
         deepLinkLabel: 'Open Discord',
-        instructions: 'Search for "ClosedHand" in Discord, send it a direct message with the code above.' },
+        instructions: 'Search for "Closedhand" in Discord, send it a direct message with the code above.' },
       slack: { name: 'Slack', icon: '/logos/slack.svg', color: '#4A154B',
         deepLink: null,
         deepLinkLabel: null,
-        instructions: 'In your Slack workspace, search for "ClosedHand" in apps, install it, then send it the code above in a direct message.' },
+        instructions: 'In your Slack workspace, search for "Closedhand" in apps, install it, then send it the code above in a direct message.' },
       line: { name: 'LINE', icon: '/logos/line.svg', color: '#00B900',
         deepLink: function() { return 'https://line.me/R/ti/p/@closedhand'; },
         deepLinkLabel: 'Open LINE',
-        instructions: 'Tap the button to find ClosedHand on LINE. Add it as a friend, then send the code above.' },
+        instructions: 'Tap the button to find Closedhand on LINE. Add it as a friend, then send the code above.' },
     };
 
     function showOnboarding(data) {
@@ -8570,7 +8570,7 @@
   </div>
   <script>
     // Every chat app on an install you run yourself is set up the same way:
-    // make the app with the provider, paste its keys here, ClosedHand checks
+    // make the app with the provider, paste its keys here, Closedhand checks
     // them and switches the app on. One panel, driven by a short spec per app.
     var CHAT_APP_SPECS = {
       discord: {
@@ -8618,7 +8618,7 @@
         html += '<div style="font-size:12px;color:#B6AFA4;margin-bottom:4px;">Address to paste</div>';
         html += '<div onclick="copyCode(\'' + info.webhook + '\')" title="Click to copy" style="font-family:ui-monospace,monospace;font-size:12px;color:#EFE6D6;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:6px;padding:8px 10px;margin-bottom:14px;cursor:pointer;word-break:break-all;">' + info.webhook + '</div>';
       } else if (info && info.needsPublic) {
-        html += '<p style="font-size:13px;color:#D0A652;line-height:1.5;margin:0 0 14px;">' + name + ' sends messages to ClosedHand over the internet, so ClosedHand needs a link that works from other devices first. Claim your personal URL in Settings, then come back here.</p>';
+        html += '<p style="font-size:13px;color:#D0A652;line-height:1.5;margin:0 0 14px;">' + name + ' sends messages to Closedhand over the internet, so Closedhand needs a link that works from other devices first. Claim your personal URL in Settings, then come back here.</p>';
       }
       if (info && info.fromEnv) html += '<p style="font-size:12px;color:#B6AFA4;margin:0 0 10px;">Some of these keys are set in the .env file, which wins over anything saved here.</p>';
       spec.fields.forEach(function(f) {
@@ -8645,7 +8645,7 @@
         closeChatAppSetup();
         if (typeof showToast === 'function') showToast((j.botName || 'The app') + ' is on. Press Connect to pair your account.');
         if (typeof loadStatus === 'function') loadStatus();
-      } catch (e) { msg.style.color = '#D0563F'; msg.textContent = 'Could not reach ClosedHand.'; btn.disabled = false; }
+      } catch (e) { msg.style.color = '#D0563F'; msg.textContent = 'Could not reach Closedhand.'; btn.disabled = false; }
     }
     async function removeChatApp() {
       var app = _chatAppOpen; if (!app) return;
@@ -8660,7 +8660,7 @@
       <p id="disconnect-body" style="font-size:13px;color:#B6AFA4;line-height:1.55;margin:0 0 14px;"></p>
       <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#EFE6D6;cursor:pointer;margin-bottom:18px;">
         <input type="checkbox" id="disconnect-purge" style="width:14px;height:14px;margin:3px 0 0;accent-color:#D0563F;flex:none;">
-        <span>Also delete everything ClosedHand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
+        <span>Also delete everything Closedhand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
       </label>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>
@@ -8692,23 +8692,23 @@
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         <h3 id="apple-modal-title" style="margin:0;">Connect your Mac</h3>
       </div>
-      <p class="mac-intro">Choose which Mac files and apps ClosedHand may use. Content needed for a request is processed by your selected AI provider.</p>
+      <p class="mac-intro">Choose which Mac files and apps Closedhand may use. Content needed for a request is processed by your selected AI provider.</p>
 
       <div id="apple-step-desktop" style="display:none;">
-        <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into the ClosedHand app and connects automatically. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
+        <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into the Closedhand app and connects automatically. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
       </div>
 
       <!-- Step 1: Not paired yet. One card, a line a step, so the whole box
            fits without scrolling. -->
       <ol id="apple-step-setup" class="mac-steps">
         <li>
-          <span class="mac-step-n">1</span><span class="mac-step-t">Download ClosedHand Bridge</span>
+          <span class="mac-step-n">1</span><span class="mac-step-t">Download Closedhand Bridge</span>
           <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download class="mac-step-btn">Download</a>
-          <div id="bridge-mobile-notice" class="mac-step-note" style="display:none;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files ClosedHand can access.</div>
+          <div id="bridge-mobile-notice" class="mac-step-note" style="display:none;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files Closedhand can access.</div>
           <script>(function(){var ua=navigator.userAgent;if(!/Macintosh|Mac OS X/i.test(ua)||/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}})()</script>
         </li>
         <li>
-          <span class="mac-step-n">2</span><span class="mac-step-t">Open it in your menu bar and choose “Pair with ClosedHand”</span>
+          <span class="mac-step-n">2</span><span class="mac-step-t">Open it in your menu bar and choose “Pair with Closedhand”</span>
         </li>
         <li>
           <span class="mac-step-n">3</span><span class="mac-step-t">Enter the code</span>
@@ -8719,7 +8719,7 @@
       <!-- Step 2: Already paired -->
       <div id="apple-step-connected" style="display:none;text-align:center;">
         <p id="apple-connected-status" style="font-size:14px;color:#EFE6D6;margin-bottom:4px;">Your Mac is connected</p>
-        <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:16px;">Keep ClosedHand Bridge open on that Mac. Choose what to allow from its menu bar.</p>
+        <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:16px;">Keep Closedhand Bridge open on that Mac. Choose what to allow from its menu bar.</p>
         <button onclick="disconnectBridge();closeAppleModal()" style="background:none;border:1px solid rgba(239,230,214,0.1);color:#D0563F;padding:6px 14px;border-radius:6px;font-size: 14px;cursor:pointer;">Disconnect</button>
       </div>
 
@@ -8791,7 +8791,7 @@
   " onmouseover="this.style.borderColor='rgba(208,86,63,0.4)';this.style.boxShadow='0 4px 24px rgba(16,14,13,0.4), 0 0 20px rgba(208,86,63,0.12)';this.style.transform='translateY(-2px)'"
      onmouseout="this.style.borderColor='rgba(208,86,63,0.25)';this.style.boxShadow='0 4px 20px rgba(16,14,13,0.3), 0 0 12px rgba(208,86,63,0.06)';this.style.transform='translateY(0)'">
     <img src="/logocircle.png" width="22" height="22" style="border-radius:50%;">
-    <span id="chat-fab-text">Ask ClosedHand</span>
+    <span id="chat-fab-text">Ask Closedhand</span>
   </a>
   <script>
   // Check for recent conversation and update FAB text
@@ -8834,7 +8834,7 @@
   .ready-card.routine .dot { width: 6px; height: 6px; border-radius: 50%; background: #B6AFA4; box-shadow: none; animation: ready-breathe 1.6s ease-in-out infinite; flex-shrink: 0; }
 </style>
 <script>
-  // Self-host only: a small card that says what ClosedHand is still getting
+  // Self-host only: a small card that says what Closedhand is still getting
   // ready, the recall model download and the first read of mail and calendar,
   // and goes away by itself when there is nothing left to say.
   (function () {

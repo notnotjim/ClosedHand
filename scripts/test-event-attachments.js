@@ -1,5 +1,5 @@
 // A file the person sent in chat can be attached to a calendar event, new or
-// existing: it goes to ClosedHand's folder in that account's Drive, then onto
+// existing: it goes to Closedhand's folder in that account's Drive, then onto
 // the event, keeping any attachments the event already had.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

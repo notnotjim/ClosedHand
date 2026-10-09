@@ -7,7 +7,7 @@
 // guess stayed in Context Brain after they said otherwise. When the person
 // says what they want to be called and the first names differ, the guess
 // goes: its profile-name note is removed, and the scan's other notes are
-// filed under the chosen name, so ClosedHand never holds two names for them.
+// filed under the chosen name, so Closedhand never holds two names for them.
 
 const first = (v) => String(v || "").trim().split(/\s+/)[0].toLowerCase();
 

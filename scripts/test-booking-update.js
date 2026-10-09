@@ -1,4 +1,4 @@
-// A change ClosedHand made to a booking is written straight to it, with where
+// A change Closedhand made to a booking is written straight to it, with where
 // it moved from, and shows on the dashboard card.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -51,7 +51,7 @@ test('the tool exists, chat and agents are told to use it, the card shows the mo
   assert.match(dash, /const field = \(label, v\) => \{ if \(v \|\| soon\)/);
 });
 
-test('a change ClosedHand made stands against an older email, and a newer email wins', () => {
+test('a change Closedhand made stands against an older email, and a newer email wins', () => {
   const { keepOwnChange } = require('../lib/booking-identity');
   const old = { starts_at: '2026-11-03T12:00:00.000Z', ends_at: null, status: 'confirmed', details: { changed_by_closedhand: '2026-11-02T20:00:00.000Z', moved_from: '2026-11-03T11:30:00.000Z' } };
   const fromEmail = { starts_at: '2026-11-03T11:30:00.000Z', ends_at: null, status: 'confirmed', title: 'Harbour Grill, table for 2' };

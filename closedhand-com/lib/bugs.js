@@ -1,4 +1,4 @@
-// Bug reports a person chose to send from their copy of ClosedHand. The copy
+// Bug reports a person chose to send from their copy of Closedhand. The copy
 // keeps a receipt that can check this report's outcome and nothing else.
 const crypto = require('node:crypto');
 

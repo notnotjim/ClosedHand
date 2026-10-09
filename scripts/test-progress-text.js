@@ -1,4 +1,4 @@
-// The progress lines the chat shows while ClosedHand works are plain words:
+// The progress lines the chat shows while Closedhand works are plain words:
 // never an internal tool name, a raw path or "undefined".
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

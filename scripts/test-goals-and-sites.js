@@ -35,7 +35,7 @@ test("trusted sites live in chat, not in a list that reads like the only sites a
   assert.doesNotMatch(dashboard, /allowed-hosts|Trusted sites|Approved websites|loadAllowedHosts/);
   assert.doesNotMatch(read("webapp/server.js"), /\/api\/settings\/allowed-hosts/);
   const card = guard.card({ host: "example.com", what: "a request with an email address in it" });
-  assert.match(card, /"always" to trust example\.com so ClosedHand can send there without confirming with you/);
+  assert.match(card, /"always" to trust example\.com so Closedhand can send there without confirming with you/);
   assert.match(card, /You can say "stop trusting example\.com" any time\./);
   const defs = require("../lib/tools/definitions.js");
   const tools = defs.TOOLS || defs.tools || Object.values(defs).find(Array.isArray);

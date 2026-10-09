@@ -1,4 +1,4 @@
-// Pulse knows what ClosedHand already did and which reminders are set, so it
+// Pulse knows what Closedhand already did and which reminders are set, so it
 // never contradicts the first or repeats the second.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,7 +27,7 @@ test('reminders in the next day are found from their schedule, and cover their e
   assert.equal(pc.coveredByReminder('2026-10-09T05:00:00Z', r), false);
 });
 
-test("what ClosedHand did lately comes from its finished jobs", async () => {
+test("what Closedhand did lately comes from its finished jobs", async () => {
   const d = db({ agent_tasks: [
     { user_id: 'u', title: 'Move table to 7pm', result: 'Done. Your table at Harbour Grill is now 7:00 PM.[[next]]More.', status: 'completed', completed_at: '2026-10-08T20:00:00Z' },
     { user_id: 'u', title: 'Old', result: 'x', status: 'completed', completed_at: '2026-10-01T00:00:00Z' },

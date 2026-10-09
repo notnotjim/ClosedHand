@@ -1,4 +1,4 @@
--- The assistant email relay: each copy of ClosedHand that turns on its own
+-- The assistant email relay: each copy of Closedhand that turns on its own
 -- address gets one here. closedhand.com is transport only. Mail arrives
 -- sealed to the copy's own key, which never leaves that computer; replies
 -- wait here encrypted until sent. Quotas belong to the verified owner, not

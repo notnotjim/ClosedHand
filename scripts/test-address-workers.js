@@ -1,6 +1,6 @@
 // The two Cloudflare Workers behind personal URLs, with Cloudflare and
 // closedhand.com as stand-ins: renamed names redirect, then stop; routes are
-// built and removed only when they are ClosedHand's own.
+// built and removed only when they are Closedhand's own.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');

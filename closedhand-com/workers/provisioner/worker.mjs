@@ -138,7 +138,7 @@ export async function moveNames(env, request = fetch) {
   }
   return {moved:done};
 }
-// How many DNS records personal URLs use: every one is a ClosedHand tunnel
+// How many DNS records personal URLs use: every one is a Closedhand tunnel
 // record. closedhand.com emails its operator past the alert level. Counted
 // every fifteen minutes.
 export async function countRecords(env, request = fetch) {

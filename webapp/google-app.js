@@ -1,10 +1,10 @@
-// webapp/google-app.js -- ClosedHand's own Google app, and which app renews each Google sign-in.
+// webapp/google-app.js -- Closedhand's own Google app, and which app renews each Google sign-in.
 //
-// Official builds carry the ID and secret of ClosedHand's Google app, a
+// Official builds carry the ID and secret of Closedhand's Google app, a
 // "Desktop app" client, added when the Docker images and the Mac app are
 // built. They are not in the source: Google's API terms keep developer
 // credentials out of open-source projects, so a build from source has no
-// ClosedHand app and connects through the person's own Google project, as
+// Closedhand app and connects through the person's own Google project, as
 // before. Google treats a desktop app's secret as public by design (it ships
 // inside the software), and hands each sign-in straight back to the computer
 // that asked for it, so mail, calendar and Drive travel from Google to that
@@ -18,7 +18,7 @@ function app() {
 }
 
 // Google sends a desktop app's sign-in back only to this computer's own
-// address, so the quick route works only where ClosedHand's address is local.
+// address, so the quick route works only where Closedhand's address is local.
 function canReturnTo(baseUrl) {
   try {
     const host = new URL(baseUrl).hostname;
@@ -27,7 +27,7 @@ function canReturnTo(baseUrl) {
 }
 
 // What renews a Google sign-in: the app that made it. Each sign-in through
-// ClosedHand's app, or through an app of the person's own picked at sign-in,
+// Closedhand's app, or through an app of the person's own picked at sign-in,
 // keeps that app's ID and secret with it; older sign-ins use the app saved
 // during setup.
 function clientFor(tokens, ownId, ownSecret) {

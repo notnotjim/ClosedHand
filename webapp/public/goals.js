@@ -27,7 +27,7 @@
     try {
       const data = await api("/api/goals");
       state.goals = data.goals; state.weekStart = data.week_start; state.timezone = data.timezone;
-      state.achievedCount = data.achieved_count; state.assistant = data.assistant_name || "ClosedHand";
+      state.achievedCount = data.achieved_count; state.assistant = data.assistant_name || "Closedhand";
       if (state.achievedOpen) state.achieved = (await api("/api/goals?status=achieved")).goals;
       byId("goals-error").hidden = true;
       render();
@@ -114,7 +114,7 @@
     if (sum) c.append(sum);
     if (g.check_in_text && g.status === "active") c.append(el("p", "goal-checkin", "Check-in: " + g.check_in_text));
     if (g.status !== "achieved" && !g.why && !g.if_then) {
-      const plan = el("button", "goal-plan-chat", `Plan it with ${state.assistant || "ClosedHand"}`); plan.type = "button";
+      const plan = el("button", "goal-plan-chat", `Plan it with ${state.assistant || "Closedhand"}`); plan.type = "button";
       plan.onclick = () => askInChat(`Help me set up my ${g.shape === "habit" ? "habit" : "goal"}: ${g.title}`);
       c.append(plan);
     }
@@ -148,7 +148,7 @@
           catch (e) { li.classList.remove("ticking"); alertIn(g.id, e.message); }
         };
         const body = el("span", "goal-step-body");
-        body.append(el("span", "goal-step-text", s.text), el("span", "goal-step-meta", (s.owner === "closedhand" ? state.assistant || "ClosedHand" : "You") + (s.due ? " · " + shortDate(s.due) : "")));
+        body.append(el("span", "goal-step-text", s.text), el("span", "goal-step-meta", (s.owner === "closedhand" ? state.assistant || "Closedhand" : "You") + (s.due ? " · " + shortDate(s.due) : "")));
         li.append(tick, body);
         list.append(li);
       });

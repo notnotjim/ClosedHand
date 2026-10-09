@@ -1,4 +1,4 @@
--- A copy of ClosedHand is known by its secret alone (by the hash of it,
+-- A copy of Closedhand is known by its secret alone (by the hash of it,
 -- which is all this service stores). An install ID it merely states proves
 -- nothing, so nobody can take a copy's place by knowing its ID. New
 -- addresses get an ID of their own, which also names their route.

@@ -1,5 +1,5 @@
-// Phones and tablets can't run ClosedHand. Pages mark them (html.handheld)
-// before anything is drawn, so there they lead with opening the ClosedHand
+// Phones and tablets can't run Closedhand. Pages mark them (html.handheld)
+// before anything is drawn, so there they lead with opening the Closedhand
 // someone already has, and send newcomers to a computer instead of offering
 // downloads. iPads that report as a Mac are caught by their touch screen.
 (function () {

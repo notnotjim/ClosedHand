@@ -1,6 +1,6 @@
 // An API key typed where a model ID goes must never reach a provider as the
 // model name: providers repeat the name in their error, so the key would land
-// with the wrong company and in ClosedHand's own log. The form refuses it, the
+// with the wrong company and in Closedhand's own log. The form refuses it, the
 // code that talks to providers refuses it again, and anything key-shaped in a
 // provider's error is hidden before it is logged.
 const { test } = require('node:test');

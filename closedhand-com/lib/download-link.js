@@ -1,5 +1,5 @@
-// "Or email it to yourself": on a phone, the link to get ClosedHand on a
-// computer, sent as one fixed email. It's optional (ClosedHand downloads
+// "Or email it to yourself": on a phone, the link to get Closedhand on a
+// computer, sent as one fixed email. It's optional (Closedhand downloads
 // with no account and no address) and nothing is stored. To stop the form
 // being used to pester someone, a keyed hash of each address is held in
 // memory for a day, so an address gets at most one email a day; visitors and
@@ -9,20 +9,20 @@ const { sendEmail } = require('./ses');
 
 const DAY = 24 * 60 * 60 * 1000, HOUR = 60 * 60 * 1000;
 const PER_VISITOR_HOUR = 5;
-const SUBJECT = 'Your ClosedHand download link';
+const SUBJECT = 'Your Closedhand download link';
 const TEXT = [
-  'Here’s the link you asked for. Open it on your computer to get ClosedHand:',
+  'Here’s the link you asked for. Open it on your computer to get Closedhand:',
   '',
   'https://closedhand.com',
   '',
-  'The Mac app downloads from there, and Docker runs ClosedHand on Windows, Linux or a Mac.',
+  'The Mac app downloads from there, and Docker runs Closedhand on Windows, Linux or a Mac.',
   '',
   'You asked for this on closedhand.com. It’s the only email we’ll send, and we haven’t kept your address.',
 ].join('\n');
 const HTML = `<!doctype html><html><body style="margin:0;padding:32px 20px;background:#100E0D;color:#EFE6D6;font:16px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
 <div style="max-width:480px;margin:0 auto">
 <p style="margin:0 0 20px;font:500 22px/1.3 Georgia,serif">Here’s the link you asked for.</p>
-<p style="margin:0 0 24px;color:#B6AFA4">Open it on your computer to get ClosedHand. The Mac app downloads from there, and Docker runs ClosedHand on Windows, Linux or a Mac.</p>
+<p style="margin:0 0 24px;color:#B6AFA4">Open it on your computer to get Closedhand. The Mac app downloads from there, and Docker runs Closedhand on Windows, Linux or a Mac.</p>
 <p style="margin:0 0 28px"><a href="https://closedhand.com" style="display:inline-block;padding:12px 22px;border-radius:12px;background:#EFE6D6;color:#100E0D;text-decoration:none;font-weight:600">Open closedhand.com</a></p>
 <p style="margin:0;font-size:13px;color:#8C857B">You asked for this on closedhand.com. It’s the only email we’ll send, and we haven’t kept your address.</p>
 </div></body></html>`;

@@ -1,6 +1,6 @@
-// The Telegram bot is called what ClosedHand is called. BotFather asks for a
-// name when the bot is made; once the person has named ClosedHand, Telegram
-// shows that name, when the bot starts and whenever ClosedHand is renamed.
+// The Telegram bot is called what Closedhand is called. BotFather asks for a
+// name when the bot is made; once the person has named Closedhand, Telegram
+// shows that name, when the bot starts and whenever Closedhand is renamed.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -31,7 +31,7 @@ function fakeBot(name) {
   return { set, getMyName: async () => ({ name }), setMyName: async (form) => { set.push(form.name); } };
 }
 
-test("Telegram takes the name ClosedHand goes by, and only changes when it differs", async () => {
+test("Telegram takes the name Closedhand goes by, and only changes when it differs", async () => {
   const bot = fakeBot("Petey");
   await loadWith({ bot, given: "Pete" }).showName();
   assert.deepEqual(bot.set, ["Pete"], "the name from settings when the bot starts");
@@ -45,7 +45,7 @@ test("Telegram takes the name ClosedHand goes by, and only changes when it diffe
   assert.deepEqual(renamed.set, ["Max"], "a rename goes straight through");
 });
 
-test("before ClosedHand has a name, the BotFather name stays", async () => {
+test("before Closedhand has a name, the BotFather name stays", async () => {
   const bot = fakeBot("Petey");
   await loadWith({ bot, given: null }).showName();
   assert.deepEqual(bot.set, []);
@@ -66,6 +66,6 @@ test("it runs when the bot starts and at every rename, and setup says so", () =>
   assert.match(read("lib/onboarding.js"), /await saveProfileSetting\("bot_name", got\.bot\);\n\s*have\.bot = got\.bot;\n\s*require\("\.\/telegram-name"\)\.showName\(got\.bot\);/);
   assert.match(read("lib/tools/handlers.js"), /if \(toolInput\.bot_name\) require\("\.\.\/telegram-name"\)\.showName\(toolInput\.bot_name\);/);
   const setup = read("webapp/views/setup.html");
-  assert.match(setup, /Any name will do: once you&rsquo;ve told ClosedHand what to call it, the bot takes that name\./);
+  assert.match(setup, /Any name will do: once you&rsquo;ve told Closedhand what to call it, the bot takes that name\./);
   assert.doesNotMatch(setup, /coming soon/i, "nothing promised that is not there");
 });

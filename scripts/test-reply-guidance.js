@@ -1,4 +1,4 @@
-// What ClosedHand is told about replying, and the names it uses, as
+// What Closedhand is told about replying, and the names it uses, as
 // behaviour that can be checked rather than wording that can drift.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -16,7 +16,7 @@ test("it never points at something the person cannot see", () => {
 test("the sandbox is called what the Computers tab calls it", () => {
   const files = ["lib/engine.js", "lib/agents.js", "lib/messaging.js", "lib/status-feed.js", "lib/tools/definitions.js", "lib/tools/handlers.js", "lib/automations.js", "webapp/server.js", "webapp/rag-processor.js"];
   for (const f of files) assert.doesNotMatch(read(f), /cloud (computer|browser)/i, f);
-  assert.match(read("webapp/views/index.html"), /ClosedHand's sandbox computer/, "the name it follows");
+  assert.match(read("webapp/views/index.html"), /Closedhand's sandbox computer/, "the name it follows");
   assert.match(read("lib/engine.js"), /call it your sandbox computer/);
 });
 

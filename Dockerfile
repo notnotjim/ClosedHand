@@ -50,7 +50,7 @@ RUN node scripts/prepare-voice.js && node scripts/prepare-voice.js --listening
 # The commit this image was built from, for bug reports.
 ARG GIT_SHA=""
 ENV CLOSEDHAND_SHA=$GIT_SHA
-# ClosedHand's own Google app (see lib/google-app.js), passed in by the
+# Closedhand's own Google app (see lib/google-app.js), passed in by the
 # official image build. A build from source leaves both empty and connects
 # Google through the person's own project.
 ARG CLOSEDHAND_GOOGLE_CLIENT_ID=""

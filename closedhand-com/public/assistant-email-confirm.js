@@ -1,22 +1,22 @@
-// Confirming a ClosedHand assistant's email address. The ClosedHand that
+// Confirming a Closedhand assistant's email address. The Closedhand that
 // asked opened this page with a signed ticket after the #; the owner signs in
 // with Google or a personal Microsoft account, then confirms. That account
 // proves the address is theirs and is where the assistant writes when it
 // emails them first, so only an address the provider has verified counts.
 // The owner may then email the assistant from that account or any Google or
-// Microsoft account connected to their ClosedHand.
+// Microsoft account connected to their Closedhand.
 (() => {
   const $ = id => document.getElementById(id);
   const ticket = location.hash.slice(1);
   const here = '/assistant-email/confirm' + location.hash;
   const status = $('status');
-  // The assistant's name travels in the signed link from its ClosedHand.
+  // The assistant's name travels in the signed link from its Closedhand.
   let name = '';
   try { name = String(JSON.parse(atob(ticket.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).name || '').slice(0, 60); } catch (_) {}
   if (name) {
     const whose = name + '’s';
     $('heading').textContent = 'Set up ' + whose + ' email address';
-    $('lede').textContent = 'Your ClosedHand assistant, ' + name + ', is getting its own email address. You can email it, forward things to it and copy it in from any Google or Microsoft account connected to your ClosedHand.';
+    $('lede').textContent = 'Your Closedhand assistant, ' + name + ', is getting its own email address. You can email it, forward things to it and copy it in from any Google or Microsoft account connected to your Closedhand.';
     $('who-label').textContent = 'When ' + name + ' emails you first, it writes to';
     $('approve').textContent = 'Create ' + whose + ' email address';
     $('address-note').textContent = whose + ' email address';
@@ -29,7 +29,7 @@
     if (!response.ok) throw new Error(data.error || 'Could not confirm this address. Please try again.');
     return data;
   }
-  if (!ticket) { status.textContent = 'Turn on ClosedHand’s email address in its Settings first.'; return; }
+  if (!ticket) { status.textContent = 'Turn on Closedhand’s email address in its Settings first.'; return; }
   request('/api/account').then(account => {
     // Signed in, but with an address the provider has not vouched for here:
     // an older sign-in, or a work account. Sign in again, or with another.
@@ -57,7 +57,7 @@
       $('address').textContent = data.address;
       $('address').hidden = $('address-note').hidden = false;
       $('confirm').hidden = true;
-      $('done-note').textContent = 'When ' + (name || 'ClosedHand') + ' emails you first, it writes to ' + data.email + '. You can close this tab: your ClosedHand updates by itself.';
+      $('done-note').textContent = 'When ' + (name || 'Closedhand') + ' emails you first, it writes to ' + data.email + '. You can close this tab: your Closedhand updates by itself.';
       $('done').hidden = false;
       status.textContent = '';
     } catch (e) {

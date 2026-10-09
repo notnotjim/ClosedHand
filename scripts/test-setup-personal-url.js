@@ -128,7 +128,7 @@ test('failed or unsafe confirmations close the blank tab and remain retryable', 
   assert.match(f.node('url-status').textContent, /try again/);
   assert.equal(f.node('url-start').disabled, false);
 });
-test('once confirmed, setup says where ClosedHand is, with Change to rename it', async () => {
+test('once confirmed, setup says where Closedhand is, with Change to rename it', async () => {
   let reply = { error: 'That name is taken. Try another.' };
   const f = fixture(o => o.method === 'POST' ? reply : { enabled: true, state: 'provisioning', ownershipConfirmed: true, registrationState: 'pending', addressName: 'amber-fox-42' });
   await f.update();
@@ -213,7 +213,7 @@ test('carrying on without a personal URL is offered only when closedhand.com can
   let state = { state: 'off', serviceAvailable: true };
   const f = fixture(() => state);
   await f.update();
-  assert.equal(f.node('url-continue').hidden, true, 'every ClosedHand gets one here');
+  assert.equal(f.node('url-continue').hidden, true, 'every Closedhand gets one here');
   assert.equal(f.node('url-start').textContent, 'Claim your personal URL');
   state = { state: 'off', serviceAvailable: false }; await f.update();
   assert.equal(f.node('url-continue').hidden, false);

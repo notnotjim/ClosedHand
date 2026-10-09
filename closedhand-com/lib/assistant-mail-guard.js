@@ -22,7 +22,7 @@ function createGuard(db, env, sender) {
       // The AWS guard sends the final notice through SNS, independently of SES.
       if (threshold === 100) return;
       await sender.send(new SendEmailCommand({ FromEmailAddress: 'alerts@assist.closedhand.ai', Destination: { ToAddresses: [env.ASSISTANT_EMAIL_OPERATOR] }, Content: { Simple: {
-        Subject: { Data: `ClosedHand email budget: ${threshold}%` },
+        Subject: { Data: `Closedhand email budget: ${threshold}%` },
         Body: { Text: { Data: `Estimated email usage this month is $${used.toFixed(2)} against the $${budget.toFixed(2)} operating reserve. Review usage before increasing capacity. The service pauses at the reserve; the AWS billing alerts are separate. No limit has been raised automatically.` } }
       } } }));
     },

@@ -32,7 +32,7 @@ struct OnboardingHost: View {
             VStack(spacing: 12) {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 40)).foregroundColor(.green)
                 Text("Mac access is set up").font(.title3)
-                Text("Change what ClosedHand may use from the menu bar.").font(.caption).foregroundColor(.secondary)
+                Text("Change what Closedhand may use from the menu bar.").font(.caption).foregroundColor(.secondary)
             }
             .padding()
             .frame(width: 380, height: 200)
@@ -51,7 +51,7 @@ enum MenuIcon {
             img.size = NSSize(width: 18, height: 18)
             return img
         }
-        return NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "ClosedHand")!
+        return NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Closedhand")!
     }()
 }
 
@@ -59,14 +59,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         // This app shares its defaults with the Bridge app it replaces. A
-        // pairing Bridge made with some other ClosedHand must not be dialled
+        // pairing Bridge made with some other Closedhand must not be dialled
         // on launch; the Supervisor hands over the local one once it is up.
         UserDefaults.standard.set(false, forKey: "isPaired")
         Supervisor.shared.start()
     }
 
     /// Opening the app again while it runs (a Finder double-click, or the
-    /// Launchpad icon) means "show me ClosedHand".
+    /// Launchpad icon) means "show me Closedhand".
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if Supervisor.shared.web == .running { Supervisor.shared.openDashboard() }
         return false

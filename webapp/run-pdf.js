@@ -220,7 +220,7 @@ function writeBody(doc, md) {
 // Build the document. Returns the PDFDocument stream; pipe it before end()
 // runs, so the route does runPdf(run).pipe(res).
 function runPdf(run) {
-  const doc = new PDFDocument({ size: "A4", margin: MARGIN, bufferPages: true, info: { Title: runTitle(run), Author: "ClosedHand" } });
+  const doc = new PDFDocument({ size: "A4", margin: MARGIN, bufferPages: true, info: { Title: runTitle(run), Author: "Closedhand" } });
 
   // Header: wordmark, date, rule.
   const finished = run.completed_at || run.created_at;
@@ -230,7 +230,7 @@ function runPdf(run) {
   if (run.result_edited_at) {
     dateStr += (dateStr ? " · " : "") + "edited " + new Date(run.result_edited_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
-  doc.font(F.bold).fontSize(10).fillColor(ACCENT).text("ClosedHand", MARGIN, MARGIN - 10, { continued: false });
+  doc.font(F.bold).fontSize(10).fillColor(ACCENT).text("Closedhand", MARGIN, MARGIN - 10, { continued: false });
   if (dateStr) {
     doc.font(F.body).fontSize(9).fillColor(MUTED)
       .text(dateStr, MARGIN, MARGIN - 9, { width: W, align: "right" });
@@ -258,7 +258,7 @@ function runPdf(run) {
     const ob = doc.page.margins.bottom;
     doc.page.margins.bottom = 0;
     doc.font(F.body).fontSize(8).fillColor(MUTED);
-    doc.text("ClosedHand", MARGIN, PAGE_H - 42, { lineBreak: false });
+    doc.text("Closedhand", MARGIN, PAGE_H - 42, { lineBreak: false });
     doc.text(`${p - range.start + 1} of ${range.count}`, MARGIN, PAGE_H - 42, { width: W, align: "right", lineBreak: false });
     doc.page.margins.bottom = ob;
   }

@@ -1,4 +1,4 @@
-# ClosedHand self-host, one-command boot: `docker compose up -d` (pulls
+# Closedhand self-host, one-command boot: `docker compose up -d` (pulls
 # pre-built images; nobody compiles anything to try the app).
 # Building from source instead:
 #   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
@@ -89,7 +89,7 @@ services:
   # Code/browser tools: one fixed sandbox container (the hosted product
   # provisions one per user on Railway; self-host is single-tenant, so one
   # static box). The bot reaches it as http://sandbox:8080; open
-  # localhost:6080 to watch ClosedHand's computer work.
+  # localhost:6080 to watch Closedhand's computer work.
   sandbox:
     image: ghcr.io/notnotjim/closedhand-sandbox:latest
     environment:

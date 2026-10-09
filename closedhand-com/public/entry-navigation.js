@@ -39,11 +39,11 @@
       return url.href;
     } catch (_) { return null; }
   }
-  // Which screen My ClosedHand (/open) shows. A newcomer has no sign of
-  // ClosedHand: not signed in, not sent from it, never opened a personal URL
+  // Which screen My Closedhand (/open) shows. A newcomer has no sign of
+  // Closedhand: not signed in, not sent from it, never opened a personal URL
   // from this browser, and nothing answering on this computer. Signed in
   // without a personal URL means Setup isn't finished: it gives every
-  // ClosedHand its address.
+  // Closedhand its address.
   function isNewcomer({ signedIn, choosing, failedSignIn, next, known, nothingHere }) {
     return !signedIn && !choosing && !failedSignIn && next === '/' && !known && !!nothingHere;
   }
@@ -52,7 +52,7 @@
     if (!signedIn || choosing || failedSignIn || (!found && !available)) return 'find';
     return found ? 'found' : 'not-set-up';
   }
-  // ClosedHand on this computer, for when the page can't see it (Safari, or
+  // Closedhand on this computer, for when the page can't see it (Safari, or
   // Chrome's question declined): Docker and the Mac app use this port.
   const LOCAL = 'http://localhost:3000';
   const api = { signInReturn, signInError, destination, registeredAddress, address, isNewcomer, openScreen, LOCAL };

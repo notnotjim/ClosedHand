@@ -167,7 +167,7 @@ test('with images off, what is said is read directly, with no extra model call',
 test('a site that wants a sign-in says so plainly, and private addresses are refused', async () => {
   reset({ out: { ok: false, kind: 'login', error: 'login required' } });
   const store = setup({ chat: { model: 'vision-model', cap: { vision: true } }, vision: 'same' });
-  await assert.rejects(video.watchVideo({ userId: 'u1', store, url: 'https://www.instagram.com/reel/abc/' }), (e) => e.userFacing && /sign in to it once in the browser on ClosedHand's sandbox computer/.test(e.message));
+  await assert.rejects(video.watchVideo({ userId: 'u1', store, url: 'https://www.instagram.com/reel/abc/' }), (e) => e.userFacing && /sign in to it once in the browser on Closedhand's sandbox computer/.test(e.message));
   await assert.rejects(video.watchVideo({ userId: 'u1', store, url: 'http://192.168.1.10/clip.mp4' }), (e) => e.userFacing);
 });
 

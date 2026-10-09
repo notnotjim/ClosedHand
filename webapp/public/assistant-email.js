@@ -23,7 +23,7 @@
   function render() {
     content.replaceChildren();
     const heading = document.getElementById('assistant-email-heading'); heading.textContent = 'Email address';
-    content.append(el('p', "Send and forward emails to ClosedHand's own secure email address, or CC it into a conversation.", 'section-desc'));
+    content.append(el('p', "Send and forward emails to Closedhand's own secure email address, or CC it into a conversation.", 'section-desc'));
     if (state.available === false) {
       const unavailable = el('button', 'Coming soon', 'conn-btn conn-btn-manage');
       unavailable.type = 'button'; unavailable.disabled = true;
@@ -59,7 +59,7 @@
         try {
           const result = await request('/enable', {});
           if (tab) tab.location = result.url;
-          else { const link = el('a', 'Confirm ClosedHand’s email address'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; content.append(link); }
+          else { const link = el('a', 'Confirm Closedhand’s email address'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; content.append(link); }
           status.textContent = 'Finish signing in on the new tab. This page updates automatically.';
           clearInterval(polling); polling = setInterval(() => { if (!document.hidden) refresh().catch(e => { status.textContent = e.message; }); }, 4000);
         } catch (e) { if (tab) tab.close(); throw e; }

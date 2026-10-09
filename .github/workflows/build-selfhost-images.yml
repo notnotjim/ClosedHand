@@ -1,7 +1,7 @@
 name: Build self-host images
 
 # The self-host compose file boots from pre-built images so nobody has to
-# compile anything to try ClosedHand. That promise is only true if these get
+# compile anything to try Closedhand. That promise is only true if these get
 # published, which is what this does. The installer falls back to building
 # from source when a pull fails, so a missing image is slow rather than fatal.
 #
@@ -81,7 +81,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:latest
             ghcr.io/${{ github.repository_owner }}/closedhand-${{ matrix.name }}:${{ github.sha }}
-          # ClosedHand's Google app goes in only once these repository
+          # Closedhand's Google app goes in only once these repository
           # secrets exist; without them the images connect Google through
           # each person's own project, as before.
           build-args: |

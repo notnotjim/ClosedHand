@@ -74,8 +74,8 @@ test("ordinary OSS report stays local until explicit consent; bare bug and space
   assert.equal(r.api.isBugReport("/ bug wrong"), false);
   assert.equal(r.api.isBugReport("bug wrong"), false);
   const reply = await file(r.api);
-  assert.match(reply, /Send this to ClosedHand to check/);
-  assert.match(reply, /random ID for your ClosedHand/);
+  assert.match(reply, /Send this to Closedhand to check/);
+  assert.match(reply, /random ID for your Closedhand/);
   assert.equal(r.calls.length, 0);
   await r.api.handleBugSendReply("alice", "no");
   assert.equal(r.calls.length, 0);
@@ -90,7 +90,7 @@ test("maintainer reports stay local without asking to send them to their own tea
 });
 test("hosted reports disclose saved context and do not forward elsewhere", async () => {
   const r = reporter({ SUPABASE_URL: "https://db.example" });
-  assert.match(await file(r.api), /Sent to ClosedHand to check/);
+  assert.match(await file(r.api), /Sent to Closedhand to check/);
   assert.equal(r.calls.length, 0);
 });
 test("save and screenshot failures are reported honestly", async () => {

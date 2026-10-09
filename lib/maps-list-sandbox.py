@@ -1,4 +1,4 @@
-# Runs on ClosedHand's sandbox computer, sent by lib/maps-lists.js with ARGS
+# Runs on Closedhand's sandbox computer, sent by lib/maps-lists.js with ARGS
 # set above it. Saves places to one of the person's Google Maps lists, in the
 # sandbox browser where they signed in to Google themselves. Google offers no
 # other way to write to saved lists, so this does what the person would do on

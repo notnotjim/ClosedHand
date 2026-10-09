@@ -1,6 +1,6 @@
-// Pages ClosedHand sends on Telegram open inside Telegram, signed in there by
+// Pages Closedhand sends on Telegram open inside Telegram, signed in there by
 // Telegram's proof of who opened them: only a fresh proof for the Telegram
-// account linked to this ClosedHand, only for ClosedHand's own pages, and only
+// account linked to this Closedhand, only for Closedhand's own pages, and only
 // as a session in Telegram's browser.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -35,7 +35,7 @@ test("a proof counts only when Telegram signed it with this bot's key, recently"
   assert.match(server, /return TELEGRAM_BOT_TOKEN \|\| \(await getRuntimeConf\("TELEGRAM_BOT_TOKEN"\)\) \|\| null;/, "the key the setup page saved");
 });
 
-test("only ClosedHand's own pages open this way, never another site", () => {
+test("only Closedhand's own pages open this way, never another site", () => {
   const box = {};
   vm.runInNewContext(fn("telegramTarget") + "\nthis.f = telegramTarget;", box);
   assert.equal(box.f("/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07");
@@ -53,7 +53,7 @@ test("the session needs a fresh proof from the linked account, lasts 12 hours, a
   assert.match(route, /validateTelegramInitData\(initData, await telegramBotToken\(\), TELEGRAM_PROOF_MAX_AGE_SEC\)/);
   assert.match(route, /if \(_usedTelegramProofs\.has\(proofId\)\) return res\.status\(403\)/, "a proof signs in once");
   assert.match(route, /\.eq\("platform", "telegram"\)\.eq\("platform_user_id", String\(tgUser\.id\)\)/);
-  assert.match(route, /link\[0\]\.user_id !== getAdminUserId\(\)/, "only the account linked to this ClosedHand");
+  assert.match(route, /link\[0\]\.user_id !== getAdminUserId\(\)/, "only the account linked to this Closedhand");
   assert.match(route, /await startAdminSession\(req, res, \{ kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC \}\);/);
   assert.match(server, /const TELEGRAM_SESSION_SEC = 12 \* 60 \* 60;\nconst TELEGRAM_PROOF_MAX_AGE_SEC = 60 \* 60;/);
   assert.ok(server.indexOf('app.post("/api/telegram/session"') < server.indexOf("// --- The gate: everything registered below needs the session"), "reachable before a session exists");
@@ -160,7 +160,7 @@ test("with no personal URL, the page link says how to reach pages from a phone",
   assert.match(shaped.text, /claim your personal URL in the dashboard's Settings/);
 });
 
-test("WhatsApp gets the full personal URL for every ClosedHand page", () => {
+test("WhatsApp gets the full personal URL for every Closedhand page", () => {
   const { absolutePageLinks } = require("../lib/page-links");
   assert.equal(absolutePageLinks(`See /page/${SAIGON} and [the dashboard](/dashboard#agents), not https://example.com/page/${SAIGON}`, BASE),
     `See ${BASE}/page/${SAIGON} and [the dashboard](${BASE}/dashboard#agents), not https://example.com/page/${SAIGON}`);

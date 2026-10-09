@@ -1,5 +1,5 @@
 // "On your phone?": tapping Mac app or Docker on a phone or tablet, where
-// ClosedHand can't be installed. It helps get the link to a computer: the
+// Closedhand can't be installed. It helps get the link to a computer: the
 // phone's own share sheet (AirDrop to a Mac, Messages, Mail), Copy link, or,
 // optionally, one email with the link. Used by the home page and /open.
 (function () {
@@ -15,7 +15,7 @@
     '<button type="button" class="get-sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
     '<svg class="get-sheet-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></svg>' +
     '<h2 id="getSheetTitle">On your phone?</h2>' +
-    '<p class="get-sheet-text">Your ClosedHand assistant lives on a computer or a server you rent, and you use it from here. Set it up there first.</p>' +
+    '<p class="get-sheet-text">Your Closedhand assistant lives on a computer or a server you rent, and you use it from here. Set it up there first.</p>' +
     '<button type="button" class="get-sheet-send" hidden>Send link</button>' +
     '<button type="button" class="get-sheet-copy"><span>closedhand.com</span><strong>Copy link</strong></button>' +
     '<form class="get-sheet-mail" novalidate hidden>' +
@@ -53,7 +53,7 @@
     });
   });
   send.addEventListener('click', function () {
-    navigator.share({ title: 'ClosedHand', url: LINK }).catch(function () {});
+    navigator.share({ title: 'Closedhand', url: LINK }).catch(function () {});
   });
   copy.addEventListener('click', function () {
     if (!navigator.clipboard || !navigator.clipboard.writeText) return;

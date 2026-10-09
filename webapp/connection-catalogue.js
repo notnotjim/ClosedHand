@@ -51,7 +51,7 @@ function createCatalogue({db, services, userId, baseUrl}) {
         const rows=Object.entries(services).filter(([key,s])=>!s.isChatPlatform).map(([key,s])=>{
           const ready=own.has(key)||!!(s.clientId&&s.clientSecret);
           // Microsoft without an app of the person's own signs in by code
-          // through ClosedHand's app, on the setup page.
+          // through Closedhand's app, on the setup page.
           const microsoftCode=key==='microsoft'&&!ready&&!!microsoftApp.appId();
           const url=remote[key];
           const mcpLinked=url&&(mcps.data||[]).some(m=>m.status==='connected'&&m.server_url?.replace(/\/$/,'')===url.replace(/\/$/,''));
@@ -71,7 +71,7 @@ function createCatalogue({db, services, userId, baseUrl}) {
       if(!validClient(clientId)||!validClient(clientSecret))return res.status(400).json({error:'Enter the client ID and client secret from your application.'});
       try{
         const encrypted=encryptString(clientSecret.trim());
-        if(!encrypted.startsWith('enc:v1:'))throw new Error('Encrypted storage is unavailable. Check ClosedHand’s settings.');
+        if(!encrypted.startsWith('enc:v1:'))throw new Error('Encrypted storage is unavailable. Check Closedhand’s settings.');
         const {error}=await db.from('connection_clients').upsert({user_id:owner,service:key,client_id:clientId.trim(),client_secret:encrypted,updated_at:new Date().toISOString()},{onConflict:'user_id,service'});
         if(error)throw new Error('Could not save connection settings. Try again.');
         res.json({redirectUrl:'/auth/'+key+(service.isSignup?'?extra=1':'')});

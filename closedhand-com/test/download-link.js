@@ -7,7 +7,7 @@ const express = require('express');
 const { register } = require('../lib/download-link');
 
 const MAIL = {
-  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'ClosedHand <download@assist.closedhand.ai>',
+  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'Closedhand <download@assist.closedhand.ai>',
   MAIL_AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', MAIL_AWS_SECRET_ACCESS_KEY: 'secret-example', TOKEN_ENCRYPTION_KEY: 'k'.repeat(44),
 };
 

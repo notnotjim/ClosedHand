@@ -1,7 +1,7 @@
 /* The personal URL, setup's step after email and calendar. Connecting Microsoft
-   through ClosedHand's app claims it with that same sign-in; otherwise one
+   through Closedhand's app claims it with that same sign-in; otherwise one
    click claims it on closedhand.com (which picks the name). Then "Your
-   ClosedHand is at name.closedhand.ai", with Change to rename. Claimed, the
+   Closedhand is at name.closedhand.ai", with Change to rename. Claimed, the
    step folds by itself: connecting carries on in the background. */
 (function (root) {
   'use strict';
@@ -10,7 +10,7 @@
     var key = null, password = false, settled = false, state = {}, busy = false, checking = false;
     var lastCheck = 0, generation = 0, actionError = null, completedReady = false, claiming = false, renaming = false, renamed = null, wasWaiting = false, signingIn = false;
     // closedhand.com hands the code straight back here, with the state from
-    // this ClosedHand's link, after its sign-in (closedhand-com/public/pair.js).
+    // this Closedhand's link, after its sign-in (closedhand-com/public/pair.js).
     var handed = null, signin = null;
     try {
       var back = new URLSearchParams((root.location.hash || '').slice(1));
@@ -74,7 +74,7 @@
       $('url-saved').hidden = !password || !(saved || reserved);
       $('url-value').value = saved || reserved || '';
       $('url-copy').hidden = !(saved || reserved);
-      // Where ClosedHand is, once its address is confirmed, with Change.
+      // Where Closedhand is, once its address is confirmed, with Change.
       $('url-ready').hidden = !password || !(saved || reserved);
       $('url-where').textContent = saved || reserved ? new URL(saved || reserved).hostname : '';
       $('url-rename-submit').disabled = renaming;
@@ -84,14 +84,14 @@
       $('url-start').classList.toggle('is-quiet', waiting);
       $('url-start').formNoValidate = !!confirm;
       $('url-status').textContent = actionError || state.error || (renamed ? renamed : saved
-        ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. ClosedHand is not connected to it yet. You can continue setup here.')
+        ? (state.state === 'on' ? 'Your personal URL is ready. Use your dashboard password to open it.' : 'Your personal URL is saved. Closedhand is not connected to it yet. You can continue setup here.')
         : confirmed ? (state.registrationState === 'error'
-          ? 'Your personal URL is claimed, but its connection is delayed. ClosedHand will retry automatically.'
+          ? 'Your personal URL is claimed, but its connection is delayed. Closedhand will retry automatically.'
           : 'Your personal URL is claimed. Connecting it now. You can continue setup.')
         : state.serviceAvailable === false ? 'closedhand.com can’t give out personal URLs right now. Carry on and claim yours from the dashboard later.'
         : confirm ? (signingIn && handsBack ? 'Sign in in the window that opened. It closes by itself when you’re done.' : '')
         : state.enabled ? 'Connecting your personal URL. You can continue setup while it connects.' : '');
-      // Every ClosedHand gets a personal URL here. Carrying on without one is
+      // Every Closedhand gets a personal URL here. Carrying on without one is
       // offered only when closedhand.com can't give one out right now (or
       // getting one failed); the dashboard offers it again later.
       var cantGet = state.serviceAvailable === false || !!(actionError || state.error);
@@ -123,7 +123,7 @@
           if (renamed && state.state === 'on') renamed = null;
           display();
           // Not while a new name is being typed: finishing folds the step away.
-          // Claimed is finished: connecting is ClosedHand's part, not the person's.
+          // Claimed is finished: connecting is Closedhand's part, not the person's.
           var claimed = state.enabled && state.ownershipConfirmed && personalUrl('https://' + state.addressName + '.closedhand.ai');
           var working = state.state === 'on' && personalUrl(state.permanent && state.url || state.savedUrl);
           if (password && !completedReady && $('url-rename-form').hidden && (claimed || working)) {
@@ -201,7 +201,7 @@
         var next = personalUrl(result.renamedTo);
         state = result; state.savedUrl = null;
         if (next) { state.addressName = new URL(next).hostname.split('.')[0]; state.ownershipConfirmed = true; }
-        renamed = next ? 'Your ClosedHand is now at ' + new URL(next).hostname + '. It takes about a minute to connect there, and the old address sends people to it for 30 days.' : null;
+        renamed = next ? 'Your Closedhand is now at ' + new URL(next).hostname + '. It takes about a minute to connect there, and the old address sends people to it for 30 days.' : null;
         $('url-rename-form').hidden = true;
       } catch (e) { actionError = e.message; }
       finally { renaming = false; lastCheck = 0; display(); }

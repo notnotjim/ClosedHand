@@ -1,5 +1,5 @@
-// Every page ClosedHand serves wears the same icon in its browser tab: the
-// ClosedHand fist, drawn from fist.png's own pixels so the logo stays exact.
+// Every page Closedhand serves wears the same icon in its browser tab: the
+// Closedhand fist, drawn from fist.png's own pixels so the logo stays exact.
 // It is cream on dark tab bars and near-black on light ones; Safari ignores
 // that choice, so its colour is a mid-tone that reads on both. Pages that
 // name no icon (a PDF in a tab) get favicon.ico in that same mid-tone.

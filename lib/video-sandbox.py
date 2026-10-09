@@ -1,4 +1,4 @@
-# Runs on ClosedHand's sandbox computer, sent by lib/video.js with ARGS set
+# Runs on Closedhand's sandbox computer, sent by lib/video.js with ARGS set
 # above it. Gathers what a model needs to understand one video link and
 # leaves the parts in a hidden folder of the workspace for the bot to collect
 # (the bot deletes that folder straight after).

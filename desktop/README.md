@@ -1,18 +1,18 @@
-# ClosedHand for Mac (desktop app)
+# Closedhand for Mac (desktop app)
 
-The native Mac version of ClosedHand: one app that runs the whole stack
+The native Mac version of Closedhand: one app that runs the whole stack
 on this Mac. It grew out of the Bridge app and keeps Bridge's bundle identity
 (`ai.closedhand.bridge`, signed by the same team), so a Mac that already
 granted Bridge its permissions keeps them.
 
-The Docker install in the repo root is another way to run ClosedHand on Mac,
+The Docker install in the repo root is another way to run Closedhand on Mac,
 Windows or Linux, including a VPS. A Mac can use either method. Same code, same
 database layout, same setup page. Docker uses the separate Bridge app for access
 to a Mac’s files and apps; this app includes that access.
 
 ## What the app does
 
-`Sources/ClosedHand/Supervisor.swift` is Docker Compose in a menu-bar app:
+`Sources/Closedhand/Supervisor.swift` is Docker Compose in a menu-bar app:
 
 - a bundled Postgres 16 with pgvector, initialised on first launch into
   `~/Library/Application Support/ClosedHand/pgdata` with the baseline schema,
@@ -25,7 +25,7 @@ to a Mac’s files and apps; this app includes that access.
 - a bundled cloudflared connection runtime for the personal URL, without
   requiring a separate installation;
 - ports: 3000/3001 when free, the nearest free ones otherwise (a Docker
-  ClosedHand on the same Mac keeps its own), remembered for next time;
+  Closedhand on the same Mac keeps its own), remembered for next time;
 - logs in `~/Library/Application Support/ClosedHand/logs`;
 - a clean stop on quit: node processes first, then a fast Postgres shutdown.
 
@@ -43,7 +43,7 @@ The first build fetches Node 22 and builds Postgres + pgvector from source
 (`pg.sh`, a few minutes), then stages the repo at HEAD with production
 dependencies for this architecture. All of it is cached in `desktop/.cache`.
 `SOURCE=worktree` stages the working tree instead of HEAD; `REUSE_APP=1`
-skips the npm install. Output: `desktop/dist/ClosedHand.app`.
+skips the npm install. Output: `desktop/dist/Closedhand.app`.
 
 Signing: every Mach-O inside (dylibs, `.node` addons, the Node and Postgres
 executables) is signed on its own, Node and Postgres with
@@ -53,7 +53,7 @@ under the hardened runtime), then the app with `ClosedHand.entitlements`.
 ## Layout inside the bundle
 
 ```
-ClosedHand.app/Contents/
+Closedhand.app/Contents/
   MacOS/ClosedHand                 the Swift shell
   Resources/node/bin/node          Node runtime (+ npm and npx for MCP servers run by command)
   Resources/bin/cloudflared        personal URL connection runtime

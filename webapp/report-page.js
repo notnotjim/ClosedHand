@@ -1,7 +1,7 @@
-// A page, at /page/<id>: what ClosedHand makes when an answer is worth
+// A page, at /page/<id>: what Closedhand makes when an answer is worth
 // keeping or sharing. One link that opens from any chat through the personal
 // URL, readable on a phone, with the same content as a PDF, Word document or
-// spreadsheet when a file is wanted. A page exists only when ClosedHand judged
+// spreadsheet when a file is wanted. A page exists only when Closedhand judged
 // one helps beyond the chat answer (save_report; the code still says report);
 // the chat always carries the answer, and this is the fuller version.
 //
@@ -148,7 +148,7 @@ ${inner}
 </main></body></html>`;
 }
 
-const brand = '<a class="brand" href="/"><img src="/fist.png" alt="">ClosedHand</a>';
+const brand = '<a class="brand" href="/"><img src="/fist.png" alt="">Closedhand</a>';
 const dated = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
 
 function pageHtml(report) {
@@ -177,7 +177,7 @@ function deletedHtml(report) {
   return shell("Page deleted", `<div class="bar">${brand}</div>
 <h1>Page deleted</h1>
 <p>"${esc(report.title)}" is gone, with its PDF, Word and Excel versions. The answer is still in the chat you asked in.</p>
-<p><a href="/dashboard#pages">Your other pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
+<p><a href="/dashboard#pages">Your other pages</a> &middot; <a href="/">Back to Closedhand</a></p>`);
 }
 
 // A page link that leads nowhere: the same page around a short note, with
@@ -185,8 +185,8 @@ function deletedHtml(report) {
 function missingHtml() {
   return shell("Page not found", `<div class="bar">${brand}</div>
 <h1>This page isn\u2019t here</h1>
-<p>It may have been deleted, or the link may be for a different ClosedHand.</p>
-<p><a href="/dashboard#pages">Your pages</a> &middot; <a href="/">Back to ClosedHand</a></p>`);
+<p>It may have been deleted, or the link may be for a different Closedhand.</p>
+<p><a href="/dashboard#pages">Your pages</a> &middot; <a href="/">Back to Closedhand</a></p>`);
 }
 
 // --- Word -------------------------------------------------------------------

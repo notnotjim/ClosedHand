@@ -37,5 +37,5 @@ test('the strip sits on the sandbox browser, and the tab carries a dot until a s
 test("setup's closing screen points to signing in on the sandbox computer", () => {
   const setup = read('webapp/views/setup.html');
   assert.match(setup, /<a class="done-signins-link" href="\/#computers">Sign in on the sandbox computer<\/a>/);
-  assert.match(setup, /ClosedHand's sandbox computer has its own browser\./);
+  assert.match(setup, /Closedhand's sandbox computer has its own browser\./);
 });

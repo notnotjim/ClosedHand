@@ -28,7 +28,7 @@ test('a successful Google connection on the next status check replaces setup wit
  context.reflectGoogle({googleCreds:true,googleRedirectUri:'http://localhost:3000/auth/google/callback',googleConnected:true,googleAccount:{email:'alex@example.com'}});
  assert.equal($('#g-connected').style.display,'');assert.equal($('#g-flow').style.display,'none');
  assert.equal($('#g-account').textContent,'Connected as alex@example.com.');assert.equal(saved,1);
- // A build with ClosedHand's Google app: the quick route shows until connected.
+ // A build with Closedhand's Google app: the quick route shows until connected.
  const $q=nodes();let rendered=0;
  const quick={$:$q,_gKey:'fixture',gStep:0,_gQuick:false,_gDone:false,gSave(){},gRender:()=>rendered++,gApplyProject(){},againNote(){}};
  vm.runInNewContext(html.slice(start,end),quick);

@@ -1,4 +1,4 @@
-// Supervisor.swift — runs the ClosedHand stack on this Mac.
+// Supervisor.swift — runs the Closedhand stack on this Mac.
 //
 // What Docker Compose does for the self-host install, this does inside the
 // app: a Postgres of our own (bundled, with pgvector), then the bot and the
@@ -78,7 +78,7 @@ final class Supervisor: ObservableObject {
     private var appDir: URL { resources.appendingPathComponent("app", isDirectory: true) }
     private var pgData: URL { supportDir.appendingPathComponent("pgdata", isDirectory: true) }
     private var storageDir: URL { supportDir.appendingPathComponent("storage", isDirectory: true) }
-    /// ClosedHand's own working folder and browser profile: the Workspace.
+    /// Closedhand's own working folder and browser profile: the Workspace.
     private var workspaceDir: URL { supportDir.appendingPathComponent("workspace", isDirectory: true) }
     private var agentDir: URL { resources.appendingPathComponent("workspace", isDirectory: true) }
     private var configFile: URL { supportDir.appendingPathComponent("config.env") }
@@ -88,7 +88,7 @@ final class Supervisor: ObservableObject {
     private var socketDir: String { NSTemporaryDirectory() + "closedhand-pg" }
 
     var dashboardURL: URL { URL(string: "http://localhost:\(webPort)/")! }
-    /// The one account a self-hosted ClosedHand has (lib/admin.js).
+    /// The one account a self-hosted Closedhand has (lib/admin.js).
     static let adminUserId = "00000000-0000-0000-0000-0000000000ad"
 
     // MARK: lifecycle
@@ -165,7 +165,7 @@ final class Supervisor: ObservableObject {
     }
 
     /// The saved ports when they are free, otherwise the nearest free ones.
-    /// A Docker ClosedHand on the same Mac holds 3000 and 3001, and the app
+    /// A Docker Closedhand on the same Mac holds 3000 and 3001, and the app
     /// must not fight it for them.
     private func choosePorts() {
         pgPort = Int(config["PG_PORT"] ?? "") ?? 54329
@@ -245,7 +245,7 @@ final class Supervisor: ObservableObject {
         env["BOT_WS_URL"] = "http://127.0.0.1:\(botPort)"
         env["SANDBOX_URL"] = "http://127.0.0.1:\(agentPort)"
         if let sha = Bundle.main.object(forInfoDictionaryKey: "ClosedHandSHA") as? String { env["CLOSEDHAND_SHA"] = sha }
-        // ClosedHand's own Google app, stamped in by the release build (empty otherwise).
+        // Closedhand's own Google app, stamped in by the release build (empty otherwise).
         for (plistKey, envKey) in [("ClosedHandGoogleClientID", "CLOSEDHAND_GOOGLE_CLIENT_ID"), ("ClosedHandGoogleClientSecret", "CLOSEDHAND_GOOGLE_CLIENT_SECRET")] {
             if let value = Bundle.main.object(forInfoDictionaryKey: plistKey) as? String, !value.isEmpty, !value.hasPrefix("__") { env[envKey] = value }
         }
@@ -343,7 +343,7 @@ final class Supervisor: ObservableObject {
                 self.backoff["web"] = nil
                 if self.web != .running {
                     self.web = .running
-                    // The Mac side of ClosedHand connects to the server it
+                    // The Mac side of Closedhand connects to the server it
                     // shares a bundle with: no pairing code, the token was
                     // made here and given to both.
                     let url = "ws://127.0.0.1:\(self.webPort)/bridge", token = self.config["BRIDGE_TOKEN"] ?? ""
@@ -445,7 +445,7 @@ final class Supervisor: ObservableObject {
     /// A port is taken when something answers on it. Asking by connecting
     /// rather than binding is what makes this reliable on a Mac: a bind to
     /// 127.0.0.1 can succeed beside a Docker listener on the same port, and
-    /// the service then starts on a port another ClosedHand already owns.
+    /// the service then starts on a port another Closedhand already owns.
     private func portFree(_ port: Int) -> Bool {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         guard fd >= 0 else { return false }

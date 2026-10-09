@@ -1,5 +1,5 @@
 /* ============================================================
-   ClosedHand Delight — Micro-interactions & Easter Eggs
+   Closedhand Delight — Micro-interactions & Easter Eggs
    ============================================================ */
 
 window.Delight = {
@@ -289,7 +289,7 @@ window.Delight = {
       localStorage.setItem("delight-first-extra-service", "1");
       setTimeout(function () {
         Delight.confetti();
-        Delight.toast("First connection made. ClosedHand just got smarter.", "success");
+        Delight.toast("First connection made. Closedhand just got smarter.", "success");
       }, 500);
     }
     // Three+ services
@@ -297,7 +297,7 @@ window.Delight = {
       localStorage.setItem("delight-power-user", "1");
       setTimeout(function () {
         Delight.confetti();
-        Delight.toast("Power user unlocked. You're getting the most out of ClosedHand.", "success");
+        Delight.toast("Power user unlocked. You're getting the most out of Closedhand.", "success");
       }, 500);
     }
   },

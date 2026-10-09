@@ -1,5 +1,5 @@
 // ============================================================
-// ClosedHand Web App
+// Closedhand Web App
 // Express server — OAuth framework, onboarding, dashboard
 // ============================================================
 
@@ -108,7 +108,7 @@ const SERVICES = {
     tokenUrl: "https://oauth2.googleapis.com/token",
     profileUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
     // Exactly the list in the Google Cloud console's Data Access page for
-    // ClosedHand's own app, openid included: Google's review compares the
+    // Closedhand's own app, openid included: Google's review compares the
     // two lists string for string.
     scopes: [
       "openid",
@@ -117,16 +117,16 @@ const SERVICES = {
       "https://www.googleapis.com/auth/gmail.readonly",
       // compose covers creating, updating and deleting drafts AND sending, so it
       // replaces gmail.send rather than joining it: same scope count, and
-      // ClosedHand can revise a draft in place instead of driving the user's
+      // Closedhand can revise a draft in place instead of driving the user's
       // browser because it had no API path to one.
       "https://www.googleapis.com/auth/gmail.compose",
-      // Events on calendars the person owns, deliberately. ClosedHand only
+      // Events on calendars the person owns, deliberately. Closedhand only
       // reads and changes events on each account's main calendar, which they
       // own, and every call it makes (events list, get, insert, patch,
       // delete) accepts this scope. The full "auth/calendar" scope asks the
       // user to agree to "permanently delete all the calendars you can
       // access"; calendar.events would add calendars other people share,
-      // which ClosedHand never reads. Google's review asks for the narrowest.
+      // which Closedhand never reads. Google's review asks for the narrowest.
       "https://www.googleapis.com/auth/calendar.events.owned",
       "https://www.googleapis.com/auth/drive.readonly",
       "https://www.googleapis.com/auth/drive.file",
@@ -424,10 +424,10 @@ function getAvailableServices() {
 // Supported chat platforms
 const SUPPORTED_PLATFORMS = {
   telegram: { name: "Telegram", botName: "@ClosedHand_Bot", available: true },
-  whatsapp: { name: "WhatsApp", botName: "ClosedHand", available: true },
-  discord: { name: "Discord", botName: "ClosedHand", available: true },
-  slack: { name: "Slack", botName: "ClosedHand", available: true },
-  line: { name: "LINE", botName: "ClosedHand", available: true },
+  whatsapp: { name: "WhatsApp", botName: "Closedhand", available: true },
+  discord: { name: "Discord", botName: "Closedhand", available: true },
+  slack: { name: "Slack", botName: "Closedhand", available: true },
+  line: { name: "LINE", botName: "Closedhand", available: true },
 };
 
 // Middleware
@@ -441,7 +441,7 @@ app.use((req, res, next) => {
 
 // Public health check (container healthcheck hits this; must bypass the gate below).
 app.get("/health", (req, res) => res.json({ status: "ok", service: "closedhand-webapp" }));
-// "My ClosedHand" on closedhand.com asks whether ClosedHand answers on the
+// "My Closedhand" on closedhand.com asks whether Closedhand answers on the
 // computer the visitor is using, and opens it when it does. Only that page
 // may ask, and the answer says nothing but "here".
 function hereHeaders(req, res) {
@@ -477,7 +477,7 @@ app.get("/api/setup/status", async (req, res) => {
   }
 });
 
-// ClosedHand's first words, for the moment setup completes: one thing it has
+// Closedhand's first words, for the moment setup completes: one thing it has
 // already picked up from the mail and calendar, if the first read has run.
 // Personal, so it sits behind the same access the setup writes do.
 app.get("/api/setup/hello", async (req, res) => {
@@ -614,7 +614,7 @@ function addressedLocally(req) {
   const host = String(req.headers.host || "").toLowerCase().replace(/:\d+$/, "");
   return LOCAL_NAMES.has(host) || host.endsWith(".localhost");
 }
-const FIRST_RUN_ELSEWHERE = "Finish setting up on the computer running ClosedHand, at http://localhost:3000.";
+const FIRST_RUN_ELSEWHERE = "Finish setting up on the computer running Closedhand, at http://localhost:3000.";
 
 // Wizard write APIs: open until a password exists (first run on this
 // computer), session-only after. Returns false after sending the answer itself.
@@ -703,7 +703,7 @@ const phoneAccess = require("./phone-access");
 process.once('exit', () => phoneAccess.shutdown());
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => process.exit(0));
 // ---------------------------------------------------------------------------
-// Wallet: cards ClosedHand may pay with, and the rules for using them.
+// Wallet: cards Closedhand may pay with, and the rules for using them.
 //
 // Self-host only. The number and security code are encrypted with the
 // install's own key and never leave this machine except into the checkout
@@ -713,7 +713,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => process.e
 
 // Loosening the spending rules or adding a card asks for the dashboard
 // password again, then trusts that browser for five minutes. These are the
-// changes that would let someone at an unlocked screen make ClosedHand spend
+// changes that would let someone at an unlocked screen make Closedhand spend
 // without asking. Looking, tightening a rule and removing a card never ask.
 // With no dashboard password set there is nothing to check against.
 const WALLET_CONFIRM_MS = 5 * 60 * 1000;
@@ -724,9 +724,9 @@ async function walletConfirmed(req) {
   return !!until && until > Date.now();
 }
 function walletNeedsPassword(res) {
-  return res.status(403).json({ needs_password: true, error: "Enter your dashboard password to let ClosedHand spend more freely." });
+  return res.status(403).json({ needs_password: true, error: "Enter your dashboard password to let Closedhand spend more freely." });
 }
-// Whether new rules let ClosedHand spend more, or more without asking.
+// Whether new rules let Closedhand spend more, or more without asking.
 function loosensLimits(before, after) {
   const b = before || {}, a = after || {};
   for (const k of ["per_purchase", "per_day", "per_month"]) {
@@ -825,9 +825,9 @@ app.post("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   if (!(await requireSetupAccess(req, res))) return;
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a ClosedHand you run yourself." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a Closedhand you run yourself." });
   if (!(await walletConfirmed(req))) return walletNeedsPassword(res);
-  if (!walletAvailable()) return res.status(400).json({ error: "ClosedHand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
+  if (!walletAvailable()) return res.status(400).json({ error: "Closedhand has no encryption key, so a card cannot be stored safely. Set TOKEN_ENCRYPTION_KEY in .env (the installer normally does) and restart." });
   try {
     const b = req.body || {};
     const number = String(b.number || "").replace(/[\s-]/g, "");
@@ -1002,7 +1002,7 @@ app.post("/api/phone/rename", async (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
-// This computer's ClosedHand account (the Google or Microsoft sign-in that
+// This computer's Closedhand account (the Google or Microsoft sign-in that
 // owns its personal URL), for the Account section in Settings.
 app.get("/api/phone/account", async (req, res) => {
   if (!(await requireSetupAccess(req, res))) return;
@@ -1273,7 +1273,7 @@ app.post("/api/setup/telegram", async (req, res) => {
 
 // ------------------------------------------------------------
 // Chat apps on an install you run yourself. Every one works the same way:
-// make the app with the provider, paste its keys here, ClosedHand checks
+// make the app with the provider, paste its keys here, Closedhand checks
 // them with the provider and switches the app on (the bot reads runtime
 // config, no restart). Slack and LINE also need a public address to send
 // messages to, which "Your phone" in Settings provides.
@@ -1340,7 +1340,7 @@ app.post("/api/chat-apps/:app", async (req, res) => {
   if (["discord", "slack", "line"].includes(req.params.app)) return res.status(400).json({ error: "Coming soon." });
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
   if (!(await requireSetupAccess(req, res))) return;
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a Closedhand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
   const keys = {};
@@ -1361,7 +1361,7 @@ app.post("/api/chat-apps/:app", async (req, res) => {
 app.delete("/api/chat-apps/:app", async (req, res) => {
   if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
   if (!(await requireSetupAccess(req, res))) return;
-  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a ClosedHand you run yourself." });
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "Chat app keys are for a Closedhand you run yourself." });
   const spec = CHAT_APPS[req.params.app];
   if (!spec) return res.status(404).json({ error: "Unknown app" });
   const patch = {};
@@ -1461,16 +1461,16 @@ for (const hook of ["line"]) {
       const ct = r.headers.get("content-type"); if (ct) res.set("content-type", ct);
       res.send(Buffer.from(await r.arrayBuffer()));
     } catch (e) {
-      res.status(502).send("ClosedHand is not reachable");
+      res.status(502).send("Closedhand is not reachable");
     }
   });
 }
 
 // --- Pages opened inside Telegram -------------------------------------------
-// A page ClosedHand sends on Telegram (a report, a canvas, a dashboard view)
+// A page Closedhand sends on Telegram (a report, a canvas, a dashboard view)
 // opens inside Telegram through /tg/open, which hands Telegram's signed proof
 // of who opened it to /api/telegram/session. When that proof is fresh and is
-// the Telegram account linked to this ClosedHand, Telegram's own browser gets
+// the Telegram account linked to this Closedhand, Telegram's own browser gets
 // a session, so no password is asked there; Telegram itself is locked. The
 // session lives only in Telegram's browser: it is a cookie set there, never
 // in a link that could be copied out, and it lasts 12 hours, renewed each
@@ -1478,7 +1478,7 @@ for (const hook of ["line"]) {
 const TELEGRAM_SESSION_SEC = 12 * 60 * 60;
 const TELEGRAM_PROOF_MAX_AGE_SEC = 60 * 60;
 const _usedTelegramProofs = new Map(); // sha256 of a proof -> when it would expire
-// Only pages ClosedHand itself sends, and never another site.
+// Only pages Closedhand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
   return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[^\s/?#]+|dashboard)([?#][^\s]*)?$/.test(path) ? path : "/";
@@ -1487,7 +1487,7 @@ app.get("/tg/open", (req, res) => {
   const to = telegramTarget(req.query.to);
   res.set("Cache-Control", "no-store");
   res.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; script-src 'unsafe-inline' https://telegram.org; connect-src 'self'; frame-ancestors 'self' https://web.telegram.org");
-  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Opening in ClosedHand</title>
+  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Opening in Closedhand</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script></head>
 <body style="margin:0;background:#141010"><script>
 (function () {
@@ -1510,13 +1510,13 @@ app.post("/api/telegram/session", async (req, res) => {
     // replayed within the hour it stays valid.
     const proofId = crypto.createHash("sha256").update(initData).digest("hex");
     for (const [id, until] of _usedTelegramProofs) if (until < Date.now()) _usedTelegramProofs.delete(id);
-    if (_usedTelegramProofs.has(proofId)) return res.status(403).json({ error: "That sign-in was already used. Open ClosedHand from Telegram again." });
+    if (_usedTelegramProofs.has(proofId)) return res.status(403).json({ error: "That sign-in was already used. Open Closedhand from Telegram again." });
     _usedTelegramProofs.set(proofId, Date.now() + TELEGRAM_PROOF_MAX_AGE_SEC * 1000);
     const { data: link, error } = await supabase.from("chat_links").select("user_id")
       .eq("platform", "telegram").eq("platform_user_id", String(tgUser.id)).limit(1);
     if (error) throw error;
     const { getAdminUserId } = require("./admin");
-    if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account isn't the one linked to your ClosedHand." });
+    if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account isn't the one linked to your Closedhand." });
     await startAdminSession(req, res, { kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC });
     res.status(204).end();
   } catch (e) {
@@ -1590,7 +1590,7 @@ app.get("/api/usage/summary", async (req, res) => {
       tokens_out: Number(r.tokens_out) || 0,
     }));
     // The prices the person entered for their models, so the tab can show
-    // what the tokens cost. ClosedHand does not guess anyone's prices.
+    // what the tokens cost. Closedhand does not guess anyone's prices.
     const { data: prof } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).maybeSingle();
     res.json({ days, rows, prices: (prof && prof.settings && prof.settings.model_prices) || {} });
   } catch (e) {
@@ -1757,7 +1757,7 @@ async function autoEnableNotificationPlatform(userId, platform) {
 
 // Setup is complete when the required pieces run and the personal URL is
 // claimed. The one way past without a URL is closedhand.com being unable to
-// give one out, so an outage never locks anyone out of their own ClosedHand.
+// give one out, so an outage never locks anyone out of their own Closedhand.
 async function setupComplete(state) {
   if (!state.ready) return false;
   if (await getRuntimeConf("PHONE_PERMANENT_URL") || await getRuntimeConf("PHONE_ADDRESS_NAME")) return true;
@@ -1793,7 +1793,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
     .single();
 
   if (!pending || new Date(pending.expires_at) < new Date()) {
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:24px;margin-bottom:16px}.desc{color:#888;line-height:1.6}</style></head>
     <body><div class="card"><div class="title">Link expired</div><p class="desc">Send another message on WhatsApp to get a fresh link.</p></div></body></html>`);
@@ -1819,7 +1819,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
     await autoEnableNotificationPlatform(userId, "whatsapp");
     await supabase.from("wa_pending_links").delete().eq("token", token);
 
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
     .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
@@ -1830,7 +1830,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
   // Not logged in — store token in cookie, show focused sign-in page
   res.setHeader("Set-Cookie", `ch_wa_link=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=1800`);
 
-  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand — Connect WhatsApp</title>
+  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand — Connect WhatsApp</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
@@ -1846,7 +1846,7 @@ app.get("/link/whatsapp/:token", async (req, res) => {
     .footer a{color:#888;text-decoration:none}
   </style></head>
   <body><div class="card">
-    <div class="logo">ClosedHand</div>
+    <div class="logo">Closedhand</div>
     <p class="subtitle">Sign in to connect your WhatsApp.<br>One tap and you're in.</p>
     <a href="/auth/google" class="btn btn-google">
       <img src="/logos/google.svg" alt="">Sign in with Google
@@ -1882,12 +1882,12 @@ app.get("/canvas/:id", async (req, res) => {
       res.set("Content-Security-Policy", "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-forms; default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'self'");
       res.set("Cache-Control", "no-store");
       res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${data.filename.replace(/</g, "&lt;")} - ClosedHand</title>
+<title>${data.filename.replace(/</g, "&lt;")} - Closedhand</title>
 <style>*{margin:0;box-sizing:border-box}
 .ch-bar{position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;background:#0a0c12;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.5);font-size:13px;font-family:Outfit,system-ui,sans-serif}
 .ch-bar img{width:18px;height:18px;opacity:0.6}.ch-bar a{color:rgba(255,255,255,0.7);text-decoration:none;font-weight:500}
 .ch-content{padding-top:42px}</style></head>
-<body><div class="ch-bar"><img src="/fist.png"><a href="/">ClosedHand</a><span style="color:rgba(255,255,255,0.3)">|</span><span>${data.filename.replace(/</g, "&lt;")}</span></div>
+<body><div class="ch-bar"><img src="/fist.png"><a href="/">Closedhand</a><span style="color:rgba(255,255,255,0.3)">|</span><span>${data.filename.replace(/</g, "&lt;")}</span></div>
 <div class="ch-content">${html}</div></body></html>`);
     } else if (data.mime_type.startsWith("image/")) {
       const buf = Buffer.from(data.content, "base64");
@@ -1981,7 +1981,7 @@ app.get("/line-setup-complete", (req, res) => {
 <html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClosedHand Setup Complete</title>
+<title>Closedhand Setup Complete</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fff; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
@@ -2034,7 +2034,7 @@ app.get("/logout", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>Log out</title></head>
 <body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#141010;color:#EFE6D6;font-family:system-ui,sans-serif">
-<form method="post" action="/logout" style="text-align:center"><p>Log out of ClosedHand on this browser?</p>
+<form method="post" action="/logout" style="text-align:center"><p>Log out of Closedhand on this browser?</p>
 <button type="submit" style="font:inherit;padding:10px 22px;border-radius:10px;border:0;background:#D8624B;color:#fff;cursor:pointer">Log out</button></form></body></html>`);
 });
 
@@ -2062,7 +2062,7 @@ app.get("/bot-connect", (req, res) => {
 
     const payload = JSON.parse(payloadStr);
     if (!payload.userId || !payload.service || !payload.exp) return res.status(400).send("Malformed token.");
-    if (Date.now() > payload.exp) return res.status(410).send("This link has expired. Ask ClosedHand for a new one.");
+    if (Date.now() > payload.exp) return res.status(410).send("This link has expired. Ask Closedhand for a new one.");
 
     const svc = SERVICES[payload.service];
     if (!svc) return res.status(400).send(`Unknown service: ${payload.service}`);
@@ -2072,7 +2072,7 @@ app.get("/bot-connect", (req, res) => {
     res.redirect(`/auth/${payload.service}${params}`);
   } catch (e) {
     console.error("bot-connect error:", e.message);
-    res.status(500).send("Something went wrong. Ask ClosedHand for a new link.");
+    res.status(500).send("Something went wrong. Ask Closedhand for a new link.");
   }
 });
 
@@ -2120,12 +2120,12 @@ app.get("/auth/:service", async (req, res) => {
   catch (_) { return res.status(503).send("Could not read connection settings. Return to Connections and try again."); }
 
   // Microsoft without an app of the person's own signs in by code through
-  // ClosedHand's app, on the setup page.
+  // Closedhand's app, on the setup page.
   if (serviceKey === "microsoft" && !(svc?.clientId && svc?.clientSecret) && require("./microsoft-app").appId()) {
     return res.redirect("/setup#step-accounts=microsoft");
   }
 
-  // Google signs in through ClosedHand's own Google app when this build has
+  // Google signs in through Closedhand's own Google app when this build has
   // one and the person has no app of their own, or picked the quick route.
   // The sign-in keeps that app with it, so it renews through the same app.
   if (serviceKey === "google") {
@@ -2391,7 +2391,7 @@ async function connectMcpHandler(req, res) {
       if (body.name && parsed.entries.length === 1) row.name = String(body.name).trim();
 
       if (row.transport === "stdio") {
-        if (!selfHost) { problems.push({ server_url: row.server_url, error: "Command-style servers run on your own machine. This ClosedHand runs on ours, so paste the server's web address instead, or run ClosedHand yourself." }); continue; }
+        if (!selfHost) { problems.push({ server_url: row.server_url, error: "Command-style servers run on your own machine. This Closedhand runs on ours, so paste the server's web address instead, or run Closedhand yourself." }); continue; }
       } else {
         let u;
         try { u = new URL(row.server_url); } catch { problems.push({ server_url: row.server_url, error: "Invalid URL" }); continue; }
@@ -2424,7 +2424,7 @@ async function connectMcpHandler(req, res) {
             server_url: row.server_url,
             oauth_possible: oauthPossible,
             message: oauthPossible
-              ? "This server wants you to sign in, but did not let ClosedHand register itself. Register an app with the service and paste its client ID, or paste a key if you have one."
+              ? "This server wants you to sign in, but did not let Closedhand register itself. Register an app with the service and paste its client ID, or paste a key if you have one."
               : "This server wants a key.",
           });
         }
@@ -2460,7 +2460,7 @@ async function connectMcpHandler(req, res) {
 require("./microsoft-device").register(app, {
   requireAccess: requireSetupAccess,
   connect: (tokens) => saveMicrosoftAccount(getAdminUserId(), SERVICES.microsoft, tokens),
-  // Connecting Microsoft through ClosedHand's app also claims the personal
+  // Connecting Microsoft through Closedhand's app also claims the personal
   // URL, so there is no second sign-in, when this computer has none yet.
   claimPersonalUrl: async (idToken) => {
     const registration = require("./phone-registration");
@@ -2789,7 +2789,7 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
     }
     // Clear cookie and show success page
     res.setHeader("Set-Cookie", "ch_wa_link=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClosedHand</title>
+    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
     .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
@@ -2909,7 +2909,7 @@ async function handleServiceOAuthComplete(req, res, stateData, serviceKey, token
     if (loginEmail && grantedEmail && loginEmail !== grantedEmail) {
       console.warn(`OAuth identity mismatch: user ${userId} (${loginEmail}) tried to connect ${serviceKey} as ${grantedEmail}. Blocked.`);
       return res.redirect("/dashboard?error=" + encodeURIComponent(
-        `That account (${metadata.email}) doesn't match your ClosedHand login (${prof?.email}). Pick your own account in the Google chooser and try again.`));
+        `That account (${metadata.email}) doesn't match your Closedhand login (${prof?.email}). Pick your own account in the Google chooser and try again.`));
     }
   }
 
@@ -3069,7 +3069,7 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
           messages: [
             {
               type: "flex",
-              altText: "Your ClosedHand dashboard is ready.",
+              altText: "Your Closedhand dashboard is ready.",
               contents: {
                 type: "bubble",
                 body: {
@@ -3078,7 +3078,7 @@ async function handleLineOAuthComplete(res, stateData, serviceKey, svc, tokens) 
                   spacing: "md",
                   contents: [
                     { type: "text", text: "Your dashboard", weight: "bold", size: "lg", align: "center" },
-                    { type: "text", text: "Add connections to make ClosedHand more powerful. Email, calendar, Shopify, Slack, and more.", size: "sm", color: "#999999", align: "center", wrap: true, margin: "sm" },
+                    { type: "text", text: "Add connections to make Closedhand more powerful. Email, calendar, Shopify, Slack, and more.", size: "sm", color: "#999999", align: "center", wrap: true, margin: "sm" },
                   ],
                 },
                 footer: {
@@ -3345,7 +3345,7 @@ app.get("/api/chat/stream", (req, res) => {
 // GET /api/threads - list all threads
 // --- Here: where the person is, and their weather ---------------------------
 // The home page's "Orientate" asks the browser where it is, on request only.
-// That sets ClosedHand's local time (reminders, briefings) and lets the page
+// That sets Closedhand's local time (reminders, briefings) and lets the page
 // show the weather there. Only a rounded position (about a kilometre) goes to
 // OpenStreetMap for the place name and Open-Meteo for the weather and timezone.
 const WX = [[[0, 1], "clear", "clear"], [[2], "partly cloudy", "cloud"], [[3], "cloudy", "cloud"], [[45, 48], "foggy", "fog"],
@@ -3468,7 +3468,7 @@ app.post("/api/here", async (req, res) => {
 });
 
 // Clicking the temperature flips it between Celsius and Fahrenheit, and the
-// choice is kept, for the weather line and for ClosedHand's weather answers.
+// choice is kept, for the weather line and for Closedhand's weather answers.
 app.post("/api/here/unit", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -4239,7 +4239,7 @@ app.post("/api/disconnect", async (req, res) => {
 
   const { service } = req.body;
   // Delete what was synced from the account too, only when asked to: kept
-  // data is what makes ClosedHand as good as it was when the account returns.
+  // data is what makes Closedhand as good as it was when the account returns.
   const purge = req.body.purge === true;
 
   // Best-effort revocation of a Google grant at Google's end, so "disconnect"
@@ -4403,9 +4403,9 @@ app.get("/api/pulse", async (req, res) => {
   }
 });
 
-// Toggle whether ClosedHand confirms before sending email on the user's behalf
+// Toggle whether Closedhand confirms before sending email on the user's behalf
 // (chat and background agents). Default on; off is opt-in for bulk senders.
-// What ClosedHand calls the person: the greeting, every reply, agents,
+// What Closedhand calls the person: the greeting, every reply, agents,
 // routines and Pulse all read preferred_name. Set once during setup from
 // whatever was to hand, it could not be changed anywhere afterwards.
 app.post("/api/settings/preferred-name", async (req, res) => {
@@ -4756,7 +4756,7 @@ const reportAsRun = (r) => ({ title: r.title, goal: r.title, result: r.content, 
 const reportFileName = (r, kind) => {
   const safe = String(r.title || "page").replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").trim().substring(0, 60) || "page";
   const date = String(r.created_at || "").substring(0, 10);
-  return `ClosedHand - ${safe}${date ? ` - ${date}` : ""}.${kind}`;
+  return `Closedhand - ${safe}${date ? ` - ${date}` : ""}.${kind}`;
 };
 
 // GET /page/:id: the page (webapp/report-page.js), with its downloads and a
@@ -4878,7 +4878,7 @@ app.get("/api/agents/:id/pdf", async (req, res) => {
     // of downloading it; the filename still applies if they save from there.
     const disposition = req.query.view === "1" ? "inline" : "attachment";
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `${disposition}; filename="ClosedHand - ${safe}${date ? ` - ${date}` : ""}.pdf"`);
+    res.setHeader("Content-Disposition", `${disposition}; filename="Closedhand - ${safe}${date ? ` - ${date}` : ""}.pdf"`);
     // A follow-on break (lib/follow-on.js) is a paragraph in a document.
     runPdf({ ...run, result: String(run.result).replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, "") }).pipe(res);
   } catch (err) {
@@ -5823,7 +5823,7 @@ app.get("/api/reminders", async (req, res) => {
     };
     const rows = (data || []);
     // Live one-offs, plus the five most recently completed so the user can
-    // look back at what ClosedHand did on their behalf.
+    // look back at what Closedhand did on their behalf.
     const live = rows.filter((r) => r.enabled).map((r) => {
       const next = nextOf(r);
       return { ...r, next_run: shown(next, r), next_at: next ? next.toISOString() : null, repeats: oneOff(r) ? null : reminderRepeats(r.cron_expression) };
@@ -5839,7 +5839,7 @@ app.get("/api/reminders", async (req, res) => {
 });
 
 // GET /api/flights — tracked flights from notes
-// Matters in flight: the live picture ClosedHand keeps of things with
+// Matters in flight: the live picture Closedhand keeps of things with
 // several people or steps. Shown in Context Brain so the person can see what
 // it thinks is going on, close one, or throw one away.
 app.get("/api/matters", async (req, res) => {
@@ -5866,13 +5866,13 @@ app.delete("/api/matters/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-// Where a flight or booking came from: the email ClosedHand read it in, to
+// Where a flight or booking came from: the email Closedhand read it in, to
 // open, and the files attached to the mail about it. A booking is often spread
 // over several emails (an order confirmation with the details, the airline's
 // e-ticket with the PDF), so the files come from every cached email that names
 // the booking reference as well as the source one. Gmail and Outlook emails
 // open in their own web mail; an IMAP email has no web address, so it opens in
-// ClosedHand's copy (/mail). Files come through the bot (lib/mail-file.js).
+// Closedhand's copy (/mail). Files come through the bot (lib/mail-file.js).
 const MAIL_SOURCE = /^(gmail|outlook)(_[a-z0-9]+)?$|^imap$/;
 const MAIL_ID = /^[A-Za-z0-9_=+\/.-]{3,300}$/;
 const mailFiles = (data) => (data?.attachments || []).filter((a) => !a.inline && a.attachmentId != null && a.filename);
@@ -5891,7 +5891,7 @@ async function askBot(userId, path) {
 
 // Every cached email carries its own web address, or none (IMAP), in the
 // shape every mailbox shares (lib/services/email-record.js). Only Gmail's and
-// Outlook's own addresses are trusted; anything else opens ClosedHand's copy.
+// Outlook's own addresses are trusted; anything else opens Closedhand's copy.
 function openUrlFor(row) {
   const link = String(row.data?.webLink || "");
   if (/^https:\/\/(mail\.google\.com|outlook\.(office|office365|live)\.com)\//i.test(link)) return link;
@@ -5936,7 +5936,7 @@ function bookingOver(b, now = Date.now()) {
   return !isNaN(end) && end < now;
 }
 
-// A file attached to an email ClosedHand keeps, fetched by the bot from the
+// A file attached to an email Closedhand keeps, fetched by the bot from the
 // mail it came from, for the person signed in to this dashboard. PDFs and
 // pictures open in the browser; anything else downloads, and nothing served
 // here may run script.
@@ -5969,7 +5969,7 @@ app.get("/api/mail/attachment", async (req, res) => {
   }
 });
 
-// ClosedHand's own copy of one email, for mail with no web address of its
+// Closedhand's own copy of one email, for mail with no web address of its
 // own (IMAP): who sent it, when, what it says and its files.
 app.get("/mail", async (req, res) => {
   const userId = getUserIdFromRequest(req);
@@ -5980,7 +5980,7 @@ app.get("/mail", async (req, res) => {
     const { data: row, error } = await supabase.from("data_cache").select("data").eq("user_id", userId)
       .eq("type", "email").eq("source", source).eq("external_id", id).maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) return res.status(404).send("That email is no longer in what ClosedHand keeps.");
+    if (!row) return res.status(404).send("That email is no longer in what Closedhand keeps.");
     const m = row.data || {};
     const e = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const when = m.date && !isNaN(Date.parse(m.date)) ? new Date(m.date).toUTCString() : e(m.date);
@@ -6128,7 +6128,7 @@ require("./model-config").install(app, {
     const endpoint = process.env.EMBED_API_URL || await getRuntimeConf("EMBED_API_URL");
     const key = process.env.DEEPINFRA_API_KEY || await getRuntimeConf("DEEPINFRA_API_KEY");
     // A row in the model check, beside the models chosen there.
-    if (!embed && !key) return { value: "ClosedHand’s local embedding model", local: true };
+    if (!embed && !key) return { value: "Closedhand’s local embedding model", local: true };
     if (endpoint) return { value: "Keeps its current model, at " + new URL(endpoint).hostname, local: false };
     return key ? { value: "Keeps its current model, on DeepInfra", local: false } : { value: "Keeps its current local embedding model", local: true };
   },
@@ -6519,7 +6519,7 @@ async function goalOwner(req, res) {
 }
 async function goalProfile(userId) {
   const { data } = await supabase.from("profiles").select("timezone, settings").eq("id", userId).single();
-  return { tz: data?.settings?.location?.timezone || data?.timezone || goalsTime.DEFAULT_TZ, botName: data?.settings?.bot_name || "ClosedHand" };
+  return { tz: data?.settings?.location?.timezone || data?.timezone || goalsTime.DEFAULT_TZ, botName: data?.settings?.bot_name || "Closedhand" };
 }
 async function goalTimezone(userId) {
   return (await goalProfile(userId)).tz;
@@ -6886,7 +6886,7 @@ app.get("/api/files", async (req, res) => {
       .from("attachments")
       .select("attachment_id, file_name, description, media_type, size_bytes, direction, created_at")
       .eq("user_id", userId)
-      // Only what ClosedHand made. A file the user sent is still kept, so it
+      // Only what Closedhand made. A file the user sent is still kept, so it
       // can be read again later, but they already have it and listing it back
       // to them is not a resource, it is clutter.
       .eq("direction", "out")
@@ -6920,8 +6920,8 @@ app.get("/api/files/:id/download", async (req, res) => {
   }
 });
 
-// GET /api/uploads - files the user sent ClosedHand in chat (direction=in).
-// Listed under Context Brain, not Files: they are part of what ClosedHand can
+// GET /api/uploads - files the user sent Closedhand in chat (direction=in).
+// Listed under Context Brain, not Files: they are part of what Closedhand can
 // re-read on request, and the user manages them where the memory lives.
 app.get("/api/uploads", async (req, res) => {
   try {
@@ -6962,7 +6962,7 @@ app.delete("/api/uploads", async (req, res) => {
   }
 });
 
-// DELETE /api/files - clear every file ClosedHand has sent (direction=out,
+// DELETE /api/files - clear every file Closedhand has sent (direction=out,
 // exactly what the dashboard lists). Inbound copies of files the USER sent
 // stay, or "read that file I sent you" would quietly stop working.
 app.delete("/api/files", async (req, res) => {
@@ -7618,7 +7618,7 @@ async function syncUserFiles(userId) {
           const fname = sync.localPath.split("/").pop();
           await supabase.from("web_messages").insert({
             user_id: userId, direction: "outbound", status: "complete",
-            content: `Heads up: "${fname}" was edited on your computer and on the sandbox computer at the same time. Your local version won, so the sandbox computer's edit was overwritten. If ClosedHand was working on that file, ask it to redo the change.`,
+            content: `Heads up: "${fname}" was edited on your computer and on the sandbox computer at the same time. Your local version won, so the sandbox computer's edit was overwritten. If Closedhand was working on that file, ask it to redo the change.`,
           });
         } catch (e) { console.log(`[Sync] conflict notice failed: ${e.message}`); }
       }
@@ -8348,7 +8348,7 @@ app.post("/api/account/clear-data", async (req, res) => {
     const currentSettings = profile?.settings || {};
     const { onboarding_step, preferred_name, bot_name, personality, ...cleanSettings } = currentSettings;
 
-    // Everything ClosedHand has built up for this user goes. What stays is the
+    // Everything Closedhand has built up for this user goes. What stays is the
     // profile, the connected services, and the synced mail and calendar cache
     // that follows those connections (it re-syncs anyway while they exist, so
     // deleting it here would only buy a re-embedding bill). The list used to
@@ -8404,7 +8404,7 @@ app.delete("/api/account", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
 
-  // The ClosedHand account goes first: closedhand.com takes the personal URL
+  // The Closedhand account goes first: closedhand.com takes the personal URL
   // down and forgets the sign-in. If it can't, nothing here is deleted
   // unless the person chooses to go ahead anyway; the personal URL is then
   // released after 90 days without a connection.
@@ -8546,7 +8546,7 @@ app.delete("/api/bridge", async (req, res) => {
 });
 
 // The Bridge app's own Remove, signed with its pairing token: unpairs this Mac,
-// closes its connection and deletes the copy of its calendar that ClosedHand
+// closes its connection and deletes the copy of its calendar that Closedhand
 // keeps. Conversations, pinned facts, Context Notes and the rest stay.
 app.post("/api/bridge/disconnect", async (req, res) => {
   try {
@@ -8783,7 +8783,7 @@ app.post("/api/sandbox/browser", async (req, res) => {
   catch (e) { res.status(503).json({ error: e.message }); }
 });
 
-// Sites people sign in to on the sandbox computer so ClosedHand can use them
+// Sites people sign in to on the sandbox computer so Closedhand can use them
 // for them, and what each sign-in unlocks. Whether they're signed in is read
 // from the names of each site's session cookie in the sandbox browser, never
 // the values, and only a yes or no leaves the sandbox. Any other site works
@@ -8987,7 +8987,7 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
     console.error("[secrets] could not seal stored secrets:", e.message);
   }
   const configured = Object.entries(SERVICES).filter(([, s]) => s.clientId && s.clientSecret).map(([k]) => k);
-  console.log(`\n🚀 ClosedHand web app running on port ${PORT}`);
+  console.log(`\n🚀 Closedhand web app running on port ${PORT}`);
   console.log(`   ${BASE_URL}`);
   console.log(`   OAuth services configured: ${configured.join(", ") || "none"}\n`);
 

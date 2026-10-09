@@ -32,10 +32,10 @@ function register(app, db, userId) {
     const remote = account?.address ? await call(account, 'status') : null;
     const connections = account ? mustWrite(await db.from('connections').select('service,tokens,metadata').eq('user_id', owner)) : [];
     const ownerAddresses = account ? p.ownerAddresses(account, connections) : [];
-    res.json({ available: true, ownerAddresses, usage: remote?.usage || null, servicePaused: !!remote?.paused, name: profile.settings?.bot_name || 'ClosedHand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
+    res.json({ available: true, ownerAddresses, usage: remote?.usage || null, servicePaused: !!remote?.paused, name: profile.settings?.bot_name || 'Closedhand', address: account?.address || null, ownerEmail: account?.owner_email || null, enabled: !!account?.enabled, pending: !!account && !account.address, lastSyncAt: account?.last_sync_at, error: account?.last_error, threads, attention });
   }));
   app.post('/api/assistant-email/enable', wrap(async (req, res, owner) => {
-    if (!await available()) return res.status(503).json({ error: 'ClosedHand’s email address is coming soon.' });
+    if (!await available()) return res.status(503).json({ error: 'Closedhand’s email address is coming soon.' });
     let account = await record(owner);
     if (!account) {
       const keys = p.keyPair();
@@ -44,7 +44,7 @@ function register(app, db, userId) {
       account = await record(owner);
     }
     const profile = mustWrite(await db.from('profiles').select('settings').eq('id', owner).single());
-    const result = await call(account, 'register', 'POST', { publicKey: account.public_key, name: profile.settings?.bot_name || 'ClosedHand' });
+    const result = await call(account, 'register', 'POST', { publicKey: account.public_key, name: profile.settings?.bot_name || 'Closedhand' });
     if (!result.url?.startsWith(ORIGIN + '/assistant-email/confirm#')) throw new Error('Could not verify the confirmation page.');
     res.json(result);
   }));

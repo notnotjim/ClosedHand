@@ -11,7 +11,7 @@ class BridgeManager: ObservableObject {
     @Published var isConnected = false
     @Published var isPaired = false
     @Published var pairingCode = ""
-    // ClosedHand runs on the computer that owns it; by default that is this Mac.
+    // Closedhand runs on the computer that owns it; by default that is this Mac.
     @Published var serverUrl = "ws://localhost:3000/bridge"
 
     // Activity indicator — shows when the bot is actively using the computer

@@ -1,6 +1,6 @@
 -- 040_wallet_and_spend_ledger.sql — money, recorded and bounded.
 --
--- ClosedHand could already reach a checkout in the browser it drives; nothing
+-- Closedhand could already reach a checkout in the browser it drives; nothing
 -- recorded what it spent or bounded it. spend_ledger is the record: one row
 -- per purchase it was about to make, from the moment it asked (or decided it
 -- may proceed) to what happened. It doubles as the idempotency check, so a
@@ -10,7 +10,7 @@
 -- security code are stored encrypted (TOKEN_ENCRYPTION_KEY) and are never
 -- shown to the model; the browser fills them in from here. limits is the
 -- person's own rule for that card: how much per purchase, per day, per month,
--- and below what amount ClosedHand may go ahead without asking.
+-- and below what amount Closedhand may go ahead without asking.
 CREATE TABLE IF NOT EXISTS spend_ledger (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   user_id uuid NOT NULL,

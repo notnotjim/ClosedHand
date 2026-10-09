@@ -1,4 +1,4 @@
-// A page is its own record, made only when ClosedHand judged one helps beyond
+// A page is its own record, made only when Closedhand judged one helps beyond
 // the chat answer (save_report; the code still says report). It opens on its
 // own, with the same content as a PDF, a Word document and its tables as a
 // spreadsheet, it is listed under Pages on the dashboard whoever made it, and
@@ -152,7 +152,7 @@ test("every page is under Pages, a week on the list then Archived, whichever cha
   assert.match(dashboard, /<button class="tab" data-tab="pages" onclick="switchTab\('pages'\)">Pages<\/button>/);
   assert.match(dashboard, /fetch\('\/api\/pages\?archived=1'\)/);
   assert.match(dashboard, /Delete this page for good\? The answer stays in the chat you asked in\./);
-  assert.match(dashboard, />A page is something ClosedHand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing\. Open it here or download it as PDF or Word\.</, "says what a page is, plainly");
+  assert.match(dashboard, />A page is something Closedhand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing\. Open it here or download it as PDF or Word\.</, "says what a page is, plainly");
 });
 
 test("a saved agent's page is linked in its message, and removing a run keeps its page", () => {

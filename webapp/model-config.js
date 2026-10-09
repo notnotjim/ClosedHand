@@ -33,7 +33,7 @@ function unlisted(error, catalog, model) {
 }
 // Ollama's default window is 4,096 tokens and its OpenAI-style interface cuts
 // longer text to fit without saying so, so a model there can pass every other
-// check and still lose most of ClosedHand's instructions. Once the check has
+// check and still lose most of Closedhand's instructions. Once the check has
 // loaded the model, Ollama reports the window it actually gives it (/api/ps)
 // and the most the model itself can take (/api/show).
 const OLLAMA_MIN_WINDOW = 32000;
@@ -58,8 +58,8 @@ function windowProblem(window, model) {
   if (!window || window.given >= OLLAMA_MIN_WINDOW) return null;
   const tokens = (n) => n.toLocaleString("en-US");
   return window.most && window.most < OLLAMA_MIN_WINDOW
-    ? `${model} can take at most ${tokens(window.most)} tokens, too few for ClosedHand's instructions. Choose a model in Ollama that takes at least 32,000.`
-    : `Ollama gives ${model} a window of ${tokens(window.given)} tokens, too small for ClosedHand's instructions, and it cuts longer requests short without saying so. Set Ollama's context length to at least 32,000, in the Ollama app's settings or with OLLAMA_CONTEXT_LENGTH, restart Ollama, then check again.`;
+    ? `${model} can take at most ${tokens(window.most)} tokens, too few for Closedhand's instructions. Choose a model in Ollama that takes at least 32,000.`
+    : `Ollama gives ${model} a window of ${tokens(window.given)} tokens, too small for Closedhand's instructions, and it cuts longer requests short without saying so. Set Ollama's context length to at least 32,000, in the Ollama app's settings or with OLLAMA_CONTEXT_LENGTH, restart Ollama, then check again.`;
 }
 async function fitsInstructions(conn, model, cap) {
   const window = await ollamaWindow(conn, model);
@@ -108,7 +108,7 @@ async function prepare(input, settings) {
   const chat = await checkModel(connections.primary, model, "chat", catalog);
   await fitsInstructions(connections.primary, model, chat);
   const supportMode = input.backgroundMode || (input.backgroundModel ? "separate" : "same");
-  if (!["same", "separate"].includes(supportMode)) throw new Error("Choose how ClosedHand should handle support work.");
+  if (!["same", "separate"].includes(supportMode)) throw new Error("Choose how Closedhand should handle support work.");
   let supportConnection = "primary", supportCatalog = catalog;
   if (supportMode === "separate" && input.background?.provider) {
     connections.background = resolveConnection(input.background, saved, "background");
@@ -125,7 +125,7 @@ async function prepare(input, settings) {
     vision: null,
   };
   const mode = input.visionMode || "same";
-  if (!["same", "separate", "off"].includes(mode)) throw new Error("Choose how ClosedHand should read images.");
+  if (!["same", "separate", "off"].includes(mode)) throw new Error("Choose how Closedhand should read images.");
   if (mode !== "off") {
     let conn = connections.primary, visionModel = model, visionCap = chat, connectionId = "primary", visionCatalog = catalog;
     if (mode === "separate") {
@@ -203,7 +203,7 @@ function install(app, deps) {
       localModels: download ? { embedder: { state: download.state, pct: download.pct } } : null });
   }));
   app.post("/api/model-config/default", route(async (req, res, id) => {
-    if (!deps.allowDefault) return res.status(400).json({ error: "There is no default model here. Connect a model provider for ClosedHand to use." });
+    if (!deps.allowDefault) return res.status(400).json({ error: "There is no default model here. Connect a model provider for Closedhand to use." });
     await profile(id);
     try {
       await require("./settings-patch").patchSettings(supabase, id, { unset: ["model_config", "llm_provider", "anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key", "custom_base_url", "custom_model", "custom_model_fast", "byok_models"] });

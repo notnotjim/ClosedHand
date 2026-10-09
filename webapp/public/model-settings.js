@@ -80,7 +80,7 @@
       '<button type="button" data-action="recheck" hidden>Check again</button><button type="button" data-action="save" hidden>Use these models</button></section>' +
       '<div class="model-result" role="status" aria-live="polite" tabindex="-1"></div><button type="button" data-action="reload" hidden>Retry loading settings</button>' +
       '<details data-region="default" hidden><summary>Return to the hosted models</summary><div class="model-fields">' +
-      '<p>This removes your own model connections from ClosedHand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
+      '<p>This removes your own model connections from Closedhand. Conversations, summaries and images will use the hosted service\'s models. Context Brain and File Search keep their existing recall provider.</p>' +
       '<button type="button" data-action="default">Use the hosted models</button></div></details></div></details>';
     var saved = null, ticket = null, models = [], imageModels = [], supportModels = [], busy = false, allowDefault = false;
     var loads = { primary: 0, vision: 0, background: 0 }, runtime = "", initialized = false;
@@ -116,7 +116,7 @@
       var download = data.localModels?.embedder;
       if (root.id !== "model-configuration" && download && ["downloading", "error"].includes(download.state)) {
         var status = document.createElement("p"); status.className = "model-hint";
-        status.textContent = download.state === "downloading" ? "Downloading the embedding model: " + (download.pct || 0) + "%." : "The embedding model could not finish downloading. ClosedHand will retry when syncing.";
+        status.textContent = download.state === "downloading" ? "Downloading the embedding model: " + (download.pct || 0) + "%." : "The embedding model could not finish downloading. Closedhand will retry when syncing.";
         current.append(status);
       }
     }
@@ -155,7 +155,7 @@
       hint.hidden = !current;
     }
     // Only models known to read images are offered for them: from what the
-    // provider publishes, a family ClosedHand knows, or an earlier check. A
+    // provider publishes, a family Closedhand knows, or an earlier check. A
     // model whose abilities are unknown can still be entered by its ID, and the
     // check proves it before anything is saved.
     function readsImages(model) { return model.capabilities?.vision === true; }
@@ -175,11 +175,11 @@
         ? "Choose the service that runs your models. For models on your own hardware, choose Ollama or Other compatible service."
         : local ? "Ollama runs models on your own hardware. It must already be running with a model installed."
         : custom ? "Connect a service that supports the OpenAI-compatible API. Where requests are processed depends on that service."
-        : "Your requests are processed by " + providers[provider] + " under its own terms. Its usage charges are separate from ClosedHand.";
+        : "Your requests are processed by " + providers[provider] + " under its own terms. Its usage charges are separate from Closedhand.";
       region("connection-help").textContent = local
         ? runtime === "docker" ? "This URL reaches Ollama on the computer running Docker. Ollama must accept connections from Docker. Change it if Ollama runs elsewhere."
           : runtime === "desktop" ? "This URL reaches Ollama on this Mac. Change it if Ollama runs elsewhere."
-          : "Enter the URL where ClosedHand can reach Ollama. If ClosedHand runs on a rented server, it cannot reach your computer through localhost."
+          : "Enter the URL where Closedhand can reach Ollama. If Closedhand runs on a rented server, it cannot reach your computer through localhost."
         : custom ? "Enter the service URL and an API key if the service requires one."
         : "Paste an API key from this provider to load its models.";
       region("address").hidden = !["custom", "ollama"].includes(value("provider"));
@@ -211,9 +211,9 @@
       try {
         response = await fetch("/api/model-config" + path, { method: body ? "POST" : "GET",
           headers: { "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) });
-      } catch (_) { throw new Error("Could not reach ClosedHand. Check that it is running, then try again."); }
+      } catch (_) { throw new Error("Could not reach Closedhand. Check that it is running, then try again."); }
       var data;
-      try { data = await response.json(); } catch (_) { throw new Error("ClosedHand returned an unexpected response. Reload this page and try again."); }
+      try { data = await response.json(); } catch (_) { throw new Error("Closedhand returned an unexpected response. Reload this page and try again."); }
       if (!response.ok) {
         var message = data.error || "Could not update the models. Try again.";
         if (/fetch failed|failed to fetch|networkerror|load failed|timeout|timed out/i.test(message)) {
@@ -230,7 +230,7 @@
       root.setAttribute("aria-busy", "true");
       root.querySelectorAll("button,input,select").forEach(function (el) { el.disabled = true; });
       try { await fn(); } catch (e) {
-        show(e.message || "Could not reach ClosedHand. Try again.", true);
+        show(e.message || "Could not reach Closedhand. Try again.", true);
       } finally {
         busy = false; root.removeAttribute("aria-busy");
         root.querySelectorAll("button,input,select").forEach(function (el) { el.disabled = false; });
@@ -266,14 +266,14 @@
         region("selection").hidden = false;
         if (kind === "primary") renderCheck();
         if (!quiet) {
-          show(vision && data.models.length && !imageModels.length ? "None of this provider's listed models is known to read images. Enter a model ID below, and ClosedHand checks it before saving."
-            : (vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. ClosedHand checks that it can carry out tasks and read images before saving.")
+          show(vision && data.models.length && !imageModels.length ? "None of this provider's listed models is known to read images. Enter a model ID below, and Closedhand checks it before saving."
+            : (vision ? imageModels : support ? supportModels : models).length ? (vision ? "Choose an image model from the list." : support ? "Choose a support model from the list." : "Choose a primary model from the list. Closedhand checks that it can carry out tasks and read images before saving.")
             : "The service returned no models. Check that a model is available or enter its model ID below.");
           scheduleCheck();
         }
       } catch (e) {
         if (token !== loads[kind]) return;
-        show(e.message || "Could not reach ClosedHand. Try again.", true);
+        show(e.message || "Could not reach Closedhand. Try again.", true);
         retry.hidden = false; region("selection").hidden = false;
       }
     }
@@ -304,7 +304,7 @@
       return /^(?:sk-|sk_|xai-|gsk_|AIza|pplx-|hf_|r8_|nvapi-|fw_|csk-)/.test(s) ||
         (s.match(/[A-Za-z0-9]{32,}/g) || []).some(function (run) { return /\d/.test(run) && /[A-Za-z]/.test(run); });
     }
-    var KEY_AS_MODEL = "That looks like an API key, not a model ID, so ClosedHand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
+    var KEY_AS_MODEL = "That looks like an API key, not a model ID, so Closedhand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
     async function runCheck() {
       clearTimeout(checkTimer);
       var token = ++checks;
@@ -323,7 +323,7 @@
         ticket = data.ticket; check = { kind: "passed", config: data.config, memory: data.memory };
       } catch (e) {
         if (token !== checks) return;
-        check = { kind: "failed", error: e.message || "Could not reach ClosedHand. Try again.", visionNeeded: !!e.visionNeeded };
+        check = { kind: "failed", error: e.message || "Could not reach Closedhand. Try again.", visionNeeded: !!e.visionNeeded };
         if (e.visionNeeded) region("extras").open = true;
       }
       renderCheck();
@@ -368,7 +368,7 @@
         return conn && conn.provider === "ollama" && w && w < 32000 ? ". Ollama gives it " + w.toLocaleString("en-US") + " tokens, so only a few frames fit; raise its context length for more" : "";
       };
       if (chatCap.vision === true && vision) return ["Sees frames and reads what's said" + narrow(chat), "ok"];
-      if (separate) return [visionLabel + " sees frames, and ClosedHand writes out what's said" + narrow(vision), "ok"];
+      if (separate) return [visionLabel + " sees frames, and Closedhand writes out what's said" + narrow(vision), "ok"];
       return ["Reads what's said only, since images are off", ""];
     }
     function catalogCaps(key) {
@@ -421,7 +421,7 @@
         : kind !== "checking" && !(kind === "failed") && savedChat() && (mode !== "separate" || savedVision()) && mode !== "off" ? saved : null;
       if (videoSetup) { var how = videoHandling(videoSetup); row("Videos", how[0], how[1]); }
       else row("Videos", kind === "checking" ? "Checking" : "Not checked yet", "wait");
-      row("Thinking effort", cap.reasoning ? "ClosedHand sets it per task" : "Fixed by the model", cap.reasoning ? "ok" : "");
+      row("Thinking effort", cap.reasoning ? "Closedhand sets it per task" : "Fixed by the model", cap.reasoning ? "ok" : "");
       row("Context limit", cap.contextWindow ? cap.contextWindow.toLocaleString() + " tokens" : "Not published by the provider");
       var supportId = support ? support.model : chosen("backgroundModel");
       var supportProvider = cfg && support ? cfg.connections[support.connection].provider : value("backgroundProvider") || chatProvider;
@@ -429,7 +429,7 @@
       var sameSupport = support ? sameConnection && supportId === chat.model : value("backgroundMode") !== "separate";
       row("Support model", sameSupport ? (cap.reasoning ? "The primary model, at low effort" : "Same as the primary model") : !supportId ? "Choose a support model" : modelName({ id: supportId }, supportProvider) + " via " + (providers[supportProvider] || supportProvider),
         sameSupport ? "" : settled ? "ok" : kind === "checking" ? "wait" : "");
-      // Recall is a model too, the one ClosedHand keeps on this computer.
+      // Recall is a model too, the one Closedhand keeps on this computer.
       if (kind === "passed" && check.memory) row("Recall", check.memory.value || check.memory, "", check.memory.local);
       save.hidden = kind !== "passed";
       again.hidden = kind !== "failed";
@@ -552,7 +552,7 @@
       region("selection").hidden = true; loads.primary++; loads.vision++; loads.background++; models = []; imageModels = []; supportModels = []; refreshPickers(); visibility();
       clearTimeout(checkTimer); checks++; check = null; renderCheck();
       region("default").hidden = true;
-      show("ClosedHand's hosted models are active."); result.focus();
+      show("Closedhand's hosted models are active."); result.focus();
       if (onSaved) onSaved();
     }); };
     async function initialize() {
@@ -565,7 +565,7 @@
       region("editor").querySelector("summary").hidden = !saved && !data.allowDefault;
       allowDefault = !!data.allowDefault;
       region("default").hidden = !allowDefault || !saved;
-      if (!saved) { refreshPickers(); visibility(); if (data.allowDefault) show("ClosedHand's hosted models are active. You can connect your own models here."); return; }
+      if (!saved) { refreshPickers(); visibility(); if (data.allowDefault) show("Closedhand's hosted models are active. You can connect your own models here."); return; }
       var primary = saved.connections.primary;
       field("provider").value = primary.provider; field("baseUrl").value = primary.baseUrl;
       field("apiKey").placeholder = primary.hasKey ? "Saved key, leave blank to keep it" : "Paste your key";

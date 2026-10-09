@@ -1,5 +1,5 @@
 #!/bin/sh
-# Films the desktop home page's smoke ring, with the ClosedHand fist in 3D
+# Films the desktop home page's smoke ring, with the Closedhand fist in 3D
 # inside it, for phones and tablets, which play it as a small looping video
 # instead of running 3D. The ring uses the desktop's own shaders, read from
 # views/home.html, so a change there is filmed exactly. The fist is

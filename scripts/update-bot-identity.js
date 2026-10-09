@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/update-bot-identity.js
 //
-// Pushes ClosedHand's brand identity (display name, short description, long
+// Pushes Closedhand's brand identity (display name, short description, long
 // description, commands, avatar where possible) to each chat platform's
 // official API. Run this whenever the brand copy or avatar changes — or after
 // first-time bot setup.
@@ -25,10 +25,10 @@
 // The script prints a per-platform summary so you can verify what landed.
 
 const IDENTITY = {
-  displayName: "ClosedHand",
+  displayName: "Closedhand",
   short: "Your personal AI across every chat app",
   // Kept under 512 chars to satisfy Telegram's long-description cap.
-  long: "ClosedHand plugs into your Google or Microsoft account and reaches your real tools — email, calendar, files, Shopify, Meta Ads, and more. Chat with it here or on any of your other chat apps; your conversation history carries across all of them. Your data is yours — never sold, never used to train AI.",
+  long: "Closedhand plugs into your Google or Microsoft account and reaches your real tools — email, calendar, files, Shopify, Meta Ads, and more. Chat with it here or on any of your other chat apps; your conversation history carries across all of them. Your data is yours — never sold, never used to train AI.",
   commands: [
     { command: "start", description: "See what's connected and reintroduce yourself" },
     { command: "new", description: "Archive the current thread and start fresh" },

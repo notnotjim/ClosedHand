@@ -18,7 +18,7 @@ test('the person is told once, where they get updates, with the way back', async
   assert.equal(await alert.tellOwner('u', store, 'google_extra_work'), true);
   assert.equal(sent.length, 1);
   assert.deepEqual(sent[0].slice(0, 2), ['telegram', '42']);
-  assert.match(sent[0][2], /^Google stopped accepting ClosedHand's sign-in for sam\.work@example\.com, so its mail and calendar are no longer updating/);
+  assert.match(sent[0][2], /^Google stopped accepting Closedhand's sign-in for sam\.work@example\.com, so its mail and calendar are no longer updating/);
   assert.match(sent[0][2], /https:\/\/fixture\.example\/dashboard#connections/);
   assert.equal(await alert.tellOwner('u', store, 'shopify'), false, 'only sign-ins that can die this way');
   assert.equal(alert.providerOf('microsoft_extra_home'), 'Microsoft');

@@ -1,11 +1,11 @@
 # Built-in voice
 
-ClosedHand includes an English Kokoro v1.0 voice. Use the speaker beside a web-chat
+Closedhand includes an English Kokoro v1.0 voice. Use the speaker beside a web-chat
 reply to read it aloud, and the same control to stop. In WhatsApp or Telegram, say
 "voice replies on" to receive spoken replies to voice notes, or "voice replies off"
 for text. Chat apps fall back to text when speech fails or the reply is too long.
 
-Speech output runs on the computer hosting ClosedHand, without a provider account,
+Speech output runs on the computer hosting Closedhand, without a provider account,
 key or usage fee. Incoming voice notes still use the existing hosted transcription
 service before their text reaches the primary LLM. This feature does not make
 incoming voice transcription local.

@@ -6,7 +6,7 @@
 -- the matter (who is involved, what each has said, what is open, what was
 -- decided) and update it as each message arrives. This table is that
 -- picture, one row per matter, updated in the background after every turn
--- and consulted before ClosedHand acts. It goes stale by silence and by the
+-- and consulted before Closedhand acts. It goes stale by silence and by the
 -- matter's own end date, so an old party does not complicate a new one.
 CREATE TABLE IF NOT EXISTS matters (
   id uuid DEFAULT gen_random_uuid() NOT NULL,

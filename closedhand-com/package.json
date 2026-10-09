@@ -1,7 +1,7 @@
 {
   "name": "closedhand-com",
   "private": true,
-  "description": "The closedhand.com service: the public website, personal URLs, bug report intake and the assistant email relay for copies of ClosedHand.",
+  "description": "The closedhand.com service: the public website, personal URLs, bug report intake and the assistant email relay for copies of Closedhand.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

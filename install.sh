@@ -1,5 +1,5 @@
 #!/bin/sh
-# ClosedHand one-line installer.
+# Closedhand one-line installer.
 #
 #   curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh
 #
@@ -36,7 +36,7 @@ fi
 # --- The drawing -------------------------------------------------------------
 # Decoration. The installer proper starts at "Preconditions" below.
 #
-# The ClosedHand fist, held while the install runs. Taken from the brand icon
+# The Closedhand fist, held while the install runs. Taken from the brand icon
 # (webapp/public/fist.png) by scripts/hand-frames.py: a shaded pixel picture,
 # run-length coded, at two sizes.
 HAND_FIST_32='16a4i2a3i17a16i11a22i9a13i1u1t3i2t3i8a8i3u3i2t3i2t1s3i7a3i2v3i3u3i2t3i1t2s3i7a3i2v3i3u3i2t3i3s3i7a3i2v3i2u9i3s3i7a3i1v1u20i7a24i8a11i5t3s5i8a11i4t6s4i7a3i4u1t8i5s1r3i7a3i3u4t7i3s3r2i7a3i2u6t7i1s4r2i7a3i1u7t4s3i5r2i7a3i7t6s1i6r2i7a3i6t7s6r3i8a2i5t7s7r3i8a3i4t6s7r1q3i8a3i3t7s6r2q3i8a3i2t7s7r1q3i10a3i7s7r2q3i10a4i5s7r2q3i12a4i3s7r1q5i13a18i15a15i19a11i11a'
@@ -313,7 +313,7 @@ browser_here() {
   command -v xdg-open >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]
 }
 
-# The closing line says what ClosedHand is and, where a browser will open,
+# The closing line says what Closedhand is and, where a browser will open,
 # alternates every 8 seconds with what happens when installing ends. Around
 # each change the line is faint for a frame, so it fades across instead of
 # jumping. Faint rather than grey: greys are the fist's own colours.
@@ -448,11 +448,11 @@ docker info >/dev/null 2>&1 || fail "the docker daemon isn't running. Start Dock
 # those is what makes a rebuild quick.
 if [ "${CLOSEDHAND_RESET:-0}" = "1" ]; then
   if [ -f docker-compose.yml ] && [ -f .env.example ]; then
-    say "Reset: removing ClosedHand's containers, volumes and settings."
+    say "Reset: removing Closedhand's containers, volumes and settings."
     docker compose down -v --remove-orphans >/dev/null 2>&1 || true
     rm -f .env
   elif [ -d "$DIR" ] && [ -f "$DIR/docker-compose.yml" ]; then
-    say "Reset: removing ClosedHand's containers, volumes and $(pwd)/$DIR."
+    say "Reset: removing Closedhand's containers, volumes and $(pwd)/$DIR."
     ( cd "$DIR" && docker compose down -v --remove-orphans >/dev/null 2>&1 ) || true
     rm -rf "$DIR"
   else
@@ -472,7 +472,7 @@ if [ -f docker-compose.yml ] && [ -f .env.example ]; then
 elif [ -d "$DIR" ]; then
   # Said plainly: someone expecting a fresh start should see at once that this
   # is an update of what is already there.
-  say "Updating the ClosedHand already in $(pwd)/$DIR, keeping its settings and data."
+  say "Updating the Closedhand already in $(pwd)/$DIR, keeping its settings and data."
 else
   say "Installing into $(pwd)/$DIR"
 fi
@@ -487,7 +487,7 @@ ui_init
 if [ -f docker-compose.yml ] && [ -f .env.example ]; then
   step 0 "Using this checkout"
 elif [ -d "$DIR" ]; then
-  [ -f "$DIR/docker-compose.yml" ] || fail "$DIR exists but doesn't look like a ClosedHand checkout. Remove it or set CLOSEDHAND_DIR."
+  [ -f "$DIR/docker-compose.yml" ] || fail "$DIR exists but doesn't look like a Closedhand checkout. Remove it or set CLOSEDHAND_DIR."
   step 0 "Updating the checkout"
   cd "$DIR"
   # Re-running the installer doubles as the upgrade path: fast-forward a clean
@@ -534,7 +534,7 @@ else
   setkey WS_AUTH_SECRET "$(rand)"
   setkey SANDBOX_TOKEN "$(rand)"
   setkey COOKIE_SECRET "$(rand)"
-  # Exactly 32 random bytes, base64: ClosedHand refuses to start without a
+  # Exactly 32 random bytes, base64: Closedhand refuses to start without a
   # valid key rather than store sign-ins unencrypted.
   setkey TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -d '\n')"
   # No ADMIN_PASSWORD here: you choose the dashboard password inside the setup
@@ -544,7 +544,7 @@ else
 fi
 
 # --- Up ----------------------------------------------------------------------
-# Every update replaces ClosedHand's images, and the ones it replaces would stay
+# Every update replaces Closedhand's images, and the ones it replaces would stay
 # on disk for good, 3 to 5 GB each time, until the disk fills. Note exactly
 # which images it runs on now; once the new version answers, those go. Nothing
 # else on this computer is touched, and an image a container still uses stays.
@@ -570,7 +570,7 @@ else
   # One retry for a genuine blip, then build from source. A missing or private
   # image is not a network problem and pulling it again cannot fix it, so the
   # fallback is the thing that actually works: slower, but it always boots.
-  if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
+  if ! run_watched 30 65 "Downloading Closedhand" pull_progress docker compose pull; then
     step 30 "Download stalled, retrying"
     _w=10
     while [ "$_w" -gt 0 ]; do
@@ -578,7 +578,7 @@ else
       if [ "$UI" = "1" ]; then ui_draw 30 "Download stalled, retrying"; fi
       _w=$((_w - 1))
     done
-    if ! run_watched 30 65 "Downloading ClosedHand" pull_progress docker compose pull; then
+    if ! run_watched 30 65 "Downloading Closedhand" pull_progress docker compose pull; then
       run_watched 30 70 "Building from source" - \
         docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build \
         || die "both the download and the build failed."
@@ -588,7 +588,7 @@ else
 fi
 
 if [ "$BUILT_FROM_SOURCE" = "0" ]; then
-  step 72 "Starting ClosedHand"
+  step 72 "Starting Closedhand"
   run docker compose up -d || die "docker compose up failed."
 fi
 
@@ -634,18 +634,18 @@ fi
 
 say ""
 if [ -n "${SSH_CONNECTION:-}" ]; then
-  say "ClosedHand is running on this server. On your own computer, open a second"
+  say "Closedhand is running on this server. On your own computer, open a second"
   say "terminal and run the command below, using the same user and server address"
   say "you used to connect here:"
   say "  ssh -N -L 3000:127.0.0.1:3000 user@server"
   say "Keep that terminal open, then open $DASH_URL on your computer."
-  say "Setup gives ClosedHand its personal URL; Settings > Personal URL manages it."
+  say "Setup gives Closedhand its personal URL; Settings > Personal URL manages it."
 elif [ "$OPENED" = "1" ]; then
   say "Opening the setup page in your browser: $DASH_URL"
 else
   say "Open $DASH_URL in a browser to reach the setup page."
 fi
 say ""
-say "ClosedHand browses and runs code on its own sandboxed computer. It can't see"
+say "Closedhand browses and runs code on its own sandboxed computer. It can't see"
 say "your files or the rest of your machine unless you give it explicit permission."
 say "Watch it work in the Computers tab."

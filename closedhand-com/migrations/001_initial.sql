@@ -21,7 +21,7 @@ CREATE TABLE owners (
 );
 CREATE UNIQUE INDEX owners_identity ON owners (provider, subject) WHERE subject IS NOT NULL;
 
--- A personal URL: which copy of ClosedHand it reaches and the routing
+-- A personal URL: which copy of Closedhand it reaches and the routing
 -- credentials for it. id and secret_hash identify the copy (its install ID
 -- and a hash of its secret); the secret itself never leaves that computer.
 CREATE TABLE addresses (
@@ -45,7 +45,7 @@ CREATE TABLE addresses (
 CREATE UNIQUE INDEX addresses_one_per_owner ON addresses (owner_id);
 
 -- Reports a person chose to send. Same columns as the table in each copy of
--- ClosedHand, so scripts/bug-queue.js reads either. Screenshots are kept
+-- Closedhand, so scripts/bug-queue.js reads either. Screenshots are kept
 -- inline in the screenshots column.
 CREATE TABLE bug_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

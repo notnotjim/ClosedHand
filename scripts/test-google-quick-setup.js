@@ -14,7 +14,7 @@ function fresh(env){
  return require('../lib/google-app');
 }
 
-test('ClosedHand\'s Google app exists only when the build carries both parts',()=>{
+test('Closedhand\'s Google app exists only when the build carries both parts',()=>{
  assert.equal(fresh({}).app(),null);
  assert.equal(fresh({CLOSEDHAND_GOOGLE_CLIENT_ID:ID}).app(),null);
  assert.equal(fresh({CLOSEDHAND_GOOGLE_CLIENT_ID:'not-a-google-id',CLOSEDHAND_GOOGLE_CLIENT_SECRET:'s'}).app(),null);
@@ -40,7 +40,7 @@ test('every Google renewal asks which app made the sign-in',()=>{
  assert.match(read('webapp/server.js'),/require\("\.\/google-app"\)\.clientFor\(toks, SERVICES\.google\.clientId, SERVICES\.google\.clientSecret\)/);
 });
 
-test('sign-in uses ClosedHand\'s app without an own app, or when asked, and keeps it with the sign-in',()=>{
+test('sign-in uses Closedhand\'s app without an own app, or when asked, and keeps it with the sign-in',()=>{
  const server=read('webapp/server.js');
  assert.match(server,/if \(quick && googleApp\.canReturnTo\(BASE_URL\) && \(req\.query\.quick === "1" \|\| !own\)\) \{\n\s+svc = \{ \.\.\.svc, clientId: quick\.clientId, clientSecret: quick\.clientSecret, personalClient: true, usePKCE: true \};/);
  // personalClient is what makes the callback keep the app's ID and secret on the tokens.
@@ -57,7 +57,7 @@ test('setup offers the quick route first and keeps the own project one link away
  assert.doesNotMatch(html,/Quick setup/);
 });
 
-test('ClosedHand\'s Google app comes from the build, never from the source',()=>{
+test('Closedhand\'s Google app comes from the build, never from the source',()=>{
  for(const f of ['Dockerfile','webapp/Dockerfile']) assert.match(read(f),/ARG CLOSEDHAND_GOOGLE_CLIENT_ID=""\nARG CLOSEDHAND_GOOGLE_CLIENT_SECRET=""/,f);
  assert.match(read('.github/workflows/build-selfhost-images.yml'),/CLOSEDHAND_GOOGLE_CLIENT_SECRET=\$\{\{ secrets\.CLOSEDHAND_GOOGLE_CLIENT_SECRET \}\}/);
  assert.match(read('desktop/Info.plist'),/__GOOGLE_CLIENT_ID__/);

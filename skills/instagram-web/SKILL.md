@@ -1,6 +1,6 @@
 ---
 name: Instagram (sandbox computer)
-description: Read and comment on Instagram posts through the browser on ClosedHand's sandbox computer, where you are signed in
+description: Read and comment on Instagram posts through the browser on Closedhand's sandbox computer, where you are signed in
 triggers: [instagram, insta, my posts, my photos, my last post, my latest post, comment on my, caption my, ig post, ig profile]
 ---
 

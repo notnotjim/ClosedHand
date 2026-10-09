@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>ClosedHand</title>
+<title>Closedhand</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1920,7 +1920,7 @@
   .mon-row { cursor:default; }
   .mon-crumb-row { display:flex; align-items:center; gap:6px; padding:5px 10px; min-height:40px; }
   /* Sites to sign in to on the sandbox browser, attached to the top of it:
-     what each sign-in lets ClosedHand do, and a tick once it's done. */
+     what each sign-in lets Closedhand do, and a tick once it's done. */
   .mon-signins { display:flex; align-items:center; gap:12px; padding:6px 12px; min-height:40px; background:rgba(26,24,23,0.95); border-bottom:1px solid rgba(239,230,214,0.06); flex-shrink:0; }
   .mon-signins[hidden] { display:none; }
   .mon-signins-text { flex:1 1 auto; min-width:0; font-size:12px; line-height:1.4; color:rgba(239,230,214,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -2235,7 +2235,7 @@
   <div class="dash-slide">
     <div class="dash-slide-header">
       <div class="dash-title">
-        <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>ClosedHand</span></a>
+        <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>Closedhand</span></a>
         <span class="ch-page-name">Dashboard</span>
       </div>
       <button class="dash-slide-close" aria-label="Close dashboard">&times;</button>
@@ -2258,7 +2258,7 @@
       </a>
       <a href="/" class="header-left ch-brand">
         <img src="/fist.png" alt="">
-        <span>ClosedHand</span>
+        <span>Closedhand</span>
       </a>
       <button id="mobileActivityBtn" style="display:none;background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;padding:4px;" title="Activity" onclick="toggleMobileActivity()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -2442,7 +2442,7 @@
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
               Sandbox computer
-                <span class="mon-info" data-tip="ClosedHand's sandbox computer keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close ClosedHand. Its work carries on whenever the computer running ClosedHand is awake and online.">i</span>
+                <span class="mon-info" data-tip="Closedhand's sandbox computer keeps its browser, files and code separate from your computer. Sign in to the sites you want it to use, and it stays signed in for future tasks. Sites may occasionally ask you to sign in again.&#10;&#10;Files stay saved when you close Closedhand. Its work carries on whenever the computer running Closedhand is awake and online.">i</span>
               </span>
               <span class="mon-subtitle">
               <span class="mon-status off" id="monWorkspaceStatus" aria-hidden="true" title="Checking status"></span>
@@ -2511,7 +2511,7 @@
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
               Local Computer
-                <span class="mon-info" data-tip="The Mac whose files and apps ClosedHand can use with your permission. Access is built into the ClosedHand Mac app; if you run ClosedHand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the sandbox computer to hand ClosedHand its own copy to work on, and drag the result back when it is done.">i</span>
+                <span class="mon-info" data-tip="The Mac whose files and apps Closedhand can use with your permission. Access is built into the Closedhand Mac app; if you run Closedhand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the sandbox computer to hand Closedhand its own copy to work on, and drag the result back when it is done.">i</span>
               </span>
               <span class="mon-subtitle">
               <span class="mon-status off" id="monLocalStatus"></span>
@@ -2546,7 +2546,7 @@
   </div>
 
     <div class="mon-drag-hint" id="monDragHint">
-      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Drag a file into the sandbox computer to give ClosedHand its own copy to work on, and drag the result back. Right-click for more options.</span>
+      <span style="color:rgba(239,230,214,0.5);font-size:12px;">Drag a file into the sandbox computer to give Closedhand its own copy to work on, and drag the result back. Right-click for more options.</span>
       <button class="mon-drag-hint-dismiss" onclick="dismissDragHint()">&times;</button>
     </div>
 
@@ -2618,7 +2618,7 @@
 
 <script>
 // Under the box: "Orientate", which asks the browser where it is (only when
-// pressed) to set ClosedHand's local time, and from then on the weather there.
+// pressed) to set Closedhand's local time, and from then on the weather there.
 (function() {
   var btn = document.getElementById('hereBtn'), wx = document.getElementById('hereWx');
   if (!btn || !wx) return;
@@ -2641,7 +2641,7 @@
       '<span class="wx-num">' + esc(w.temp) + '\u00b0' + esc(w.unit || 'C') + '</span></button>';
   }
   // The other unit is already here, so the number flips at once; the choice
-  // is saved for the weather line and ClosedHand's weather answers.
+  // is saved for the weather line and Closedhand's weather answers.
   function flipUnit(t) {
     var w = last && last.weather;
     if (!w || !w.other) return;
@@ -3529,7 +3529,7 @@
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
             '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.5);"> Enter your pairing code</span></span>' +
           '</a>' +
-          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open ClosedHand on your Mac to download Bridge<br>and choose which Mac features ClosedHand can use.</p>' +
+          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open Closedhand on your Mac to download Bridge<br>and choose which Mac features Closedhand can use.</p>' +
         '</div>';
     }
   }
@@ -4546,7 +4546,7 @@
 
   // A reopened conversation shows what was said. A note wholly in brackets
   // ("[User moved on, action cancelled]") and the "OK, cancelled." after it
-  // are ClosedHand's own bookkeeping for the model, never something the
+  // are Closedhand's own bookkeeping for the model, never something the
   // person typed or was told.
   function shownInThread(messages) {
     var out = [];
@@ -4569,11 +4569,11 @@
     // Inline confirmation: replace content with confirm/cancel buttons
     var original = item.innerHTML;
     // Two different intents share this X. Hide is the tidy-up: the thread
-    // stops being listed but ClosedHand keeps everything it learned. Delete
+    // stops being listed but Closedhand keeps everything it learned. Delete
     // is the promise: gone from the list, gone from memory.
     item.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;color:#B6AFA4;">' +
-      '<button onclick="event.stopPropagation();archiveThread(\'' + threadId + '\',this)" title="Put away but kept. ClosedHand remembers it, and you can restore it from Archived below." style="padding:2px 10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);color:#EFE6D6;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Archive</button>' +
-      '<button onclick="event.stopPropagation();confirmDeleteThread(\'' + threadId + '\',this)" title="Erase this conversation and everything ClosedHand remembers from it." style="padding:2px 10px;background:#D0563F;color:#EFE6D6;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Delete forever</button>' +
+      '<button onclick="event.stopPropagation();archiveThread(\'' + threadId + '\',this)" title="Put away but kept. Closedhand remembers it, and you can restore it from Archived below." style="padding:2px 10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);color:#EFE6D6;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Archive</button>' +
+      '<button onclick="event.stopPropagation();confirmDeleteThread(\'' + threadId + '\',this)" title="Erase this conversation and everything Closedhand remembers from it." style="padding:2px 10px;background:#D0563F;color:#EFE6D6;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Delete forever</button>' +
       '<button onclick="event.stopPropagation();cancelDeleteThread(this)" style="padding:2px 10px;background:transparent;border:1px solid rgba(239,230,214,0.28);color:#B6AFA4;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Cancel</button></div>';
     item._originalHTML = original;
   }
@@ -5318,7 +5318,7 @@ function winBridgeSoon(e) {
 }
 window.winBridgeSoon = winBridgeSoon;
 
-// Installation identity comes from ClosedHand, not the viewing device.
+// Installation identity comes from Closedhand, not the viewing device.
 async function readMacAccessStatus() {
   try {
     var response = await fetch('/api/bridge/status');
@@ -5329,15 +5329,15 @@ async function readMacAccessStatus() {
   } catch (e) { return { status: 'unavailable', desktop: window._macDesktop === true }; }
 }
 
-// ClosedHand already runs on this computer, so "Offline" here read as a
+// Closedhand already runs on this computer, so "Offline" here read as a
 // fault. Bridge is a separate, optional thing: it opens a Mac's own files and
-// apps to ClosedHand, on this Mac or another.
-var BRIDGE_PITCH = 'ClosedHand already runs on this computer. Bridge lets it open your Mac\u2019s own files and apps too, on this Mac or another one.';
+// apps to Closedhand, on this Mac or another.
+var BRIDGE_PITCH = 'Closedhand already runs on this computer. Bridge lets it open your Mac\u2019s own files and apps too, on this Mac or another one.';
 function macAccessHelp(data) {
-  if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when ClosedHand is reachable.' };
-  if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'ClosedHand’s' : 'ClosedHand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
-  if (data.desktop) return { title: 'Mac access is not connected', text: 'The ClosedHand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running ClosedHand.' };
-  if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep ClosedHand Bridge open on the connected Mac. It will reconnect automatically.' };
+  if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when Closedhand is reachable.' };
+  if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'Closedhand’s' : 'Closedhand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
+  if (data.desktop) return { title: 'Mac access is not connected', text: 'The Closedhand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running Closedhand.' };
+  if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep Closedhand Bridge open on the connected Mac. It will reconnect automatically.' };
   return { title: 'Connect a Mac', text: BRIDGE_PITCH, setup: true };
 }
 
@@ -5368,7 +5368,7 @@ function checkBridgeStatus() {
         card.dataset.desktop = 'true';
       }
       var req = document.querySelector('.feat-table th[data-row="bridge"]');
-      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Included in the ClosedHand app. Choose what to allow from the fist in the menu bar on the Mac running ClosedHand.'; }
+      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Included in the Closedhand app. Choose what to allow from the fist in the menu bar on the Mac running Closedhand.'; }
     }
     if (cardAction) {
       var on = data.status === 'connected';
@@ -5634,9 +5634,9 @@ async function ragAddSource() {
   html += '<div class="rag-browse-item" style="opacity:0.35;cursor:default;">'
     + '<img src="/logos/notion.svg" width="16" height="16" style="flex-shrink:0;"> Notion <span style="font-size:10px;color:#B6AFA4;margin-left:auto;">Coming soon</span></div>';
 
-  // ClosedHand section
+  // Closedhand section
   html += '<div style="border-top:1px solid rgba(239,230,214,0.06);margin:14px 0 8px;"></div>';
-  html += '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">ClosedHand</p>';
+  html += '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">Closedhand</p>';
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'cloud\',\'/workspace\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
@@ -6425,7 +6425,7 @@ function escapeHtml(s) {
       e.ondragover=function(ev){ev.preventDefault();this.classList.add('dragover');};
       e.ondragleave=function(){this.classList.remove('dragover');};
       e.ondrop=function(ev){ev.preventDefault();this.classList.remove('dragover');if(ev.dataTransfer.files&&ev.dataTransfer.files.length>0)monHandleUpload(ev.dataTransfer.files);};
-      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div class="mon-empty-text">ClosedHand’s sandbox computer</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
+      e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div class="mon-empty-text">Closedhand’s sandbox computer</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
     }
     var sorted=monSort(visible);
     if(_monCloudView==='grid')monRenderGrid(sorted,el,'cloud');
@@ -6597,7 +6597,7 @@ function escapeHtml(s) {
       var dlAttrs=isMac?' download':' onclick="winBridgeSoon(event)"';
       var dlLabel=isMac?'Download Bridge for Mac':'Bridge is available for Mac only';
       el.innerHTML='<div class="bridge-cta">'
-        // One stroke, one colour: the box ClosedHand lives in on the left, this
+        // One stroke, one colour: the box Closedhand lives in on the left, this
         // computer on the right, a dashed arc between them for the bridge.
         +'<div class="bridge-cta-node"><svg viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">'
         +'<rect x="5" y="28" width="16" height="24" rx="2"/>'
@@ -6609,7 +6609,7 @@ function escapeHtml(s) {
         +'</svg></div>'
         +'<h3>Connect a Mac</h3>'
         +'<p>'+BRIDGE_PITCH+'</p>'
-        +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open ClosedHand on your Mac to download Bridge.</p>')
+        +(isMac?'<a class="bridge-cta-dl" href="'+dlUrl+'"'+dlAttrs+'><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+dlLabel+'</a>':'<p>Open Closedhand on your Mac to download Bridge.</p>')
         +'<div class="bridge-cta-flow">'
         +'<div class="bridge-cta-step"><em>1</em> Download</div>'
         +'<span class="bridge-cta-arrow">\u2192</span>'
@@ -7747,7 +7747,7 @@ function escapeHtml(s) {
       openBtn.id = 'monDesktopOpen';
       openBtn.className = 'mon-btn';
       openBtn.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-50% + 34px));display:none;padding:8px 16px;';
-      openBtn.textContent = "Open ClosedHand's browser";
+      openBtn.textContent = "Open Closedhand's browser";
       openBtn.onclick = function () {
         openBtn.disabled = true; loading.textContent = 'Opening\u2026';
         fetch('/api/sandbox/browser', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: 'https://www.google.com', focus: true }) })
@@ -7768,7 +7768,7 @@ function escapeHtml(s) {
         if (!r.ok) {
           var d = await r.json().catch(function () { return {}; });
           img.style.display = 'none'; openBtn.style.display = '';
-          loading.textContent = /no browser/i.test(d.error || '') ? "ClosedHand's browser is not open." : (d.error || 'The browser is not answering.');
+          loading.textContent = /no browser/i.test(d.error || '') ? "Closedhand's browser is not open." : (d.error || 'The browser is not answering.');
           loading.style.display = '';
           return;
         }
@@ -7814,7 +7814,7 @@ function escapeHtml(s) {
   // ticks refresh while the browser is on screen, so they follow the person
   // signing in; the Computers tab carries a dot until any site is signed in.
   var _monSignins = null, _monSigninPoll = null;
-  var MON_SIGNIN_INTRO = 'Sign in to sites here so ClosedHand can use them for you. Any other site works too.';
+  var MON_SIGNIN_INTRO = 'Sign in to sites here so Closedhand can use them for you. Any other site works too.';
   async function monLoadSignins(fresh) {
     try {
       var r = await fetch('/api/sandbox/sign-ins' + (fresh ? '?fresh=1' : ''));

@@ -1,4 +1,4 @@
-# Build-from-source override. Use when hacking on ClosedHand itself:
+# Build-from-source override. Use when hacking on Closedhand itself:
 #   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 services:
   bot:

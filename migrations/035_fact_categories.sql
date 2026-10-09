@@ -19,7 +19,7 @@ alter table facts add column if not exists subject text;
 --   person     someone in the user's life: family, colleagues, customers
 --   business   a company, product or project the user runs or works on
 --   profile    who the user is: where they live, key dates, circumstances
---   preference how the user wants ClosedHand to behave
+--   preference how the user wants Closedhand to behave
 --   topic      anything durable that is none of the above (the fallback)
 alter table facts drop constraint if exists facts_category_check;
 alter table facts add constraint facts_category_check

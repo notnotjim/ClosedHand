@@ -3,7 +3,7 @@
 // delivered answer is in the chat, and its page under Pages, so it is not
 // repeated. Each finished card says how the run ended in the person's
 // terms, the same way the chat did: the first line of the answer, or why it
-// could not finish. The quality check's notes are ClosedHand's own working
+// could not finish. The quality check's notes are Closedhand's own working
 // and never shown.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -50,10 +50,10 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached the chat you asked in, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
-  assert.match(dashboard, />ClosedHand sends out agents when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");
+  assert.match(dashboard, />Closedhand sends out agents when a job needs more than a quick answer\. Here is what they are working on, the routines you have set up and what is coming up\.</, "agents named where they really are at work");
 });
 
-test("the Schedules tab holds what is about time; what ClosedHand made is on Pages", () => {
+test("the Schedules tab holds what is about time; what Closedhand made is on Pages", () => {
   assert.match(dashboard, /onclick="switchTab\('automations'\)">Schedules<\/button>/);
   const schedule = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-goals"'));
   assert.doesNotMatch(schedule, />Resources<|id="files-section"|id="datasets-section"|skills-library/, "no Resources on the Schedules tab");
@@ -69,7 +69,7 @@ test("Upcoming says what, what kind and when; what already happened folds under 
   assert.equal(fns.reminderTitle("plumber-visit-14mar"), "Plumber visit 14mar", "an old slug reads as words");
   assert.equal(fns.reminderTitle("Renew the car insurance"), "Renew the car insurance");
   assert.equal(fns.reminderTitle(""), "Reminder");
-  assert.match(dashboard, /upcomingRow\(\{ icon: '\\u23F0', title: reminderTitle\(r\.name\), kind: r\.repeats \? 'Reminder, ' \+ r\.repeats : 'Reminder', when: r\.next_at \? FlightTime\.time\(r\.next_at, where\) : '' \}\)/, "the note ClosedHand left itself is not shown");
+  assert.match(dashboard, /upcomingRow\(\{ icon: '\\u23F0', title: reminderTitle\(r\.name\), kind: r\.repeats \? 'Reminder, ' \+ r\.repeats : 'Reminder', when: r\.next_at \? FlightTime\.time\(r\.next_at, where\) : '' \}\)/, "the note Closedhand left itself is not shown");
   assert.doesNotMatch(dashboard, /esc\(r\.task/, "no reminder prompt on the dashboard");
   assert.doesNotMatch(dashboard, /_showPastReminders|Show \d+ that already ran|that already ran<\/a>/);
   assert.match(dashboard, /<button type="button" class="mc-section-label archive-row" id="past-toggle" aria-expanded="false" aria-controls="past-body" onclick="togglePast\(\)">Past <span class="count" id="past-count"><\/span><span class="chevron-down"><\/span><\/button>/, "Past is a heading row like Archived");

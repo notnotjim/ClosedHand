@@ -1,7 +1,7 @@
 # closedhand.com
 
 The small service behind closedhand.com. It serves the public website and
-the three things a copy of ClosedHand asks it for:
+the three things a copy of Closedhand asks it for:
 
 - **Personal URLs** (`name.closedhand.ai`): a copy asks for a name, its owner
   claims it here by signing in with Google (or Microsoft), the Cloudflare
@@ -61,7 +61,7 @@ Sign-in callbacks are `BASE_URL/auth/google/callback` and
 
 `workers/provisioner` builds each personal URL's Cloudflare tunnel and DNS
 record; it receives routing jobs only, never owners. `workers/edge` shows a
-"ClosedHand is offline" page when a personal URL's computer is asleep. Copy
+"Closedhand is offline" page when a personal URL's computer is asleep. Copy
 each `wrangler.example.jsonc` to `wrangler.jsonc` (ignored by git), fill in
 the IDs, and deploy with Wrangler.
 

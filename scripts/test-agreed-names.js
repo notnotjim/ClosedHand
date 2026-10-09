@@ -43,17 +43,17 @@ test("the web chat is where people talk; the dashboard is the control panel", ()
   assert.doesNotMatch(setup, /open the dashboard and ask/i);
   assert.doesNotMatch(setup, /Your chat app is where you talk to it/, "a chat app may not be linked");
   assert.doesNotMatch(markup("webapp/views/index.html"), /Open this dashboard on your Mac/);
-  assert.doesNotMatch(markup("webapp/views/dashboard.html"), /Keep your dashboard handy|ClosedHand gives your dashboard an address/);
+  assert.doesNotMatch(markup("webapp/views/dashboard.html"), /Keep your dashboard handy|Closedhand gives your dashboard an address/);
 });
 
 test("the sandbox computer is never Workspace, cloud or online", () => {
   const index = markup("webapp/views/index.html");
   const panel = index.slice(index.indexOf('id="monCloud"'), index.indexOf('id="monFileControlsRow"'));
   assert.match(panel, /<\/svg>\s*Sandbox computer\s*<span class="mon-info"/, "the Computers panel title");
-  assert.doesNotMatch(panel, /<span>ClosedHand's sandbox computer<\/span>/, "named once, not twice");
+  assert.doesNotMatch(panel, /<span>Closedhand's sandbox computer<\/span>/, "named once, not twice");
   assert.doesNotMatch(index, /(?<![\w\/.-])[Ww]orkspace(?![\w\/-])/, "no Workspace in anything the web chat shows");
   assert.doesNotMatch(index, /cloud: 'Cloud'|cloud \$|Your online workspace/);
-  assert.doesNotMatch(read("desktop/Sources/ClosedHand/MenuView.swift"), /row\("Workspace"/);
+  assert.doesNotMatch(read("desktop/Sources/Closedhand/MenuView.swift"), /row\("Workspace"/);
   assert.doesNotMatch(readable("desktop/workspace/host.js"), /Preparing Workspace|Starting Workspace|Workspace (?:could not|took|stopped|disconnected|is closing|starts|did not)/, "the Mac app's startup messages");
   for (const f of ["closedhand-com/views/terms.html", "webapp/views/terms.html", "webapp/views/privacy.html", "closedhand-com/views/architecture.html"]) {
     assert.doesNotMatch(visibleText(f), /\b[Ww]orkspace\b/, f);
@@ -80,8 +80,8 @@ test("a personal URL is claimed, never confirmed, and has one name", () => {
   }
 });
 
-test("closedhand.com names ClosedHand as your ClosedHand assistant first, and never as an installation", () => {
-  assert.match(visibleText("closedhand-com/views/assistant-email-confirm.html"), /Confirm your ClosedHand assistant’s email address/);
+test("closedhand.com names Closedhand as your Closedhand assistant first, and never as an installation", () => {
+  assert.match(visibleText("closedhand-com/views/assistant-email-confirm.html"), /Confirm your Closedhand assistant’s email address/);
   for (const f of ["closedhand-com/views/assistant-email-confirm.html", "closedhand-com/views/privacy.html"]) {
     assert.doesNotMatch(visibleText(f), /\byour assistant\b/i, f);
   }
@@ -90,7 +90,7 @@ test("closedhand.com names ClosedHand as your ClosedHand assistant first, and ne
   assert.doesNotMatch(read("README.md"), /\bOne install\b|scripted installs/);
 });
 
-test("closedhand.com explains when ClosedHand is there in one place, as a choice of home", () => {
+test("closedhand.com explains when Closedhand is there in one place, as a choice of home", () => {
   const views = fs.readdirSync(path.join(__dirname, "..", "closedhand-com", "views")).filter((f) => f.endsWith(".html"));
   const allowed = new Set(["terms.html", "privacy.html"]);
   for (const view of views.filter((v) => !allowed.has(v))) {
@@ -98,7 +98,7 @@ test("closedhand.com explains when ClosedHand is there in one place, as a choice
     if (view === "home.html") {
       const start = html.indexOf('<section class="lives'), end = html.indexOf("</section>", start);
       const lives = html.slice(start, end);
-      assert.ok(start > 0 && /Where ClosedHand lives/.test(lives), "the one section that owns it");
+      assert.ok(start > 0 && /Where Closedhand lives/.test(lives), "the one section that owns it");
       assert.match(lives, /can’t be moved to another one/, "no move between homes is implied");
       assert.match(lives, /Schedules due while it sleeps are skipped/, "a laptop does not catch up on schedules");
       html = html.slice(0, start) + html.slice(end);
@@ -111,6 +111,6 @@ test("closedhand.com explains when ClosedHand is there in one place, as a choice
   const readme = read("README.md");
   assert.doesNotMatch(readme, /full product|sets the tier|catches up/i);
   assert.match(readme, /a schedule due while it slept is skipped/);
-  assert.match(readme, /no supported way to move ClosedHand's data to another computer/);
+  assert.match(readme, /no supported way to move Closedhand's data to another computer/);
   assert.doesNotMatch(visibleText("webapp/views/setup.html"), /while this computer is on/);
 });

@@ -1,5 +1,5 @@
 // The assistant email relay against a real Postgres: pairing a copy of
-// ClosedHand to its owner, who mail may go to, the allowances, and the
+// Closedhand to its owner, who mail may go to, the allowances, and the
 // worker's handling of incoming mail. Google and Amazon are stand-ins;
 // nothing leaves this machine.
 // Run: DATABASE_URL=postgres://... node --test closedhand-com/test/assistant-email.js
@@ -50,7 +50,7 @@ const google = (sub, email, verified = true) => ({ iss: 'https://accounts.google
 const microsoft = (tid, oid, email) => ({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: 'ms-client', tid, oid, email, preferred_username: email, exp: Date.now() / 1000 + 600 });
 const call = (method, path, body, headers = {}) => fetch(base + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
 
-// A copy of ClosedHand: its install ID, the secret only it holds, and the key
+// A copy of Closedhand: its install ID, the secret only it holds, and the key
 // its incoming mail is sealed to.
 function copy() {
   const id = crypto.randomUUID(), secret = crypto.randomBytes(32).toString('hex'), keys = p.keyPair();

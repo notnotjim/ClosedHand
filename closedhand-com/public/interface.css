@@ -233,8 +233,8 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
   #phone-qr, #phone-scan-help { display: none; }
 }
 
-/* The website's header on every page, as on the home page: the ClosedHand
-   lockup, then GitHub, My ClosedHand as an outlined button, Privacy and
+/* The website's header on every page, as on the home page: the Closedhand
+   lockup, then GitHub, My Closedhand as an outlined button, Privacy and
    Terms. On a phone it keeps the lockup, the GitHub mark and the button,
    each on one line. */
 .site-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.75rem; }

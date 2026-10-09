@@ -1,4 +1,4 @@
--- A ClosedHand account is the Google or Microsoft sign-in that confirmed a
+-- A Closedhand account is the Google or Microsoft sign-in that confirmed a
 -- personal URL. It holds that personal URL and nothing else.
 --
 -- Deleting an account forgets the sign-in straight away. Its address and

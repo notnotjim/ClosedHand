@@ -1,4 +1,4 @@
-// ClosedHand's own writing has no emdashes. The model is asked not to use
+// Closedhand's own writing has no emdashes. The model is asked not to use
 // them, and every reply, background answer, report and sent message has any
 // that slip through turned into a comma, colon or bullet. Code and number
 // ranges are left alone.
@@ -27,7 +27,7 @@ test("code and ranges are left as written", () => {
   assert.equal(noEmDashes(null), null);
 });
 
-test("every way ClosedHand writes to the person goes through it", () => {
+test("every way Closedhand writes to the person goes through it", () => {
   assert.match(read("lib/engine.js"), /\.trim\(\);\n\s*finalText = require\("\.\/plain-dashes"\)\.noEmDashes\(finalText\);/, "chat replies");
   assert.match(read("lib/engine.js"), /return require\("\.\/plain-dashes"\)\.noEmDashes\(line \|\|/, "the hand-over note");
   assert.match(read("lib/messaging.js"), /async function sendToPlatform\(platform, chatId, message\) \{\n  message = require\("\.\/plain-dashes"\)\.noEmDashes\(message\);/, "background answers, reminders and notices");

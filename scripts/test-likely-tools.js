@@ -38,7 +38,7 @@ test("a question about what a background run found loads its saved result", () =
   assert.deepEqual([...box.likely("reword the report's second section", [], tools)].sort(), ["agent_report_read", "agent_report_update"]);
 });
 
-test("a short reply carries the subject of ClosedHand's last message", () => {
+test("a short reply carries the subject of Closedhand's last message", () => {
   const convo = [{ role: "user", content: "write to Sam about dinner" }, { role: "assistant", content: "Here's a draft email to Sam: ... Want me to send it?" }];
   assert.deepEqual(pick("make it a bit warmer", convo), ["gmail_create_draft", "gmail_reply", "gmail_send", "outlook_send"]);
   assert.deepEqual(pick("Separately, what is the weather going to do on Saturday afternoon around Hampstead Heath for the picnic?", convo), [], "a long new message brings its own subject");

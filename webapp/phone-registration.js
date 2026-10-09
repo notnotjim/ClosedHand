@@ -5,7 +5,7 @@ const { encryptString, decryptString } = require('./crypto-tokens');
 const PROVIDER = 'https://closedhand.com';
 function encrypted(value) {
   const result = encryptString(value);
-  if (!result?.startsWith('enc:v1:')) throw new Error('Your personal URL needs encrypted storage. Check ClosedHand’s settings.');
+  if (!result?.startsWith('enc:v1:')) throw new Error('Your personal URL needs encrypted storage. Check Closedhand’s settings.');
   return result;
 }
 let identityPromise;
@@ -140,17 +140,17 @@ async function claim(code, state) {
     const states = await claimStates();
     const match = typeof state === 'string' && /^[a-f0-9]{32}$/.test(state) &&
       states.find(s => Date.now() - s.at < 30 * 60000 && s.state.length === 32 && crypto.timingSafeEqual(Buffer.from(s.state), Buffer.from(state)));
-    if (!match) throw new Error('That link didn’t come from this ClosedHand. Get your personal URL here instead.');
+    if (!match) throw new Error('That link didn’t come from this Closedhand. Get your personal URL here instead.');
     await setConf({ PHONE_CLAIM_STATES: JSON.stringify(states.filter(s => s !== match)) });
   }
   const data = await call('claim', 'POST', { code });
   if (['pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state)) registrationState = data.state;
-  // The name closedhand.com picked, so setup can say where ClosedHand is.
+  // The name closedhand.com picked, so setup can say where Closedhand is.
   if (validAddress(data.url)) await setConf({ PHONE_ADDRESS_NAME: new URL(data.url).hostname.split('.')[0] });
   return data;
 }
 // Claim in one step with the Microsoft sign-in this computer has just done
-// through ClosedHand's own Microsoft app, checked by closedhand.com against
+// through Closedhand's own Microsoft app, checked by closedhand.com against
 // Microsoft's keys. Null when closedhand.com wants it claimed on its
 // confirmation page instead (an address already used on another computer).
 async function claimWithMicrosoft(idToken) {
@@ -165,7 +165,7 @@ async function challenge(nonce) {
   const secret = (await credentials()).split('.').pop();
   return crypto.createHmac('sha256',secret).update('closedhand-address:'+nonce).digest('hex');
 }
-// This computer's ClosedHand account: the Google or Microsoft sign-in that
+// This computer's Closedhand account: the Google or Microsoft sign-in that
 // owns its personal URL, which is all the account holds. Null without one.
 async function account() {
   if (!(await getConf('PHONE_INSTALL_ID'))) return null;
@@ -173,7 +173,7 @@ async function account() {
   if (!found || !validAddress(found.url)) return null;
   return { provider: found.provider === 'microsoft' ? 'microsoft' : 'google', email: typeof found.email === 'string' ? found.email : null, url: new URL(found.url).origin };
 }
-// Delete this computer's ClosedHand account on closedhand.com, then forget
+// Delete this computer's Closedhand account on closedhand.com, then forget
 // the personal URL here. Throws when closedhand.com can't do it, so the
 // person can be told before anything else is deleted.
 async function deleteAccount() {

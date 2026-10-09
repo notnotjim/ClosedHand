@@ -1,4 +1,4 @@
-// ClosedHand stops at boot rather than run with secrets anyone could know:
+// Closedhand stops at boot rather than run with secrets anyone could know:
 // no encryption key means no sign-ins stored unencrypted, and a placeholder
 // web chat secret means no forged tickets. The installers make real ones.
 const { test } = require('node:test');
@@ -17,7 +17,7 @@ function freshCrypto(key) {
   return { mod, restore: () => { if (saved === undefined) delete process.env.TOKEN_ENCRYPTION_KEY; else process.env.TOKEN_ENCRYPTION_KEY = saved; delete require.cache[file]; } };
 }
 
-test('with no valid encryption key, ClosedHand refuses to start and never stores a sign-in in plain text', () => {
+test('with no valid encryption key, Closedhand refuses to start and never stores a sign-in in plain text', () => {
   for (const key of [undefined, '', 'not-a-key', crypto.randomBytes(24).toString('hex')]) {
     const { mod, restore } = freshCrypto(key);
     try {

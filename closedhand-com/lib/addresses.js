@@ -1,4 +1,4 @@
-// Personal URLs (name.closedhand.ai). A copy of ClosedHand asks for an
+// Personal URLs (name.closedhand.ai). A copy of Closedhand asks for an
 // address, its owner confirms it here after signing in and is shown a code,
 // and the code typed into that copy finishes the request. The name is picked
 // here (names.js) unless an older copy asks for one it chose; the owner can
@@ -6,11 +6,11 @@
 // copy proves it answers at the new address before the address is marked
 // ready. Only routing records live here.
 //
-// A copy that has just connected Microsoft mail through ClosedHand's own
+// A copy that has just connected Microsoft mail through Closedhand's own
 // Microsoft app can claim in one step instead (claim-microsoft): it passes
 // on that sign-in, which is checked against Microsoft's keys.
 //
-// The sign-in that claims a personal URL is the owner's ClosedHand account.
+// The sign-in that claims a personal URL is the owner's Closedhand account.
 // Only its email is kept, with the address, and deleting it
 // forgets the sign-in and takes the route down (deleteAccount).
 const crypto = require('node:crypto');
@@ -23,7 +23,7 @@ const { PROVIDERS } = require('./signin');
 const { ownerFor } = require('./owners');
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
-// Names a person could mistake for a ClosedHand or mail service address.
+// Names a person could mistake for a Closedhand or mail service address.
 const RESERVED = new Set(['www', 'app', 'api', 'admin', 'account', 'accounts', 'auth', 'login', 'mail', 'smtp', 'support', 'status', 'cloud', 'dashboard', 'closedhand',
   'autodiscover', 'autoconfig', 'mta-sts', 'webmail', 'imap', 'pop', 'mx', 'ns1', 'ns2', 'sso', 'id', 'help', 'security', 'docs', 'relay', 'assist',
   'billing', 'pay', 'secure', 'static', 'cdn', 'blog', 'open', 'keep', 'setup']);
@@ -63,7 +63,7 @@ async function smallJson(response, max = 2048) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (_) { return null; }
 }
 
-// A copy of ClosedHand signs its requests with "Bearer <install id>.<secret>".
+// A copy of Closedhand signs its requests with "Bearer <install id>.<secret>".
 // It is known by its secret alone: the ID it states proves nothing, so
 // knowing a copy's ID never lets anyone take its place.
 function installation(req) {
@@ -105,7 +105,7 @@ async function nameTaken(db, hostname, ownerId = null) {
   return found.rowCount > 0;
 }
 // The name held for an owner whose address was released for lack of use,
-// which they get back when they set ClosedHand up again.
+// which they get back when they set Closedhand up again.
 async function heldName(db, ownerId) {
   const found = await db.query(
     `SELECT h.hostname FROM held_names h WHERE h.owner_id = $1
@@ -255,7 +255,7 @@ async function locked(pool, fn) {
     client.release();
   }
 }
-// Deleting a ClosedHand account: the sign-in is forgotten, and nothing left
+// Deleting a Closedhand account: the sign-in is forgotten, and nothing left
 // here links its names to anyone.
 async function deleteAccount(pool, ownerId) {
   return locked(pool, async client => {
@@ -291,7 +291,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // Switching new personal URLs off never stops anyone deleting their account.
   const wrap = (fn, { always = false } = {}) => async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    if (!always && !enabled()) return res.status(503).json({ error: 'Personal URLs are not available right now. You can still use ClosedHand on the computer running it.' });
+    if (!always && !enabled()) return res.status(503).json({ error: 'Personal URLs are not available right now. You can still use Closedhand on the computer running it.' });
     const now = Date.now();
     if (now > resetAt) { hits.clear(); total = 0; resetAt = now + 60000; }
     const key = req.ip || '?', count = (hits.get(key) || 0) + 1;
@@ -316,12 +316,12 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
 
   app.post('/api/phone-enrollment/register', wrap(async (req, res) => {
     const copy = installation(req), { name, port, confirm } = req.body || {};
-    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
+    if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
     // Copies from before confirmation codes could never finish.
-    if (confirm !== 'code') return res.status(400).json({ error: 'Update ClosedHand on your computer, then choose your personal URL again.' });
+    if (confirm !== 'code') return res.status(400).json({ error: 'Update Closedhand on your computer, then choose your personal URL again.' });
     // Asked without a name, the address gets one picked here.
     if (name === undefined || name === null || name === '') {
-      if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update ClosedHand on your computer and try again.' });
+      if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update Closedhand on your computer and try again.' });
       return res.json({ ticket: ticketFor({ secret_hash: copy.secret_hash, hostname: await freeName(db), port, auto: true }, secret) });
     }
     const hostname = typeof name === 'string' ? name + '.closedhand.ai' : '';
@@ -338,7 +338,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // opens another copy.
   app.post('/api/phone-enrollment/details', wrap(async (req, res) => {
     const t = readTicket(req.body?.ticket, secret);
-    if (!t) return res.status(400).json({ error: 'This claim link is not valid. Start again in ClosedHand.' });
+    if (!t) return res.status(400).json({ error: 'This claim link is not valid. Start again in Closedhand.' });
     const answer = { url: 'https://' + t.hostname, state: 'unconfirmed' };
     const owner = sessions.owner(req);
     if (owner) {
@@ -356,7 +356,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
         if (code) Object.assign(answer, { state: 'awaiting-code', code, url: 'https://' + waiting.hostname });
       }
     }
-    if (t.expires <= Date.now() && answer.state === 'unconfirmed') return res.status(400).json({ error: 'This claim link expired. Start again in ClosedHand.' });
+    if (t.expires <= Date.now() && answer.state === 'unconfirmed') return res.status(400).json({ error: 'This claim link expired. Start again in Closedhand.' });
     res.json(answer);
   }));
 
@@ -367,7 +367,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     const owner = sessions.owner(req), t = readTicket(req.body?.ticket, secret);
     if (!owner) return res.status(401).json({ error: 'Sign in to claim this personal URL.' });
     if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this claim page on closedhand.com.' });
-    if (!t || t.expires <= Date.now()) return res.status(400).json({ error: 'This claim link expired. Start again in ClosedHand.' });
+    if (!t || t.expires <= Date.now()) return res.status(400).json({ error: 'This claim link expired. Start again in Closedhand.' });
     const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
     // A picked name gives way to the owner's own address, or the name held
     // for them, or to another free one if somebody took it in the meantime.
@@ -375,7 +375,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     if (t.auto) hostname = mine ? mine.hostname : await heldName(db, owner) || ((await nameTaken(db, hostname, owner)) ? await freeName(db) : hostname);
     const url = 'https://' + hostname;
     if (mine && mine.hostname !== hostname) {
-      throw new Refusal('This account already has a personal URL, ' + mine.hostname + '. To use it with this computer, choose ' + mine.hostname.split('.')[0] + ' in ClosedHand.');
+      throw new Refusal('This account already has a personal URL, ' + mine.hostname + '. To use it with this computer, choose ' + mine.hostname.split('.')[0] + ' in Closedhand.');
     }
     if (mine && mine.secret_hash === t.secret_hash && mine.state !== 'revoked') return res.json({ state: shown(mine), url });
     if (!mine && (await nameTaken(db, hostname, owner))) throw new Refusal('That personal URL is already taken. Choose another name.');
@@ -397,7 +397,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // before the code is compared, so trying many at once gains nothing.
   app.post('/api/phone-enrollment/claim', wrap(async (req, res) => {
     const copy = installation(req);
-    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
+    if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
     const code = String(req.body?.code || '').toUpperCase().replace(/[\s-]/g, '');
     const waiting = (await db.query(
       'UPDATE approvals SET attempts = attempts + 1 WHERE secret_hash = $1 AND expires_at > now() AND attempts < $2 RETURNING *',
@@ -416,15 +416,15 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     res.json({ state: shown(row), url: 'https://' + row.hostname });
   }));
 
-  // A copy that just connected Microsoft mail through ClosedHand's own
+  // A copy that just connected Microsoft mail through Closedhand's own
   // Microsoft app passes on that sign-in and claims in one step: Microsoft's
   // signature stands in for signing in here, and the copy's own secret for
   // the code. An address the owner already uses on another computer is never
   // moved this way; the copy is told to claim it on the confirmation page.
   app.post('/api/phone-enrollment/claim-microsoft', wrap(async (req, res) => {
     const copy = installation(req), { idToken, port } = req.body || {};
-    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update ClosedHand on your computer and try again.' });
+    if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
+    if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update Closedhand on your computer and try again.' });
     const apps = String(env.MICROSOFT_ASSOCIATED_APP_IDS || '').split(',').map(s => s.trim()).filter(id => uuid.test(id) && id !== env.MICROSOFT_CLIENT_ID);
     const claims = apps.length ? await verifyMicrosoftToken(idToken, { appIds: apps, request }) : null;
     const identity = claims && PROVIDERS.microsoft.identity(claims, claims.aud);
@@ -443,7 +443,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // request from it; the name is tidied first, as the copy shows it.
   app.post('/api/phone-enrollment/rename', wrap(async (req, res) => {
     const copy = installation(req);
-    if (!copy) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
+    if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
     const hostname = cleanName(req.body?.name) + '.closedhand.ai';
     if (!validHostname(hostname)) {
       return res.status(400).json({ error: 'Use 3 to 32 letters, numbers or hyphens, starting with a letter. A few names, like admin and mail, are kept back.' });
@@ -483,17 +483,17 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     res.json({ state: 'active' });
   }));
 
-  // A ClosedHand account is the Google or Microsoft sign-in that confirmed a
+  // A Closedhand account is the Google or Microsoft sign-in that confirmed a
   // personal URL, and it holds that personal URL and nothing else. The
   // computer the URL opens can see which sign-in it is, and can delete the
-  // account (Settings in ClosedHand); so can the owner here, signed in.
+  // account (Settings in Closedhand); so can the owner here, signed in.
   app.get('/api/phone-enrollment/account', wrap(async (req, res) => {
     const found = await owned(req);
     const person = found && (await db.query('SELECT provider, email FROM owners WHERE id = $1', [found.row.owner_id])).rows[0];
     res.json({ account: person ? { provider: person.provider, email: person.email, url: 'https://' + found.row.hostname } : null });
   }, { always: true }));
   app.post('/api/phone-enrollment/account/delete', wrap(async (req, res) => {
-    if (!installation(req)) return res.status(401).json({ error: 'ClosedHand could not be recognised. Update it on your computer and try again.' });
+    if (!installation(req)) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
     const found = await owned(req);
     // Nothing on closedhand.com is linked to this computer: nothing to delete.
     if (!found) return res.json({ deleted: false });
@@ -503,7 +503,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   app.post('/api/account/delete', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     const owner = sessions.owner(req);
-    if (!owner) return res.status(401).json({ error: 'Sign in to delete your ClosedHand account.' });
+    if (!owner) return res.status(401).json({ error: 'Sign in to delete your Closedhand account.' });
     if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this on closedhand.com.' });
     try {
       await deleteAccount(db, owner);

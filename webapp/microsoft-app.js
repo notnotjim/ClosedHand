@@ -1,6 +1,6 @@
-// webapp/microsoft-app.js -- ClosedHand's own Microsoft app, and how sign-ins through any Microsoft app renew.
+// webapp/microsoft-app.js -- Closedhand's own Microsoft app, and how sign-ins through any Microsoft app renew.
 //
-// A copy of ClosedHand without a Microsoft app of its own signs in through
+// A copy of Closedhand without a Microsoft app of its own signs in through
 // this one. It is a public app: there is no secret to keep, which is how
 // Microsoft intends an app that ships inside software people run themselves.
 // Microsoft hands each sign-in straight to the computer that asked for it, so

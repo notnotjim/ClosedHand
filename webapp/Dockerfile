@@ -32,7 +32,7 @@ ENV npm_config_cache=/data/storage/cache/npm \
 COPY . .
 ARG GIT_SHA=""
 ENV CLOSEDHAND_SHA=$GIT_SHA
-# ClosedHand's own Google app (see lib/google-app.js), passed in by the
+# Closedhand's own Google app (see lib/google-app.js), passed in by the
 # official image build. A build from source leaves both empty and connects
 # Google through the person's own project.
 ARG CLOSEDHAND_GOOGLE_CLIENT_ID=""

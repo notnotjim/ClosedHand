@@ -165,7 +165,7 @@ test('a saved address that stops working is checked again, and forgotten only wh
 });
 // Objects made inside the sandbox, compared as plain data.
 const plain = value => JSON.parse(JSON.stringify(value));
-test('the ClosedHand account: shown only as closedhand.com states it, and deleted there before anything here is forgotten', async () => {
+test('the Closedhand account: shown only as closedhand.com states it, and deleted there before anything here is forgotten', async () => {
   const saved = { PHONE_PERMANENT_URL: 'https://amber-fox-42.closedhand.ai', PHONE_TUNNEL_TOKEN: 'enc:v1:fixture-per-install-token-1234567890', PHONE_ADDRESS_NAME: 'amber-fox-42',
     PHONE_INSTALL_ID: '11111111-1111-4111-8111-111111111111', PHONE_INSTALL_SECRET: 'enc:v1:' + 'a'.repeat(64) };
   const calls = [];
@@ -215,7 +215,7 @@ test('a code handed straight back counts only with the state from this copy\'s o
   const params = new URLSearchParams(link.hash.slice(1));
   assert.equal(params.get('t'), 'fixture');
   assert.match(params.get('state'), /^[a-f0-9]{32}$/);
-  for (const stranger of ['f'.repeat(32), 'short', '', null]) await assert.rejects(client.claim('ABC123', stranger), /didn’t come from this ClosedHand/);
+  for (const stranger of ['f'.repeat(32), 'short', '', null]) await assert.rejects(client.claim('ABC123', stranger), /didn’t come from this Closedhand/);
   assert.equal(sent.filter(u => u.endsWith('/claim')).length, 0, 'a code with a strange state is never sent on');
   await client.claim('abc 123', params.get('state'));
   assert.equal(sent.filter(u => u.endsWith('/claim')).length, 1);

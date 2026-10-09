@@ -11,7 +11,7 @@
 <script src="shaders.js"></script>
 <script>
 // The smoke ring (the desktop's own shaders, drift made periodic, brighter
-// for its small size) with the ClosedHand fist in 3D inside it: the traced
+// for its small size) with the Closedhand fist in 3D inside it: the traced
 // logo extruded as thin glass with its outline drawn round the front face.
 var ringVS = vertexShader.replace('uniform float uTime;', 'uniform vec3 uLoop;').replace('  float t = uTime * 0.1;', '  vec3 t = uLoop;');
 var ringFS = fragmentShader.replace('uniform float uPulse;', 'uniform float uPulse;\nuniform float uGain;').replace('  gl_FragColor = vec4(color, alpha);', '  gl_FragColor = vec4(color * uGain, alpha);');

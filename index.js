@@ -1,4 +1,4 @@
-// index.js — Startup wiring for ClosedHand bot
+// index.js — Startup wiring for Closedhand bot
 // All logic lives in lib/ modules. This file creates clients, assigns them
 // to the shared context, calls platform setup(), and starts the server.
 
@@ -160,7 +160,7 @@ ctx._lastMessageTime = Date.now();
 ctx.expressApp.get("/health", (req, res) => {
   res.json({ status: "ok", platform: "closedhand-bot", uptime: process.uptime() });
 });
-// The files on emails ClosedHand keeps, asked for by the dashboard (lib/mail-file.js).
+// The files on emails Closedhand keeps, asked for by the dashboard (lib/mail-file.js).
 require("./lib/mail-file").register(ctx.expressApp);
 
 // Keepalive: prevent Railway container sleep, warm DB connection
@@ -226,7 +226,7 @@ async function main() {
   const { setupWebChatServer } = require("./lib/web-chat-ws");
   setupWebChatServer(server);
 
-  console.log("☁️  ClosedHand cloud bot is running!");
+  console.log("☁️  Closedhand cloud bot is running!");
   console.log("User data: Supabase");
   console.log("Waiting for Telegram + WhatsApp messages...");
 

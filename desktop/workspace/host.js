@@ -69,7 +69,7 @@ class Workspace {
   status() {
     return { status: this.state, isolation: 'virtual-machine', progress: this.progress,
       error: this.error || undefined, message: this.error || (this.state === 'downloading'
-        ? `Preparing the sandbox computer, ${this.progress}%. You can keep using ClosedHand.`
+        ? `Preparing the sandbox computer, ${this.progress}%. You can keep using Closedhand.`
         : this.state === 'starting' ? 'Starting the sandbox computer…' : this.state === 'running' ? 'Ready' : 'The sandbox computer starts when you need it.') };
   }
   start() {
