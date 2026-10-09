@@ -25,6 +25,20 @@ const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./secu
 const mcpClient = require("./mcp-client");
 
 const app = express();
+// Headers every response carries: no guessing a file's type from its
+// contents, no address sent to other sites, and no framing by other sites
+// (Telegram's web client frames the pages it opens). Routes that need a
+// stricter policy set their own Content-Security-Policy.
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin",
+    "Content-Security-Policy": "frame-ancestors 'self' https://web.telegram.org",
+  });
+  if (require("./browser-access").publicHttps(req)) res.set("Strict-Transport-Security", "max-age=31536000");
+  next();
+});
 app.use("/novnc", express.static(path.join(__dirname, "public", "novnc")));
 
 // Local-storage public route: serves ONLY the `logos` bucket (rendered in the
@@ -35,6 +49,10 @@ app.get("/storage/logos/*", (req, res) => {
   try {
     const { safeJoin } = require("./storage-driver-local");
     const dir = path.resolve(process.env.STORAGE_DIR || "./data/storage");
+    // Logos come from connected services and may be SVG, which can carry a
+    // script. Shown in an <img> that never runs; opened on its own, this
+    // policy stops it running as the dashboard.
+    res.set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
     res.sendFile(safeJoin(dir, "logos", req.params[0] || ""), (err) => {
       if (err && !res.headersSent) res.status(404).end();
     });
@@ -435,9 +453,19 @@ app.get('/.well-known/closedhand-installation', async (req, res) => {
 
 // First-run setup state (booleans + service names only, no secrets) — drives the
 // onboarding wizard. Kept public so it's reachable before an admin password exists.
+// Before a password exists this is the first run on this computer, and the
+// setup page needs all of it. After that, a visitor without a session (anyone
+// who finds the personal URL) learns only how far setup has got, never whose
+// accounts are connected: names, emails, the WhatsApp number and the Telegram
+// bot used to be readable here by anyone.
 app.get("/api/setup/status", async (req, res) => {
   try {
-    res.json(await require("./setup-state").getSetupState());
+    res.set("Cache-Control", "no-store");
+    const state = await require("./setup-state").getSetupState();
+    if ((await passwordConfigured()) && !(await hasAdminSession(req, res))) {
+      return res.json({ ready: state.ready, steps: state.steps, nextUnlock: state.nextUnlock });
+    }
+    res.json(state);
   } catch (e) {
     res.status(500).json({ error: "setup status failed" });
   }
@@ -1811,8 +1839,11 @@ app.get("/canvas/:id", async (req, res) => {
 
     if (data.mime_type === "text/html") {
       const html = Buffer.from(data.content, "base64").toString("utf-8");
-      // Serve HTML directly with a top bar. CSP restricts to scripts only (no forms, no navigation).
-      res.set("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'self'");
+      // The model wrote this page, so it runs sandboxed with an origin of its
+      // own: its scripts work, but it cannot use the dashboard's sign-in or
+      // reach the API, as it could at this address otherwise.
+      res.set("Content-Security-Policy", "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-forms; default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'self'");
+      res.set("Cache-Control", "no-store");
       res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${data.filename.replace(/</g, "&lt;")} - ClosedHand</title>
 <style>*{margin:0;box-sizing:border-box}
@@ -1824,7 +1855,8 @@ app.get("/canvas/:id", async (req, res) => {
     } else if (data.mime_type.startsWith("image/")) {
       const buf = Buffer.from(data.content, "base64");
       res.set("Content-Type", data.mime_type);
-      res.set("Cache-Control", "public, max-age=86400");
+      res.set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+      res.set("Cache-Control", "private, no-store");
       res.send(buf);
     } else {
       res.status(400).send("Unsupported content type");
@@ -1906,7 +1938,9 @@ app.get("/line-app", (req, res) => {
 });
 
 app.get("/line-setup-complete", (req, res) => {
-  const name = req.query.name || "";
+  // The name comes from the address bar, so it goes into the page as text only.
+  const name = String(req.query.name || "").slice(0, 80)
+    .replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   res.type("html").send(`<!DOCTYPE html>
 <html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -7235,8 +7269,11 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
     const info = await getSandboxInfo(tokenData.userId);
     if (!info) return res.status(404).json({ error: "Sandbox not found" });
 
-    const destPath = req.body.path || tokenData.destPath;
-    const isDir = req.body.isTar === "true";
+    // Where it goes was fixed when the upload was asked for; the request
+    // carrying the file does not get to choose another place.
+    const destPath = tokenData.destPath;
+    const isDir = tokenData.isDir === true;
+    const sh = (v) => "'" + String(v).split("'").join("'\\''") + "'";
     const fileBuffer = req.file.buffer;
 
     const b64 = fileBuffer.toString("base64");
@@ -7247,12 +7284,12 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
       await sandboxFetch(info, "POST", "/files/write", { path: tmpTar, content: b64, encoding: "base64" }, 120000);
       await sandboxFetch(info, "POST", "/exec", {
         language: "bash",
-        code: `mkdir -p "${destPath}" && tar xf "${tmpTar}" -C "${destPath}" && rm -f "${tmpTar}"`
+        code: `mkdir -p ${sh(destPath)} && tar xf ${sh(tmpTar)} -C ${sh(destPath)} && rm -f ${sh(tmpTar)}`
       }, 60000);
     } else {
       // Single file: write directly via sandbox /files/write (limit raised to 500MB)
       const parentDir = destPath.substring(0, destPath.lastIndexOf("/")) || "/workspace";
-      await sandboxFetch(info, "POST", "/exec", { language: "bash", code: `mkdir -p "${parentDir}"` }, 5000).catch(() => {});
+      await sandboxFetch(info, "POST", "/exec", { language: "bash", code: `mkdir -p ${sh(parentDir)}` }, 5000).catch(() => {});
       await sandboxFetch(info, "POST", "/files/write", { path: destPath, content: b64, encoding: "base64" }, 120000);
     }
 
@@ -7337,6 +7374,16 @@ async function refreshWorkspaceCache(userId) {
 
 // --- Always On Sync ---
 
+// A path in the Mac's home folder as shell text for the Bridge to run. The
+// name travels encoded, so quotes, $ or backticks in it reach the command as
+// data and never run; escaping only single quotes inside double quotes let
+// "$(...)" in a path run on the Mac. Use it inside double quotes.
+function macHomePath(p) {
+  const rel = String(p || "").replace(/^~\/?/, "");
+  if (!rel) return "$HOME";
+  return `$HOME/$(printf %s ${Buffer.from(rel, "utf8").toString("base64")} | base64 --decode)`;
+}
+
 // POST /api/sync/mark - mark a local file as "always on" (copies to cloud)
 app.post("/api/sync/mark", async (req, res) => {
   const userId = getUserIdFromRequest(req);
@@ -7350,11 +7397,11 @@ app.post("/api/sync/mark", async (req, res) => {
     if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
 
     // Check if directory or file
-    const cleanPath = localPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+    const cleanPath = macHomePath(localPath);
     let isDir = false;
     try {
       const chk = await bridgeWsRequest(userId, "shell.run", {
-        command: `bash -c 'test -d "$HOME/${cleanPath}" && echo "DIR" || echo "FILE"'`
+        command: `bash -c 'test -d "${cleanPath}" && echo "DIR" || echo "FILE"'`
       });
       isDir = (chk?.result?.stdout || chk?.stdout || "").trim() === "DIR";
     } catch (_) {}
@@ -7370,13 +7417,13 @@ app.post("/api/sync/mark", async (req, res) => {
     let localSize = 0, localMtime = 0;
     try {
       const s = await bridgeWsRequest(userId, "shell.run", {
-        command: `stat -f '%z %m' "$HOME/${cleanPath}" 2>/dev/null`
+        command: `stat -f '%z %m' "${cleanPath}" 2>/dev/null`
       }, 5000);
       const parts = (s?.result?.stdout || s?.stdout || "").trim().split(" ");
       localSize = Number(parts[0]) || 0;
       localMtime = Number(parts[1]) || 0;
     } catch (_) {}
-    await supabase.from("facts").upsert({
+    const { error: noteError } = await supabase.from("facts").upsert({
       user_id: userId, key: "_sync_" + localPath.replace(/[^a-zA-Z0-9]/g, "_"),
       value: JSON.stringify({
         localPath, cloudPath: destPath, syncedAt: new Date().toISOString(), status: "synced",
@@ -7384,6 +7431,7 @@ app.post("/api/sync/mark", async (req, res) => {
         lastCloudSize: localSize, lastCloudMtime: 0, // cloud mtime not available immediately after upload
       }),
     }, { onConflict: "user_id,key" });
+    if (noteError) throw new Error(noteError.message);
     console.log("[Sync] mark: success", { localPath, destPath });
     res.json({ success: true, cloudPath: destPath });
   } catch (e) { console.error("[Sync] mark: error", e.message); res.status(500).json({ error: e.message }); }
@@ -7405,7 +7453,8 @@ app.post("/api/sync/unmark", async (req, res) => {
     }
     const info = await getSandboxInfo(userId);
     if (info) await sandboxFetch(info, "POST", "/files/delete", { path: cloudPath }).catch(() => {});
-    await supabase.from("facts").delete().eq("user_id", userId).eq("key", syncKey);
+    const { error: noteError } = await supabase.from("facts").delete().eq("user_id", userId).eq("key", syncKey);
+    if (noteError) throw new Error(noteError.message);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -7455,9 +7504,9 @@ async function syncUserFiles(userId) {
 
     try {
       // Get local file stat via Bridge
-      const cleanPath = sync.localPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+      const cleanPath = macHomePath(sync.localPath);
       const localStat = await bridgeWsRequest(userId, "shell.run", {
-        command: `stat -f '%z %m' "$HOME/${cleanPath}" 2>/dev/null`
+        command: `stat -f '%z %m' "${cleanPath}" 2>/dev/null`
       }, 8000).catch(() => null);
       const localStatStr = (localStat?.result?.stdout || localStat?.stdout || "").trim();
       const [localSize, localMtime] = localStatStr.split(" ").map(Number);
@@ -7491,7 +7540,8 @@ async function syncUserFiles(userId) {
         sync.lastLocalMtime = localMtime || 0;
         sync.lastCloudSize = cloudSize || 0;
         sync.lastCloudMtime = cloudMtime || 0;
-        await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+        const { error: noteError } = await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+        if (noteError) console.error("[Sync] could not save the sync note:", noteError.message);
         continue;
       }
 
@@ -7535,7 +7585,7 @@ async function syncUserFiles(userId) {
       // Re-stat to get post-sync values
       if (localChanged || cloudChanged) {
         const newLocalStat = await bridgeWsRequest(userId, "shell.run", {
-          command: `stat -f '%z %m' "$HOME/${cleanPath}" 2>/dev/null`
+          command: `stat -f '%z %m' "${cleanPath}" 2>/dev/null`
         }, 8000).catch(() => null);
         const newLocalStr = (newLocalStat?.result?.stdout || newLocalStat?.stdout || "").trim();
         const [nls, nlm] = newLocalStr.split(" ").map(Number);
@@ -7553,7 +7603,8 @@ async function syncUserFiles(userId) {
         sync.lastCloudSize = ncs || cloudSize || 0;
         sync.lastCloudMtime = ncm || cloudMtime || 0;
         sync.lastSyncAt = new Date().toISOString();
-        await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+        const { error: noteError } = await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+        if (noteError) console.error("[Sync] could not save the sync note:", noteError.message);
       }
     } catch (e) {
       console.log(`[Sync] Error syncing ${sync.localPath}: ${e.message}`);
@@ -7737,11 +7788,11 @@ app.post("/api/sandbox/rename", async (req, res) => {
             if (oldName !== newName && sync.localPath) {
               const localDir = sync.localPath.substring(0, sync.localPath.length - oldName.length);
               const newLocalPath = localDir + newName;
-              const cleanOld = sync.localPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
-              const cleanNew = newLocalPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+              const cleanOld = macHomePath(sync.localPath);
+              const cleanNew = macHomePath(newLocalPath);
               try {
                 await bridgeWsRequest(userId, "shell.run", {
-                  command: `mv "$HOME/${cleanOld}" "$HOME/${cleanNew}"`
+                  command: `mv "${cleanOld}" "${cleanNew}"`
                 }, 10000);
                 console.log("[Sync] Renamed local file:", sync.localPath, "->", newLocalPath);
                 // Update sync record with new paths and new key
@@ -7750,20 +7801,24 @@ app.post("/api/sandbox/rename", async (req, res) => {
                 sync.localPath = newLocalPath;
                 sync.cloudPath = newPath;
                 // Delete old key, insert new key (localPath changed so key changes)
-                await supabase.from("facts").delete().eq("user_id", userId).eq("key", oldKey);
-                await supabase.from("facts").upsert({
+                const { error: dropError } = await supabase.from("facts").delete().eq("user_id", userId).eq("key", oldKey);
+                if (dropError) throw new Error(dropError.message);
+                const { error: keepError } = await supabase.from("facts").upsert({
                   user_id: userId, key: newKey, value: JSON.stringify(sync)
                 }, { onConflict: "user_id,key" });
+                if (keepError) throw new Error(keepError.message);
               } catch (e) {
                 // Bridge offline or rename failed, just update cloud path
                 console.log("[Sync] Local rename failed (Bridge offline?):", e.message);
                 sync.cloudPath = newPath;
-                await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+                const { error: noteError } = await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+                if (noteError) console.error("[Sync] could not save the sync note:", noteError.message);
               }
             } else {
               // Only directory changed, not filename
               sync.cloudPath = newPath;
-              await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+              const { error: noteError } = await supabase.from("facts").update({ value: JSON.stringify(sync) }).eq("user_id", userId).eq("key", note.key);
+              if (noteError) console.error("[Sync] could not save the sync note:", noteError.message);
             }
           }
         } catch (_) {}
@@ -7856,7 +7911,7 @@ async function bridgeWsRequest(userId, action, params, timeout = 60000) {
 
 // Copy file from Bridge to sandbox via curl upload (streams from disk, no base64 over WebSocket)
 async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
-  const cleanPath = sourcePath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+  const cleanPath = macHomePath(sourcePath);
   const token = crypto.randomUUID();
   const baseUrl = BASE_URL;
 
@@ -7870,7 +7925,7 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
   }, 5000).catch(() => {});
 
   // Tell Bridge to curl the file directly to our upload endpoint (runs in background)
-  const curlCmd = `bash -c 'curl -s -X POST -F "file=@$HOME/${cleanPath}" -F "path=${destPath}" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'curl -s -X POST -F "file=@${cleanPath}" -F "path=${destPath}" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl] ${sourcePath} -> ${destPath} (starting curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -7901,7 +7956,7 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
 
 // Copy directory from Bridge to sandbox via curl upload (tar + stream)
 async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
-  const cleanPath = sourcePath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+  const cleanPath = macHomePath(sourcePath);
   const token = crypto.randomUUID();
   const baseUrl = BASE_URL;
 
@@ -7914,7 +7969,7 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
   }, 5000).catch(() => {});
 
   // Tell Bridge to tar the directory and pipe to curl (runs in background)
-  const curlCmd = `bash -c 'cd "$HOME/${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" -F "path=${destPath}" -F "isTar=true" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'cd "${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" -F "path=${destPath}" -F "isTar=true" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl-dir] ${sourcePath} -> ${destPath} (starting tar+curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -7948,13 +8003,13 @@ app.post("/api/sandbox/copy-from-local", async (req, res) => {
   try {
     const { sourcePath, destPath } = req.body;
     if (!sourcePath || !destPath) return res.status(400).json({ error: "sourcePath and destPath required" });
-    const cleanPath = sourcePath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+    const cleanPath = macHomePath(sourcePath);
 
     // Check if path is a directory via direct Bridge WebSocket
     let isDirectory = false;
     try {
       const checkResult = await bridgeWsRequest(userId, "shell.run", {
-        command: `bash -c 'test -d "$HOME/${cleanPath}" && echo "DIR" || echo "FILE"'`
+        command: `bash -c 'test -d "${cleanPath}" && echo "DIR" || echo "FILE"'`
       });
       const checkOut = (checkResult?.result?.stdout || checkResult?.stdout || "").trim();
       isDirectory = checkOut === "DIR";
@@ -8042,8 +8097,8 @@ app.get("/api/bridge/files", async (req, res) => {
     // If files.list returned very few results, supplement with ls
     if (files.length < 5) {
       try {
-        const cleanPath = dirPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
-        const lsPath = dirPath === "~" || dirPath === "~/" ? "$HOME" : `$HOME/${cleanPath}`;
+        const cleanPath = macHomePath(dirPath);
+        const lsPath = dirPath === "~" || dirPath === "~/" ? "$HOME" : `${cleanPath}`;
         const lsResult = await bridgeWsRequest(userId, "shell.run", {
           command: `ls -1p "${lsPath}" 2>/dev/null`
         }, 10000);
@@ -8082,8 +8137,8 @@ app.get("/api/bridge/search", async (req, res) => {
   if (!ws || ws.readyState !== 1) return res.status(502).json({ error: "Bridge offline" });
   // Normalize requested path (must be ~ or ~/subpath). Reject anything else.
   const rawPath = (req.query.path || "~").trim();
-  const rel = rawPath.replace(/^~\/?/, "").replace(/\.\./g, "").replace(/[`"\\$]/g, "");
-  const cdTarget = rel ? `"$HOME/${rel}"` : `"$HOME"`;
+  const rel = rawPath.replace(/^~\/?/, "").replace(/\.\./g, "");
+  const cdTarget = `"${macHomePath(rel)}"`;
   const displayBase = rel ? "~/" + rel.replace(/\/$/, "") : "~";
   try {
     // Prune heavy dirs (Library, node_modules, Applications, dotfiles) so we don't descend into them at all.
@@ -8152,7 +8207,7 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
   }
 
   try {
-    const cleanPath = filePath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
+    const cleanPath = macHomePath(filePath);
     const token = crypto.randomUUID();
     const baseUrl = BASE_URL;
 
@@ -8163,7 +8218,7 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
     });
 
     // Tell Bridge to curl the file to our upload endpoint (same proven mechanism as file copies)
-    const cmd = `curl -s -X POST -F "file=@$HOME/${cleanPath}" "${baseUrl}/api/bridge/thumb-upload?token=${token}"`;
+    const cmd = `curl -s -X POST -F "file=@${cleanPath}" "${baseUrl}/api/bridge/thumb-upload?token=${token}"`;
     bridgeWsRequest(userId, "shell.run", { command: cmd }, 12000).catch(() => {});
 
     const { buffer, mime } = await thumbPromise;
@@ -8856,6 +8911,18 @@ app.get("/api/sandbox/vnc-diag", async (req, res) => {
 // ============================================================
 // START SERVER
 // ============================================================
+
+// A request that fails before its route answers (a body that is not JSON, or
+// one too large) gets a plain answer. Express's own error page shows file
+// paths and the text around the fault, which can be part of a password.
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = Number(err.status || err.statusCode) || 500;
+  console.error("[http]", req.method, req.path, err.type || err.name || "error");
+  res.status(status >= 400 && status < 600 ? status : 500).json({
+    error: status === 413 ? "That is too large to send." : status < 500 ? "That request could not be read." : "Something went wrong. Try again.",
+  });
+});
 
 // LISTEN_HOST keeps the dashboard to this computer where nothing in between
 // does (the Mac app); in Docker the port binding does it instead.

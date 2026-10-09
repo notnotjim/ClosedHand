@@ -175,7 +175,12 @@ window.Delight = {
 
     var toast = document.createElement("div");
     toast.className = "delight-toast " + type;
-    toast.innerHTML = (icons[type] || "") + '<span>' + msg + '</span>';
+    // The message is text, never markup: callers pass file names and words
+    // taken from the address bar.
+    toast.innerHTML = icons[type] || "";
+    var text = document.createElement("span");
+    text.textContent = String(msg);
+    toast.appendChild(text);
     container.appendChild(toast);
 
     // Auto-remove

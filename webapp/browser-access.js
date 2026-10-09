@@ -20,4 +20,4 @@ function allowBrowserWrite(req) {
   // fetch metadata. Normal browsers must not write from a sibling or other site.
   return !['same-site', 'cross-site'].includes(req.headers['sec-fetch-site']);
 }
-module.exports = { sessionName, sessionAttributes, allowBrowserWrite };
+module.exports = { publicHttps, sessionName, sessionAttributes, allowBrowserWrite };

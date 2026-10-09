@@ -12,7 +12,6 @@ const path = require("node:path");
 const server = fs.readFileSync(path.join(__dirname, "..", "webapp", "server.js"), "utf8");
 
 const PUBLIC = new Set([
-  "/api/setup/status",    // which setup step to show, before signing in
   "/api/setup/qr",        // a QR picture of a t.me link
   "/api/setup/provider",  // always refuses
   "/api/login",           // signing in
@@ -34,4 +33,10 @@ test("every API route before the login gate checks access, or is public by desig
   });
   assert.deepEqual(open, [], "open to anyone who can reach the dashboard: " + open.join(", "));
   for (const r of ['app.get("/api/wallet"', 'app.post("/api/wallet"', 'app.delete("/api/wallet/:id"', 'app.post("/api/settings/spend-limits"', 'app.post("/api/chat-apps/:app"', 'app.delete("/api/chat-apps/:app"']) assert.ok(before.includes(r), r + " is still checked here");
+});
+
+test("without a session, setup status says how far setup has got and nothing about whose accounts", () => {
+  const route = server.slice(server.indexOf('app.get("/api/setup/status"'), server.indexOf('app.get("/api/setup/hello"'));
+  assert.match(route, /if \(\(await passwordConfigured\(\)\) && !\(await hasAdminSession\(req, res\)\)\) \{\n\s*return res\.json\(\{ ready: state\.ready, steps: state\.steps, nextUnlock: state\.nextUnlock \}\);/);
+  assert.match(route, /res\.set\("Cache-Control", "no-store"\);/);
 });

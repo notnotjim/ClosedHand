@@ -4804,14 +4804,20 @@
     var shareLink = document.getElementById('canvasShareLink');
     title.textContent = filename;
     shareLink.href = '/canvas/' + id;
+    // A canvas is written by the model, so it runs in a sandbox with an origin
+    // of its own: its scripts work, but it cannot reach this page, its
+    // sign-in or the API. A frame at this page's own address could.
+    body.textContent = '';
     if (mimeType === 'text/html') {
-      var html = atob(content);
-      var blob = new Blob([html], { type: 'text/html' });
-      var blobUrl = URL.createObjectURL(blob);
-      body.innerHTML = '<iframe src="' + blobUrl + '"></iframe>';
-    } else if (mimeType.startsWith('image/')) {
-      var imgSrc = 'data:' + mimeType + ';base64,' + content;
-      body.innerHTML = '<img src="' + imgSrc + '" onclick="openLightbox(this.src)">';
+      var frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-forms');
+      frame.srcdoc = new TextDecoder().decode(Uint8Array.from(atob(content), function (c) { return c.charCodeAt(0); }));
+      body.appendChild(frame);
+    } else if (mimeType.indexOf('image/') === 0) {
+      var img = document.createElement('img');
+      img.src = 'data:' + mimeType.replace(/[^a-z0-9.+\/-]/gi, '') + ';base64,' + content;
+      img.onclick = function () { openLightbox(this.src); };
+      body.appendChild(img);
     }
     panel.classList.add('active');
     adjustChatForCanvas();
