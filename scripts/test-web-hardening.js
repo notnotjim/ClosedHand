@@ -91,3 +91,29 @@ test('a file from the Mac lands where the upload was asked for, never where the 
   assert.doesNotMatch(upload, /req\.body\.path/);
   assert.doesNotMatch(upload, /"\$\{destPath\}"|"\$\{parentDir\}"|"\$\{tmpTar\}"/, 'sandbox paths are single-quoted, not double');
 });
+
+test('before a password exists, only requests addressed to this computer by name reach setup', () => {
+  const src = server.slice(server.indexOf('const LOCAL_NAMES = new Set('), server.indexOf('const FIRST_RUN_ELSEWHERE'));
+  const addressedLocally = new Function(src + '; return addressedLocally;')();
+  const at = (host) => addressedLocally({ headers: { host } });
+  for (const h of ['localhost:3000', '127.0.0.1:3000', '[::1]:3000', 'webapp:3000', 'closedhand.localhost', 'LOCALHOST:3100']) assert.equal(at(h), true, h);
+  for (const h of ['evil.example', 'evil.example:3000', 'localhost.evil.example', '192.168.1.20:3000', 'name.closedhand.ai', '']) assert.equal(at(h), false, h);
+  const access = server.slice(server.indexOf('async function requireSetupAccess('), server.indexOf('app.get("/login"'));
+  assert.match(access, /if \(addressedLocally\(req\)\) return true;\n\s*res\.status\(403\)/);
+  const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));
+  assert.match(gate, /if \(!\(await passwordConfigured\(\)\)\) \{\n\s*if \(addressedLocally\(req\)\) return next\(\);/);
+});
+
+test('replacing the dashboard password takes the current one, under the same lockout', () => {
+  const route = server.slice(server.indexOf('app.post("/api/setup/password"'), server.indexOf('app.post("/api/setup/detect"'));
+  assert.ok(route.indexOf('checkDashboardPassword(String((req.body || {}).current') < route.indexOf('DASHBOARD_PASSWORD_HASH: hashPassword(pw)'));
+  assert.match(route, /if \(lockedOut\(ip, req\)\) return res\.status\(429\)/);
+  assert.match(route, /noteWrongPassword\(ip, req\);/);
+});
+
+test('the Bridge relay needs a real secret, compared in constant time', () => {
+  const relay = server.slice(server.indexOf('app.post("/api/bridge/request"'), server.indexOf('app.post("/api/bridge/request"') + 1200);
+  assert.doesNotMatch(relay, /secret !== process\.env\./, 'two unset values no longer match each other');
+  assert.match(relay, /if \(!secret \|\| !relaySecrets\.some\(/);
+  assert.match(relay, /crypto\.timingSafeEqual/);
+});

@@ -603,10 +603,27 @@ async function hasAdminSession(req, res) {
   }
 }
 
-// Wizard write APIs: open until a password exists (first run on localhost),
-// session-only after. Returns false after sending the 401 itself.
+// Before a password exists the setup routes are open, which is safe only for
+// someone at this computer. A page elsewhere could point its own name at
+// 127.0.0.1 (DNS rebinding) and drive them, down to adding a tool server that
+// runs commands. Such a request still carries that page's hostname, so until
+// a password exists only requests addressed to this computer by name are
+// answered. Over SSH the browser says localhost too.
+const LOCAL_NAMES = new Set(["localhost", "127.0.0.1", "[::1]", "webapp"]);
+function addressedLocally(req) {
+  const host = String(req.headers.host || "").toLowerCase().replace(/:\d+$/, "");
+  return LOCAL_NAMES.has(host) || host.endsWith(".localhost");
+}
+const FIRST_RUN_ELSEWHERE = "Finish setting up on the computer running ClosedHand, at http://localhost:3000.";
+
+// Wizard write APIs: open until a password exists (first run on this
+// computer), session-only after. Returns false after sending the answer itself.
 async function requireSetupAccess(req, res) {
-  if (!(await passwordConfigured())) return true;
+  if (!(await passwordConfigured())) {
+    if (addressedLocally(req)) return true;
+    res.status(403).json({ error: FIRST_RUN_ELSEWHERE });
+    return false;
+  }
   if (await hasAdminSession(req, res)) return true;
   res.status(401).json({ error: "Login required" });
   return false;
@@ -1067,6 +1084,16 @@ app.post("/api/setup/password", async (req, res) => {
     // falls quickly even with the lockout.
     if (pw.length < 8) return res.status(400).json({ error: "Use at least 8 characters." });
     if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD setting in your .env file" });
+    // Replacing a password takes the current one, so a browser left signed
+    // in is not enough to lock its owner out.
+    if (await passwordConfigured()) {
+      const ip = clientIp(req);
+      if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+      if (!(await checkDashboardPassword(String((req.body || {}).current || "")))) {
+        noteWrongPassword(ip, req);
+        return res.status(403).json({ error: "Type your current password to change it." });
+      }
+    }
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
     // A new password signs every browser out, then this one back in.
     await dashboardSessions.endAll();
@@ -1448,6 +1475,7 @@ for (const hook of ["line"]) {
 // time a page is opened from Telegram.
 const TELEGRAM_SESSION_SEC = 12 * 60 * 60;
 const TELEGRAM_PROOF_MAX_AGE_SEC = 60 * 60;
+const _usedTelegramProofs = new Map(); // sha256 of a proof -> when it would expire
 // Only pages ClosedHand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
@@ -1473,8 +1501,15 @@ app.get("/tg/open", (req, res) => {
 });
 app.post("/api/telegram/session", async (req, res) => {
   try {
-    const tgUser = validateTelegramInitData((req.body || {}).initData, await telegramBotToken(), TELEGRAM_PROOF_MAX_AGE_SEC);
+    const initData = String((req.body || {}).initData || "");
+    const tgUser = validateTelegramInitData(initData, await telegramBotToken(), TELEGRAM_PROOF_MAX_AGE_SEC);
     if (!tgUser || !tgUser.id) return res.status(403).json({ error: "Telegram could not confirm who opened this." });
+    // A proof signs in once: one copied from a link or a log cannot be
+    // replayed within the hour it stays valid.
+    const proofId = crypto.createHash("sha256").update(initData).digest("hex");
+    for (const [id, until] of _usedTelegramProofs) if (until < Date.now()) _usedTelegramProofs.delete(id);
+    if (_usedTelegramProofs.has(proofId)) return res.status(403).json({ error: "That sign-in was already used. Open ClosedHand from Telegram again." });
+    _usedTelegramProofs.set(proofId, Date.now() + TELEGRAM_PROOF_MAX_AGE_SEC * 1000);
     const { data: link, error } = await supabase.from("chat_links").select("user_id")
       .eq("platform", "telegram").eq("platform_user_id", String(tgUser.id)).limit(1);
     if (error) throw error;
@@ -1500,7 +1535,10 @@ app.post("/api/telegram/session", async (req, res) => {
 const SIGNED_BY_BRIDGE = new Set(["/api/bridge/file-upload", "/api/bridge/thumb-upload", "/api/bridge/sync-cache", "/api/bridge/disconnect"]);
 app.use(async (req, res, next) => {
   try {
-    if (!(await passwordConfigured())) return next();
+    if (!(await passwordConfigured())) {
+      if (addressedLocally(req)) return next();
+      return req.path.startsWith("/api/") ? res.status(403).json({ error: FIRST_RUN_ELSEWHERE }) : res.status(403).send(FIRST_RUN_ELSEWHERE);
+    }
     if (await hasAdminSession(req, res)) return next();
     if (req.method === "POST" && SIGNED_BY_BRIDGE.has(req.path)) return next();
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
@@ -8625,7 +8663,8 @@ app.post("/api/bridge/request", async (req, res) => {
     const { userId, action, params, secret } = req.body;
     console.log(`[Bridge] Request received: userId=${userId}, action=${action}, from=${req.ip}`);
     // Simple shared secret auth between bot and webapp
-    if (secret !== process.env.BRIDGE_RELAY_SECRET && secret !== process.env.COOKIE_SECRET) {
+    const relaySecrets = [process.env.BRIDGE_RELAY_SECRET, process.env.COOKIE_SECRET].filter(Boolean);
+    if (!secret || !relaySecrets.some((k) => k.length === String(secret).length && crypto.timingSafeEqual(Buffer.from(k), Buffer.from(String(secret))))) {
       console.log("[Bridge] Request rejected: bad secret");
       return res.status(403).json({ error: "Unauthorized" });
     }

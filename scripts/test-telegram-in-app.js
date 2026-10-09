@@ -49,7 +49,9 @@ test("only ClosedHand's own pages open this way, never another site", () => {
 
 test("the session needs a fresh proof from the linked account, lasts 12 hours, and lives in Telegram's browser", () => {
   const route = server.slice(server.indexOf('app.post("/api/telegram/session"'), server.indexOf("// --- The gate: everything registered below needs the session"));
-  assert.match(route, /validateTelegramInitData\(\(req\.body \|\| \{\}\)\.initData, await telegramBotToken\(\), TELEGRAM_PROOF_MAX_AGE_SEC\)/);
+  assert.match(route, /const initData = String\(\(req\.body \|\| \{\}\)\.initData \|\| ""\);/);
+  assert.match(route, /validateTelegramInitData\(initData, await telegramBotToken\(\), TELEGRAM_PROOF_MAX_AGE_SEC\)/);
+  assert.match(route, /if \(_usedTelegramProofs\.has\(proofId\)\) return res\.status\(403\)/, "a proof signs in once");
   assert.match(route, /\.eq\("platform", "telegram"\)\.eq\("platform_user_id", String\(tgUser\.id\)\)/);
   assert.match(route, /link\[0\]\.user_id !== getAdminUserId\(\)/, "only the account linked to this ClosedHand");
   assert.match(route, /await startAdminSession\(req, res, \{ kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC \}\);/);
