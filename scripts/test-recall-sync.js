@@ -52,7 +52,7 @@ function harness(seed = {}, overrides = {}) {
   const api = createConnector({ db, now: () => clock, decryptTokens: x => x, encryptTokens: x => x,
     request: async () => [{ id: 1, title: "Flight", body: "Flight changed to 10pm", state: "open" }],
     indexItems: async (...args) => { indexed.push(args); },
-    mcp: { openClient: async () => ({ client }), closeQuietly: async () => { closed++; } },
+    mcp: { openClient: async () => ({ client }), closeQuietly: async () => { closed++; }, openRow: (row) => row, sealRow: (row) => row },
     ...overrides,
   });
   return { db, client, indexed, api, closed: () => closed, advance: () => { clock += 16 * 60000; } };

@@ -29,7 +29,7 @@ test('each of those routes refuses a missing or wrong token before doing anythin
   assert.match(handler('/api/bridge/thumb-upload'), /_thumbTokens\.get\(token\);\s*if \(!pending \|\| pending\.expires < Date\.now\(\)\) return res\.status\(401\)/);
   const sync = handler('/api/bridge/sync-cache');
   assert.match(sync, /if \(!token\) return res\.status\(401\)/);
-  assert.match(sync, /\.eq\("token", token\)[\s\S]*if \(bridgeErr \|\| !bridge\) return res\.status\(403\)/);
+  assert.match(sync, /\.in\("token", bridgeToken\.storedForms\(token\)\)[\s\S]*if \(bridgeErr \|\| !bridge\) return res\.status\(403\)/);
   const remove = handler('/api/bridge/disconnect');
   assert.match(remove, /if \(!token\) return res\.status\(401\)/);
   assert.match(remove, /if \(!bridge\) return res\.status\(403\)/);

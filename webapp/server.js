@@ -25,6 +25,7 @@ const { supabase } = require("./db");
 
 const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./security-scan");
 const mcpClient = require("./mcp-client");
+const bridgeToken = require("./bridge-token");
 
 const app = express();
 // Headers every response carries: no guessing a file's type from its
@@ -2304,7 +2305,7 @@ async function mcpOpenForDiscovery(row, { allowOAuth, state } = {}) {
     state,
     oauth: !!allowOAuth,
     onRedirect: (u) => { redirectUrl = u; },
-    save: async (patch) => { Object.assign(row, patch); if (row.id) { const { error } = await supabase.from("user_mcps").update(patch).eq("id", row.id); if (error) console.error("[mcp] save failed:", error.message); } },
+    save: async (patch) => { Object.assign(row, patch); if (row.id) { const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow(patch)).eq("id", row.id); if (error) console.error("[mcp] save failed:", error.message); } },
     saveVerifier: async (v) => { row.oauth_code_verifier = v; },
     connectTimeoutMs: row.transport === "stdio" ? 180000 : 20000,
   };
@@ -2376,11 +2377,27 @@ async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
   };
   const { data, error } = await supabase
     .from("user_mcps")
-    .upsert(record, { onConflict: "user_id,server_url" })
+    .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
     .select("id, name, server_url, status, transport, caps")
     .single();
   if (error) throw error;
   return data;
+}
+
+// MCP credentials saved before they were stored encrypted are sealed once, at
+// start. Returns how many connections it sealed.
+async function sealStoredMcps() {
+  const { data, error } = await supabase.from("user_mcps").select("id, auth_token, oauth_client_secret, oauth_refresh_token, env, headers");
+  if (error) throw new Error(error.message);
+  let sealed = 0;
+  for (const row of data || []) {
+    const { id, ...patch } = mcpClient.sealRow(row);
+    if (JSON.stringify({ id, ...patch }) === JSON.stringify(row)) continue;
+    const { error: writeError } = await supabase.from("user_mcps").update(patch).eq("id", id);
+    if (writeError) throw new Error(writeError.message);
+    sealed++;
+  }
+  return sealed;
 }
 
 // The one connect handler. Body: { input | server_url, name?, auth_token?,
@@ -5659,13 +5676,14 @@ app.delete("/api/mcps/:id", async (req, res) => {
 // would, list what it offers, and record the outcome. Fix additionally
 // restarts OAuth when the server has stopped accepting the saved token.
 async function mcpCheckRow(userId, id, { reauth } = {}) {
-  const { data: mcp, error } = await supabase
+  const { data: stored, error } = await supabase
     .from("user_mcps")
     .select("*")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
-  if (error || !mcp) return { status: 404, body: { error: "Not found" } };
+  if (error || !stored) return { status: 404, body: { error: "Not found" } };
+  const mcp = mcpClient.openRow(stored);
 
   const state = crypto.randomBytes(16).toString("hex");
   let opened;
@@ -8511,13 +8529,14 @@ app.post("/api/bridge/pair", async (req, res) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ error: "Pairing code required" });
 
-    // Store the pairing request in Supabase for the bot to pick up
-    const token = require("crypto").randomBytes(32).toString("hex");
+    // Store the pairing request for the poll below to match to the Mac. The
+    // Mac's token is made there, when it is handed over, and only its hash
+    // is kept; until then the row holds the hash of a value nobody has.
     const { error } = await supabase
       .from("user_bridges")
       .upsert({
         user_id: userId,
-        token,
+        token: bridgeToken.hashBridgeToken(require("crypto").randomBytes(32).toString("hex")),
         status: "pending_pair",
         pairing_code: code.toUpperCase(),
         paired_at: new Date().toISOString(),
@@ -8574,7 +8593,7 @@ app.post("/api/bridge/disconnect", async (req, res) => {
   try {
     const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
     if (!token) return res.status(401).json({ error: "Bridge token required" });
-    const { data: bridge, error } = await supabase.from("user_bridges").select("user_id").eq("token", token).maybeSingle();
+    const { data: bridge, error } = await supabase.from("user_bridges").select("user_id").in("token", bridgeToken.storedForms(token)).maybeSingle();
     if (error) throw new Error(error.message);
     if (!bridge) return res.status(403).json({ error: "Invalid bridge token" });
     const userId = bridge.user_id;
@@ -8602,7 +8621,7 @@ app.post("/api/bridge/sync-cache", async (req, res) => {
     const { data: bridge, error: bridgeErr } = await supabase
       .from("user_bridges")
       .select("user_id")
-      .eq("token", token)
+      .in("token", bridgeToken.storedForms(token))
       .single();
     if (bridgeErr || !bridge) return res.status(403).json({ error: "Invalid bridge token" });
 
@@ -9000,13 +9019,20 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
-  // Secrets and provider keys saved before they were stored encrypted are
-  // sealed once; reads already handle both.
+  // Secrets, provider keys and MCP credentials saved before they were stored
+  // encrypted are sealed once; reads already handle both.
   try {
-    const sealed = (await require("./config").sealStoredConf()) + (await require("./model-config").sealStoredKeys(supabase, getAdminUserId()));
+    const sealed = (await require("./config").sealStoredConf()) + (await require("./model-config").sealStoredKeys(supabase, getAdminUserId())) + (await sealStoredMcps());
     if (sealed) console.log(`[secrets] sealed ${sealed} stored secret(s) that were saved before encryption`);
   } catch (e) {
     console.error("[secrets] could not seal stored secrets:", e.message);
+  }
+  // Mac Bridge tokens saved before they were kept as a hash are hashed once.
+  try {
+    const hashed = await bridgeToken.hashStoredTokens(supabase);
+    if (hashed) console.log(`[secrets] ${hashed} Mac Bridge token(s) now kept as a hash only`);
+  } catch (e) {
+    console.error("[secrets] could not hash stored Mac Bridge tokens:", e.message);
   }
   const configured = Object.entries(SERVICES).filter(([, s]) => s.clientId && s.clientSecret).map(([k]) => k);
   console.log(`\n🚀 Closedhand web app running on port ${PORT}`);
@@ -9080,7 +9106,7 @@ wss.on("connection", (ws) => {
         let { data } = await supabase
           .from("user_bridges")
           .select("user_id")
-          .eq("token", msg.token)
+          .in("token", bridgeToken.storedForms(msg.token))
           .eq("status", "connected")
           .single();
         // The desktop app is Bridge and server in one: it made BRIDGE_TOKEN
@@ -9090,7 +9116,7 @@ wss.on("connection", (ws) => {
         if (!data && process.env.CLOSEDHAND_DESKTOP && process.env.BRIDGE_TOKEN && msg.token === process.env.BRIDGE_TOKEN) {
           const adminId = getAdminUserId();
           const { error: pairError } = await supabase.from("user_bridges")
-            .upsert({ user_id: adminId, token: msg.token, status: "connected", paired_at: new Date().toISOString() }, { onConflict: "user_id" });
+            .upsert({ user_id: adminId, token: bridgeToken.hashBridgeToken(msg.token), status: "connected", paired_at: new Date().toISOString() }, { onConflict: "user_id" });
           if (pairError) console.error("[Bridge] could not record the desktop pairing:", pairError.message);
           data = { user_id: adminId };
         }
@@ -9170,18 +9196,24 @@ setInterval(async () => {
   try {
     const { data: pending } = await supabase
       .from("user_bridges")
-      .select("user_id, token, pairing_code")
+      .select("user_id, pairing_code")
       .eq("status", "pending_pair");
     if (!pending || !pending.length) return;
     for (const row of pending) {
       const code = (row.pairing_code || "").toUpperCase();
       const ws = bridgeConnections.get(code);
       if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type: "paired", userId: row.user_id, token: row.token }));
+        // The Mac's token is made here and goes only to the Mac; the
+        // database keeps its hash, recorded before the Mac is told.
+        const token = require("crypto").randomBytes(32).toString("hex");
+        const { error: pairError } = await supabase.from("user_bridges")
+          .update({ token: bridgeToken.hashBridgeToken(token), status: "connected", pairing_code: null })
+          .eq("user_id", row.user_id).eq("status", "pending_pair");
+        if (pairError) { console.error("[Bridge] could not record the pairing:", pairError.message); continue; }
+        ws.send(JSON.stringify({ type: "paired", userId: row.user_id, token }));
         ws.bridgeUserId = row.user_id;
         bridgeConnections.set("user:" + row.user_id, ws);
         bridgeConnections.delete(code);
-        await supabase.from("user_bridges").update({ status: "connected", pairing_code: null }).eq("user_id", row.user_id);
         console.log("Bridge paired for user " + row.user_id);
       }
     }

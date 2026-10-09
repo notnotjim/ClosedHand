@@ -15,8 +15,9 @@
   "lexical": "75c74a7230a13203",
   "fact-vectors": "4be86f1d81bbcf74",
   "doc-search": "a16b870d429cde91",
-  "mcp-client": "9cedaab57a5b91e8",
+  "mcp-client": "6bd907e918c31b2c",
   "crypto-tokens": "91542f972fc69427",
   "microsoft-app": "b0c5e2265c0c41dd",
-  "google-app": "6e9509a7eb782735"
+  "google-app": "6e9509a7eb782735",
+  "bridge-token": "e52053fd0ccd228a"
 }

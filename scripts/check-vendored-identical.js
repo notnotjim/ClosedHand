@@ -71,6 +71,10 @@ const PAIRS = [
     name: "google-app",
     copies: ["lib/google-app.js", "webapp/google-app.js"],
   },
+  {
+    name: "bridge-token",
+    copies: ["lib/bridge-token.js", "webapp/bridge-token.js"],
+  },
 ];
 
 function normalise(src, name) {

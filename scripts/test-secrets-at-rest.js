@@ -102,3 +102,111 @@ test('every place that uses a stored key opens it first', () => {
   assert.equal(read('lib/crypto-tokens.js').trim().split('\n').pop(), 'module.exports = require("../crypto-tokens");');
   assert.match(read('webapp/server.js'), /await require\("\.\/config"\)\.sealStoredConf\(\)\) \+ \(await require\("\.\/model-config"\)\.sealStoredKeys\(supabase, getAdminUserId\(\)\)\)/);
 });
+
+// The MCP client in a box: the SDK it would load is not needed to seal and
+// open a row, so any name from it is a stand-in.
+function loadMcpClient() {
+  const sdk = new Proxy({}, { get: () => function stub() {} });
+  const deps = { './crypto-tokens': require('../webapp/crypto-tokens'), os: require('node:os'), fs, path, crypto };
+  const box = { module: { exports: {} }, require: (n) => deps[n] || (n.startsWith('@modelcontextprotocol/sdk/') ? sdk : undefined), process, console, URL, Buffer, setTimeout, clearTimeout };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'webapp/mcp-client.js'), 'utf8'), box);
+  return box.module.exports;
+}
+const plain = (o) => JSON.parse(JSON.stringify(o));
+
+test('an MCP connection keeps its key, OAuth secrets, headers and environment sealed, and opens them for use', () => {
+  const mcp = loadMcpClient();
+  const row = { id: 'm1', name: 'Test server', server_url: 'https://mcp.example.test/mcp', command: null, args: ['--port', '9000'], auth_type: 'bearer',
+    auth_token: 'test-access-token-1', oauth_client_id: 'test-client-id', oauth_client_secret: 'test-client-secret', oauth_refresh_token: 'test-refresh-token',
+    headers: { 'X-Api-Key': 'test-header-key' }, env: { TEST_API_KEY: 'test-env-key', PORT: 9000, EMPTY: '' } };
+  const sealed = plain(mcp.sealRow(row));
+  for (const v of [sealed.auth_token, sealed.oauth_client_secret, sealed.oauth_refresh_token, sealed.headers['X-Api-Key'], sealed.env.TEST_API_KEY, sealed.env.PORT]) assert.match(v, /^enc:v1:/);
+  assert.doesNotMatch(JSON.stringify(sealed), /test-access|test-client-secret|test-refresh|test-header-key|test-env-key/);
+  for (const k of ['id', 'name', 'server_url', 'auth_type', 'oauth_client_id']) assert.equal(sealed[k], row[k], k);
+  assert.deepEqual(sealed.args, row.args);
+  assert.equal(sealed.env.EMPTY, '');
+  assert.equal(row.auth_token, 'test-access-token-1', 'the row passed in is not changed');
+  assert.deepEqual(plain(mcp.sealRow(sealed)), sealed, 'sealing twice changes nothing');
+  const opened = plain(mcp.openRow(sealed));
+  assert.equal(opened.auth_token, 'test-access-token-1');
+  assert.equal(opened.oauth_client_secret, 'test-client-secret');
+  assert.equal(opened.oauth_refresh_token, 'test-refresh-token');
+  assert.deepEqual(opened.headers, { 'X-Api-Key': 'test-header-key' });
+  assert.deepEqual(opened.env, { TEST_API_KEY: 'test-env-key', PORT: '9000', EMPTY: '' });
+  assert.equal(plain(mcp.requestHeaders(opened)).Authorization, 'Bearer test-access-token-1');
+  assert.deepEqual(plain(mcp.openRow(row)), plain(row), 'a row saved before sealing reads as it was');
+  assert.equal(mcp.sealRow(null), null);
+});
+
+test('MCP credentials saved before sealing are sealed once at start, and only those', async () => {
+  const mcp = loadMcpClient();
+  const rows = [
+    { id: 'old', auth_token: 'test-plain-token', oauth_client_secret: null, oauth_refresh_token: null, env: { TEST_KEY: 'test-plain-env' }, headers: null },
+    { id: 'none', auth_token: null, oauth_client_secret: null, oauth_refresh_token: null, env: null, headers: null },
+  ];
+  const writes = [];
+  const supabase = { from: () => ({
+    select: async () => ({ data: rows.map((r) => ({ ...r })), error: null }),
+    update: (patch) => ({ eq: async (col, id) => { writes.push({ id, patch }); Object.assign(rows.find((r) => r.id === id), patch); return { error: null }; } }),
+  }) };
+  const server = fs.readFileSync(path.join(root, 'webapp/server.js'), 'utf8');
+  const src = server.slice(server.indexOf('async function sealStoredMcps() {'), server.indexOf('// The one connect handler.'));
+  const sealStoredMcps = new Function('supabase', 'mcpClient', src + '; return sealStoredMcps;')(supabase, mcp);
+  assert.equal(await sealStoredMcps(), 1);
+  assert.deepEqual(writes.map((w) => w.id), ['old']);
+  assert.match(rows[0].auth_token, /^enc:v1:/);
+  assert.match(rows[0].env.TEST_KEY, /^enc:v1:/);
+  assert.equal(plain(mcp.openRow(rows[0])).auth_token, 'test-plain-token');
+  assert.equal(await sealStoredMcps(), 0, 'nothing left to seal');
+});
+
+test('every place that reads or writes an MCP connection seals and opens it', () => {
+  const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+  const server = read('webapp/server.js');
+  assert.match(server, /\.upsert\(mcpClient\.sealRow\(record\), \{ onConflict: "user_id,server_url" \}\)/);
+  assert.match(server, /from\("user_mcps"\)\.update\(mcpClient\.sealRow\(patch\)\)\.eq\("id", row\.id\)/);
+  assert.match(server, /const mcp = mcpClient\.openRow\(stored\);/);
+  assert.match(server, /\(await sealStoredMcps\(\)\);/);
+  assert.match(read('lib/user-mcp.js'), /from\("user_mcps"\)\.update\(mcp\.sealRow\(patch\)\)/);
+  assert.match(read('lib/user-mcp.js'), /await openEntry\(mcp\.openRow\(row\), /);
+  assert.match(read('lib/services/usi-connector.js'), /mcp\.openClient\(mcp\.openRow\(row\), \{ connectTimeoutMs: 20000, save: patch => mustWrite\(db\.from\("user_mcps"\)\.update\(mcp\.sealRow\(patch\)\)/);
+  for (const f of ['webapp/server.js', 'lib/user-mcp.js', 'lib/services/usi-connector.js']) {
+    assert.doesNotMatch(read(f), /from\("user_mcps"\)\s*\.(?:update|upsert|insert)\((?!mcp(?:Client)?\.sealRow\(|\{ status|patch\)|\{ \.\.\.)/, f);
+  }
+});
+
+test('a Mac Bridge token is kept only as a hash, and a token saved before still works', async () => {
+  const bt = require('../webapp/bridge-token');
+  assert.equal(fs.readFileSync(path.join(root, 'lib/bridge-token.js'), 'utf8'), fs.readFileSync(path.join(root, 'webapp/bridge-token.js'), 'utf8'));
+  const token = 'a'.repeat(64);
+  const hash = bt.hashBridgeToken(token);
+  assert.match(hash, /^sha256:[0-9a-f]{64}$/);
+  assert.notEqual(hash.slice(7), token);
+  assert.deepEqual(bt.storedForms(token), [hash, token]);
+  assert.deepEqual(bt.storedForms(hash), [bt.hashBridgeToken(hash)], 'a hash copied from the database is not a token');
+  const rows = [{ user_id: 'u1', token }, { user_id: 'u2', token: bt.hashBridgeToken('b'.repeat(64)) }];
+  const db = { from: () => ({
+    select: async () => ({ data: rows.map((r) => ({ ...r })), error: null }),
+    update: (patch) => { const q = { filters: {}, eq(col, v) { this.filters[col] = v; return this; },
+      then(resolve) { const r = rows.find((x) => x.user_id === this.filters.user_id && x.token === this.filters.token); if (r) Object.assign(r, patch); resolve({ error: null }); } }; return q; },
+  }) };
+  assert.equal(await bt.hashStoredTokens(db), 1);
+  assert.equal(rows[0].token, hash);
+  assert.equal(await bt.hashStoredTokens(db), 0, 'nothing left to hash');
+});
+
+test('the Bridge token goes only to the Mac: made at pairing, stored hashed, looked up by hash', () => {
+  const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+  for (const f of ['webapp/server.js', 'lib/bridge-server.js']) {
+    const src = read(f);
+    assert.doesNotMatch(src, /from\("user_bridges"\)[^;]*\.eq\("token"/, f);
+    assert.doesNotMatch(src, /select\("user_id, token, pairing_code"\)|token: row\.token|token: msg\.token/, f);
+    assert.match(src, /\.update\(\{ token: (?:bridgeToken\.)?hashBridgeToken\(token\), status: "connected", pairing_code: null \}\)/, f);
+  }
+  const server = read('webapp/server.js');
+  assert.equal((server.match(/\.in\("token", bridgeToken\.storedForms\((?:msg\.)?token\)\)/g) || []).length, 3);
+  assert.match(server, /token: bridgeToken\.hashBridgeToken\(msg\.token\), status: "connected"/);
+  assert.match(server, /await bridgeToken\.hashStoredTokens\(supabase\)/);
+  assert.match(read('lib/bridge-server.js'), /\.in\("token", storedForms\(token\)\)/);
+  assert.match(read('lib/bridge-server.js'), /user_id: userId,\n\s*token: hashBridgeToken\(token\),/);
+});
