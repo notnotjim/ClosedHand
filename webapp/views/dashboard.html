@@ -8892,5 +8892,17 @@
     setInterval(tick, 6000);
   })();
 </script>
+<script>
+  // Logging out is a POST, so a link on another site cannot do it. The link
+  // sends one, then goes where the server says (the login page).
+  document.querySelectorAll('.logout-link').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/logout', { method: 'POST', credentials: 'same-origin' })
+        .catch(function () {})
+        .then(function () { location.href = '/'; });
+    });
+  });
+</script>
 </body>
 </html>

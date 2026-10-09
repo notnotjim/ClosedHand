@@ -162,7 +162,7 @@ test('the dashboard starts, checks and ends sessions through this module', () =>
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
   assert.doesNotMatch(server, /ADMIN_SESSION_VALUE|setAdminSessionCookie|"admin-session"/);
   assert.match(server, /require\("\.\/dashboard-sessions"\)\.createSessions\(/);
-  const logout = server.slice(server.indexOf('app.get("/logout"'), server.indexOf('app.get("/logout"') + 600);
+  const logout = server.slice(server.indexOf('app.post("/logout"'), server.indexOf('app.get("/logout"'));
   assert.match(logout, /await dashboardSessions\.end\(readCookie\(req, browserAccess\.sessionName\(req\)\)\)/);
   assert.match(logout, /sessionCookie\(req, "", 0\)/);
   const setPw = server.slice(server.indexOf('app.post("/api/setup/password"'), server.indexOf('app.post("/api/setup/detect"'));
@@ -196,9 +196,52 @@ test('the sign-in form, the wallet check and Basic auth share one count of wrong
   const wallet = server.slice(server.indexOf('app.post("/api/wallet/confirm"'), server.indexOf('function walletAvailable()'));
   const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));
   for (const [name, part] of [['sign-in', login], ['wallet', wallet], ['Basic auth', gate]]) {
-    assert.match(part, /if \(lockedOut\(ip\)\) return res\.status\(429\)/, name);
-    assert.match(part, /noteWrongPassword\(ip\);/, name);
+    assert.match(part, /if \(lockedOut\(ip, req\)\) return res\.status\(429\)/, name);
+    assert.match(part, /noteWrongPassword\(ip, req\);/, name);
     assert.doesNotMatch(part, /rec\.n \+= 1/, name + ' keeps no count of its own');
   }
-  assert.ok(gate.indexOf('lockedOut(ip)') < gate.indexOf('checkDashboardPassword(pass)'), 'a locked-out address is refused before its password is checked');
+  assert.ok(gate.indexOf('lockedOut(ip, req)') < gate.indexOf('checkDashboardPassword(pass)'), 'a locked-out address is refused before its password is checked');
+});
+
+test('through the personal URL, 100 wrong passwords an hour from all addresses together stop every try; this computer is never held to it', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const src = server.slice(server.indexOf('const _loginFails = new Map();'), server.indexOf('app.post("/api/login"'));
+  const box = new Function(src + '; return { lockedOut, noteWrongPassword, clientIp };')();
+  const tunnel = (ip) => ({ socket: { remoteAddress: '::1' }, headers: { 'cf-connecting-ip': ip } });
+  const local = { socket: { remoteAddress: '172.18.0.1' }, headers: {} };
+  for (let i = 0; i < 100; i++) {
+    const req = tunnel('198.51.100.' + (i % 250) + '.' + i);
+    assert.equal(box.lockedOut(box.clientIp(req), req), false, 'try ' + i);
+    box.noteWrongPassword(box.clientIp(req), req);
+  }
+  const fresh = tunnel('203.0.113.77');
+  assert.equal(box.lockedOut(box.clientIp(fresh), fresh), true, 'a new address through the personal URL is refused too');
+  assert.equal(box.lockedOut(box.clientIp(local), local), false, 'the computer itself still signs in');
+});
+
+test('a dashboard password has at least 8 characters, on the setup page and on the server', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const route = server.slice(server.indexOf('app.post("/api/setup/password"'), server.indexOf('app.post("/api/setup/detect"'));
+  assert.match(route, /if \(pw\.length < 8\) return res\.status\(400\)\.json\(\{ error: "Use at least 8 characters\." \}\);/);
+  const setup = fs.readFileSync(path.join(__dirname, '..', 'webapp/views/setup.html'), 'utf8');
+  assert.match(setup, /id="pw-input" autocomplete="new-password" minlength="8" required/);
+});
+
+test('logging out is a POST that clears what the browser kept, and a link elsewhere cannot do it', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const post = server.slice(server.indexOf('app.post("/logout"'), server.indexOf('app.get("/logout"'));
+  assert.match(post, /res\.set\("Clear-Site-Data", '"cache", "storage"'\);/);
+  for (const c of ['ch_user', 'ch_wa_link', 'ch_connect_queue', 'ch_wallet_ok']) assert.ok(post.includes(c + '=;'), c + ' is cleared');
+  const get = server.slice(server.indexOf('app.get("/logout"'), server.indexOf('app.get("/logout"') + 900);
+  assert.doesNotMatch(get, /dashboardSessions\.end/, 'opening /logout only shows the button');
+  assert.match(get, /<form method="post" action="\/logout"/);
+  assert.doesNotMatch(server, /setUserCookie|signUserId|verifySignedCookie/, 'the old signed cookie is gone');
+  const dash = fs.readFileSync(path.join(__dirname, '..', 'webapp/views/dashboard.html'), 'utf8');
+  assert.match(dash, /fetch\('\/logout', \{ method: 'POST', credentials: 'same-origin' \}\)/);
+});
+
+test('API answers are kept by no browser cache, from the first route on', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const noStore = server.indexOf('app.use("/api", (req, res, next) => {\n  res.set("Cache-Control", "no-store");');
+  assert.ok(noStore > 0 && noStore < server.indexOf('app.get("/api/'), 'before any API route');
 });

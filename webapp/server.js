@@ -39,6 +39,12 @@ app.use((req, res, next) => {
   if (require("./browser-access").publicHttps(req)) res.set("Strict-Transport-Security", "max-age=31536000");
   next();
 });
+// API answers are personal (mail, chats, cards), so no browser keeps a copy
+// after logging out. A route that serves something shareable sets its own.
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use("/novnc", express.static(path.join(__dirname, "public", "novnc")));
 
 // Local-storage public route: serves ONLY the `logos` bucket (rendered in the
@@ -62,8 +68,6 @@ app.get("/storage/logos/*", (req, res) => {
 });
 const PORT = process.env.PORT || 3000;
 
-const COOKIE_SECRET = process.env.COOKIE_SECRET || crypto.randomBytes(32).toString("hex");
-if (!process.env.COOKIE_SECRET) console.warn("[setup] COOKIE_SECRET is not set — dashboard sessions won't survive a restart. Set it in .env.");
 
 // Single-tenant admin identity. Kick the bootstrap at module load so the cache is
 // warm before requests; the listen callback awaits it too.
@@ -629,20 +633,34 @@ function clientIp(req) {
   const cf = req.headers["cf-connecting-ip"];
   return cf && isLoopback(peer) ? String(cf) : peer;
 }
-function lockedOut(ip) {
-  const rec = _loginFails.get(ip);
-  return !!rec && rec.until > Date.now();
+// Through the personal URL there is also a ceiling for all addresses together,
+// 100 wrong passwords an hour, so guessing from many addresses at once gets
+// nowhere. The dashboard's port answers only this computer, so a flood from
+// outside can never lock its owner out at home.
+const TUNNEL_FAILS_PER_HOUR = 100;
+const _tunnelFails = []; // when each wrong password through the personal URL came
+function viaTunnel(req) {
+  return !!req.headers["cf-connecting-ip"] && isLoopback((req.socket && req.socket.remoteAddress) || "");
 }
-function noteWrongPassword(ip) {
+function lockedOut(ip, req) {
+  const rec = _loginFails.get(ip);
+  if (rec && rec.until > Date.now()) return true;
+  if (!viaTunnel(req)) return false;
+  const hourAgo = Date.now() - 60 * 60 * 1000;
+  while (_tunnelFails.length && _tunnelFails[0] < hourAgo) _tunnelFails.shift();
+  return _tunnelFails.length >= TUNNEL_FAILS_PER_HOUR;
+}
+function noteWrongPassword(ip, req) {
   const rec = _loginFails.get(ip) || { n: 0, until: 0 };
   rec.n += 1;
   if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
   _loginFails.set(ip, rec);
+  if (viaTunnel(req)) _tunnelFails.push(Date.now());
 }
 app.post("/api/login", async (req, res) => {
   try {
     const ip = clientIp(req);
-    if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (await checkDashboardPassword((req.body || {}).password)) {
       _loginFails.delete(ip);
       try {
@@ -653,7 +671,7 @@ app.post("/api/login", async (req, res) => {
       }
       return res.json({ success: true });
     }
-    noteWrongPassword(ip);
+    noteWrongPassword(ip, req);
     await new Promise((r) => setTimeout(r, 400)); // slow brute force a little
     return res.status(403).json({ error: "Wrong password" });
   } catch (e) {
@@ -706,9 +724,9 @@ app.post("/api/wallet/confirm", async (req, res) => {
   try {
     // The same five tries and fifteen-minute lockout as signing in.
     const ip = clientIp(req);
-    if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (!(await checkDashboardPassword(String((req.body || {}).password || "")))) {
-      noteWrongPassword(ip);
+      noteWrongPassword(ip, req);
       await new Promise((r) => setTimeout(r, 400));
       return res.status(403).json({ error: "That password is not right." });
     }
@@ -1043,6 +1061,9 @@ app.post("/api/setup/password", async (req, res) => {
     if (!(await requireSetupAccess(req, res))) return;
     const pw = String((req.body || {}).password || "");
     if (!pw) return res.status(400).json({ error: "Type a password first" });
+    // Anyone who finds the personal URL can try passwords, so a short one
+    // falls quickly even with the lockout.
+    if (pw.length < 8) return res.status(400).json({ error: "Use at least 8 characters." });
     if (process.env.ADMIN_PASSWORD) return res.status(400).json({ error: "The password is fixed by the ADMIN_PASSWORD setting in your .env file" });
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
     // A new password signs every browser out, then this one back in.
@@ -1485,13 +1506,13 @@ app.use(async (req, res, next) => {
       // Scripts may send the password with each request, under the same
       // five tries as the sign-in form; without that this was a way round it.
       const ip = clientIp(req);
-      if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+      if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
       const pass = Buffer.from(encoded, "base64").toString().split(":").slice(1).join(":");
       if (await checkDashboardPassword(pass)) {
         _loginFails.delete(ip);
         return next();
       }
-      noteWrongPassword(ip);
+      noteWrongPassword(ip, req);
     }
     if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Login required" });
     return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/"));
@@ -1566,44 +1587,12 @@ setInterval(() => {
   for (const [k, v] of _uploadTokens) { if (now > v.expires) _uploadTokens.delete(k); }
 }, 300000);
 
-// ============================================================
-// SIGNED COOKIE
-// ============================================================
-
-function signUserId(userId) {
-  const hmac = crypto.createHmac("sha256", COOKIE_SECRET);
-  hmac.update(userId);
-  return `${userId}.${hmac.digest("hex")}`;
-}
-
-function verifySignedCookie(cookie) {
-  if (!cookie) return null;
-  const lastDot = cookie.lastIndexOf(".");
-  if (lastDot === -1) return null;
-  const userId = cookie.substring(0, lastDot);
-  const sig = cookie.substring(lastDot + 1);
-  const hmac = crypto.createHmac("sha256", COOKIE_SECRET);
-  hmac.update(userId);
-  const expected = hmac.digest("hex");
-  if (expected.length === sig.length && crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(sig, "hex"))) return userId;
-  return null;
-}
-
-// Single-tenant: identity is always the one admin. The signed cookie is retained
-// for a future dashboard password gate (P3) but no longer determines *which* user.
+// Single-tenant: identity is always the one admin. Whether this request may
+// act for them is the session's job (hasAdminSession).
 function getUserIdFromRequest(req) {
   return getAdminUserId();
 }
 
-function setUserCookie(res, userId) {
-  const signed = signUserId(userId);
-  // Use res.append to avoid overwriting other Set-Cookie headers
-  if (typeof res.append === "function") {
-    res.append("Set-Cookie", `ch_user=${encodeURIComponent(signed)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`);
-  } else {
-    res.setHeader("Set-Cookie", `ch_user=${encodeURIComponent(signed)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`);
-  }
-}
 
 // ============================================================
 // TELEGRAM MINI APP — initData validation
@@ -1905,7 +1894,6 @@ app.get("/dashboard", async (req, res) => {
           .single();
         if (link) {
           userId = link.user_id;
-          setUserCookie(res, userId);
         }
       }
     }
@@ -1977,16 +1965,29 @@ app.get("/line-setup-complete", (req, res) => {
 </body></html>`);
 });
 
-// Logging out ends this browser's session on the server, not just its cookie.
-app.get("/logout", async (req, res) => {
+// Logging out ends this browser's session on the server, not just its cookie,
+// and asks the browser to drop what it kept: cached pages and stored data.
+// It is a POST, so a link on another site cannot log anyone out; opening
+// /logout shows the button.
+app.post("/logout", async (req, res) => {
   try {
     await dashboardSessions.end(readCookie(req, browserAccess.sessionName(req)));
   } catch (e) {
     console.error("[logout] could not end the session:", e.message);
   }
+  res.set("Clear-Site-Data", '"cache", "storage"');
   res.append("Set-Cookie", sessionCookie(req, "", 0));
-  res.append("Set-Cookie", "ch_user=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
-  res.redirect("/");
+  for (const c of ["ch_user=; Path=/", "ch_wa_link=; Path=/", "ch_connect_queue=; Path=/", "ch_wallet_ok=; Path=/api"]) {
+    res.append("Set-Cookie", `${c}; HttpOnly; SameSite=Lax; Max-Age=0`);
+  }
+  res.redirect(303, "/");
+});
+app.get("/logout", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>Log out</title></head>
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#141010;color:#EFE6D6;font-family:system-ui,sans-serif">
+<form method="post" action="/logout" style="text-align:center"><p>Log out of ClosedHand on this browser?</p>
+<button type="submit" style="font:inherit;padding:10px 22px;border-radius:10px;border:0;background:#D8624B;color:#fff;cursor:pointer">Log out</button></form></body></html>`);
 });
 
 // ============================================================
@@ -2019,7 +2020,6 @@ app.get("/bot-connect", (req, res) => {
     if (!svc) return res.status(400).send(`Unknown service: ${payload.service}`);
 
     // Log the user in and redirect to OAuth
-    setUserCookie(res, payload.userId);
     const params = payload.storeDomain ? `?store_domain=${encodeURIComponent(payload.storeDomain)}` : "";
     res.redirect(`/auth/${payload.service}${params}`);
   } catch (e) {
@@ -2697,7 +2697,6 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
   const user = { id: adminId, ...profile };
 
   // Set cookie FIRST, before any potentially-failing operations
-  setUserCookie(res, user.id);
   console.log(`[Auth] Cookie set for user ${user.id}`);
 
   try {
@@ -3866,11 +3865,6 @@ app.get("/api/chat/status", async (req, res) => {
     console.error("[Auth] chat/status error:", e.message);
     res.json({ authenticated: false });
   }
-});
-
-app.use("/api", (req, res, next) => {
-  res.set("Cache-Control", "no-store");
-  next();
 });
 
 // Available services list
