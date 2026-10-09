@@ -37,6 +37,7 @@ test("recall hands over its query embedding before it waits on anything", async 
     "./services/doc-search": { docSearch: () => ({ searchDocuments: async () => ({ results: [] }) }) },
     "./services/reranker": { rerank: async (q, docs) => docs },
     "./services/usi-connector": { activeSources: async () => new Set() },
+    "./log-text": require("../lib/log-text"),
   };
   const box = { module: { exports: {} }, console: { log() {}, error() {} }, require: (n) => deps[n] };
   vm.runInNewContext(read("lib/brain.js"), box);

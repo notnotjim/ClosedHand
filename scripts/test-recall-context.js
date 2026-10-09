@@ -38,6 +38,7 @@ function recall({ documents = [], chunks = [], services = [], active = [], fileE
     } },
     "./services/doc-search": { docSearch },
     "./services/reranker": { rerank: rank },
+    "./log-text": require("../lib/log-text"),
     "./services/usi-connector": { activeSources: async () => new Set(active) },
   };
   const box = { module: { exports: {} }, console: { log() {}, error() {} }, require: name => {

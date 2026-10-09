@@ -1589,6 +1589,12 @@ setInterval(() => {
   for (const [k, v] of _uploadTokens) { if (now > v.expires) _uploadTokens.delete(k); }
 }, 300000);
 
+// An MCP server's address can carry its key in the path or query, so logs
+// name only its host.
+function mcpHost(url) {
+  try { return new URL(String(url)).host || "(no host)"; } catch (_) { return "(address)"; }
+}
+
 // Single-tenant: identity is always the one admin. Whether this request may
 // act for them is the session's job (hasAdminSession).
 function getUserIdFromRequest(req) {
@@ -2260,7 +2266,7 @@ async function mcpDiscoverAndScan(client, row, acceptWarnings) {
   let scan = null;
   if (found.tools.length > 0) {
     scan = await scanMcpTools(found.tools, await scanModelFor(row.user_id));
-    console.log(`[security-scan] MCP "${row.name || row.server_url}": ${scan.risk_level} - ${scan.summary}`);
+    console.log(`[security-scan] MCP "${row.name || mcpHost(row.server_url)}": ${scan.risk_level} - ${scan.summary}`);
     if (scan.risk_level === "blocked") return { found, verdict: { blocked: true, scan } };
     if (scan.risk_level === "warning" && !acceptWarnings) return { found, verdict: { needs_confirmation: true, scan } };
   }
@@ -2463,7 +2469,7 @@ app.get("/auth/mcp-oauth/callback", async (req, res) => {
     }
     if (verdict && verdict.needs_confirmation) {
       // Nothing can be asked mid-redirect; connect and say what was found.
-      console.log(`[security-scan] Warning for OAuth MCP "${row.name || row.server_url}":`, verdict.scan.findings);
+      console.log(`[security-scan] Warning for OAuth MCP "${row.name || mcpHost(row.server_url)}":`, verdict.scan.findings);
     }
     const saved = await mcpSaveRow(pending.userId, row, found, opened.transportKind, pending.name);
     console.log(`MCP OAuth connected: ${saved.name} for user ${String(pending.userId).substring(0, 8)}`);

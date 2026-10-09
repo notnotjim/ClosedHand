@@ -338,31 +338,34 @@ app.post("/exec", (req, res) => {
 
   switch (language) {
     case "python": {
-      tmpFile = path.join(os.tmpdir(), `exec_${crypto.randomBytes(4).toString("hex")}.py`);
-      fs.writeFileSync(tmpFile, code);
-      // Unbuffered, so a run stopped at the time cap still shows what it had
-      // printed; buffered output died with the process and every timeout read
-      // as "no output".
+      // Checked before the script is written: a script can hold a card number
+      // (the wallet's checkout fill), and returning here used to leave it in
+      // a temp file.
       if (pythonState !== "ready") {
         return res.json({ stdout: "", exit_code: -1, duration_ms: 0,
           stderr: pythonState === "installing" || pythonState === "checking"
             ? "Python is still being set up on this Mac (a one-time download). Try again in a minute or two."
             : `Python is not available here: ${pythonError || pythonState}.` });
       }
+      tmpFile = path.join(os.tmpdir(), `exec_${crypto.randomBytes(4).toString("hex")}.py`);
+      fs.writeFileSync(tmpFile, code, { mode: 0o600 });
+      // Unbuffered, so a run stopped at the time cap still shows what it had
+      // printed; buffered output died with the process and every timeout read
+      // as "no output".
       cmd = PYTHON;
       args = ["-u", tmpFile];
       break;
     }
     case "node": {
       tmpFile = path.join(os.tmpdir(), `exec_${crypto.randomBytes(4).toString("hex")}.js`);
-      fs.writeFileSync(tmpFile, code);
+      fs.writeFileSync(tmpFile, code, { mode: 0o600 });
       cmd = "node";
       args = [tmpFile];
       break;
     }
     case "bash": {
       tmpFile = path.join(os.tmpdir(), `exec_${crypto.randomBytes(4).toString("hex")}.sh`);
-      fs.writeFileSync(tmpFile, code);
+      fs.writeFileSync(tmpFile, code, { mode: 0o600 });
       cmd = "bash";
       args = [tmpFile];
       break;
