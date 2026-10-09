@@ -199,7 +199,7 @@ test('the sign-in form, the wallet check and Basic auth share one count of wrong
   const wallet = server.slice(server.indexOf('app.post("/api/wallet/confirm"'), server.indexOf('function walletAvailable()'));
   const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));
   for (const [name, part] of [['sign-in', login], ['wallet', wallet], ['Basic auth', gate]]) {
-    assert.match(part, /if \(lockedOut\(ip, req\)\) return res\.status\(429\)/, name);
+    assert.match(part, /if \(lockedOut\(ip, req\)\) (\{\n\s*signInRecord\("[^"]+", req\);\n\s*)?return res\.status\(429\)/, name);
     assert.match(part, /noteWrongPassword\(ip, req\);/, name);
     assert.doesNotMatch(part, /rec\.n \+= 1/, name + ' keeps no count of its own');
   }

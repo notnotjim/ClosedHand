@@ -55,3 +55,20 @@ test('a script for the sandbox is never left on disk when Python is not ready, a
   assert.doesNotMatch(agent, /fs\.writeFileSync\(tmpFile, code\);/);
   assert.equal((agent.match(/fs\.writeFileSync\(tmpFile, code, \{ mode: 0o600 \}\);/g) || []).length, 3);
 });
+
+test('every sign-in event is logged once, with the address masked and nothing the visitor sent', () => {
+  const server = read('webapp/server.js');
+  const src = server.slice(server.indexOf('function maskedIp(ip) {'), server.indexOf('function signInRecord(what, req) {'));
+  const maskedIp = new Function(src + '; return maskedIp;')();
+  assert.equal(maskedIp('203.0.113.77'), '203.0.113.x');
+  assert.equal(maskedIp('::ffff:198.51.100.9'), '198.51.100.x');
+  assert.equal(maskedIp('2001:db8:85a3:8d3:1319:8a2e:370:7348'), '2001:db8:85a3:x');
+  const record = server.slice(server.indexOf('function signInRecord(what, req) {'), server.indexOf('function noteWrongPassword('));
+  assert.doesNotMatch(record, /req\.body|password\b(?! or)/i);
+  const calls = server.match(/signInRecord\([^)]*\)/g) || [];
+  for (const c of calls) assert.doesNotMatch(c, /req\.body|pass\b|pw\b|token/, c);
+  const login = server.slice(server.indexOf('app.post("/api/login"'), server.indexOf('// --- Reach the dashboard from your phone'));
+  for (const what of ['refused, too many tries', 'signed in', 'wrong password']) assert.ok(login.includes(`signInRecord("${what}", req)`), what);
+  assert.ok(server.includes('signInRecord("signed out", req)'));
+  assert.ok(server.includes('signInRecord("wrong password (Basic auth)", req)'));
+});

@@ -669,6 +669,17 @@ function lockedOut(ip, req) {
   while (_tunnelFails.length && _tunnelFails[0] < hourAgo) _tunnelFails.shift();
   return _tunnelFails.length >= TUNNEL_FAILS_PER_HOUR;
 }
+// One log line per sign-in event, so the owner can see who tried and when:
+// never the password or the session, and the address with its last part
+// hidden.
+function maskedIp(ip) {
+  const s = String(ip || "?").replace(/^::ffff:/, "");
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(s)) return s.replace(/\.\d+$/, ".x");
+  return s.includes(":") ? s.split(":").slice(0, 3).join(":") + ":x" : s;
+}
+function signInRecord(what, req) {
+  console.log(`[sign-in] ${what} from ${maskedIp(clientIp(req))} (${viaTunnel(req) ? "personal URL" : "this computer"})`);
+}
 function noteWrongPassword(ip, req) {
   const rec = _loginFails.get(ip) || { n: 0, until: 0 };
   rec.n += 1;
@@ -679,7 +690,10 @@ function noteWrongPassword(ip, req) {
 app.post("/api/login", async (req, res) => {
   try {
     const ip = clientIp(req);
-    if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (lockedOut(ip, req)) {
+      signInRecord("refused, too many tries", req);
+      return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    }
     if (await checkDashboardPassword((req.body || {}).password)) {
       _loginFails.delete(ip);
       try {
@@ -688,8 +702,10 @@ app.post("/api/login", async (req, res) => {
         console.error("[login] could not start a session:", e.message);
         return res.status(503).json({ error: "Could not sign you in just now. Try again in a moment." });
       }
+      signInRecord("signed in", req);
       return res.json({ success: true });
     }
+    signInRecord("wrong password", req);
     noteWrongPassword(ip, req);
     await new Promise((r) => setTimeout(r, 400)); // slow brute force a little
     return res.status(403).json({ error: "Wrong password" });
@@ -745,6 +761,7 @@ app.post("/api/wallet/confirm", async (req, res) => {
     const ip = clientIp(req);
     if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (!(await checkDashboardPassword(String((req.body || {}).password || "")))) {
+      signInRecord("wrong password at the wallet check", req);
       noteWrongPassword(ip, req);
       await new Promise((r) => setTimeout(r, 400));
       return res.status(403).json({ error: "That password is not right." });
@@ -1092,6 +1109,7 @@ app.post("/api/setup/password", async (req, res) => {
       const ip = clientIp(req);
       if (lockedOut(ip, req)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
       if (!(await checkDashboardPassword(String((req.body || {}).current || "")))) {
+        signInRecord("password change refused, wrong current password", req);
         noteWrongPassword(ip, req);
         return res.status(403).json({ error: "Type your current password to change it." });
       }
@@ -1100,6 +1118,7 @@ app.post("/api/setup/password", async (req, res) => {
     // A new password signs every browser out, then this one back in.
     await dashboardSessions.endAll();
     await startAdminSession(req, res);
+    signInRecord("dashboard password set; every other session ended", req);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "could not save the password" });
@@ -1518,6 +1537,7 @@ app.post("/api/telegram/session", async (req, res) => {
     const { getAdminUserId } = require("./admin");
     if (!link?.[0] || link[0].user_id !== getAdminUserId()) return res.status(403).json({ error: "This Telegram account isn't the one linked to your Closedhand." });
     await startAdminSession(req, res, { kind: "telegram", lastsSec: TELEGRAM_SESSION_SEC });
+    signInRecord("signed in through Telegram", req);
     res.status(204).end();
   } catch (e) {
     console.error("[telegram] in-app sign-in failed:", e.message);
@@ -1554,6 +1574,7 @@ app.use(async (req, res, next) => {
         _loginFails.delete(ip);
         return next();
       }
+      signInRecord("wrong password (Basic auth)", req);
       noteWrongPassword(ip, req);
     }
     if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Login required" });
@@ -2023,6 +2044,7 @@ app.post("/logout", async (req, res) => {
   } catch (e) {
     console.error("[logout] could not end the session:", e.message);
   }
+  signInRecord("signed out", req);
   res.set("Clear-Site-Data", '"cache", "storage"');
   res.append("Set-Cookie", sessionCookie(req, "", 0));
   for (const c of ["ch_user=; Path=/", "ch_wa_link=; Path=/", "ch_connect_queue=; Path=/", "ch_wallet_ok=; Path=/api"]) {
