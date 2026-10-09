@@ -35,7 +35,7 @@ test("both ways tools run go through the ceiling", () => {
 test("a live Gmail search reads the newest 40, a few at a time, and says when there were more", () => {
   const src = read("lib/services/data-access.js");
   assert.match(src, /const LIVE_LIMIT = 40;/);
-  assert.match(src, /"maxResults":\$\{LIVE_LIMIT\}/, "the gws path asks for 40");
+  assert.match(src, /q: fullQuery, maxResults: LIVE_LIMIT \}/, "the gws path asks for 40");
   assert.match(src, /messages\?q=\$\{encoded\}&maxResults=\$\{LIVE_LIMIT\}/, "the HTTP path asks for 40");
   assert.equal((src.match(/pLimit\(LIVE_FETCHES_AT_ONCE\)/g) || []).length, 2);
   assert.doesNotMatch(src, /slice\(0, 500\)|maxResults=100|"maxResults":500/);
