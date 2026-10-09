@@ -70,6 +70,16 @@ function effortOptions(cap, effort = "default", maxTokens = 4096) {
     default: return {};
   }
 }
+// Provider keys are stored encrypted (sealConfig) and opened only here, where
+// a role is about to be used. A key saved before that reads as it was.
+const { encryptString, decryptString } = require("./crypto-tokens");
+const openKey = (v) => (typeof v === "string" && v.startsWith("enc:v1:") ? decryptString(v) || "" : v);
+const sealKey = (v) => (typeof v === "string" && v ? encryptString(v) : v);
+function sealConfig(config) {
+  if (!config || !config.connections) return config;
+  return { ...config, connections: Object.fromEntries(Object.entries(config.connections).map(([id, c]) =>
+    [id, c && c.apiKey ? { ...c, apiKey: sealKey(c.apiKey) } : c])) };
+}
 function getRole(settings, role) {
   const config = settings?.model_config;
   if (!config) return undefined; // Legacy setup, intentionally distinct from disabled.
@@ -77,7 +87,7 @@ function getRole(settings, role) {
   if (!pick) return null;
   const conn = config.connections?.[pick.connection];
   if (!conn) throw new Error("The model connection is missing. Check Models in Settings.");
-  return { ...conn, model: pick.model, capabilities: pick.capabilities };
+  return { ...conn, apiKey: openKey(conn.apiKey), model: pick.model, capabilities: pick.capabilities };
 }
 function publicConfig(config) {
   if (!config) return null;
@@ -89,4 +99,4 @@ function publicSettings(settings = {}) {
     key !== "self_host_config" && !/(?:api_key|secret|token)/i.test(key)
   ).map(([key, value]) => [key, key === "model_config" ? publicConfig(value) : value]));
 }
-module.exports = { BASES, connection, capabilities, effortOptions, getRole, publicConfig, publicSettings };
+module.exports = { BASES, connection, capabilities, effortOptions, getRole, publicConfig, publicSettings, sealConfig, sealKey, openKey };

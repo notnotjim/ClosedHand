@@ -1,4 +1,6 @@
 const { test, afterEach } = require("node:test");
+// Saved provider keys are sealed; encryption needs a key, as in every real setup.
+process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || require("crypto").randomBytes(32).toString("base64");
 
 test("dashboard settings never expose connection secrets", () => {
   const conn = policy.connection({ provider: "custom", baseUrl: "https://chosen.example/v1", apiKey: "NEW_SECRET" });

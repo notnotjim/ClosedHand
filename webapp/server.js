@@ -1035,7 +1035,9 @@ configureScanBackend(async () => {
   const eu = await getConf("ENRICH_API_URL"), em = await getConf("ENRICH_MODEL"), ek = await getConf("ENRICH_API_KEY");
   if (eu && em && ek && !/^local:/.test(em)) return { wire: "openai", url: eu, key: ek, model: em };
   const { data: profile } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).single();
-  const s = (profile && profile.settings) || {};
+  const s = { ...((profile && profile.settings) || {}) };
+  const { openKey } = require("./model-policy");
+  for (const f of ["anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key"]) s[f] = openKey(s[f]);
   const provider = s.llm_provider || "anthropic";
   const models = s.byok_models || {};
   const { PROVIDERS, pickModel } = require("./provider-capabilities");
@@ -8976,6 +8978,14 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
+  // Secrets and provider keys saved before they were stored encrypted are
+  // sealed once; reads already handle both.
+  try {
+    const sealed = (await require("./config").sealStoredConf()) + (await require("./model-config").sealStoredKeys(supabase, getAdminUserId()));
+    if (sealed) console.log(`[secrets] sealed ${sealed} stored secret(s) that were saved before encryption`);
+  } catch (e) {
+    console.error("[secrets] could not seal stored secrets:", e.message);
+  }
   const configured = Object.entries(SERVICES).filter(([, s]) => s.clientId && s.clientSecret).map(([k]) => k);
   console.log(`\n🚀 ClosedHand web app running on port ${PORT}`);
   console.log(`   ${BASE_URL}`);

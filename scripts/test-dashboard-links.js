@@ -18,7 +18,8 @@ function config(values, env = {}) {
     return { data: { settings: { self_host_config: values } }, error: null };
   } };
   return load('lib/config.js', { './db': { isDbConfigured: () => true, supabase: { from: () => query } },
-    './admin': { getAdminUserId: () => 'test' } }, { process: { env } });
+    './admin': { getAdminUserId: () => 'test' },
+    './crypto-tokens': { encryptString: (v) => v, decryptString: (v) => v } }, { process: { env } });
 }
 function links(conf) { return load('lib/dashboard-links.js', { './config': conf }); }
 const phone = 'https://test-phone.trycloudflare.com';

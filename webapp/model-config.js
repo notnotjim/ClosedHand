@@ -8,7 +8,7 @@ function legacyConfig(settings) {
   const model = provider === "custom" ? settings.custom_model : settings.byok_models?.default;
   if (!model) return null;
   const primary = policy.connection({ provider, baseUrl: settings.custom_base_url,
-    apiKey: settings[provider === "custom" ? "custom_api_key" : provider + "_api_key"] });
+    apiKey: policy.openKey(settings[provider === "custom" ? "custom_api_key" : provider + "_api_key"]) });
   return { version: 1, connections: { primary }, roles: {
     chat: { connection: "primary", model, capabilities: policy.capabilities(primary, model) },
     background: { connection: "primary", model: settings.custom_model_fast || settings.byok_models?.fast || model },
@@ -20,7 +20,7 @@ function resolveConnection(input, saved, id) {
   if (input.useSavedKey) {
     const previous = saved?.connections?.[id];
     if (!previous || previous.baseUrl !== conn.baseUrl || previous.backend !== conn.backend) throw new Error("Paste a key for the newly selected provider.");
-    conn.apiKey = previous.apiKey;
+    conn.apiKey = policy.openKey(previous.apiKey);
   }
   if (!conn.apiKey && !["ollama", "custom"].includes(conn.provider)) throw new Error("Paste your provider's API key.");
   return conn;
@@ -173,13 +173,15 @@ async function watchesVideo(conn, model) {
     return /\bred\b[\s\S]*\bblue\b/i.test(wire.responseText(reply));
   } catch { return false; }
 }
+// What is saved: keys sealed, in the config and in the older fields kept
+// beside it for single-connection readers.
 function withConfig(settings, config) {
-  const next = { ...settings, model_config: config };
+  const next = { ...settings, model_config: policy.sealConfig(config) };
   for (const field of ["anthropic_api_key", "openai_api_key", "gemini_api_key", "custom_api_key", "custom_base_url", "custom_model", "custom_model_fast", "byok_models"]) delete next[field];
   const conn = config.connections.primary;
   next.llm_provider = conn.backend === "custom" ? "custom" : conn.backend;
-  if (conn.backend === "custom") Object.assign(next, { custom_base_url: conn.baseUrl, custom_model: config.roles.chat.model, custom_api_key: conn.apiKey });
-  else { next[conn.backend + "_api_key"] = conn.apiKey; next.byok_models = { fast: config.roles.chat.model, default: config.roles.chat.model, strong: config.roles.chat.model }; }
+  if (conn.backend === "custom") Object.assign(next, { custom_base_url: conn.baseUrl, custom_model: config.roles.chat.model, custom_api_key: policy.sealKey(conn.apiKey) });
+  else { next[conn.backend + "_api_key"] = policy.sealKey(conn.apiKey); next.byok_models = { fast: config.roles.chat.model, default: config.roles.chat.model, strong: config.roles.chat.model }; }
   return next;
 }
 function install(app, deps) {
@@ -258,6 +260,25 @@ function install(app, deps) {
   }));
 }
 const RED_IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAb0lEQVR4nO3PAQkAAAyEwO9feoshgnABdLep8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3IPanc8OLDQitxAAAAAElFTkSuQmCC";
-module.exports = { install, prepare, withConfig, legacyConfig, ollamaWindow, windowProblem };
+// Seal provider keys saved before keys were stored encrypted: in the config
+// and in the older *_api_key fields. Returns how many fields it sealed.
+async function sealStoredKeys(supabase, id) {
+  const { data, error } = await supabase.from("profiles").select("settings").eq("id", id).single();
+  if (error || !data) return 0;
+  const settings = data.settings || {};
+  const set = {};
+  if (settings.model_config) {
+    const sealed = policy.sealConfig(settings.model_config);
+    if (JSON.stringify(sealed) !== JSON.stringify(settings.model_config)) set.model_config = sealed;
+  }
+  for (const [field, value] of Object.entries(settings)) {
+    if (/_api_key$/.test(field) && typeof value === "string" && value && !value.startsWith("enc:v1:")) set[field] = policy.sealKey(value);
+  }
+  if (!Object.keys(set).length) return 0;
+  await require("./settings-patch").patchSettings(supabase, id, { set });
+  return Object.keys(set).length;
+}
+
+module.exports = { install, prepare, withConfig, legacyConfig, ollamaWindow, windowProblem, sealStoredKeys };
 // Four seconds at 128 pixels square: two red, then two blue (H.264, made with PyAV).
 const CHECK_VIDEO = "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";

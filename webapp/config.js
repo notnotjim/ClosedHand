@@ -12,6 +12,14 @@
 
 const CACHE_MS = 3000;
 
+// Secrets kept here (a bot token, a client secret) are stored encrypted with
+// TOKEN_ENCRYPTION_KEY and come out of getConf as the plain value. A value
+// saved before this was encrypted still reads as it is; sealStoredConf seals
+// those once.
+const { encryptString, decryptString } = require("./crypto-tokens");
+const SECRET_NAME = /(?:_KEY|_TOKEN|_SECRET)$/;
+const open = (v) => (typeof v === "string" && v.startsWith("enc:v1:") ? decryptString(v) : v);
+
 let _cache = null;
 let _cacheAt = 0;
 let _failed = false;
@@ -43,7 +51,7 @@ async function getConf(key) {
   const env = process.env[key];
   if (env !== undefined && env !== "") return env;
   const conf = await _load();
-  return conf[key];
+  return open(conf[key]);
 }
 
 // The same, but throws when the settings could not be read just now, for a
@@ -54,7 +62,7 @@ async function getConfStrict(key) {
   if (env !== undefined && env !== "") return env;
   const conf = await _load();
   if (_failed) throw new Error("settings could not be read");
-  return conf[key];
+  return open(conf[key]);
 }
 
 // Merge a patch into self_host_config (the wizard's write path; webapp only in
@@ -69,7 +77,7 @@ async function setConf(patch) {
   const confSet = {}, confUnset = [];
   for (const [k, v] of Object.entries(patch)) {
     if (v === null || v === undefined) confUnset.push(k);
-    else confSet[k] = v;
+    else confSet[k] = SECRET_NAME.test(k) && typeof v === "string" && v ? encryptString(v) : v;
   }
   const settings = await require("./settings-patch").patchSettings(supabase, getAdminUserId(), { confSet, confUnset });
   const conf = settings.self_host_config || {};
@@ -93,7 +101,19 @@ function getConfCached(key) {
     _refresher = setInterval(() => { _cacheAt = 0; _load().catch(() => {}); }, 5000);
     if (_refresher.unref) _refresher.unref();
   }
-  return _cache ? _cache[key] : undefined;
+  return _cache ? open(_cache[key]) : undefined;
+}
+
+// Seal secrets saved before they were encrypted. Returns how many it sealed.
+async function sealStoredConf() {
+  const conf = await _load();
+  if (_failed) return 0;
+  const patch = {};
+  for (const [k, v] of Object.entries(conf)) {
+    if (SECRET_NAME.test(k) && typeof v === "string" && v && !v.startsWith("enc:v1:")) patch[k] = v;
+  }
+  if (Object.keys(patch).length) await setConf(patch);
+  return Object.keys(patch).length;
 }
 
 // Outbound chat links need an HTTPS address reachable off this computer.
@@ -116,4 +136,4 @@ async function dashboardBase() {
   return null;
 }
 
-module.exports = { getConf, getConfStrict, setConf, invalidateConf, getConfCached, dashboardBase };
+module.exports = { getConf, getConfStrict, setConf, invalidateConf, getConfCached, dashboardBase, sealStoredConf };
