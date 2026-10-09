@@ -587,16 +587,34 @@ app.get("/login", (req, res) => {
 // machine only ever reached from localhost this changes nothing; once the
 // dashboard is reachable from a phone it is what stands between a guessed
 // address and a guessed password.
+// Every way of trying the password shares the count: this form, the wallet
+// confirmation and Basic auth on the API.
 const _loginFails = new Map(); // ip -> { n, until }
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
+const isLoopback = (a) => a === "127.0.0.1" || a === "::1" || a === "::ffff:127.0.0.1";
+// cloudflared runs beside the dashboard and connects from this computer, so
+// Cloudflare's header naming who is asking is believed only then. Anyone
+// reaching the dashboard directly could write that header themselves and get
+// a fresh five tries with every made-up address.
 function clientIp(req) {
-  return req.headers["cf-connecting-ip"] || req.ip || (req.socket && req.socket.remoteAddress) || "?";
+  const peer = (req.socket && req.socket.remoteAddress) || "?";
+  const cf = req.headers["cf-connecting-ip"];
+  return cf && isLoopback(peer) ? String(cf) : peer;
+}
+function lockedOut(ip) {
+  const rec = _loginFails.get(ip);
+  return !!rec && rec.until > Date.now();
+}
+function noteWrongPassword(ip) {
+  const rec = _loginFails.get(ip) || { n: 0, until: 0 };
+  rec.n += 1;
+  if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
+  _loginFails.set(ip, rec);
 }
 app.post("/api/login", async (req, res) => {
   try {
     const ip = clientIp(req);
-    const rec = _loginFails.get(ip) || { n: 0, until: 0 };
-    if (rec.until > Date.now()) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (await checkDashboardPassword((req.body || {}).password)) {
       _loginFails.delete(ip);
       try {
@@ -607,9 +625,7 @@ app.post("/api/login", async (req, res) => {
       }
       return res.json({ success: true });
     }
-    rec.n += 1;
-    if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
-    _loginFails.set(ip, rec);
+    noteWrongPassword(ip);
     await new Promise((r) => setTimeout(r, 400)); // slow brute force a little
     return res.status(403).json({ error: "Wrong password" });
   } catch (e) {
@@ -662,12 +678,9 @@ app.post("/api/wallet/confirm", async (req, res) => {
   try {
     // The same five tries and fifteen-minute lockout as signing in.
     const ip = clientIp(req);
-    const rec = _loginFails.get(ip) || { n: 0, until: 0 };
-    if (rec.until > Date.now()) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     if (!(await checkDashboardPassword(String((req.body || {}).password || "")))) {
-      rec.n += 1;
-      if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
-      _loginFails.set(ip, rec);
+      noteWrongPassword(ip);
       await new Promise((r) => setTimeout(r, 400));
       return res.status(403).json({ error: "That password is not right." });
     }
@@ -1441,8 +1454,16 @@ app.use(async (req, res, next) => {
     if (req.method === "POST" && SIGNED_BY_BRIDGE.has(req.path)) return next();
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
     if (scheme === "Basic" && encoded) {
+      // Scripts may send the password with each request, under the same
+      // five tries as the sign-in form; without that this was a way round it.
+      const ip = clientIp(req);
+      if (lockedOut(ip)) return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
       const pass = Buffer.from(encoded, "base64").toString().split(":").slice(1).join(":");
-      if (await checkDashboardPassword(pass)) return next();
+      if (await checkDashboardPassword(pass)) {
+        _loginFails.delete(ip);
+        return next();
+      }
+      noteWrongPassword(ip);
     }
     if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Login required" });
     return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/"));

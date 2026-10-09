@@ -174,3 +174,31 @@ test('the dashboard starts, checks and ends sessions through this module', () =>
   assert.match(access, /Max-Age=2592000/, 'the cookie lasts 30 days, matching the session');
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'migrations/058_dashboard_sessions.sql')));
 });
+
+// The five-tries lockout covers every way of trying the password, and the
+// address it counts against can't be made up by whoever is asking.
+test("Cloudflare's address header is believed only from the tunnel on this computer", () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const src = server.slice(server.indexOf('const isLoopback = '), server.indexOf('function lockedOut('));
+  const clientIp = new Function(src + '; return clientIp;')();
+  const req = (peer, cf) => ({ socket: { remoteAddress: peer }, headers: cf ? { 'cf-connecting-ip': cf } : {} });
+  assert.equal(clientIp(req('::1', '203.0.113.9')), '203.0.113.9', 'through the tunnel');
+  assert.equal(clientIp(req('127.0.0.1', '203.0.113.9')), '203.0.113.9');
+  assert.equal(clientIp(req('::ffff:127.0.0.1', '203.0.113.9')), '203.0.113.9');
+  assert.equal(clientIp(req('172.18.0.1', '203.0.113.9')), '172.18.0.1', 'reached directly: the header is ignored');
+  assert.equal(clientIp(req('192.168.1.20', '1.2.3.4')), '192.168.1.20');
+  assert.equal(clientIp(req('::1')), '::1');
+});
+
+test('the sign-in form, the wallet check and Basic auth share one count of wrong passwords', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  const login = server.slice(server.indexOf('app.post("/api/login"'), server.indexOf('// --- Reach the dashboard from your phone'));
+  const wallet = server.slice(server.indexOf('app.post("/api/wallet/confirm"'), server.indexOf('function walletAvailable()'));
+  const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));
+  for (const [name, part] of [['sign-in', login], ['wallet', wallet], ['Basic auth', gate]]) {
+    assert.match(part, /if \(lockedOut\(ip\)\) return res\.status\(429\)/, name);
+    assert.match(part, /noteWrongPassword\(ip\);/, name);
+    assert.doesNotMatch(part, /rec\.n \+= 1/, name + ' keeps no count of its own');
+  }
+  assert.ok(gate.indexOf('lockedOut(ip)') < gate.indexOf('checkDashboardPassword(pass)'), 'a locked-out address is refused before its password is checked');
+});
