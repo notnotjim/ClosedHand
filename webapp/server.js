@@ -1501,7 +1501,7 @@ const _usedTelegramProofs = new Map(); // sha256 of a proof -> when it would exp
 // Only pages Closedhand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
-  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[\w.~%-]+|dashboard)([?#][\w.~%&=+\/:,@-]*)?$/.test(path) ? path : "/";
+  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[\w.~%-]+|dashboard)([?#][\w.~%&=+\/:,@?#-]*)?$/.test(path) ? path : "/";
 }
 // A value written into an inline <script>. JSON alone leaves "</script>" able
 // to end the script early and start one of the caller's own.

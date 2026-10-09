@@ -124,6 +124,7 @@ test('a link opened through Telegram cannot end the page script and run its own'
   assert.equal(telegramTarget('/dashboard?</script><script>alert(1)</script>'), '/');
   assert.equal(telegramTarget('/dashboard#"onload=x'), '/');
   assert.equal(telegramTarget('/dashboard#agents'), '/dashboard#agents');
+  assert.equal(telegramTarget('/dashboard?tab=pages#recent'), '/dashboard?tab=pages#recent');
   assert.equal(telegramTarget('/page/0b8f2c1e-6d1a-4c55-9a3e-2f1d4b7c9e10'), '/page/0b8f2c1e-6d1a-4c55-9a3e-2f1d4b7c9e10');
   const written = scriptJson('</script><script>alert(1)</script>\u2028&');
   assert.doesNotMatch(written, /<|>|&|\u2028/);
@@ -144,4 +145,5 @@ test('a search reaches the Google command-line tool as data, never through a she
   }
   const { gwsCommand } = require('../lib/services/gws');
   await assert.rejects(gwsCommand("gmail users messages list --params '{}'"), /list of strings/);
+  assert.match(gws, /throw new Error\(`gws \$\{args\.slice\(0, 3\)\.join\(" "\)\} failed/, 'a failure names the command, never the search');
 });
