@@ -1650,8 +1650,8 @@ setInterval(() => {
   for (const [k, v] of _uploadTokens) { if (now > v.expires) _uploadTokens.delete(k); }
 }, 300000);
 
-// An MCP server's address can carry its key in the path or query, so logs
-// name only its host.
+// An address (an MCP server's, a skill's) can carry a key in the path or
+// query, so logs name only its host.
 function mcpHost(url) {
   try { return new URL(String(url)).host || "(no host)"; } catch (_) { return "(address)"; }
 }
@@ -5409,7 +5409,7 @@ app.post("/api/skills/install", async (req, res) => {
 
     // AI security scan
     const scan = await scanSkillContent(content, await scanModelFor(userId));
-    console.log(`[security-scan] Skill "${name}" from ${url}: ${scan.risk_level} - ${scan.summary}`);
+    console.log(`[security-scan] Skill "${name}" from ${mcpHost(url)}: ${scan.risk_level} - ${scan.summary}`);
 
     if (scan.risk_level === "blocked") {
       return res.json({ blocked: true, scan });
@@ -8702,7 +8702,7 @@ app.post("/api/bridge/request", async (req, res) => {
       await new Promise(r => setTimeout(r, 5000));
       ws = bridgeConnections.get("user:" + userId);
       if (!ws || ws.readyState !== 1) {
-        console.log(`[Bridge] Still no WebSocket after retry. Keys: ${[...bridgeConnections.keys()].join(", ")}`);
+        console.log(`[Bridge] Still no WebSocket after retry. Connected: ${[...bridgeConnections.keys()].map(bridgeKeyForLog).join(", ") || "none"}`);
         return res.status(404).json({ error: "Bridge not connected" });
       }
       console.log(`[Bridge] WebSocket reconnected after retry for user ${userId}`);
@@ -9033,6 +9033,9 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
 // WebSocket server for Bridge app connections
 const { WebSocketServer } = require("ws");
 const bridgeConnections = new Map(); // "user:<id>" -> ws, or "<CODE>" -> ws
+// A log line names a Mac by its user, never by its pairing code: whoever
+// reads the code could pair a Mac of their own in its place.
+const bridgeKeyForLog = (key) => (key.startsWith("user:") ? key : "a Mac waiting to pair");
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -9041,12 +9044,12 @@ const wss = new WebSocketServer({ noServer: true });
 setInterval(() => {
   for (const [key, ws] of bridgeConnections) {
     if (ws.readyState !== 1) {
-      console.log(`[Bridge] Ping cleanup: removing dead connection key=${key}, readyState=${ws.readyState}`);
+      console.log(`[Bridge] Ping cleanup: removing dead connection for ${bridgeKeyForLog(key)}, readyState=${ws.readyState}`);
       bridgeConnections.delete(key);
       continue;
     }
     if (!ws.isAlive) {
-      console.log(`[Bridge] Ping timeout: no pong received for key=${key}, terminating`);
+      console.log(`[Bridge] Ping timeout: no pong received for ${bridgeKeyForLog(key)}, terminating`);
       bridgeConnections.delete(key);
       ws.terminate();
       continue;
@@ -9064,8 +9067,9 @@ wss.on("connection", (ws) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "pair" && msg.code) {
-        // Bridge app registering its pairing code
-        console.log(`[Bridge] Pairing code registered: ${msg.code.toUpperCase()}`);
+        // Bridge app registering its pairing code. The code is good for as
+        // long as this connection stays open, and never goes in the log.
+        console.log("[Bridge] A Mac offered a pairing code; it works until that Mac disconnects");
         bridgeConnections.set(msg.code.toUpperCase(), ws);
         ws.bridgeCode = msg.code.toUpperCase();
         ws.send(JSON.stringify({ type: "waiting" }));
@@ -9139,7 +9143,7 @@ wss.on("connection", (ws) => {
     } catch (e) { console.error("[Bridge] WS message error:", e.message); }
   });
   ws.on("close", (code, reason) => {
-    console.log(`[Bridge] WebSocket closed: code=${code}, userId=${ws.bridgeUserId || "none"}, pairingCode=${ws.bridgeCode || "none"}`);
+    console.log(`[Bridge] WebSocket closed: code=${code}, userId=${ws.bridgeUserId || "none"}${ws.bridgeCode ? ", was waiting to pair" : ""}`);
     if (ws.bridgeCode) bridgeConnections.delete(ws.bridgeCode);
     // Only remove user entry if this ws is still the current one (prevents race condition on reconnect)
     if (ws.bridgeUserId && bridgeConnections.get("user:" + ws.bridgeUserId) === ws) {
