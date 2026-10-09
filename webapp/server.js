@@ -5,9 +5,11 @@
 
 require("dotenv").config();
 
-// Fail fast in production if OAuth token encryption isn't configured.
-// (dev/test still allowed to run without a key for local convenience.)
+// Stop at boot without a valid encryption key or with a missing or placeholder
+// shared secret, rather than store sign-ins unencrypted or accept forged
+// web chat tickets.
 require("./crypto-tokens").assertReady();
+require("./required-secrets").requireSecret("WS_AUTH_SECRET");
 
 const express = require("express");
 const http = require("http");
@@ -5834,7 +5836,7 @@ const mailQuery = (source, id) => `source=${encodeURIComponent(source)}&id=${enc
 function botToken(userId) {
   const exp = Date.now() + 60000;
   const payload = `${userId}.${exp}`;
-  const sig = crypto.createHmac("sha256", process.env.WS_AUTH_SECRET || "fallback-dev-secret").update(payload).digest("hex");
+  const sig = crypto.createHmac("sha256", process.env.WS_AUTH_SECRET).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
 async function askBot(userId, path) {
@@ -7306,7 +7308,7 @@ function staticSandbox() {
   if (!url) return null;
   let u;
   try { u = new URL(url.includes("://") ? url : `http://${url}`); } catch (_) { return null; }
-  return { hostname: u.hostname, port: Number(u.port) || 8080, token: process.env.SANDBOX_TOKEN || "change-me-sandbox-token", volume_size_mb: process.env.WORKSPACE_VM ? 16384 : 0, static: true };
+  return { hostname: u.hostname, port: Number(u.port) || 8080, token: process.env.SANDBOX_TOKEN || "", volume_size_mb: process.env.WORKSPACE_VM ? 16384 : 0, static: true };
 }
 
 async function getSandboxInfo(userId) {
@@ -9237,10 +9239,18 @@ server.on("upgrade", (req, socket, head) => {
   const url = new URL(req.url, "http://localhost");
 
   if (url.pathname === "/chat") {
-    require("./chat-proxy").proxyChatUpgrade(req, socket, head, {
-      upstream: process.env.BOT_INTERNAL_URL || process.env.BOT_WS_URL,
-      secret: process.env.WS_AUTH_SECRET || "fallback-dev-secret",
-    });
+    // The ticket says the dashboard handed it out; the session says this
+    // browser is still signed in. A ticket alone is not enough.
+    (async () => {
+      if ((await passwordConfigured()) && !(await hasAdminSession(req))) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        return socket.destroy();
+      }
+      require("./chat-proxy").proxyChatUpgrade(req, socket, head, {
+        upstream: process.env.BOT_INTERNAL_URL || process.env.BOT_WS_URL,
+        secret: process.env.WS_AUTH_SECRET,
+      });
+    })().catch(() => socket.destroy());
     return;
   }
 

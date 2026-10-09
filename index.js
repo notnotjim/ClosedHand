@@ -4,9 +4,11 @@
 
 require("dotenv").config();
 
-// Fail fast in production if OAuth token encryption isn't configured.
-// (dev/test still allowed to run without a key for local convenience.)
+// Stop at boot without a valid encryption key or with a missing or placeholder
+// shared secret, rather than store sign-ins unencrypted or accept forged
+// web chat tickets.
 require("./crypto-tokens").assertReady();
+require("./lib/required-secrets").requireSecret("WS_AUTH_SECRET");
 
 // Prevent unhandled rejections from crashing the process
 process.on("unhandledRejection", (reason, promise) => {

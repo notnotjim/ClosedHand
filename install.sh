@@ -510,6 +510,7 @@ step 20 "Code ready"
 # Never regenerate: POSTGRES_PASSWORD must keep matching the existing data
 # volume, and rotating WS/sandbox secrets on re-run would break a live stack.
 if [ -f .env ]; then
+  chmod 600 .env  # earlier installs left it readable by every account here
   step 28 "Keeping your settings"
 else
   cp .env.example .env
@@ -533,9 +534,12 @@ else
   setkey WS_AUTH_SECRET "$(rand)"
   setkey SANDBOX_TOKEN "$(rand)"
   setkey COOKIE_SECRET "$(rand)"
-  setkey TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 2>/dev/null || rand)"
+  # Exactly 32 random bytes, base64: ClosedHand refuses to start without a
+  # valid key rather than store sign-ins unencrypted.
+  setkey TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -d '\n')"
   # No ADMIN_PASSWORD here: you choose the dashboard password inside the setup
   # wizard, where you'll actually remember it.
+  chmod 600 .env  # it holds the database password and the encryption key
   step 28 "Settings ready"
 fi
 

@@ -16,10 +16,10 @@
 //   TOKEN_ENCRYPTION_KEY_OLD  — optional previous key, used only for decrypt
 //                                fallback during rotation
 //
-// Missing-key behaviour:
-//   NODE_ENV=production and no valid key → assertReady() throws at boot.
-//   Otherwise (dev/test/unset) → warn once, encrypt no-ops (returns plaintext).
-//   The write path is safe either way: boot aborts before writes can happen.
+// Missing-key behaviour: with no valid key, assertReady() throws at boot and
+// encryptString throws, so a token is never written in plain text. Both
+// installers (install.sh, the Mac app) generate a key; until 2026-10 a
+// missing key only warned unless NODE_ENV=production, which nothing set.
 //
 // Reads: if a value starts with "enc:v1:" decrypt is attempted with current
 // key, then with old key. Values without the prefix are treated as legacy
@@ -64,24 +64,21 @@ function _resolveKeys() {
   _old = _loadKey("TOKEN_ENCRYPTION_KEY_OLD");
   _resolved = true;
   if (!_current && !_warned) {
-    console.warn("[crypto-tokens] TOKEN_ENCRYPTION_KEY not set — tokens stored in plaintext (dev only). Generate one: openssl rand -base64 32");
+    console.error("[crypto-tokens] TOKEN_ENCRYPTION_KEY is missing or not 32 bytes. Add one to .env: openssl rand -base64 32");
     _warned = true;
   }
 }
 
 /**
- * Startup gate. Call this at boot of every service that touches tokens.
- * In production, throws if the encryption key is missing so the process
- * aborts before any plaintext write can happen. In dev, prints a warning
- * and returns, allowing local work without a key.
+ * Startup gate. Call this at boot of every service that touches tokens: with
+ * no valid key the process stops before anything could be stored unencrypted.
  */
 function assertReady() {
   _resolveKeys();
-  if (!_current && process.env.NODE_ENV === "production") {
+  if (!_current) {
     throw new Error(
-      "[crypto-tokens] TOKEN_ENCRYPTION_KEY is required in production. " +
-      "Refusing to start — writing OAuth tokens in plaintext is not allowed. " +
-      "Set the env var to a base64-encoded 32-byte key on this service."
+      "[crypto-tokens] TOKEN_ENCRYPTION_KEY is required and must be a base64-encoded 32-byte key. " +
+      "Refusing to start rather than store sign-ins unencrypted. Add one to .env (openssl rand -base64 32) and start again."
     );
   }
 }
@@ -90,12 +87,7 @@ function encryptString(plaintext) {
   if (typeof plaintext !== "string" || !plaintext) return plaintext;
   if (plaintext.startsWith(PREFIX)) return plaintext; // idempotent
   _resolveKeys();
-  if (!_current) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("[crypto-tokens] Cannot encrypt: TOKEN_ENCRYPTION_KEY missing in production");
-    }
-    return plaintext; // dev fallback
-  }
+  if (!_current) throw new Error("[crypto-tokens] Cannot encrypt: TOKEN_ENCRYPTION_KEY is missing or invalid");
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALG, _current, iv);
   const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
@@ -107,7 +99,7 @@ function _tryDecrypt(buf, key) {
   const iv = buf.slice(0, 12);
   const tag = buf.slice(12, 28);
   const ct = buf.slice(28);
-  const decipher = crypto.createDecipheriv(ALG, key, iv);
+  const decipher = crypto.createDecipheriv(ALG, key, iv, { authTagLength: 16 });
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
 }

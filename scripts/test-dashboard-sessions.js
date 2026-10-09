@@ -169,7 +169,10 @@ test('the dashboard starts, checks and ends sessions through this module', () =>
   assert.match(setPw, /await dashboardSessions\.endAll\(\);\n\s*await startAdminSession\(req, res\);/);
   const login = server.slice(server.indexOf('app.post("/api/login"'), server.indexOf('// --- Reach the dashboard from your phone'));
   assert.match(login, /await startAdminSession\(req, res\);/);
-  assert.equal((server.match(/hasAdminSession\(req\)/g) || []).length, 0, 'every check awaits the session and can refresh its cookie');
+  const calls = server.replace('async function hasAdminSession(req, res)', '').match(/(await )?hasAdminSession\(req[^)]*\)/g) || [];
+  assert.ok(calls.length >= 5);
+  for (const c of calls) assert.match(c, /^await /, 'every check awaits the session: ' + c);
+  assert.equal(calls.filter((c) => c === 'await hasAdminSession(req)').length, 1, 'only the socket upgrade, which has no response, skips refreshing the cookie');
   const access = fs.readFileSync(path.join(__dirname, '..', 'webapp/browser-access.js'), 'utf8');
   assert.match(access, /Max-Age=2592000/, 'the cookie lasts 30 days, matching the session');
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'migrations/058_dashboard_sessions.sql')));

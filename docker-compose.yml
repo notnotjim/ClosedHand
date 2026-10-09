@@ -15,7 +15,7 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}
       POSTGRES_DB: ${POSTGRES_DB:-closedhand}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -36,11 +36,11 @@ services:
     env_file: [.env]
     environment:
       DB_DRIVER: pg
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-closedhand}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}@db:5432/${POSTGRES_DB:-closedhand}
       STORAGE_DIR: /data/storage
-      WS_AUTH_SECRET: ${WS_AUTH_SECRET:-change-me-dev-secret}
+      WS_AUTH_SECRET: ${WS_AUTH_SECRET:?WS_AUTH_SECRET is missing from .env; install.sh generates it}
       SANDBOX_URL: http://sandbox:8080
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "3000"
     ports:
       - "127.0.0.1:${BOT_PORT:-3001}:3000" # bot service and health endpoint, this computer only
@@ -66,13 +66,13 @@ services:
     env_file: [.env]
     environment:
       DB_DRIVER: pg
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-closedhand}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}@db:5432/${POSTGRES_DB:-closedhand}
       STORAGE_DIR: /data/storage
-      WS_AUTH_SECRET: ${WS_AUTH_SECRET:-change-me-dev-secret}
+      WS_AUTH_SECRET: ${WS_AUTH_SECRET:?WS_AUTH_SECRET is missing from .env; install.sh generates it}
       BASE_URL: ${BASE_URL:-http://localhost:3000}
       BOT_INTERNAL_URL: http://bot:3000
       SANDBOX_URL: http://sandbox:8080 # the Computers tab shows this box's browser and files
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "3000"
     ports:
       - "127.0.0.1:${WEBAPP_PORT:-3000}:3000"
@@ -93,7 +93,7 @@ services:
   sandbox:
     image: ghcr.io/notnotjim/closedhand-sandbox:latest
     environment:
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-me-sandbox-token}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "8080"
       GATEWAY_URL: http://bot:3000
       USER_ID: admin

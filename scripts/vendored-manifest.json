@@ -1,9 +1,10 @@
 {
-  "assistant-email-protocol": "61f210e94eba2df6",
+  "assistant-email-protocol": "9b78f3348ab11ec4",
   "goals-time": "6a9f58e1f74ff9c8",
   "name-guess": "8624abc0cd206bcd",
   "settings-patch": "a20d7d9ac1d43a0d",
   "config": "9ed0a1fd008581ad",
+  "required-secrets": "284e2fdf6527b705",
   "db-driver-pg": "951c78403eeec4d6",
   "recall-settings": "69d4a9b8f9049041",
   "model-policy": "62a388c0b5c58101",
@@ -15,7 +16,7 @@
   "fact-vectors": "a43405b9c6a0900e",
   "doc-search": "a16b870d429cde91",
   "mcp-client": "0605de51be5443ff",
-  "crypto-tokens": "ca68f85b1197424d",
+  "crypto-tokens": "91542f972fc69427",
   "microsoft-app": "cf74e772fe8447b7",
   "google-app": "9ce251ee5d58f46b"
 }

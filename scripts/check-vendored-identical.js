@@ -32,6 +32,7 @@ const PAIRS = [
   { name: "name-guess", copies: ["lib/name-guess.js", "webapp/name-guess.js"] },
   { name: "settings-patch", copies: ["lib/settings-patch.js", "webapp/settings-patch.js"] },
   { name: "config", copies: ["lib/config.js", "webapp/config.js"] },
+  { name: "required-secrets", copies: ["lib/required-secrets.js", "webapp/required-secrets.js"] },
   { name: "db-driver-pg", copies: ["lib/db-driver-pg.js", "webapp/db-driver-pg.js", "closedhand-com/lib/db-driver-pg.js"] },
   { name: "recall-settings", copies: ["lib/services/recall-settings.js", "webapp/recall-settings.js"] },
   { name: "model-policy", copies: ["lib/model-policy.js", "webapp/model-policy.js"] },
