@@ -7307,7 +7307,7 @@ app.get("/api/rag/search", async (req, res) => {
 
   try {
     const found = await _docSearch.searchDocuments(userId, query);
-    if (found.error) return res.status(500).json({ error: found.error });
+    if (found.error) { console.error("RAG search error:", found.error); return res.status(503).json({ error: "File Search isn't available right now. Try again in a minute." }); }
     res.json({ results: found.results, no_strong_matches: found.no_strong_matches });
   } catch (err) {
     console.error("RAG search error:", err.message);

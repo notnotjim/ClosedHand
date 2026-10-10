@@ -150,6 +150,7 @@ test('a search reaches the Google command-line tool as data, never through a she
 
 test('a failure inside this computer reaches the browser as a plain sentence, never a 502 or the system text', () => {
   assert.doesNotMatch(server, /status\((502|504)\)/, 'Cloudflare swaps a 502 or 504 for its own page and drops the headers');
+  assert.doesNotMatch(server, /res\.status\(500\)\.json\(\{ error: found\.error \}\)/, 'File Search failures are logged, not sent');
   const src = server.slice(server.indexOf('const SYSTEM_ERROR ='), server.indexOf('app.use("/novnc"'));
   const app = { mw: [], use(p, f) { this.mw.push(f); } };
   new Function('app', src)(app);
