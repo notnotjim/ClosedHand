@@ -147,3 +147,27 @@ test('a search reaches the Google command-line tool as data, never through a she
   await assert.rejects(gwsCommand("gmail users messages list --params '{}'"), /list of strings/);
   assert.match(gws, /throw new Error\(`gws \$\{args\.slice\(0, 3\)\.join\(" "\)\} failed/, 'a failure names the command, never the search');
 });
+
+test('a failure inside this computer reaches the browser as a plain sentence, never a 502 or the system text', () => {
+  assert.doesNotMatch(server, /status\((502|504)\)/, 'Cloudflare swaps a 502 or 504 for its own page and drops the headers');
+  const src = server.slice(server.indexOf('const SYSTEM_ERROR ='), server.indexOf('app.use("/novnc"'));
+  const app = { mw: [], use(p, f) { this.mw.push(f); } };
+  new Function('app', src)(app);
+  const run = (path, query, status, body) => {
+    let sent = null, code = status;
+    const res = { get statusCode() { return code; }, status(c) { code = c; return this; }, json(b) { sent = b; return this; } };
+    const saved = console.error; console.error = () => {};
+    try { app.mw[0]({ method: 'GET', path, query }, res, () => {}); res.json(body); } finally { console.error = saved; }
+    return { code, sent };
+  };
+  const sandbox = run('/sandbox/search', {}, 500, { error: 'getaddrinfo ENOTFOUND sandbox.railway.internal' });
+  assert.equal(sandbox.code, 503);
+  assert.equal(sandbox.sent.error, "Closedhand's sandbox computer isn't running.");
+  const other = run('/llm/models', {}, 500, { error: 'connect ECONNREFUSED 10.0.0.5:443' });
+  assert.equal(other.code, 503);
+  assert.doesNotMatch(other.sent.error, /ECONNREFUSED|10\.0\.0\.5/);
+  const own = run('/phone', {}, 500, { error: 'Your personal URL could not be verified.' });
+  assert.deepEqual(own, { code: 500, sent: { error: 'Your personal URL could not be verified.' } });
+  const fine = run('/status', {}, 200, { ok: true });
+  assert.deepEqual(fine, { code: 200, sent: { ok: true } });
+});

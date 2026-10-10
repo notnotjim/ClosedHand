@@ -48,6 +48,28 @@ app.use("/api", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
+// A failure inside this computer reaches the browser as a plain sentence,
+// never as the system's own text ("getaddrinfo ENOTFOUND sandbox..."), which
+// names internal hosts. The full text goes to the log. The status is 503:
+// Cloudflare replaces a 502 or 504 with its own page, dropping these headers.
+const SYSTEM_ERROR = /\b(getaddrinfo|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|EHOSTUNREACH|socket hang up|fetch failed)\b/;
+function unreachableMessage(req) {
+  return req.path.startsWith("/sandbox") || (req.path.startsWith("/rag/browse") && req.query.origin === "cloud")
+    ? "Closedhand's sandbox computer isn't running."
+    : "Part of Closedhand isn't reachable right now. Try again in a minute.";
+}
+app.use("/api", (req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => {
+    if (res.statusCode >= 500 && body && typeof body.error === "string" && SYSTEM_ERROR.test(body.error)) {
+      console.error(`[api] ${req.method} ${req.path}: ${body.error}`);
+      res.status(503);
+      return json({ error: unreachableMessage(req) });
+    }
+    return json(body);
+  };
+  next();
+});
 app.use("/novnc", express.static(path.join(__dirname, "public", "novnc")));
 
 // Local-storage public route: serves ONLY the `logos` bucket (rendered in the
@@ -1481,7 +1503,7 @@ for (const hook of ["line"]) {
       const ct = r.headers.get("content-type"); if (ct) res.set("content-type", ct);
       res.send(Buffer.from(await r.arrayBuffer()));
     } catch (e) {
-      res.status(502).send("Closedhand is not reachable");
+      res.status(503).send("Closedhand is not reachable");
     }
   });
 }
@@ -6010,7 +6032,7 @@ app.get("/api/mail/attachment", async (req, res) => {
     res.send(body);
   } catch (e) {
     console.error("[mail] attachment error:", e.message);
-    res.status(502).json({ error: "Could not open that file. Try again." });
+    res.status(503).json({ error: "Could not open that file. Try again." });
   }
 });
 
@@ -8140,7 +8162,7 @@ app.post("/api/sandbox/copy-to-local", async (req, res) => {
       body: JSON.stringify({ userId, action: "files.write", params: { path: destPath, content, encoding: fileData.encoding || "base64" }, secret: process.env.BRIDGE_RELAY_SECRET || process.env.COOKIE_SECRET || "" }),
     });
     const bridgeData = await bridgeResp.json();
-    if (!bridgeResp.ok) return res.status(502).json({ error: bridgeData.error || "Bridge write failed" });
+    if (!bridgeResp.ok) return res.status(503).json({ error: bridgeData.error || "Bridge write failed" });
     res.json({ success: true });
   } catch (err) {
     console.error("Copy to local error:", err.message);
@@ -8164,7 +8186,7 @@ app.get("/api/bridge/files", async (req, res) => {
     // Find the WS and send request directly using the bridge request handler logic
     const ws = bridgeConnections.get("user:" + userId);
     if (!ws || ws.readyState !== 1) {
-      return res.status(502).json({ error: "Bridge offline" });
+      return res.status(503).json({ error: "Bridge offline" });
     }
     // Try files.list first, fall back to shell.run ls for completeness
     let files = [];
@@ -8209,7 +8231,7 @@ app.get("/api/bridge/files", async (req, res) => {
     res.json({ files });
   } catch (err) {
     console.log(`[Bridge/files] Error for userId: ${err.message}`);
-    res.status(502).json({ error: "Bridge offline" });
+    res.status(503).json({ error: "Bridge offline" });
   }
 });
 
@@ -8221,7 +8243,7 @@ app.get("/api/bridge/search", async (req, res) => {
   const safe = raw.replace(/[^\w.\- ]/g, "").slice(0, 80);
   if (!safe) return res.json({ files: [] });
   const ws = bridgeConnections.get("user:" + userId);
-  if (!ws || ws.readyState !== 1) return res.status(502).json({ error: "Bridge offline" });
+  if (!ws || ws.readyState !== 1) return res.status(503).json({ error: "Bridge offline" });
   // Normalize requested path (must be ~ or ~/subpath). Reject anything else.
   const rawPath = (req.query.path || "~").trim();
   const rel = rawPath.replace(/^~\/?/, "").replace(/\.\./g, "");
@@ -8262,7 +8284,7 @@ app.get("/api/bridge/search", async (req, res) => {
     res.json({ files });
   } catch (err) {
     console.log(`[Bridge/search] Error: ${err.message}`);
-    res.status(502).json({ error: "Bridge offline" });
+    res.status(503).json({ error: "Bridge offline" });
   }
 });
 
@@ -8315,7 +8337,7 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
     res.send(buffer);
   } catch (e) {
     console.log(`[Bridge/thumb] Failed for ${filePath}: ${e.message}`);
-    res.status(502).end();
+    res.status(503).end();
   }
 });
 
@@ -8456,7 +8478,7 @@ app.delete("/api/account", async (req, res) => {
   try { await require("./phone-registration").deleteAccount(); }
   catch (e) {
     if (req.query.anyway !== "1") {
-      return res.status(502).json({ accountUnreachable: true, error: "closedhand.com couldn’t be reached, so nothing was deleted. Try again, or delete anyway: everything on this computer goes now, and your personal URL is released after 90 days without a connection." });
+      return res.status(503).json({ accountUnreachable: true, error: "closedhand.com couldn’t be reached, so nothing was deleted. Try again, or delete anyway: everything on this computer goes now, and your personal URL is released after 90 days without a connection." });
     }
   }
   await phoneAccess.disable().catch(e => console.error("[Account delete] personal URL:", e.message));
