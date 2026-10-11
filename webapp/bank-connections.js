@@ -10,7 +10,7 @@ const feeds = require("./bank-feeds");
 const { encryptTokens } = require("./crypto-tokens");
 
 const SECRET = { simplefin: "access_url", lunchflow: "api_key" };
-const NO_ACCOUNTS = "Lunch Flow is sharing no accounts with Closedhand yet. Link a bank in Lunch Flow and switch it on under your API destination's Account access.";
+const NO_ACCOUNTS = "Lunch Flow is sharing no accounts with Closedhand yet. In Lunch Flow, link a bank under Connections, then switch its accounts on under Account Access in your REST API destination.";
 
 async function mustWrite(query, what) {
   const { error } = await query;
@@ -82,12 +82,12 @@ function register(app, { db, userId, feedOpts = {} }) {
 
   app.post("/api/bank/lunchflow", once("lunchflow", async (owner, req, res) => {
     const key = typeof (req.body && req.body.apiKey) === "string" ? req.body.apiKey.trim() : "";
-    if (!feeds.validLunchflowKey(key)) return res.status(400).json({ error: "Paste the API key from your Lunch Flow API destination." });
+    if (!feeds.validLunchflowKey(key)) return res.status(400).json({ error: "Paste the key Lunch Flow shows in your REST API destination." });
     let list;
     try { list = await feeds.lunchflowAccounts(key, feedOpts); }
     catch (e) {
       console.log(`[bank] Lunch Flow key check failed: ${outcome(e)}`);
-      if (e.kind === "auth") return res.status(400).json({ error: "Lunch Flow didn't accept that key. Copy it again from your API destination in Lunch Flow and paste it here." });
+      if (e.kind === "auth") return res.status(400).json({ error: "Lunch Flow didn't accept that key. Copy it again from your REST API destination under Destinations in Lunch Flow and paste it here." });
       if (e.kind === "rate") return res.status(429).json({ error: "Lunch Flow asked Closedhand to slow down. Try again in a few minutes." });
       if (e.kind === "payment") return res.status(400).json({ error: "Lunch Flow says your Lunch Flow subscription needs paying. Once it's paid, paste the key again." });
       return res.status(503).json({ error: "Couldn't reach Lunch Flow. Check the computer running Closedhand is online, then try again." });

@@ -3515,8 +3515,8 @@
     // A bank card: the accounts it reads with their latest balances, the
     // provider's own notices, and the way back when its access stopped.
     const BANK_CARDS = {
-      simplefin: { stopped: "SimpleFIN stopped accepting Closedhand's access, so your bank data isn't updating. Make a new Setup Token in SimpleFIN and paste it here.", button: "Paste a new Setup Token" },
-      lunchflow: { stopped: "Lunch Flow stopped accepting the key Closedhand uses, so your bank data isn't updating. Create a new key in Lunch Flow and paste it here.", button: "Paste a new key" },
+      simplefin: { stopped: "SimpleFIN stopped accepting Closedhand's access, so your bank data isn't updating. In SimpleFIN, make a new Setup Token under Apps, then paste it here.", button: "Paste a new Setup Token" },
+      lunchflow: { stopped: "Lunch Flow stopped accepting the key Closedhand uses, so your bank data isn't updating. In Lunch Flow, add a new REST API destination under Destinations, then paste its key here.", button: "Paste a new key" },
     };
     function bankDrawerHtml(c) {
       const m = c.metadata || {};
@@ -4213,7 +4213,7 @@
     // history, not mail.
     const BANK_DISCONNECT = {
       simplefin: "Closedhand will stop reading your bank data through SimpleFIN. To end SimpleFIN's own access too, remove Closedhand's app connection in SimpleFIN.",
-      lunchflow: "Closedhand will stop reading your bank data through Lunch Flow. To end it at Lunch Flow too, delete the API destination there.",
+      lunchflow: "Closedhand will stop reading your bank data through Lunch Flow. To end it at Lunch Flow too, delete the REST API destination under Destinations there.",
     };
     const BANK_PURGE = "Also delete the balances and transactions Closedhand kept from it. Leave this off to keep your bank history for when you reconnect.";
     async function disconnectFromSettings(service, name, isSignin) {

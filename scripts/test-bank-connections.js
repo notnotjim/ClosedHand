@@ -250,7 +250,7 @@ test("Lunch Flow: the key is checked by listing accounts, stored encrypted, and 
   const db = memoryDb(), call = webapp(db);
   const wrong = await capture(() => call("/api/bank/lunchflow", { apiKey: "lf-not-the-right-key" }));
   assert.equal(wrong.v.code, 400);
-  assert.equal(wrong.v.body.error, "Lunch Flow didn't accept that key. Copy it again from your API destination in Lunch Flow and paste it here.");
+  assert.equal(wrong.v.body.error, "Lunch Flow didn't accept that key. Copy it again from your REST API destination under Destinations in Lunch Flow and paste it here.");
   assert.equal(db.tables.connections.length, 0);
   assert.equal((await call("/api/bank/lunchflow", { apiKey: "  " })).code, 400);
   const { v: res, lines } = await capture(() => call("/api/bank/lunchflow", { apiKey: ` ${LF_KEY} ` }));
@@ -399,7 +399,7 @@ test("Lunch Flow sync: blank ids still dedupe, pending is replaced, a lost bank 
   assert.match(gymId, /^tx:101:h[0-9a-f]{16}$/, "a booked payment without an id is keyed by what it says");
   const conn = db.tables.connections[0];
   assert.deepEqual(conn.metadata.accounts.map((a) => [a.name, a.balance, a.status]), [["Everyday", 830.15, "ACTIVE"], ["Joint", 12, "DISCONNECTED"]]);
-  assert.deepEqual(state.told, ["Lunch Flow has lost its connection to Sample Building Society (Joint), so that account isn't updating. Reconnect it in Lunch Flow and Closedhand will pick it up again by itself."]);
+  assert.deepEqual(state.told, ["Lunch Flow has lost its connection to Sample Building Society (Joint), so that account isn't updating. Reconnect it under Connections in Lunch Flow and Closedhand will pick it up again by itself."]);
 
   lf.stage = 2;
   state.now = T0 + 7 * 3600e3;
@@ -541,8 +541,12 @@ test("the bank tiles open a short form that says who sees the data, then show th
   let setup = ids["catalogue-setup"];
   assert.match(setup.textContent, /goes from your bank through Lunch Flow to Closedhand on your computer and never to closedhand\.com/);
   assert.match(setup.textContent, /can only read it: it can’t move money/);
-  assert.match(setup.textContent, /switch on every account Closedhand should read/);
-  assert.equal(setup.all((e) => e.className === "catalogue-deep")[0].href, "https://www.lunchflow.app/destinations");
+  // Steps name the buttons Lunch Flow shows, so someone who has never heard of an API can follow them.
+  assert.match(setup.textContent, /click “Add Destination” and pick “REST API”/);
+  assert.match(setup.textContent, /under “Account Access”, switch on each account you want Closedhand to see/);
+  // Setup describes the service; it doesn't sell it.
+  assert.doesNotMatch(setup.textContent, /free trial|trial/i);
+  assert.equal(setup.all((e) => e.className === "catalogue-deep")[0].href, "https://www.lunchflow.app/");
 
   tiles.find((t) => /SimpleFIN/.test(t.textContent)).click();
   setup = ids["catalogue-setup"];
@@ -581,9 +585,9 @@ test("the dashboard card, the chat alert and the server wiring say what stopped 
   stub("../lib/dashboard-links", { dashboardUrl: async (p, section) => `https://fixture.example/dashboard#${section}` });
   const alert = require("../lib/connection-alert");
   assert.equal(await alert.tellOwner("u", { connections: {} }, "simplefin"), true);
-  assert.equal(sent[0][2], "SimpleFIN stopped accepting Closedhand's access to your bank data, so your balances and transactions are no longer updating. To fix it, make a new Setup Token in SimpleFIN and paste it on the dashboard: https://fixture.example/dashboard#connections");
+  assert.equal(sent[0][2], "SimpleFIN stopped accepting Closedhand's access to your bank data, so your balances and transactions are no longer updating. To fix it, make a new Setup Token under Apps in SimpleFIN and paste it on the dashboard: https://fixture.example/dashboard#connections");
   assert.equal(await alert.tellOwner("u", { connections: {} }, "lunchflow"), true);
-  assert.equal(sent[1][2], "Your Lunch Flow key stopped working, so your balances and transactions are no longer updating. To fix it, create a new key in Lunch Flow and paste it on the dashboard: https://fixture.example/dashboard#connections");
+  assert.equal(sent[1][2], "Your Lunch Flow key stopped working, so your balances and transactions are no longer updating. To fix it, add a new REST API destination under Destinations in Lunch Flow and paste its key on the dashboard: https://fixture.example/dashboard#connections");
   assert.equal(await alert.notify("u", {}, "Lunch Flow has lost its connection to Example Bank (Everyday)."), true);
   assert.equal(sent[2][2], "Lunch Flow has lost its connection to Example Bank (Everyday).");
 });

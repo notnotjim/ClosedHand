@@ -77,13 +77,13 @@
   const BANKS={
     simplefin:{
       intro:'SimpleFIN is a service you sign up to yourself, for about $15 a year paid to SimpleFIN. Your bank data goes from your bank through SimpleFIN to Closedhand on your computer and never to closedhand.com. Closedhand can only read it: it can’t move money or change anything at your bank.',
-      steps:['Open SimpleFIN, sign up and link your US bank there.','Create a Setup Token in SimpleFIN and copy it.','Paste it below. A Setup Token works once: Closedhand swaps it straight away for its own access, kept encrypted on the computer running Closedhand.'],
+      steps:['Open SimpleFIN, click “Get Started” and enter your email. Sign in with the link SimpleFIN emails you.','Under “Financial Institutions”, click “New Connection” and link your US bank. SimpleFIN asks you to subscribe before the first one.','Under “Apps”, click “New Connection”, name it Closedhand and click “Create Setup Token”. Copy the token it shows.','Paste it below. A Setup Token works once: Closedhand swaps it straight away for its own access, kept encrypted on the computer running Closedhand.'],
       link:'https://bridge.simplefin.org/simplefin/create',linkText:'Open SimpleFIN',label:'Setup Token',field:'setupToken',url:'/api/bank/simplefin',
     },
     lunchflow:{
-      intro:'Lunch Flow is a paid service you sign up to yourself and pay directly, with a 7-day free trial. Your bank data goes from your bank through Lunch Flow to Closedhand on your computer and never to closedhand.com. Closedhand can only read it: it can’t move money or change anything at your bank.',
-      steps:['Open Lunch Flow, sign up and link your UK or EU banks there.','Under Destinations, add a REST API destination and copy the API key it shows.','In that destination’s Account access, switch on every account Closedhand should read.','Paste the key below. Closedhand keeps it encrypted on the computer running Closedhand.'],
-      link:'https://www.lunchflow.app/destinations',linkText:'Open Lunch Flow',label:'API key',field:'apiKey',url:'/api/bank/lunchflow',
+      intro:'Lunch Flow is a paid service you sign up to yourself and pay directly. Your bank data goes from your bank through Lunch Flow to Closedhand on your computer and never to closedhand.com. Closedhand can only read it: it can’t move money or change anything at your bank.',
+      steps:['Open Lunch Flow and sign up.','Go to “Connections”, click “+ New Connection”, find your bank and approve it at your bank. Do this for each UK or EU bank you want.','Go to “Destinations”, click “Add Destination” and pick “REST API”, the option for apps like Closedhand. Copy the key Lunch Flow shows you.','On that same page, under “Account Access”, switch on each account you want Closedhand to see.','Paste the key below. Closedhand keeps it encrypted on the computer running Closedhand.'],
+      link:'https://www.lunchflow.app/',linkText:'Open Lunch Flow',label:'API key',field:'apiKey',url:'/api/bank/lunchflow',
     },
   };
   const amount=n=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
