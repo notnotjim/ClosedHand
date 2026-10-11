@@ -75,6 +75,10 @@ const PAIRS = [
     name: "bridge-token",
     copies: ["lib/bridge-token.js", "webapp/bridge-token.js"],
   },
+  {
+    name: "bank-feeds",
+    copies: ["lib/bank-feeds.js", "webapp/bank-feeds.js"],
+  },
 ];
 
 function normalise(src, name) {

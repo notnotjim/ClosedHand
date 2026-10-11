@@ -9,7 +9,7 @@ function unchanged(query, field, value, timestamp) {
 }
 function usesExistingReader(row) {
   return !Object.keys(row.config?.recall || {}).length && (/^(google|microsoft)(_|$)/.test(row.service) ||
-    ["slack", "notion", "imap", "ics_calendar", "whatsapp", "whatsapp_linked", "telegram"].includes(row.service));
+    ["slack", "notion", "imap", "ics_calendar", "whatsapp", "whatsapp_linked", "telegram", "simplefin", "lunchflow"].includes(row.service));
 }
 function location(kind) {
   if (kind === "connection") return { table: "connections", field: "config", source: row => `connected:${row.service}` };

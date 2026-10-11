@@ -122,8 +122,10 @@ function decryptString(value) {
 }
 
 // Every credential-bearing field that may appear in connections.tokens.
-// app_password covers Apple iCloud app-specific passwords (IMAP/SMTP/CalDAV).
-const SECRET_FIELDS = ["access_token", "refresh_token", "app_password", "ics_url", "client_secret"];
+// app_password covers Apple iCloud app-specific passwords (IMAP/SMTP/CalDAV);
+// access_url is SimpleFIN's Access URL, which carries its own sign-in, and
+// api_key is a Lunch Flow key: each reads someone's bank data.
+const SECRET_FIELDS = ["access_token", "refresh_token", "app_password", "ics_url", "client_secret", "access_url", "api_key"];
 
 function encryptTokens(tokens) {
   if (!tokens || typeof tokens !== "object") return tokens;
