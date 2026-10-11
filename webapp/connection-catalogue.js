@@ -56,7 +56,7 @@ function createCatalogue({db, services, userId, baseUrl}) {
           const url=remote[key];
           const mcpLinked=url&&(mcps.data||[]).some(m=>m.status==='connected'&&m.server_url?.replace(/\/$/,'')===url.replace(/\/$/,''));
           return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||!!mcpLinked,
-            mode:s.needsStoreDomain?'shopify':microsoftCode?'microsoft':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
+            mode:s.pasteForm?s.pasteForm:s.needsStoreDomain?'shopify':microsoftCode?'microsoft':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
             url:!ready&&url?url:null,manualMode:(url||microsoftCode)&&guides[key]?(ready?'oauth':'setup'):null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
             redirectUri:baseUrl+'/auth/'+key+'/callback',scopes:s.scopes||[],personalClient:own.has(key)};
         });

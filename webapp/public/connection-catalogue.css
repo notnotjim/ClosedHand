@@ -37,6 +37,9 @@
 .catalogue-copy-btn {flex:none;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:7px;background:none;color:#B6AFA4;cursor:pointer;}
 .catalogue-copy-btn:hover {background:rgba(239,230,214,.08);color:#EFE6D6;}
 .catalogue-copy-btn.done {color:#8DBD79;}
+#catalogue-setup .catalogue-steps {display:grid;gap:8px;margin:16px 0 0;padding-left:22px;font-size:15px;color:#B6AFA4;line-height:1.6;}
+#catalogue-setup .catalogue-accounts {display:grid;gap:6px;margin:0;padding-left:22px;font-size:15px;color:#EFE6D6;line-height:1.5;}
+#catalogue-setup p.catalogue-notice {color:#E6C27A;}
 .connection-catalogue .mcp-hero {padding:24px 0 32px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:none!important;overflow:visible!important;}
 .connection-catalogue .mcp-copy {text-align:center;max-width:none;padding:0!important;margin:0 0 12px!important;}
 .connection-catalogue .mcp-description {font-size:15px!important;color:#B6AFA4!important;}

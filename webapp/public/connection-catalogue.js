@@ -71,7 +71,65 @@
     box.append(back,title);
     return {box,title};
   }
+  // A bank, read-only, through a service the person signs up to and pays
+  // themselves: SimpleFIN for US banks, Lunch Flow for UK and EU banks. They
+  // paste what it hands out; Closedhand keeps it encrypted.
+  const BANKS={
+    simplefin:{
+      intro:'SimpleFIN is a service you sign up to yourself, for about $15 a year paid to SimpleFIN. Your bank data goes from your bank through SimpleFIN to Closedhand on your computer and never to closedhand.com. Closedhand can only read it: it can’t move money or change anything at your bank.',
+      steps:['Open SimpleFIN, sign up and link your US bank there.','Create a Setup Token in SimpleFIN and copy it.','Paste it below. A Setup Token works once: Closedhand swaps it straight away for its own access, kept encrypted on the computer running Closedhand.'],
+      link:'https://bridge.simplefin.org/simplefin/create',linkText:'Open SimpleFIN',label:'Setup Token',field:'setupToken',url:'/api/bank/simplefin',
+    },
+    lunchflow:{
+      intro:'Lunch Flow is a paid service you sign up to yourself and pay directly, with a 7-day free trial. Your bank data goes from your bank through Lunch Flow to Closedhand on your computer and never to closedhand.com. Closedhand can only read it: it can’t move money or change anything at your bank.',
+      steps:['Open Lunch Flow, sign up and link your UK or EU banks there.','Under Destinations, add a REST API destination and copy the API key it shows.','In that destination’s Account access, switch on every account Closedhand should read.','Paste the key below. Closedhand keeps it encrypted on the computer running Closedhand.'],
+      link:'https://www.lunchflow.app/destinations',linkText:'Open Lunch Flow',label:'API key',field:'apiKey',url:'/api/bank/lunchflow',
+    },
+  };
+  const amount=n=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  function bankForm(s){
+    const b=BANKS[s.mode];
+    const {box,title}=openSetup(s);
+    const intro=el('p','',b.intro);
+    const steps=el('ol','catalogue-steps');b.steps.forEach(t=>steps.append(el('li','',t)));
+    const link=el('a','catalogue-deep',b.linkText);link.href=b.link;link.target='_blank';link.rel='noopener noreferrer';
+    const form=el('form','catalogue-form');
+    const label=el('label','',b.label),input=el('input');input.type='password';input.name=b.field;input.required=true;input.maxLength=4096;input.autocomplete='off';input.spellcheck=false;label.append(input);
+    const status=el('p','catalogue-status');status.setAttribute('role','status');
+    const submit=el('button','catalogue-action','Connect');submit.type='submit';
+    form.append(label,submit,status);
+    form.onsubmit=async event=>{
+      event.preventDefault();submit.disabled=true;status.textContent='Connecting…';
+      try{
+        const response=await fetch(b.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[b.field]:input.value})});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||'Could not connect. Try again.');
+        input.value='';
+        [intro,steps,link,form].forEach(n=>{n.hidden=true;});
+        const accounts=data.accounts||[];
+        box.append(el('p','',accounts.length?'Connected. Closedhand can now read '+(accounts.length===1?'this account:':'these '+accounts.length+' accounts:'):'Connected.'));
+        if(accounts.length){
+          const list=el('ul','catalogue-accounts');
+          accounts.forEach(a=>list.append(el('li','',[a.institution,a.name].filter(Boolean).join(' ')+(typeof a.balance==='number'?': '+amount(a.balance)+' '+(a.currency||''):''))));
+          box.append(list);
+        }
+        (data.notices||[]).forEach(t=>box.append(el('p','catalogue-notice',t)));
+        box.append(el('p','','Balances and transactions arrive in the next few minutes, then update a few times a day.'));
+        if(typeof window.loadStatus==='function')window.loadStatus();
+        window.refreshConnectionCatalogue();
+      }catch(e){status.textContent=e.message;submit.disabled=false;}
+    };
+    box.append(intro,steps,link,form);title.focus();
+  }
+  // From a bank card whose access stopped: the same form, to paste a new one.
+  window.openBankConnection=function(key){
+    if(!BANKS[key])return;
+    const s=services.find(x=>x.key===key)||{key,name:key==='simplefin'?'US banks via SimpleFIN':'UK and EU banks via Lunch Flow'};
+    bankForm({...s,mode:key});
+    byId('mcp-section').scrollIntoView({block:'start',behavior:'smooth'});
+  };
   async function select(s,button) {
+    if(BANKS[s.mode]){bankForm(s);return;}
     if(s.mode==='shopify'){window.openShopifyModal();return;}
     if(s.mode==='google'){(window.top||window).location.href='/setup#step-accounts=google';return;}
     if(s.mode==='microsoft'){(window.top||window).location.href='/setup#step-accounts=microsoft';return;}

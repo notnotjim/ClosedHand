@@ -3436,11 +3436,15 @@
     // One question, with the choice that matters on it: whether what was
     // synced from the account goes too. Resolves { ok, purge }.
     var _disconnectResolve = null;
-    function askDisconnect(title, body) {
+    var _purgeText = null;
+    function askDisconnect(title, body, purgeText) {
       return new Promise(function(resolve) {
         _disconnectResolve = resolve;
         document.getElementById('disconnect-title').textContent = title;
         document.getElementById('disconnect-body').textContent = body;
+        var purgeLabel = document.getElementById('disconnect-purge-text');
+        if (_purgeText === null) _purgeText = purgeLabel.textContent;
+        purgeLabel.textContent = purgeText || _purgeText;
         document.getElementById('disconnect-purge').checked = false;
         document.getElementById('disconnect-modal').classList.add('visible');
       });
@@ -3508,7 +3512,40 @@
         + `<button class="conn-btn conn-btn-manage" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();(window.top||window).location.href='${signInUrl}'">Sign in again</button>` + remove + `</span>`;
     }
 
+    // A bank card: the accounts it reads with their latest balances, the
+    // provider's own notices, and the way back when its access stopped.
+    const BANK_CARDS = {
+      simplefin: { stopped: "SimpleFIN stopped accepting Closedhand's access, so your bank data isn't updating. Make a new Setup Token in SimpleFIN and paste it here.", button: "Paste a new Setup Token" },
+      lunchflow: { stopped: "Lunch Flow stopped accepting the key Closedhand uses, so your bank data isn't updating. Create a new key in Lunch Flow and paste it here.", button: "Paste a new key" },
+    };
+    function bankDrawerHtml(c) {
+      const m = c.metadata || {};
+      const card = BANK_CARDS[c.service];
+      let html = "";
+      if (m.reconnect_required) {
+        html += `<p class="conn-again">${card.stopped}</p>`
+          + `<button class="conn-btn conn-btn-manage" onclick="event.stopPropagation();openBankConnection('${c.service}')">${card.button}</button>`;
+      }
+      for (const notice of m.notices || []) html += `<p class="conn-again">${escHtml(notice)}</p>`;
+      const accounts = m.accounts || [];
+      if (accounts.length) {
+        html += resourceSection("Accounts", accounts.map(a => {
+          const balance = typeof a.balance === "number" ? a.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + (a.currency || "") : "";
+          const right = a.status && a.status !== "ACTIVE" ? '<span class="conn-badge-warn">Not updating</span>'
+            : `<span style="color:rgba(239,230,214,0.6);font-size:13px">${escHtml(balance.trim())}</span>`;
+          return `<div class="conn-resource"><span>${escHtml([a.institution, a.name].filter(Boolean).join(" "))}</span>${right}</div>`;
+        }).join(""));
+      }
+      html += `<div class="conn-resources-label">Permissions</div><div class="conn-perms">`
+        + ["Balances", "Transactions", "Read-only"].map(p => `<span class="conn-perm granted">${p}</span>`).join("") + `</div>`;
+      const when = (iso) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      html += `<div class="conn-date">${m.updated_at ? "Updated " + when(m.updated_at) + ". Closedhand checks a few times a day." : "Balances and transactions arrive a few minutes after connecting."}</div>`;
+      html += `<div class="conn-drawer-actions"><button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}')">Disconnect</button></div>`;
+      return html;
+    }
+
     function connDrawerHtml(c) {
+      if (BANK_CARDS[c.service]) return bankDrawerHtml(c);
       const m = c.metadata || {};
       const rows = [];
       // Its provider stopped accepting the sign-in: say so first, with the way back.
@@ -4171,11 +4208,19 @@
       if (window.filterConnectionCatalogue) window.filterConnectionCatalogue(query);
     }
 
+    // Disconnecting a bank stops Closedhand reading it; the access at the
+    // provider is the person's to end there, and the choice is about bank
+    // history, not mail.
+    const BANK_DISCONNECT = {
+      simplefin: "Closedhand will stop reading your bank data through SimpleFIN. To end SimpleFIN's own access too, remove Closedhand's app connection in SimpleFIN.",
+      lunchflow: "Closedhand will stop reading your bank data through Lunch Flow. To end it at Lunch Flow too, delete the API destination there.",
+    };
+    const BANK_PURGE = "Also delete the balances and transactions Closedhand kept from it. Leave this off to keep your bank history for when you reconnect.";
     async function disconnectFromSettings(service, name, isSignin) {
       const msg = isSignin
         ? `This revokes Closedhand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in.`
-        : `Closedhand will lose access to this service.`;
-      var answer = await askDisconnect('Disconnect ' + name + '?', msg);
+        : BANK_DISCONNECT[service] || `Closedhand will lose access to this service.`;
+      var answer = await askDisconnect('Disconnect ' + name + '?', msg, BANK_DISCONNECT[service] ? BANK_PURGE : null);
       if (!answer.ok) return;
       const res = await fetch("/api/disconnect", {
         method: "POST",
@@ -8660,7 +8705,7 @@
       <p id="disconnect-body" style="font-size:13px;color:#B6AFA4;line-height:1.55;margin:0 0 14px;"></p>
       <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#EFE6D6;cursor:pointer;margin-bottom:18px;">
         <input type="checkbox" id="disconnect-purge" style="width:14px;height:14px;margin:3px 0 0;accent-color:#D0563F;flex:none;">
-        <span>Also delete everything Closedhand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
+        <span id="disconnect-purge-text">Also delete everything Closedhand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
       </label>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>

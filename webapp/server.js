@@ -422,7 +422,24 @@ const SERVICES = {
     provides: ["GitLab"],
   },
 
+  // Read-only bank data through a service the person signs up to themselves.
+  // No OAuth: the dashboard form takes what that service hands out
+  // (webapp/bank-connections.js), and the bot syncs it (lib/services/bank-sync.js).
+  simplefin: {
+    name: "US banks via SimpleFIN",
+    description: "Bank balances and transactions, read-only",
+    logoUrl: "/logos/bank.svg",
+    pasteForm: "simplefin",
+    provides: ["Bank balances", "Bank transactions"],
+  },
 
+  lunchflow: {
+    name: "UK and EU banks via Lunch Flow",
+    description: "Bank balances and transactions, read-only",
+    logoUrl: "/logos/bank.svg",
+    pasteForm: "lunchflow",
+    provides: ["Bank balances", "Bank transactions"],
+  },
 };
 
 // Which services are available (have credentials configured)
@@ -2139,6 +2156,7 @@ function generatePKCE() {
 
 const connectionCatalogue = require("./connection-catalogue").createCatalogue({ db: supabase, services: SERVICES, userId: getUserIdFromRequest, baseUrl: BASE_URL });
 connectionCatalogue.register(app);
+require("./bank-connections").register(app, { db: supabase, userId: getUserIdFromRequest });
 require("./assistant-email-settings").register(app, supabase, getUserIdFromRequest);
 
 // OAuth state tokens (in-memory, short-lived)
