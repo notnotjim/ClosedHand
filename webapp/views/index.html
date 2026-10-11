@@ -1845,8 +1845,10 @@
   .mon { container-type:inline-size; }
   .mon-bar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; padding:10px 14px; background:rgba(26,24,23,0.95); flex-shrink:0; gap:8px; border-bottom:1px solid rgba(239,230,214,0.06); min-height:40px; }
   .mon-dots { display:flex; gap:6px; flex-shrink:0; grid-column:1; grid-row:1; }
-  .mon-dots span { width:8px; height:8px; border-radius:50%; }
-  .mon-dots .d-r { background:#D0563F; } .mon-dots .d-y { background:#D0A652; } .mon-dots .d-g { background:#D0563F; }
+  /* A window's corner dots are decoration, grey like a Mac window that is not
+     in front, so the only coloured dots on the page are status (green online)
+     and the red that means something has gone wrong. */
+  .mon-dots span { width:8px; height:8px; border-radius:50%; background:rgba(239,230,214,0.16); }
   .mon-bar-title { grid-column:2; grid-row:1; min-width:0; text-align:center; color:#B6AFA4; display:flex; flex-direction:column; align-items:center; gap:4px; }
   .mon-title-line { display:flex; align-items:center; gap:8px; font-size:14px; color:#EFE6D6; }
   .mon-subtitle { display:flex; align-items:center; gap:6px; font-size:12px; line-height:1.4; color:#B6AFA4; }
@@ -1929,7 +1931,6 @@
   .mon-signin:hover, .mon-signin:focus-visible { border-color:rgba(208,86,63,0.6); color:#EFE6D6; outline:none; }
   .mon-signin.is-done { color:rgba(141,189,121,0.95); border-color:rgba(141,189,121,0.28); }
   .mon-signin.is-done::before { content:"\2713"; }
-  #tabComputers.needs-signin::after { content:""; display:inline-block; vertical-align:middle; width:6px; height:6px; border-radius:50%; background:#D0563F; margin-left:2px; }
   @media (max-width: 899px) { .mon-signins { flex-wrap:wrap; } .mon-signins-text { flex-basis:100%; white-space:normal; } .mon-signins-sites { overflow-x:auto; max-width:100%; } }
   .mon-crumb-row .mon-crumb { flex:1; min-width:0; }
   .mon-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.06); border-radius:6px; padding:3px 8px; color:#B6AFA4; font-size:11px; font-family:inherit; width:80px; outline:none; flex-shrink:0; transition:border-color 0.2s,width 0.2s; }
@@ -7814,7 +7815,9 @@ function escapeHtml(s) {
 
   // Sites to sign in to on the sandbox browser (/api/sandbox/sign-ins). The
   // ticks refresh while the browser is on screen, so they follow the person
-  // signing in; the Computers tab carries a dot until any site is signed in.
+  // signing in. The tab carries no dot for this: a red dot means something
+  // has gone wrong, and a site not yet signed in to is an invitation, which
+  // the strip itself makes.
   var _monSignins = null, _monSigninPoll = null;
   var MON_SIGNIN_INTRO = 'Sign in to sites here so Closedhand can use them for you. Any other site works too.';
   async function monLoadSignins(fresh) {
@@ -7828,10 +7831,6 @@ function escapeHtml(s) {
   function monRenderSignins() {
     var bar = document.getElementById('monSignins');
     if (!bar || !_monSignins) return;
-    var known = _monSignins.some(function (s) { return s.signedIn !== null; });
-    var any = _monSignins.some(function (s) { return s.signedIn; });
-    var tab = document.getElementById('tabComputers');
-    if (tab) tab.classList.toggle('needs-signin', known && !any);
     var text = bar.querySelector('.mon-signins-text'), list = bar.querySelector('.mon-signins-sites');
     if (!bar._busy) text.textContent = MON_SIGNIN_INTRO;
     list.replaceChildren();

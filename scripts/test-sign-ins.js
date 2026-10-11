@@ -26,11 +26,14 @@ test('the sign-in check reports yes or no per site, never a cookie value', () =>
   assert.match(route, /print\('SIGNINS ' \+ json\.dumps\(\{s\['id'\]: any\(/);
 });
 
-test('the strip sits on the sandbox browser, and the tab carries a dot until a site is signed in', () => {
+test('the strip sits on the sandbox browser, and red stays for problems', () => {
   const page = read('webapp/views/index.html');
   assert.ok(page.indexOf('id="monSignins"') < page.indexOf('<div id="monDesktop"'), 'directly above the browser it is about');
-  assert.match(page, /tab\.classList\.toggle\('needs-signin', known && !any\)/);
-  assert.match(page, /#tabComputers\.needs-signin::after/);
+  // A site not yet signed in to is an invitation, not a problem: no red dot on the tab.
+  assert.doesNotMatch(page, /needs-signin/);
+  // The window corner dots are decoration, one quiet grey, never status colours.
+  assert.match(page, /\.mon-dots span \{ width:8px; height:8px; border-radius:50%; background:rgba\(239,230,214,0\.16\); \}/);
+  assert.doesNotMatch(page, /\.mon-dots \.d-[ryg] \{ background/);
   assert.match(page, /'\/api\/sandbox\/sign-in', \{ method: 'POST'/);
 });
 
