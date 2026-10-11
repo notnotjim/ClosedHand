@@ -5,6 +5,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const vm = require("node:vm");
 const path = require("node:path");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 const { yearCorrection, yearsToAnchor, yearWritten, implausiblyLate, shiftYears } = require("../lib/email-dates");
@@ -96,11 +97,13 @@ function memoryDb(tables) {
         select() { return q; },
         update(p) { op = "update"; patch = p; return q; },
         delete() { op = "delete"; return q; },
+        upsert(row) { op = "upsert"; patch = row; return q; },
         eq(k, v) { filters.push((r) => r[k] === v); return q; },
         gte(k, v) { filters.push((r) => String(r[k]) >= v); return q; },
         in(k, vs) { filters.push((r) => vs.includes(r[k])); return q; },
         like(k, v) { const re = new RegExp("^" + v.replace(/%/g, ".*") + "$"); filters.push((r) => re.test(r[k])); return q; },
         then(done, fail) {
+          if (op === "upsert") { const row = { id: "id" + (rows.length + 1), ...patch }; rows.push(row); return Promise.resolve({ data: [{ id: row.id }], error: null }).then(done, fail); }
           const hit = rows.filter((r) => filters.every((f) => f(r)));
           if (op === "update") hit.forEach((r) => Object.assign(r, patch));
           if (op === "delete") hit.forEach((r) => rows.splice(rows.indexOf(r), 1));
@@ -175,4 +178,51 @@ test("a finished stay dated a year ahead by a host's message heals on the next s
   } finally { Module._load = load; delete require.cache[require.resolve("../lib/bookings")]; }
   assert.deepEqual(tables.bookings.map((b) => b.id), ["s2"], "the finished stay goes; the stay ahead stays");
   assert.equal(tables.bookings[0].starts_at, at(now + 40 * day), "and keeps its date");
+});
+
+test("a booking is read from the whole email, and dates the email doesn't give are dropped", async () => {
+  const Module = require("node:module");
+  const day = 86400000, now = Date.now();
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const words = (ms) => { const d = new Date(ms); return `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+  const iso = (ms) => new Date(ms).toISOString().slice(0, 10) + "T14:00:00+07:00";
+  const checkIn = now + 5 * day, checkOut = now + 9 * day;
+  const stay = `${words(checkIn)} - ${words(checkOut)}, 4 nights, 2 guests`;
+  const tables = { facts: [], data_cache: [], bookings: [] };
+  // The search hands over a window near the top; the dates sit further down.
+  const window = { id: "m1", subject: "Confirmed booking - Example Hostel", from: "Example <hi@example.com>", date: new Date(now - day).toISOString(), body: "Booking Confirmation. Booking Reference 4471-2290" };
+  const whole = `Booking Confirmation. Booking Reference 4471-2290. Example Hostel, Harbour Road. ${stay}. Private double room.`;
+  let prompt = "";
+  const reply = [
+    { emailIndex: 0, kind: "hotel", title: "Example Hostel", provider: "Example Hostel", reference: "4471-2290", starts_at: iso(checkIn), ends_at: iso(checkOut), timezone: "Asia/Bangkok", yearStated: true, dates_quote: stay, details: { room: "Private double room" } },
+    { emailIndex: 0, kind: "hotel", title: "Example Hostel dorm", provider: "Example Hostel", reference: null, starts_at: iso(checkIn + day), ends_at: iso(checkOut - day), timezone: "Asia/Bangkok", yearStated: true, dates_quote: "3 Mar - 5 Mar, 2 nights", details: { room: "Shared dorm bed" } },
+  ];
+  const load = Module._load;
+  Module._load = function (request, parent, ...rest) {
+    if (parent && /lib\/bookings\.js$/.test(parent.filename)) {
+      if (request === "./db") return { supabase: memoryDb(tables) };
+      if (request === "./services/data-access") return { searchCache: async () => ({ results: [window] }) };
+      if (request === "./llm") return { getInternalClient: () => ({ model: "fixture", client: { messages: { create: async (p) => { prompt = p.messages[0].content; return { content: [{ type: "text", text: JSON.stringify(reply) }] }; } } } }) };
+      if (request === "./mail-attachments") return { withWholeBodies: async (_, es) => es.map((e) => ({ ...e, body: whole })), bodyForScan: (_, e) => e.body };
+    }
+    return load.call(this, request, parent, ...rest);
+  };
+  try {
+    delete require.cache[require.resolve("../lib/bookings")];
+    await require("../lib/bookings").scanBookings("u1");
+  } finally { Module._load = load; delete require.cache[require.resolve("../lib/bookings")]; }
+  assert.match(prompt, /4 nights, 2 guests/, "the reader sees the whole email, not the search window");
+  assert.match(prompt, /dates_quote must be COPIED from the email/);
+  assert.deepEqual(tables.bookings.map((b) => b.title), ["Example Hostel"], "the stay with dates the email doesn't give is dropped");
+});
+
+test("invisible padding at the top of an email is stripped before a reader sees it", () => {
+  const src = read("lib/mail-attachments.js");
+  const box = {};
+  vm.runInNewContext(src.slice(src.indexOf("const INVISIBLE"), src.indexOf("\n}\n", src.indexOf("function readable")) + 3) + "\nthis.readable = readable;", box);
+  const padded = "Booking Confirmation " + "\u034f\ufeff ".repeat(300) + "\n\n  You are going\u00a0to Example Hostel";
+  assert.equal(box.readable(padded), "Booking Confirmation\nYou are going to Example Hostel");
+  const flights = read("lib/flights.js");
+  assert.match(flights, /const flightEmails = await withWholeBodies\(userId,/, "the flight reader reads whole emails too");
+  assert.doesNotMatch(flights, /filter\(e => !e\.body\)/, "not only when the search result has no body, which it always has");
 });

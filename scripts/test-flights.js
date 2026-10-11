@@ -92,7 +92,7 @@ function loadFlights(state, modelResponse, extra = {}) {
     './http': {}, './messaging': {}, './storage': { saveStore() { saved++; } },
     './services/google': { isGoogleConnected: () => false }, './services/microsoft': { isMicrosoftConnected: () => false },
     './services/imap-mail': { isImapConnected: () => false }, './services/data-access': {},
-    './mail-attachments': { bodyForScan: async (_,e,n) => (e.summary || e.body).slice(0,n) },
+    './mail-attachments': { bodyForScan: async (_,e,n) => (e.summary || e.body).slice(0,n), withWholeBodies: async (_,es) => es },
     './flight-time': clock, './flight-bookings': require('../lib/flight-bookings'), ...extra };
   class FixedDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const sandbox = { module: { exports: {} }, Date: FixedDate, console, process: { env: { FLIGHTAWARE_API_KEY: 'fixture' } }, require: name => { if (!(name in dependencies)) throw Error(name); return dependencies[name]; } };
@@ -285,7 +285,7 @@ test('live tracking covers long flights beyond six hours, then stops within a bo
 });
 test('scanner reads arrival from attached itinerary even when the body contains a flight number', async () => {
   let reads=0;
-  const h=loadFlights({},[next],{'./mail-attachments':{bodyForScan:async(_,e)=>e.body,attachmentTextFor:async()=>{reads++;return '[Attachment itinerary.pdf] XY648 departs 20:00 arrives 21:20';}}});
+  const h=loadFlights({},[next],{'./mail-attachments':{withWholeBodies:async(_,es)=>es,bodyForScan:async(_,e)=>e.body,attachmentTextFor:async()=>{reads++;return '[Attachment itinerary.pdf] XY648 departs 20:00 arrives 21:20';}}});
   await h.api.scanEmailsForFlights('fixture-user',{emails:[{...email,body:'XY648 will now depart 20:00. Please see your full itinerary.',attachments:[{filename:'itinerary.pdf',size:100}]}]});
   assert.equal(reads,1);assert.match(h.prompt(),/arrives 21:20/);
 });
