@@ -7,7 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
-const { yearCorrection, yearsToAnchor, implausiblyLate, shiftYears } = require("../lib/email-dates");
+const { yearCorrection, yearsToAnchor, yearWritten, implausiblyLate, shiftYears } = require("../lib/email-dates");
 const { reconcileFlights } = require("../lib/flight-bookings");
 
 test("a date without its year is the first such day after the email was sent", () => {
@@ -22,6 +22,21 @@ test("a date without its year is the first such day after the email was sent", (
   assert.equal(implausiblyLate("2026-12-02T15:00:00Z", "2025-10-25T00:00:00Z"), true);
   assert.equal(shiftYears("2026-12-22T00:00:00+03:00", -4), "2022-12-22T00:00:00+03:00");
   assert.equal(yearsToAnchor("not a date", "2022-12-21T00:00:00Z"), 0);
+});
+
+test("mail sent during or just after a trip is about that trip, not the same days next year", () => {
+  // A host's message in the reservation thread, sent on the last day of the stay.
+  const thread = { end: "2027-05-20T04:00:00Z", text: "RE: Reservation for Garden loft, 2 – 20 May. On 19 May 2026, Mai wrote: see you soon" };
+  assert.equal(yearCorrection("2027-05-02T07:00:00Z", "2026-05-20T02:51:37Z", false, thread), -1, "the stay that just ended, not one almost a year away");
+  assert.equal(yearCorrection("2027-05-02T07:00:00Z", "2026-05-20T02:51:37Z", true, thread), -1, "a year the email never writes was guessed, whatever the reader says");
+  assert.equal(yearCorrection("2027-05-02T07:00:00Z", "2026-05-20T02:51:37Z", undefined, thread), -1);
+  assert.equal(yearCorrection("2027-05-02T07:00:00Z", "2026-05-20T02:51:37Z", true, { text: "Your stay 2 May 2027 – 20 May 2027" }), 0, "a year the email writes is kept");
+  assert.equal(yearCorrection("2027-03-05T19:00:00+07:00", "2026-03-09T03:53:47Z", false, { text: "How was dinner on 5 March?" }), -1, "a review request after a table is about that table");
+  assert.equal(yearCorrection("2026-01-15T10:00:00+00:00", "2026-12-20T10:00:00Z", false, { end: "2026-01-20T10:00:00+00:00", text: "15 Jan – 20 Jan" }), 1, "a stay that ended months before the email is next year's");
+  assert.equal(yearCorrection("2026-06-20T15:00:00+07:00", "2026-06-07T02:00:00Z", false, { end: "2026-06-25T11:00:00+07:00", text: "20 June – 25 June" }), 0, "a stay ahead of its email keeps the email's year");
+  assert.equal(yearsToAnchor("2027-05-02T07:00:00Z", "2026-06-30T00:00:00Z", "2027-05-20T04:00:00Z"), 0, "more than a month after the stay, the next one is meant");
+  assert.equal(yearWritten("2027-05-02", "booked for 2027"), true);
+  assert.equal(yearWritten("2027-05-02", "ref 120279 and 2 May"), false, "digits inside a longer number are not a year");
 });
 
 test("a flight from an old email is dated by that email, so a past trip never shows as upcoming", () => {
@@ -128,4 +143,36 @@ test("a scan with no new mail still heals the stored bookings", async () => {
   } finally { Module._load = load; delete require.cache[require.resolve("../lib/bookings")]; }
   const left = Object.fromEntries(tables.bookings.map((b) => [b.id, b.kind]));
   assert.deepEqual(left, { b3: "flight", b4: "hotel" }, "the flight kept as a train goes, the past trip goes, the airline 'bus' is a flight");
+});
+
+test("a finished stay dated a year ahead by a host's message heals on the next scan", async () => {
+  const Module = require("node:module");
+  const day = 86400000, at = (ms) => new Date(ms).toISOString(), now = Date.now();
+  const tables = {
+    facts: [],
+    data_cache: [
+      { user_id: "u1", type: "email", external_id: "m-thread", received_at: at(now - 5 * day), data: { subject: "RE: Reservation for Garden studio", body: "See you at check-out. Your stay runs to the day this was sent." } },
+      { user_id: "u1", type: "email", external_id: "m-ahead", received_at: at(now - 10 * day), data: { subject: "Reservation confirmed", body: "Lake cabin, check-in in a few weeks" } },
+    ],
+    bookings: [
+      { id: "s1", user_id: "u1", kind: "hotel", provider: "Example Stays", title: "Garden studio", reference: null, starts_at: shiftYears(at(now - 25 * day), 1), ends_at: shiftYears(at(now - 5 * day), 1), source_email_id: "m-thread" },
+      { id: "s2", user_id: "u1", kind: "hotel", provider: "Example Stays", title: "Lake cabin", reference: null, starts_at: at(now + 40 * day), ends_at: at(now + 45 * day), source_email_id: "m-ahead" },
+    ],
+  };
+  const load = Module._load;
+  Module._load = function (request, parent, ...rest) {
+    if (parent && /lib\/bookings\.js$/.test(parent.filename)) {
+      if (request === "./db") return { supabase: memoryDb(tables) };
+      if (request === "./services/data-access") return { searchCache: async () => ({ results: [] }) };
+      if (request === "./llm") return { getInternalClient: () => ({}) };
+      if (request === "./mail-attachments") return { bodyForScan: (e) => e.body || "" };
+    }
+    return load.call(this, request, parent, ...rest);
+  };
+  try {
+    delete require.cache[require.resolve("../lib/bookings")];
+    await require("../lib/bookings").scanBookings("u1");
+  } finally { Module._load = load; delete require.cache[require.resolve("../lib/bookings")]; }
+  assert.deepEqual(tables.bookings.map((b) => b.id), ["s2"], "the finished stay goes; the stay ahead stays");
+  assert.equal(tables.bookings[0].starts_at, at(now + 40 * day), "and keeps its date");
 });
