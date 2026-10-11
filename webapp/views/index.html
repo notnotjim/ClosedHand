@@ -2662,8 +2662,10 @@
   function render(d) {
     if (!d || !d.location || !d.weather) { btn.hidden = false; wx.hidden = true; return; }
     var w = d.weather, g = (glyphs[w.kind] || glyphs.cloud)(w.isDay);
+    // No town name when the map service couldn't be reached: "cloudy here".
+    var where = d.location.name ? ' in ' + esc(d.location.name) : ' here';
     wx.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + g + '</svg>' +
-      '<span>' + tempButton(w) + ' <button type="button" class="wx-place" data-tip="Moved? Click to update your location." aria-label="' + esc(w.label) + ' in ' + esc(d.location.name) + '. Moved? Click to update your location.">and ' + esc(w.label) + ' in ' + esc(d.location.name) + '</button></span>';
+      '<span>' + tempButton(w) + ' <button type="button" class="wx-place" data-tip="Moved? Click to update your location." aria-label="' + esc(w.label) + where + '. Moved? Click to update your location.">and ' + esc(w.label) + where + '</button></span>';
     last = d;
     wx.hidden = false; btn.hidden = true;
   }

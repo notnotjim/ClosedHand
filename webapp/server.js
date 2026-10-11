@@ -3462,6 +3462,20 @@ function weatherInUnit(w, settings) {
 }
 const _validTz = (tz) => { try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; } };
 
+// The town's name comes from OpenStreetMap, and some networks block it (a
+// guest Wi-Fi network answered 127.0.0.1 for openstreetmap.org). Without it the
+// place has no name, rather than a stand-in: "where you are", once saved as
+// the name, read "cloudy in where you are" and went to the assistant as the
+// person's town. A place re-read within a short walk of the last one keeps
+// that one's name, since the town has not changed.
+const OLD_STAND_IN = "where you are";
+const SAME_TOWN_KM = 25;
+function kmApart(a, b) {
+  const rad = Math.PI / 180, x = (b.longitude - a.longitude) * rad * Math.cos(((a.latitude + b.latitude) / 2) * rad), y = (b.latitude - a.latitude) * rad;
+  return Math.sqrt(x * x + y * y) * 6371;
+}
+const placeName = (loc) => (loc && typeof loc.name === "string" && loc.name && loc.name !== OLD_STAND_IN ? loc.name : null);
+
 app.get("/api/here", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -3470,7 +3484,10 @@ app.get("/api/here", async (req, res) => {
     const loc = data?.settings?.location;
     if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return res.json({ location: null });
     const lat = Math.round(loc.latitude * 100) / 100, lon = Math.round(loc.longitude * 100) / 100;
-    res.json({ location: { name: loc.name || null }, weather: weatherInUnit(await weatherHere(lat, lon).catch(() => null), data?.settings) });
+    // A stand-in an older version saved as the name goes, so the assistant
+    // stops being told the person is in "where you are".
+    if (loc.name === OLD_STAND_IN) await patchSettings(supabase, userId, { set: { location: { ...loc, name: null } } }).catch(() => {});
+    res.json({ location: { name: placeName(loc) }, weather: weatherInUnit(await weatherHere(lat, lon).catch(() => null), data?.settings) });
   } catch (e) {
     res.status(500).json({ error: "Could not load where you are." });
   }
@@ -3533,6 +3550,8 @@ app.post("/api/here", async (req, res) => {
   const lat = Math.round(Number(req.body?.latitude) * 100) / 100, lon = Math.round(Number(req.body?.longitude) * 100) / 100;
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return res.status(400).json({ error: "That position isn't readable." });
   try {
+    const { data: before } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const was = before?.settings?.location;
     let name = null;
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&accept-language=en`,
@@ -3540,10 +3559,11 @@ app.post("/api/here", async (req, res) => {
       const a = (await r.json()).address || {};
       name = a.city || a.town || a.village || a.municipality || a.county || a.state || null;
     } catch (_) { /* the weather still comes, without a place name */ }
+    if (!name && was && Number.isFinite(was.latitude) && Number.isFinite(was.longitude) && kmApart(was, { latitude: lat, longitude: lon }) <= SAME_TOWN_KM) name = placeName(was);
     const weather = await weatherHere(lat, lon).catch(() => null);
     const browserTz = typeof req.body?.timezone === "string" && _validTz(req.body.timezone) ? req.body.timezone : null;
     const timezone = browserTz || weather?.timezone || null;
-    const location = { name: name || "where you are", latitude: lat, longitude: lon, ...(timezone ? { timezone } : {}), updated: new Date().toISOString(), source: "browser" };
+    const location = { name, latitude: lat, longitude: lon, ...(timezone ? { timezone } : {}), updated: new Date().toISOString(), source: "browser" };
     const settings = await patchSettings(supabase, userId, { set: { location } });
     res.json({ location: { name: location.name, timezone: timezone }, weather: weatherInUnit(weather, settings) });
   } catch (e) {

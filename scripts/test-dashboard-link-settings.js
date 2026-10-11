@@ -286,7 +286,7 @@ test("location is set where it shows, not in a Settings card", () => {
   const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
   assert.match(chat, /<button class="here" id="hereBtn"/, "the chat page sets it from the browser and shows the weather there");
   assert.match(chat, /if \(t\) \{ flipUnit\(t\); return; \}\n\s*if \(!e\.target\.closest\('\.wx-place'\)\) return;\n\s*wx\.hidden = true; btn\.hidden = false; btn\.click\(\);/, "the temperature flips the unit; the rest of the sentence sets the place again after a move");
-  assert.match(chat, /' <button type="button" class="wx-place" data-tip="Moved\? Click to update your location\." aria-label="[^"]*">and ' \+ esc\(w\.label\) \+ ' in ' \+ esc\(d\.location\.name\) \+ '<\/button>/, "the whole rest of the sentence is the one control");
+  assert.match(chat, /' <button type="button" class="wx-place" data-tip="Moved\? Click to update your location\." aria-label="[^"]*">and ' \+ esc\(w\.label\) \+ where \+ '<\/button>/, "the whole rest of the sentence is the one control");
   const defs = fs.readFileSync(require.resolve("../lib/tools/definitions.js"), "utf8");
   assert.match(defs, /name: "save_location"/, "and Closedhand saves it when told in chat");
 });
@@ -319,4 +319,24 @@ test("clicking the temperature flips it between Celsius and Fahrenheit, and the 
   const handlers = fs.readFileSync(require.resolve("../lib/tools/handlers.js"), "utf8");
   assert.match(handlers, /const chosenUnit = \(ctx\.activeUserStore \|\| ctx\.store\)\?\.profile\?\.settings\?\.temperature_unit;/, "Closedhand's weather answers use the same choice");
   assert.match(handlers, /temperature: deg\(current\.temperature_2m\)/);
+});
+
+test("a place whose town couldn't be looked up has no name, never a stand-in", () => {
+  // Some networks block OpenStreetMap, where the town's name comes from.
+  const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");
+  assert.match(chat, /var where = d\.location\.name \? ' in ' \+ esc\(d\.location\.name\) : ' here';/, "the line reads \"cloudy here\", not \"cloudy in where you are\"");
+  assert.doesNotMatch(source, /name: name \|\| "where you are"/, "the stand-in is never saved as the name");
+  assert.match(source, /if \(loc\.name === OLD_STAND_IN\) await patchSettings/, "a stand-in an older version saved is cleared");
+  const box = {};
+  vm.runInNewContext(region(source, "const OLD_STAND_IN", "\napp.get(\"/api/here\"") + "\nthis.placeName = placeName; this.kmApart = kmApart; this.SAME_TOWN_KM = SAME_TOWN_KM;", box);
+  assert.equal(box.placeName({ name: "where you are" }), null);
+  assert.equal(box.placeName({ name: "Porto" }), "Porto");
+  assert.equal(box.placeName({ name: null }), null);
+  const porto = { latitude: 41.15, longitude: -8.61 };
+  assert.ok(box.kmApart(porto, { latitude: 41.13, longitude: -8.61 }) <= box.SAME_TOWN_KM, "across the river keeps the town's name");
+  assert.ok(box.kmApart(porto, { latitude: 38.72, longitude: -9.14 }) > box.SAME_TOWN_KM, "another city does not");
+  assert.match(source, /kmApart\(was, \{ latitude: lat, longitude: lon \}\) <= SAME_TOWN_KM\) name = placeName\(was\);/);
+  for (const f of ["../lib/engine.js", "../lib/agents.js"]) {
+    assert.match(fs.readFileSync(require.resolve(f), "utf8"), /const named = (ctx\.store|userStore)\.location\.name \? /, `${f} leaves out a missing name`);
+  }
 });
