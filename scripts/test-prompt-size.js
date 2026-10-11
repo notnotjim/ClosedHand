@@ -51,10 +51,10 @@ const FACTS = {
   "preference-food": { value: "Sam is vegetarian", category: "preferences" },
 };
 const LONDON = { name: "London", latitude: 51.5, longitude: -0.12, timezone: "Europe/London" };
-function asSam({ platform = "web", bridge = false, goals = [], location = LONDON } = {}) {
+function asSam({ platform = "web", bridge = false, goals = [], location = LONDON, bank = false } = {}) {
   const store = {
     profile: { display_name: "Sam", settings: { preferred_name: "Sam", pulse_settings: { proactiveLevel: "medium" } }, timezone: "Europe/London" },
-    connections: { google: { email: "sam@example.com" } },
+    connections: { google: { email: "sam@example.com" }, ...(bank ? { lunchflow: { tokens: { api_key: "fixture" }, metadata: {} } } : {}) },
     location,
     facts: FACTS, userRules: ["Never use emojis", "Always reply in British English"], goals,
   };
@@ -101,7 +101,7 @@ test("every on-demand tool is still named in the prompt's list", () => {
   const sent = new Set(engine.getAllTools().map((t) => t.name));
   for (const t of INTERNAL_TOOLS) {
     if (t.agentOnly || sent.has(t.name) || t.needs) continue;
-    if (/^(outlook|onedrive|send_mail|reply_to_mail|create_mail_draft|caldav)_?/.test(t.name)) continue; // not connected here
+    if (/^(outlook|onedrive|send_mail|reply_to_mail|create_mail_draft|caldav|bank)_?/.test(t.name)) continue; // not connected here
     assert.ok(new RegExp(`\\b${t.name}\\b`).test(list), t.name);
   }
 });
@@ -122,6 +122,17 @@ test("only connected services' tools are described", () => {
   assert.match(system, /London transport: prefer tfl_departures/);
   asSam({ location: { name: "Lisbon", latitude: 38.7, longitude: -9.1, timezone: "Europe/Lisbon" } });
   assert.doesNotMatch(engine.buildSystemPrompt(), /London transport: prefer/);
+});
+
+test("bank tools and their line come only with a bank connection", () => {
+  asSam();
+  assert.doesNotMatch(engine.buildSystemPrompt(), /bank_accounts|bank_transactions/);
+  asSam({ bank: true });
+  const system = engine.buildSystemPrompt();
+  const list = system.slice(system.indexOf("ADDITIONAL TOOLS"));
+  assert.match(list, /\bbank_accounts\b/);
+  assert.match(list, /\bbank_transactions\b/);
+  assert.match(system, /Bank \(read-only, through Lunch Flow, fetched a few times a day\): bank_accounts for balances/);
 });
 
 test("delegate_email_thread is sent in full only in a conversation by email", () => {
