@@ -60,8 +60,8 @@ function register(app, { db, userId, feedOpts = {} }) {
       console.log(`[bank] SimpleFIN claim failed: ${outcome(e)}`);
       // The protocol asks apps to say a refused token may be in someone else's hands.
       if (e.kind === "claimed") return res.status(400).json({ error: "SimpleFIN says this Setup Token has already been used. If you didn't use it yourself, someone else may have it: disable it in SimpleFIN, then make a new Setup Token and paste that here." });
-      if (e.kind === "unavailable" && !e.status) return res.status(502).json({ error: "Couldn't reach SimpleFIN. Check the computer running Closedhand is online, then try again with the same Setup Token." });
-      return res.status(502).json({ error: "SimpleFIN didn't hand over access. Make a new Setup Token in SimpleFIN and try again." });
+      if (e.kind === "unavailable" && !e.status) return res.status(503).json({ error: "Couldn't reach SimpleFIN. Check the computer running Closedhand is online, then try again with the same Setup Token." });
+      return res.status(503).json({ error: "SimpleFIN didn't hand over access. Make a new Setup Token in SimpleFIN and try again." });
     }
     let accounts = [], notices = [];
     try {
@@ -90,7 +90,7 @@ function register(app, { db, userId, feedOpts = {} }) {
       if (e.kind === "auth") return res.status(400).json({ error: "Lunch Flow didn't accept that key. Copy it again from your API destination in Lunch Flow and paste it here." });
       if (e.kind === "rate") return res.status(429).json({ error: "Lunch Flow asked Closedhand to slow down. Try again in a few minutes." });
       if (e.kind === "payment") return res.status(400).json({ error: "Lunch Flow says your Lunch Flow subscription needs paying. Once it's paid, paste the key again." });
-      return res.status(502).json({ error: "Couldn't reach Lunch Flow. Check the computer running Closedhand is online, then try again." });
+      return res.status(503).json({ error: "Couldn't reach Lunch Flow. Check the computer running Closedhand is online, then try again." });
     }
     const accounts = list.map((a) => ({ id: a.id, name: a.name, institution: a.institution, currency: a.currency, balance: null, available: null, as_of: null, status: a.status }));
     const notices = accounts.length ? [] : [NO_ACCOUNTS];
