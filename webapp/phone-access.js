@@ -1,7 +1,7 @@
 // Phone access. The dashboard remains on this computer; cloudflared
 // forwards HTTPS traffic to it. A quick tunnel gets a new address on restart.
 const { spawn } = require("child_process");
-const { getConf, setConf } = require("./config");
+const { getConf, getConfStrict, setConf } = require("./config");
 const BIN = process.env.CLOUDFLARED_BIN || "cloudflared";
 // What cloudflared may see of the environment: where to run and how to reach
 // out, nothing else (the dashboard's environment holds its keys).
@@ -207,10 +207,16 @@ function shutdown() {
 }
 async function boot() {
   try {
-    mode = (await getConf("PHONE_ACCESS_MODE")) === "managed" ? "managed" : "quick";
-    wanted = String(await getConf("PHONE_ACCESS")) === "1";
+    // A setting that could not be read is not "off" or "temporary": one read
+    // that failed just after a restart once started a temporary address in
+    // place of the personal URL. Read strictly, and try again shortly.
+    mode = (await getConfStrict("PHONE_ACCESS_MODE")) === "managed" ? "managed" : "quick";
+    wanted = String(await getConfStrict("PHONE_ACCESS")) === "1";
     if (wanted) await start();
     else await save({ PHONE_ACCESS_URL: null });
-  } catch (e) { console.error("[Phone] Could not restore phone access:", e.message); }
+  } catch (e) {
+    console.error("[Phone] Could not restore phone access, trying again in 10 seconds:", e.message);
+    setTimeout(() => { void boot(); }, 10000);
+  }
 }
 module.exports = { enable, disable, reconnect, status, boot, shutdown };

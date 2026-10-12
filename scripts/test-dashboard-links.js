@@ -50,7 +50,7 @@ function tunnel(initial = {}, permanent = null, registration = {}) {
   const values = { ...initial }, children = [], intervals = [], retries = [];
   let health = async () => ({ ok: true, json: async () => ({ status: 'ok', service: 'closedhand-webapp' }) });
   const api = load('webapp/phone-access.js', {
-    './config': { getConf: async key => values[key], setConf: async patch => Object.assign(values, patch) },
+    './config': { getConf: async key => values[key], getConfStrict: async key => values[key], setConf: async patch => Object.assign(values, patch) },
     './phone-registration': { connection: async () => permanent, status: () => registration, begin: async () => 'https://closedhand.com/phone-access/pair#fixture' },
     child_process: { spawn(bin, args, options) { const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => { child.killed = true; }; child.args = args; child.options = options; children.push(child); return child; } },
   }, { setTimeout: fn => { retries.push(fn); return retries.length; }, clearTimeout() {}, console: { log() {}, error() {} },
@@ -223,4 +223,12 @@ test('upgrading a temporary phone connection keeps it reachable during approval'
   await t.api.disable();
   t.retries.at(-1)(); await flush();
   assert.equal(t.api.status().enabled, false);
+});
+
+test("phone access starts only from settings it could read, and tries again if it could not", () => {
+  const access = fs.readFileSync(path.join(__dirname, "..", "webapp/phone-access.js"), "utf8");
+  const boot = access.slice(access.indexOf("async function boot()"), access.indexOf("module.exports"));
+  assert.match(boot, /mode = \(await getConfStrict\("PHONE_ACCESS_MODE"\)\) === "managed"/, "a failed read is not taken as the temporary address");
+  assert.match(boot, /wanted = String\(await getConfStrict\("PHONE_ACCESS"\)\) === "1";/);
+  assert.match(boot, /setTimeout\(\(\) => \{ void boot\(\); \}, 10000\);/);
 });

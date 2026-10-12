@@ -170,6 +170,7 @@ test("the database names each service, and the sandbox agent answers nothing wit
   assert.match(read("lib/db.js"), /applicationName: "closedhand-bot"/);
   assert.match(read("webapp/db.js"), /applicationName: "closedhand-webapp"/);
   assert.match(read("lib/db-driver-pg.js"), /application_name: applicationName/);
+  assert.match(read("lib/db-driver-pg.js"), /pool\.on\("error", /, "a database restart no longer ends the process");
   const agent = read("sandbox-image/agent/server.js");
   assert.match(agent, /if \(!SANDBOX_TOKEN\) \{\n    if \(process\.env\.SANDBOX_DEV === "1"\) return next\(\);\n    return res\.status\(503\)/);
 });
