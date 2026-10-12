@@ -17,6 +17,10 @@ ALTER TABLE automations ADD COLUMN IF NOT EXISTS watched_until timestamptz;
 ALTER TABLE automations ADD COLUMN IF NOT EXISTS watch_seen text[] NOT NULL DEFAULT '{}';
 ALTER TABLE automations ADD COLUMN IF NOT EXISTS expires_at timestamptz;
 ALTER TABLE automations ADD COLUMN IF NOT EXISTS fired_at timestamptz;
+-- A routine saved for "when something happens" before this ran would
+-- otherwise look back over everything synced since it was made, and could
+-- act on months-old mail. Those start from now.
+UPDATE automations SET watched_until = now() WHERE trigger_type = 'event' AND watched_until IS NULL;
 ALTER TABLE automations DROP CONSTRAINT IF EXISTS automations_status_check;
 ALTER TABLE automations ADD CONSTRAINT automations_status_check CHECK (status IN ('active', 'paused', 'idle', 'done', 'expired'));
 

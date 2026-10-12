@@ -198,5 +198,6 @@ test("the dashboard checks a watch it saves, arms it from now, and shows where i
   assert.doesNotMatch(dash, /Shopify order over 500/, "the form no longer suggests what a watch cannot see");
   const sql = read("migrations/059_watches.sql");
   assert.match(sql, /CREATE TABLE IF NOT EXISTS told_items/);
+  assert.match(sql, /UPDATE automations SET watched_until = now\(\) WHERE trigger_type = 'event' AND watched_until IS NULL;/, "routines saved before watches ran start from now");
   assert.match(sql, /CHECK \(status IN \('active', 'paused', 'idle', 'done', 'expired'\)\)/);
 });
