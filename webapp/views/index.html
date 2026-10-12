@@ -6670,7 +6670,7 @@ function jsq(s) {
       html += '<span class="mon-crumb-sep">/</span>';
       var cumPath = '~/' + parts.slice(0, i + 1).join('/');
       if(i < parts.length - 1) html += '<span onclick="monNavLocal(\'' + jsq(cumPath) + '\')">' + escapeHtml(parts[i]) + '</span>';
-      else html += '<span>' + parts[i] + '</span>';
+      else html += '<span>' + escapeHtml(parts[i]) + '</span>';
     }
     el.innerHTML = html;
   }

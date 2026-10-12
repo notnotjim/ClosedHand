@@ -21,8 +21,8 @@ function ownedTables() {
   return owned;
 }
 
-// The files that answer the dashboard's routes.
-const FILES = ["webapp/server.js", "webapp/bank-connections.js"];
+// Every webapp file that answers a route.
+const FILES = fs.readdirSync(path.join(root, "webapp")).filter((n) => n.endsWith(".js") && /\bapp\.(get|post|put|patch|delete)\(/.test(fs.readFileSync(path.join(root, "webapp", n), "utf8"))).map((n) => "webapp/" + n);
 
 // Queries that pick by id without the owner, and why each is safe. Matched on
 // the file and a piece of the query's own text.

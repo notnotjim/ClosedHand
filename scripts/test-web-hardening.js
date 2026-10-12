@@ -186,6 +186,9 @@ test("secrets are compared in constant time, and records are read by owner as we
   assert.doesNotMatch(web, /msg\.token === process\.env\.BRIDGE_TOKEN/);
   const wa = r("lib/platforms/whatsapp.js");
   assert.match(wa, /return res\.status\(200\)\.type\("text\/plain"\)\.send\(String\(challenge\)\);/, "the webhook echo is never a page");
+  assert.match(wa, /const sameToken = crypto\.timingSafeEqual\(/);
+  assert.match(gateway, /if \(!data \|\| !sameSecret\(data\.sandbox_token, token\)\)/);
+  assert.match(r("lib/bridge-server.js"), /if \(\/\^\[ABCDEFGHJKLMNPQRSTUVWXYZ23456789\]\{6\}\$\/\.test\(code\) && !pendingPairs\.has\(code\) && pendingPairs\.size < 50\)/, "the bot's pairing listener keeps the same rules");
   assert.match(r("lib/services/usi.js"), /\(\(\{ _content_hash, \.\.\.rest \}\) => rest\)\(r\.source_metadata\)/, "the content hash is not sent to the model");
   assert.match(web, /from\("canvases"\)\.select\("id, filename, mime_type, content"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);
   assert.match(web, /from\("canvases"\)\.select\("\*"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);

@@ -55,6 +55,7 @@ test("text names are escaped, and no page escapes a name for ' alone", () => {
     assert.equal(loose, 1, `${file}: only jsq() itself escapes ' for a script`);
   }
   assert.match(page, /'<span class="mon-row-name">'\+escapeHtml\(f\.name\)/);
+  assert.match(page, /else html \+= '<span>' \+ escapeHtml\(parts\[i\]\) \+ '<\/span>';\n    \}\n    el\.innerHTML = html;/, "the Mac breadcrumb's last folder too");
   assert.match(page, /title="'\+escapeHtml\(f\.name\)\+'">'\+escapeHtml\(f\.name\)/);
   assert.match(page, /escapeHtml\(String\(msg\.filename \|\| ''\)\)/);
   assert.match(page, /Uploading '\+escapeHtml\(String\(name\)\)\+'\.\.\./);
