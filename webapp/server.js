@@ -9254,11 +9254,12 @@ wss.on("connection", (ws) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "pair" && msg.code) {
-        // Bridge app registering its pairing code. The code is good for as
-        // long as this connection stays open, and never goes in the log.
-        console.log("[Bridge] A Mac offered a pairing code; it works until that Mac disconnects");
+        // Bridge app registering its pairing code. The code works for ten
+        // minutes while this connection stays open, and never goes in the log.
+        console.log("[Bridge] A Mac offered a pairing code; it works for ten minutes");
         bridgeConnections.set(msg.code.toUpperCase(), ws);
         ws.bridgeCode = msg.code.toUpperCase();
+        ws.bridgeCodeAt = Date.now();
         ws.send(JSON.stringify({ type: "waiting" }));
       }
       if (msg.type === "auth" && msg.token) {
@@ -9352,15 +9353,32 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Poll for pending pairing requests and match to WebSocket clients
+// Poll for pending pairing requests and match to WebSocket clients.
+// A pairing code lasts ten minutes on both sides: the code a Mac shows, and
+// the request the dashboard made with it. The code only pairs a Mac with a
+// dashboard someone is already signed in to; it signs nobody in. Before, a
+// code shown on a Mac left open worked until the Mac disconnected, and a
+// request typed on the dashboard waited for its Mac forever.
+const BRIDGE_PAIR_CODE_MS = 10 * 60 * 1000;
 setInterval(async () => {
   try {
+    for (const [key, ws] of bridgeConnections) {
+      if (key.startsWith("user:") || !ws.bridgeCodeAt || Date.now() - ws.bridgeCodeAt <= BRIDGE_PAIR_CODE_MS) continue;
+      bridgeConnections.delete(key);
+      // The Bridge app starts over on "error": no code shown, Pair again.
+      try { ws.send(JSON.stringify({ type: "error", message: "That pairing code ran out. Pair again for a new one." })); ws.close(); } catch (_) {}
+    }
     const { data: pending } = await supabase
       .from("user_bridges")
-      .select("user_id, pairing_code")
+      .select("user_id, pairing_code, paired_at")
       .eq("status", "pending_pair");
     if (!pending || !pending.length) return;
     for (const row of pending) {
+      if (Date.now() - Date.parse(row.paired_at || 0) > BRIDGE_PAIR_CODE_MS) {
+        const { error: expireError } = await supabase.from("user_bridges").delete().eq("user_id", row.user_id).eq("status", "pending_pair");
+        if (expireError) console.error("[Bridge] could not clear a pairing request that ran out:", expireError.message);
+        continue;
+      }
       const code = (row.pairing_code || "").toUpperCase();
       const ws = bridgeConnections.get(code);
       if (ws && ws.readyState === 1) {

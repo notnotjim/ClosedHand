@@ -125,5 +125,5 @@ test('the Bridge pairing code is never logged, only that a Mac is waiting', () =
   const bridgeKeyForLog = new Function(src + '; return bridgeKeyForLog;')();
   assert.equal(bridgeKeyForLog('user:00000000-0000-4000-8000-000000000001'), 'user:00000000-0000-4000-8000-000000000001');
   assert.doesNotMatch(bridgeKeyForLog('K7QX2M'), /K7QX2M/);
-  assert.match(server, /console\.log\("\[Bridge\] A Mac offered a pairing code; it works until that Mac disconnects"\);/);
+  assert.match(server, /console\.log\("\[Bridge\] A Mac offered a pairing code; it works for ten minutes"\);/);
 });

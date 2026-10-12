@@ -129,3 +129,15 @@ test('status distinguishes live connections, missing pairings and database failu
     }
   }
 });
+
+test('a Bridge pairing code lasts ten minutes on the Mac and on the dashboard', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'server.js'), 'utf8');
+  assert.match(server, /const BRIDGE_PAIR_CODE_MS = 10 \* 60 \* 1000;/);
+  assert.match(server, /ws\.bridgeCodeAt = Date\.now\(\);/, 'when the Mac offered its code');
+  assert.match(server, /if \(key\.startsWith\("user:"\) \|\| !ws\.bridgeCodeAt \|\| Date\.now\(\) - ws\.bridgeCodeAt <= BRIDGE_PAIR_CODE_MS\) continue;\n\s*bridgeConnections\.delete\(key\);/, 'a code shown too long stops working');
+  assert.match(server, /ws\.send\(JSON\.stringify\(\{ type: "error", message: "That pairing code ran out\. Pair again for a new one\." \}\)\)/, 'and the Bridge app starts over');
+  assert.match(server, /if \(Date\.now\(\) - Date\.parse\(row\.paired_at \|\| 0\) > BRIDGE_PAIR_CODE_MS\) \{\n\s*const \{ error: expireError \} = await supabase\.from\("user_bridges"\)\.delete\(\)\.eq\("user_id", row\.user_id\)\.eq\("status", "pending_pair"\);/, 'a request typed on the dashboard waits ten minutes, not forever');
+  const swift = fs.readFileSync(path.join(__dirname, '..', 'bridge-app', 'Sources', 'BridgeManager.swift'), 'utf8');
+  assert.match(swift, /case "error":[\s\S]{0,200}pairingCode = ""/, 'the Mac app clears its code on "error"');
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'lib', 'bridge-server.js'), 'utf8'), /Date\.now\(\) - entry\.timestamp <= 10 \* 60 \* 1000/);
+});
