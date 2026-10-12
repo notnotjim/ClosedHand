@@ -210,3 +210,22 @@ test('the Bridge token goes only to the Mac: made at pairing, stored hashed, loo
   assert.match(read('lib/bridge-server.js'), /\.in\("token", storedForms\(token\)\)/);
   assert.match(read('lib/bridge-server.js'), /user_id: userId,\n\s*token: hashBridgeToken\(token\),/);
 });
+
+test("every read of a stored secret leaves an audit line naming the reader, never the value", () => {
+  process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || require("node:crypto").randomBytes(32).toString("base64");
+  delete require.cache[require.resolve("../crypto-tokens")];
+  const ct = require("../crypto-tokens");
+  const sealed = ct.encryptTokens({ refresh_token: "fixture-refresh-value", api_key: "fixture-key-value" });
+  const lines = [];
+  const log = console.log;
+  console.log = (...a) => lines.push(a.join(" "));
+  try {
+    for (let i = 0; i < 5; i++) ct.decryptTokens(sealed);
+  } finally { console.log = log; }
+  const audit = lines.filter((l) => l.startsWith("[secret-read] "));
+  assert.deepEqual(audit, ["[secret-read] scripts/test-secrets-at-rest.js read refresh_token", "[secret-read] scripts/test-secrets-at-rest.js read api_key"], "the first read by each file in an hour, by kind");
+  for (const l of lines) assert.doesNotMatch(l, /fixture-(refresh|key)-value/, "never the value");
+  for (const copy of ["webapp/crypto-tokens.js", "closedhand-com/lib/crypto-tokens.js"]) {
+    assert.equal(require("node:fs").readFileSync(require("node:path").join(__dirname, "..", copy), "utf8"), require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "crypto-tokens.js"), "utf8"), `${copy} audits the same way`);
+  }
+});

@@ -104,8 +104,35 @@ function _tryDecrypt(buf, key) {
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
 }
 
-function decryptString(value) {
+// Every read of a stored secret leaves an audit line in the log: which file
+// read it and what kind of secret, never the value. A file's first read in
+// each hour is logged, with how many reads it made in the hour before, so the
+// log shows who reads secrets and how often without a line per request.
+const _reads = new Map(); // "reader what" -> { hour, n, before }
+function _reader() {
+  const frames = String(new Error().stack || "").split("\n").slice(1);
+  for (const frame of frames) {
+    const m = frame.match(/\(?([^()\s]+\.js):\d+:\d+\)?\s*$/);
+    if (!m || m[1] === __filename || m[1].endsWith("crypto-tokens.js")) continue;
+    return require("path").relative(__dirname, m[1]) || m[1];
+  }
+  return "unknown";
+}
+function _audit(what) {
+  try {
+    const key = `${_reader()} ${what}`;
+    const hour = Math.floor(Date.now() / 3600000);
+    const r = _reads.get(key);
+    if (r && r.hour === hour) { r.n += 1; return; }
+    const before = r && r.hour === hour - 1 ? r.n : 0;
+    _reads.set(key, { hour, n: 1 });
+    console.log(`[secret-read] ${key.replace(" ", " read ")}${before ? ` (${before} reads in the hour before)` : ""}`);
+  } catch (_) { /* the audit never stops a read */ }
+}
+
+function decryptString(value, what = "a stored secret") {
   if (typeof value !== "string" || !value.startsWith(PREFIX)) return value; // legacy plaintext or non-string
+  _audit(what);
   _resolveKeys();
   if (!_current && !_old) {
     console.error("[crypto-tokens] Encrypted token found but no keys configured — cannot decrypt.");
@@ -140,7 +167,7 @@ function decryptTokens(tokens) {
   if (!tokens || typeof tokens !== "object") return tokens;
   const out = { ...tokens };
   for (const f of SECRET_FIELDS) {
-    if (out[f] !== undefined) out[f] = decryptString(out[f]);
+    if (out[f] !== undefined) out[f] = decryptString(out[f], f);
   }
   return out;
 }
