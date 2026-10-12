@@ -13,7 +13,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 const server = read("webapp/server.js");
 const fn = (name) => { const s = server.indexOf(`function ${name}`); return server.slice(s, server.indexOf("\n}\n", s) + 2); };
 
-const TOKEN = "123456:test-token";
+const TOKEN = "123456:AAtest-token-for-the-mini-app-0000000";
 function proof(user, authDate, token = TOKEN) {
   const params = new URLSearchParams({ auth_date: String(authDate), query_id: "q1", user: JSON.stringify(user) });
   const check = [...params.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => `${k}=${v}`).join("\n");
@@ -23,11 +23,13 @@ function proof(user, authDate, token = TOKEN) {
 }
 
 test("a proof counts only when Telegram signed it with this bot's key, recently", () => {
-  const box = { crypto, Buffer, Date, URLSearchParams, JSON, Number, parseInt, console: { error() {} } };
+  const box = { crypto, Buffer, Date, URLSearchParams, JSON, Number, parseInt, console: { error() {} }, TELEGRAM_TOKEN_FORM: /^\d+:[A-Za-z0-9_-]{30,}$/ };
   vm.runInNewContext(fn("validateTelegramInitData") + "\nthis.f = validateTelegramInitData;", box);
   const now = Math.floor(Date.now() / 1000);
   assert.equal(box.f(proof({ id: 42 }, now), TOKEN, 3600).id, 42);
-  assert.equal(box.f(proof({ id: 42 }, now), "999:other", 3600), null, "another bot's key");
+  assert.equal(box.f(proof({ id: 42 }, now), "999:AAanother-bots-token-000000000000000", 3600), null, "another bot's key");
+  const short = "123456:short-token";
+  assert.equal(box.f(proof({ id: 42 }, now, short), short, 3600), null, "a token too short to sign safely");
   assert.equal(box.f(proof({ id: 42 }, now - 7200), TOKEN, 3600), null, "older than an hour");
   assert.equal(box.f(proof({ id: 42 }, now).replace(/hash=[0-9a-f]{4}/, "hash=0000"), TOKEN, 3600), null, "altered");
   assert.equal(box.f(proof({ id: 42 }, now), null, 3600), null, "no key, no proof");

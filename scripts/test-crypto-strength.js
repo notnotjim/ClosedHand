@@ -90,3 +90,10 @@ test("sessions carry on when the password's hash is raised, and a .env password'
   stored = next;
   assert.equal((await s.check(token)).ok, true, "still signed in under the raised hash");
 });
+
+test("a Telegram bot token too short to sign proofs safely is neither saved nor used", () => {
+  const server = read("webapp/server.js");
+  assert.match(server, /const TELEGRAM_TOKEN_FORM = \/\^\\d\+:\[A-Za-z0-9_-\]\{30,\}\$\/;/);
+  assert.match(server, /if \(!TELEGRAM_TOKEN_FORM\.test\(token\)\) return res\.status\(400\)/);
+  assert.match(server, /if \(!initData \|\| !token \|\| !TELEGRAM_TOKEN_FORM\.test\(token\)\) return null;/);
+});

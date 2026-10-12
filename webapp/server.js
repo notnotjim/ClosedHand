@@ -1426,6 +1426,12 @@ app.get("/api/setup/qr", async (req, res) => {
   }
 });
 
+// A bot token is the bot's number, a colon and a secret Telegram makes. The
+// secret signs the mini app's sign-in proof (validateTelegramInitData), so one
+// shorter than 30 characters of its 64-letter alphabet (180 bits) is not
+// taken or used. Telegram's own are 35.
+const TELEGRAM_TOKEN_FORM = /^\d+:[A-Za-z0-9_-]{30,}$/;
+
 // Telegram: validate the token with getMe (which also gives us the bot's
 // handle for a tap-to-open link), then store it. The bot process notices
 // within seconds and starts polling, no restart involved.
@@ -1433,7 +1439,7 @@ app.post("/api/setup/telegram", async (req, res) => {
   try {
     if (!(await requireSetupAccess(req, res))) return;
     const token = String((req.body || {}).token || "").trim();
-    if (!/^\d+:[A-Za-z0-9_-]{20,}$/.test(token)) return res.status(400).json({ error: "That doesn't look like a bot token. BotFather sends it as numbers, a colon, then letters." });
+    if (!TELEGRAM_TOKEN_FORM.test(token)) return res.status(400).json({ error: "That doesn't look like a bot token. BotFather sends it as numbers, a colon, then letters." });
     const r = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: AbortSignal.timeout(10000) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.ok) return res.status(400).json({ error: "Telegram rejected that token. Copy the whole line BotFather sent." });
@@ -1838,7 +1844,7 @@ async function telegramBotToken() {
 }
 
 function validateTelegramInitData(initData, token, maxAgeSec = 86400) {
-  if (!initData || !token) return null;
+  if (!initData || !token || !TELEGRAM_TOKEN_FORM.test(token)) return null;
 
   try {
     const params = new URLSearchParams(initData);
