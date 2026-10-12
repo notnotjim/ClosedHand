@@ -611,11 +611,21 @@ async function checkDashboardPassword(pw) {
 
 // Each sign-in is its own session that logging out or a new password ends
 // (dashboard-sessions.js). The cookie holds only the session's random value.
+// A session signed out while the database couldn't take the delete is kept,
+// as its hash, in the storage folder until the delete goes through.
+const endedSessionsFile = path.join(path.resolve(process.env.STORAGE_DIR || "./data/storage"), "ended-sessions.json");
 const dashboardSessions = require("./dashboard-sessions").createSessions({
   db: supabase,
   password: async () => process.env.ADMIN_PASSWORD
     ? { envPassword: process.env.ADMIN_PASSWORD }
     : { storedHash: (await getRuntimeConf("DASHBOARD_PASSWORD_HASH")) || "" },
+  ended: {
+    load: () => { try { return JSON.parse(require("fs").readFileSync(endedSessionsFile, "utf8")); } catch (_) { return {}; } },
+    save: (map) => {
+      try { const fs = require("fs"); fs.mkdirSync(path.dirname(endedSessionsFile), { recursive: true }); fs.writeFileSync(endedSessionsFile, JSON.stringify(map), { mode: 0o600 }); }
+      catch (e) { console.error("[logout] could not keep the list of signed-out sessions:", e.message); }
+    },
+  },
 });
 function readCookie(req, name) {
   for (const part of String(req.headers.cookie || "").split(";")) {
@@ -2170,7 +2180,8 @@ app.get("/line-setup-complete", (req, res) => {
 // /logout shows the button.
 app.post("/logout", async (req, res) => {
   try {
-    await dashboardSessions.end(readCookie(req, browserAccess.sessionName(req)));
+    const ended = await dashboardSessions.end(readCookie(req, browserAccess.sessionName(req)));
+    if (ended.pending) console.error(`[logout] the database didn't take the sign-out (${ended.reason}); the session is refused here and the delete will be tried again`);
   } catch (e) {
     console.error("[logout] could not end the session:", e.message);
   }

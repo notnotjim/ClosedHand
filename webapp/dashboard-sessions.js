@@ -35,8 +35,37 @@ function passwordFingerprint({ envPassword, storedHash }) {
 }
 
 // db: the supabase-style client. password(): resolves { envPassword, storedHash }.
-function createSessions({ db, password, now = () => Date.now() }) {
+// ended: optional { load(), save(map) } keeping sessions signed out while the
+// database couldn't be told, so a restart still refuses them.
+function createSessions({ db, password, now = () => Date.now(), ended = null, retryMs = 30 * 1000 }) {
   const known = new Map(); // token hash -> { expires, fp, kind, checkedAt }
+  // Signing out deletes the session's row. If the database can't take the
+  // delete just then, the session is still ended here at once: its hash is
+  // refused from this list, kept on disk, and the delete is tried again until
+  // it goes through. Before, a failed delete cleared only the browser's
+  // cookie and left the session good until it ran out.
+  const pending = new Map(); // token hash -> when the session would have run out
+  for (const [hash, until] of Object.entries((ended && ended.load()) || {})) if (until > now()) pending.set(hash, until);
+  let retryTimer = null;
+  function savePending() {
+    if (ended) ended.save(Object.fromEntries(pending));
+  }
+  async function retryPending() {
+    retryTimer = null;
+    for (const [hash, until] of pending) {
+      if (until <= now()) { pending.delete(hash); continue; }
+      const { error } = await db.from(TABLE).delete().eq("token_hash", hash);
+      if (!error) pending.delete(hash);
+    }
+    savePending();
+    if (pending.size) scheduleRetry();
+  }
+  function scheduleRetry() {
+    if (retryTimer || !retryMs) return;
+    retryTimer = setTimeout(() => { retryPending().catch(() => scheduleRetry()); }, retryMs);
+    if (retryTimer.unref) retryTimer.unref();
+  }
+  if (pending.size) scheduleRetry();
 
   async function currentFp() {
     return passwordFingerprint(await password());
@@ -61,6 +90,7 @@ function createSessions({ db, password, now = () => Date.now() }) {
   async function check(token) {
     if (!token) return { ok: false };
     const hash = hashToken(token);
+    if (pending.has(hash)) return { ok: false };
     let s = known.get(hash);
     if (!s || now() - s.checkedAt > RECHECK_MS) {
       const { data, error } = await db.from(TABLE).select("kind, password_fp, expires_at").eq("token_hash", hash).maybeSingle();
@@ -94,12 +124,22 @@ function createSessions({ db, password, now = () => Date.now() }) {
     return { ok: true, kind: s.kind };
   }
 
+  // { ended: true } once the row is gone; { ended: true, pending: true } when
+  // the database refused the delete and the session is refused here instead.
   async function end(token) {
-    if (!token) return;
+    if (!token) return { ended: false };
     const hash = hashToken(token);
     known.delete(hash);
-    const { error } = await db.from(TABLE).delete().eq("token_hash", hash);
-    if (error) throw new Error(error.message);
+    let failure = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { error } = await Promise.resolve(db.from(TABLE).delete().eq("token_hash", hash)).catch((e) => ({ error: e }));
+      if (!error) return { ended: true };
+      failure = error;
+    }
+    pending.set(hash, now() + SESSION_SEC * 1000);
+    savePending();
+    scheduleRetry();
+    return { ended: true, pending: true, reason: failure.message };
   }
 
   async function endAll() {
@@ -108,7 +148,7 @@ function createSessions({ db, password, now = () => Date.now() }) {
     if (error) throw new Error(error.message);
   }
 
-  return { start, check, end, endAll };
+  return { start, check, end, endAll, retryPending };
 }
 
 module.exports = { createSessions, passwordFingerprint, hashToken, SESSION_SEC };

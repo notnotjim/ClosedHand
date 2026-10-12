@@ -14,7 +14,7 @@ const DAY = 24 * 60 * 60 * 1000;
 // Just enough of the database client for one table.
 function fakeDb() {
   const rows = new Map();
-  const state = { rows, failReads: false };
+  const state = { rows, failReads: false, failDeletes: false };
   state.from = () => {
     const q = { filters: [], op: 'select' };
     const match = (r) => q.filters.every(([col, how, val]) => how === 'eq' ? r[col] === val : how === 'neq' ? r[col] !== val : r[col] < val);
@@ -26,7 +26,7 @@ function fakeDb() {
       }
       if (q.op === 'insert') { rows.set(q.row.token_hash, { ...q.row }); return { error: null }; }
       if (q.op === 'update') { for (const r of rows.values()) if (match(r)) Object.assign(r, q.row); return { error: null }; }
-      if (q.op === 'delete') { for (const [k, r] of rows) if (match(r)) rows.delete(k); return { error: null }; }
+      if (q.op === 'delete') { if (state.failDeletes) return { error: { message: 'connection refused' } }; for (const [k, r] of rows) if (match(r)) rows.delete(k); return { error: null }; }
     };
     const b = {
       select() { q.op = 'select'; return b; },
@@ -247,4 +247,30 @@ test('API answers are kept by no browser cache, from the first route on', () => 
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
   const noStore = server.indexOf('app.use("/api", (req, res, next) => {\n  res.set("Cache-Control", "no-store");');
   assert.ok(noStore > 0 && noStore < server.indexOf('app.get("/api/'), 'before any API route');
+});
+
+test('signing out ends the session even when the database refuses the delete, and a restart still refuses it', async () => {
+  const { db, clock, pw } = setup();
+  let saved = {};
+  const ended = { load: () => saved, save: (m) => { saved = { ...m }; } };
+  const make = () => createSessions({ db, now: () => clock.t, ended, retryMs: 0, password: async () => ({ storedHash: pw.storedHash }) });
+  const sessions = make();
+  const s = await sessions.start();
+  assert.equal((await sessions.check(s.token)).ok, true);
+  db.failDeletes = true;
+  const out = await sessions.end(s.token);
+  assert.equal(out.ended, true);
+  assert.equal(out.pending, true);
+  assert.ok(db.rows.has(hashToken(s.token)), 'the row is still there');
+  assert.equal((await sessions.check(s.token)).ok, false, 'but the session is refused at once');
+  assert.deepEqual(Object.keys(saved), [hashToken(s.token)], 'only its hash is kept, on disk');
+  const restarted = make();
+  assert.equal((await restarted.check(s.token)).ok, false, 'a restart still refuses it');
+  db.failDeletes = false;
+  await restarted.retryPending();
+  assert.equal(db.rows.has(hashToken(s.token)), false, 'the delete goes through once the database takes it');
+  assert.deepEqual(saved, {}, 'and the kept hash goes too');
+  assert.equal((await restarted.check(s.token)).ok, false);
+  const logout = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
+  assert.match(logout, /ended: \{\n\s*load: \(\) => \{ try \{ return JSON\.parse\(require\("fs"\)\.readFileSync\(endedSessionsFile, "utf8"\)\); \}/);
 });
