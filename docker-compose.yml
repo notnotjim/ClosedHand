@@ -32,11 +32,19 @@ services:
       - pgdata:/var/lib/postgresql/data
       # Auto-applies the full schema on FIRST init (empty data volume only).
       - ./migrations/000_baseline_schema.sql:/docker-entrypoint-initdb.d/000_baseline_schema.sql:ro
+    # Checked every 2 seconds while it starts, then every 30: each check is a
+    # connection, and every connection is now a line in the log.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-closedhand}"]
-      interval: 3s
+      interval: 30s
       timeout: 3s
-      retries: 30
+      retries: 3
+      start_period: 90s
+      start_interval: 2s
+    # The connection log is kept to 50 MB, about two months of it.
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
     restart: unless-stopped
 
   bot:
