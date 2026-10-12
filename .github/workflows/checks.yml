@@ -137,6 +137,8 @@ jobs:
 
       - name: No new unchecked database writes
         run: node scripts/check-unchecked-writes.js
+      - name: Every record picked by id names its owner
+        run: node scripts/check-owner-filters.js
 
       - name: Report page, Word and Excel files
         run: |

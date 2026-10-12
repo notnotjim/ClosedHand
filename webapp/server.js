@@ -3791,7 +3791,7 @@ app.post("/api/threads/new", async (req, res) => {
       if (!title) title = "Chat, " + new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
       await supabase.from("conversation_threads")
         .update({ is_active: false, title, updated_at: new Date().toISOString() })
-        .eq("id", active.id);
+        .eq("id", active.id).eq("user_id", userId);
     }
 
     // Create new
@@ -4914,7 +4914,7 @@ app.get("/api/agents/:id", async (req, res) => {
     const { data: task, error } = await supabase
       .from("agent_tasks")
       .select("id, user_id, goal, status, model, result, progress, tools_used, error, created_at, completed_at")
-      .eq("id", req.params.id)
+      .eq("id", req.params.id).eq("user_id", userId)
       .single();
 
     if (error || !task) return res.status(404).json({ error: "Agent not found" });
@@ -4937,7 +4937,7 @@ async function ownReport(req, res) {
   const { data, error } = await supabase
     .from("reports")
     .select("id, user_id, task_id, title, content, reason, created_at, updated_at")
-    .eq("id", req.params.id)
+    .eq("id", req.params.id).eq("user_id", userId)
     .limit(1);
   const report = data?.[0];
   if (error || !report) {
@@ -5065,7 +5065,7 @@ app.get("/api/agents/:id/pdf", async (req, res) => {
     const { data: run, error } = await supabase
       .from("agent_tasks")
       .select("id, user_id, goal, title, status, result, created_at, completed_at, result_edited_at")
-      .eq("id", req.params.id)
+      .eq("id", req.params.id).eq("user_id", userId)
       .single();
 
     if (error || !run) return res.status(404).json({ error: "Agent not found" });
@@ -5097,7 +5097,7 @@ app.post("/api/agents/:id/cancel", async (req, res) => {
     const { data: task, error: fetchErr } = await supabase
       .from("agent_tasks")
       .select("user_id, status")
-      .eq("id", req.params.id)
+      .eq("id", req.params.id).eq("user_id", userId)
       .single();
 
     if (fetchErr || !task) return res.status(404).json({ error: "Agent not found" });
@@ -5107,7 +5107,7 @@ app.post("/api/agents/:id/cancel", async (req, res) => {
     const { error } = await supabase
       .from("agent_tasks")
       .update({ status: "cancelled", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", req.params.id);
+      .eq("id", req.params.id).eq("user_id", userId);
 
     if (error) throw error;
     res.json({ success: true });
@@ -5859,7 +5859,7 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
       oauthStates.set(state, { flow: "mcp-oauth", userId, row: { ...mcp, auth_type: "oauth" }, name: mcp.name, created: Date.now() });
       return { status: 200, body: { needs_reauth: true, redirect_url: e.redirectUrl } };
     }
-    const { error: e2 } = await supabase.from("user_mcps").update({ status: e.needsAuth ? "needs_auth" : "error" }).eq("id", id);
+    const { error: e2 } = await supabase.from("user_mcps").update({ status: e.needsAuth ? "needs_auth" : "error" }).eq("id", id).eq("user_id", userId);
     if (e2) console.error("[mcp] status update failed:", e2.message);
     return { status: 200, body: { success: false, needs_reauth: !!e.needsAuth, error: e.message } };
   }
@@ -5867,7 +5867,7 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
     const found = await mcpClient.discover(opened.client);
     const patch = { ...mcpRowPatchFrom(found, mcp.caps), status: "connected" };
     if (opened.transportKind !== "stdio" && opened.transportKind !== mcp.transport) patch.transport = opened.transportKind;
-    const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id);
+    const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id).eq("user_id", userId);
     if (e3) console.error("[mcp] check update failed:", e3.message);
     return {
       status: 200,
@@ -5882,7 +5882,7 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
       },
     };
   } catch (e) {
-    const { error: e4 } = await supabase.from("user_mcps").update({ status: "error" }).eq("id", id);
+    const { error: e4 } = await supabase.from("user_mcps").update({ status: "error" }).eq("id", id).eq("user_id", userId);
     if (e4) console.error("[mcp] status update failed:", e4.message);
     return { status: 200, body: { success: false, error: e.message } };
   } finally {
@@ -7269,7 +7269,7 @@ app.delete("/api/datasets/:id", async (req, res) => {
   try {
     const { data: ds } = await supabase.from("datasets").select("id").eq("id", req.params.id).eq("user_id", userId).single();
     if (!ds) return res.status(404).json({ error: "Dataset not found" });
-    await mustWrite("could not delete that dataset", supabase.from("datasets").delete().eq("id", ds.id));
+    await mustWrite("could not delete that dataset", supabase.from("datasets").delete().eq("id", ds.id).eq("user_id", userId));
     res.json({ success: true });
   } catch (err) {
     console.error("Dataset delete error:", err.message);
@@ -7284,9 +7284,9 @@ app.delete("/api/datasets/rows/:rowId", async (req, res) => {
   try {
     const { data: row } = await supabase.from("dataset_rows").select("id, dataset_id").eq("id", req.params.rowId).eq("user_id", userId).single();
     if (!row) return res.status(404).json({ error: "Row not found" });
-    await supabase.from("dataset_rows").delete().eq("id", row.id);
+    await supabase.from("dataset_rows").delete().eq("id", row.id).eq("user_id", userId);
     const { count } = await supabase.from("dataset_rows").select("id", { count: "exact", head: true }).eq("dataset_id", row.dataset_id);
-    await supabase.from("datasets").update({ row_count: count || 0 }).eq("id", row.dataset_id);
+    await supabase.from("datasets").update({ row_count: count || 0 }).eq("id", row.dataset_id).eq("user_id", userId);
     res.json({ success: true });
   } catch (err) {
     console.error("Dataset row delete error:", err.message);
@@ -7360,7 +7360,7 @@ app.delete("/api/rag/sources/:id", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   const { data } = await supabase.from("rag_sources").select("id").eq("id", req.params.id).eq("user_id", userId).single();
   if (!data) return res.status(404).json({ error: "Source not found" });
-  const { error: delErr } = await supabase.from("rag_sources").delete().eq("id", data.id);
+  const { error: delErr } = await supabase.from("rag_sources").delete().eq("id", data.id).eq("user_id", userId);
   // No try/catch in this handler, so answer directly rather than throwing into
   // nothing: an async throw in Express 4 leaves the request hanging.
   if (delErr) return res.status(500).json({ error: `could not remove that source (${delErr.message})` });
@@ -9452,7 +9452,7 @@ supabase.channel("bridge-requests-listener")
       }
       if (!ws || ws.readyState !== 1) {
         console.log(`[Bridge-Broker] No live WebSocket for user ${userId}`);
-        await supabase.from("bridge_requests").update({ status: "error", error: "Bridge not connected" }).eq("id", id);
+        await supabase.from("bridge_requests").update({ status: "error", error: "Bridge not connected" }).eq("id", id).eq("user_id", userId);
         return;
       }
 
@@ -9473,10 +9473,10 @@ supabase.channel("bridge-requests-listener")
       });
 
       console.log(`[Bridge-Broker] Request ${id} completed, writing result`);
-      await supabase.from("bridge_requests").update({ status: "completed", result }).eq("id", id);
+      await supabase.from("bridge_requests").update({ status: "completed", result }).eq("id", id).eq("user_id", userId);
     } catch (e) {
       console.log(`[Bridge-Broker] Request ${id} failed: ${e.message}`);
-      await supabase.from("bridge_requests").update({ status: "error", error: e.message }).eq("id", id);
+      await supabase.from("bridge_requests").update({ status: "error", error: e.message }).eq("id", id).eq("user_id", userId);
     }
   })
   .subscribe((status) => {
@@ -9502,14 +9502,14 @@ setInterval(async () => {
       const { error: claimErr } = await supabase
         .from("bridge_requests")
         .update({ status: "processing" })
-        .eq("id", id)
+        .eq("id", id).eq("user_id", userId)
         .eq("status", "pending");
       if (claimErr) continue; // Another instance may have claimed it
 
       try {
         const ws = bridgeConnections.get("user:" + userId);
         if (!ws || ws.readyState !== 1) {
-          await supabase.from("bridge_requests").update({ status: "error", error: "Bridge not connected" }).eq("id", id);
+          await supabase.from("bridge_requests").update({ status: "error", error: "Bridge not connected" }).eq("id", id).eq("user_id", userId);
           continue;
         }
 
@@ -9525,9 +9525,9 @@ setInterval(async () => {
           ws.send(JSON.stringify({ type: "request", id: requestId, action, params: params || {} }));
         });
 
-        await supabase.from("bridge_requests").update({ status: "completed", result }).eq("id", id);
+        await supabase.from("bridge_requests").update({ status: "completed", result }).eq("id", id).eq("user_id", userId);
       } catch (e) {
-        await supabase.from("bridge_requests").update({ status: "error", error: e.message }).eq("id", id);
+        await supabase.from("bridge_requests").update({ status: "error", error: e.message }).eq("id", id).eq("user_id", userId);
       }
     }
   } catch (e) {
