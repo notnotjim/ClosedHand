@@ -39,10 +39,12 @@ const DEFAULT_TIMEOUT = 30000; // 30s default
 const MAX_OUTPUT = 8000; // chars
 
 // --- Auth middleware ---
+// Compared in the same time whatever the guess, so timing can't spell out a secret.
+const sameSecret = (a, b) => crypto.timingSafeEqual(crypto.createHash("sha256").update(String(a || "")).digest(), crypto.createHash("sha256").update(String(b || "")).digest());
 function auth(req, res, next) {
   if (!SANDBOX_TOKEN) return next(); // dev mode
   const token = req.headers["x-sandbox-token"];
-  if (!token || token !== SANDBOX_TOKEN) {
+  if (!token || !sameSecret(token, SANDBOX_TOKEN)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();

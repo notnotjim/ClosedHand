@@ -174,3 +174,24 @@ test('a failure inside this computer reaches the browser as a plain sentence, ne
   const fine = run('/status', {}, 200, { ok: true });
   assert.deepEqual(fine, { code: 200, sent: { ok: true } });
 });
+
+test("secrets are compared in constant time, and records are read by owner as well as id", () => {
+  const r = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+  const gateway = r("lib/gateway.js");
+  assert.match(gateway, /if \(!token \|\| !sameSecret\(token, STATIC_SANDBOX_TOKEN\)\)/);
+  assert.match(r("sandbox-image/agent/server.js"), /if \(!token \|\| !sameSecret\(token, SANDBOX_TOKEN\)\)/);
+  assert.match(r("lib/platforms/line.js"), /crypto\.timingSafeEqual\(crypto\.createHash\("sha256"\)\.update\(hash\)\.digest\(\)/);
+  const web = r("webapp/server.js");
+  assert.match(web, /process\.env\.BRIDGE_TOKEN && crypto\.timingSafeEqual\(/);
+  assert.doesNotMatch(web, /msg\.token === process\.env\.BRIDGE_TOKEN/);
+  const wa = r("lib/platforms/whatsapp.js");
+  assert.match(wa, /return res\.status\(200\)\.type\("text\/plain"\)\.send\(String\(challenge\)\);/, "the webhook echo is never a page");
+  assert.match(r("lib/services/usi.js"), /\(\(\{ _content_hash, \.\.\.rest \}\) => rest\)\(r\.source_metadata\)/, "the content hash is not sent to the model");
+  assert.match(web, /from\("canvases"\)\.select\("id, filename, mime_type, content"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);
+  assert.match(web, /from\("canvases"\)\.select\("\*"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);
+  assert.match(web, /\.select\("id, title, messages"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", userId\)/);
+  assert.match(web, /const \{ id: _id, user_id: _owner, created_at: _made, updated_at: _changed, \.\.\.changes \} = req\.body \|\| \{\};/, "an automation's id and owner never come from the body");
+  assert.match(web, /const BRIDGE_PAIR_CODE = \/\^\[ABCDEFGHJKLMNPQRSTUVWXYZ23456789\]\{6\}\$\/i;/);
+  assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(String\(code\)\)\) return res\.status\(400\)/);
+  assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(offered\) \|\| bridgeConnections\.has\(offered\) \|\| waiting >= 50\)/);
+});

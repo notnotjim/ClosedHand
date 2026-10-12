@@ -170,6 +170,7 @@ test('named connection retains the exact address across a disconnect and an inst
   assert.equal(t.api.status().url, null);
   assert.equal(t.children[0].args.includes(permanent.token), false);
   assert.equal(t.children[0].options.env.TUNNEL_TOKEN, permanent.token);
+  assert.deepEqual(Object.keys(t.children[0].options.env).filter((k) => !['PATH', 'HOME', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'https_proxy', 'http_proxy', 'no_proxy', 'TUNNEL_TOKEN'].includes(k)), [], 'cloudflared never sees the keys in the dashboard\'s environment');
   t.children[0].stderr.emit('data', 'Registered tunnel connection'); await flush();
   assert.equal(t.api.status().url, permanent.url);
   t.children[0].emit('exit', 1); await flush();

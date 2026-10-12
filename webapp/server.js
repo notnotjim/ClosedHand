@@ -2021,7 +2021,8 @@ app.get("/link/whatsapp/:token", async (req, res) => {
 // Canvas JSON API: fetch canvas content for in-panel rendering
 app.get("/api/canvas/:id", async (req, res) => {
   try {
-    const { data, error } = await supabase.from("canvases").select("id, filename, mime_type, content").eq("id", req.params.id).single();
+    // Only the signed-in person's own canvases, by owner as well as id.
+    const { data, error } = await supabase.from("canvases").select("id, filename, mime_type, content").eq("id", req.params.id).eq("user_id", getUserIdFromRequest(req)).single();
     if (error || !data) return res.status(404).json({ error: "Not found" });
     res.json(data);
   } catch (err) {
@@ -2032,7 +2033,7 @@ app.get("/api/canvas/:id", async (req, res) => {
 // Canvas: shareable generated content (charts, HTML, images)
 app.get("/canvas/:id", async (req, res) => {
   try {
-    const { data, error } = await supabase.from("canvases").select("*").eq("id", req.params.id).single();
+    const { data, error } = await supabase.from("canvases").select("*").eq("id", req.params.id).eq("user_id", getUserIdFromRequest(req)).single();
     if (error || !data) return res.status(404).send("Canvas not found");
 
     if (data.mime_type === "text/html") {
@@ -3818,7 +3819,7 @@ app.post("/api/threads/:id/activate", async (req, res) => {
 
     // Get the thread for response
     const { data: threadRows } = await supabase.from("conversation_threads")
-      .select("id, title, messages").eq("id", req.params.id).limit(1);
+      .select("id, title, messages").eq("id", req.params.id).eq("user_id", userId).limit(1);
     var thread = threadRows && threadRows.length > 0 ? threadRows[0] : null;
     res.json({ success: true, title: thread?.title, message_count: (thread?.messages || []).length });
   } catch (e) {
@@ -5327,9 +5328,12 @@ app.put("/api/automations/:id", async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
+    // Which automation and whose it is come from the address and the
+    // session, never from the body.
+    const { id: _id, user_id: _owner, created_at: _made, updated_at: _changed, ...changes } = req.body || {};
     const { data, error } = await supabase
       .from("automations")
-      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .update({ ...changes, updated_at: new Date().toISOString() })
       .eq("id", req.params.id)
       .eq("user_id", userId)
       .select()
@@ -7626,6 +7630,14 @@ function macHomePath(p) {
   if (!rel) return "$HOME";
   return `$HOME/$(printf %s ${Buffer.from(rel, "utf8").toString("base64")} | base64 --decode)`;
 }
+// A file or folder name in a shell command. Names come from files anyone can
+// make, so a name is never pasted in as it is: a ' or a $( ) in one ran its own
+// command on the Mac or in the sandbox. shq() quotes it for a command line;
+// shDecoded() is for a command already inside quotes (bash -c '...'): the
+// name goes as base64 and is decoded where it runs, as macHomePath does, so
+// none of its characters reach either shell's parser.
+const shq = (v) => "'" + String(v).split("'").join("'\\''") + "'";
+const shDecoded = (v) => `"$(printf %s ${Buffer.from(String(v), "utf8").toString("base64")} | base64 --decode)"`;
 
 // POST /api/sync/mark - mark a local file as "always on" (copies to cloud)
 app.post("/api/sync/mark", async (req, res) => {
@@ -8164,11 +8176,11 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
   // Ensure parent directory exists on sandbox
   const parentDir = destPath.substring(0, destPath.lastIndexOf("/")) || "/workspace";
   await sandboxFetch(info, "POST", "/exec", {
-    language: "bash", code: `mkdir -p "${parentDir}"`
+    language: "bash", code: `mkdir -p ${shq(parentDir)}`
   }, 5000).catch(() => {});
 
   // Tell Bridge to curl the file directly to our upload endpoint (runs in background)
-  const curlCmd = `bash -c 'curl -s -X POST -F "file=@${cleanPath}" -F "path=${destPath}" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'curl -s -X POST -F "file=@${cleanPath}" --form-string path=${shDecoded(destPath)} -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl] ${sourcePath} -> ${destPath} (starting curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -8181,7 +8193,7 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
       // Verify file exists on sandbox
       try {
         const check = await sandboxFetch(info, "POST", "/exec", {
-          language: "bash", code: `test -f "${destPath}" && stat -c%s "${destPath}" 2>/dev/null || stat -f%z "${destPath}" 2>/dev/null || echo "0"`
+          language: "bash", code: `test -f ${shq(destPath)} && stat -c%s ${shq(destPath)} 2>/dev/null || stat -f%z ${shq(destPath)} 2>/dev/null || echo "0"`
         }, 5000);
         const size = parseInt((check.stdout || check.output || "0").trim());
         if (size > 0) {
@@ -8208,11 +8220,11 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
 
   // Ensure dest dir exists on sandbox
   await sandboxFetch(info, "POST", "/exec", {
-    language: "bash", code: `mkdir -p "${destPath}"`
+    language: "bash", code: `mkdir -p ${shq(destPath)}`
   }, 5000).catch(() => {});
 
   // Tell Bridge to tar the directory and pipe to curl (runs in background)
-  const curlCmd = `bash -c 'cd "${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" -F "path=${destPath}" -F "isTar=true" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'cd "${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" --form-string path=${shDecoded(destPath)} -F "isTar=true" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl-dir] ${sourcePath} -> ${destPath} (starting tar+curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -8224,7 +8236,7 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
       // Verify directory was extracted
       try {
         const check = await sandboxFetch(info, "POST", "/exec", {
-          language: "bash", code: `test -d "${destPath}" && ls -1 "${destPath}" 2>/dev/null | wc -l || echo "0"`
+          language: "bash", code: `test -d ${shq(destPath)} && ls -1 ${shq(destPath)} 2>/dev/null | wc -l || echo "0"`
         }, 5000);
         const count = parseInt((check.stdout || check.output || "0").trim());
         if (count > 0) {
@@ -8689,6 +8701,8 @@ app.post("/api/bridge/pair", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { code } = req.body;
     if (!code) return res.status(400).json({ error: "Pairing code required" });
+    // The Mac app shows six characters from this alphabet (no 0, O, 1 or I).
+    if (!BRIDGE_PAIR_CODE.test(String(code))) return res.status(400).json({ error: "That isn't a pairing code. Type the six characters the Mac app shows." });
 
     // Store the pairing request for the poll below to match to the Mac. The
     // Mac's token is made there, when it is handed over, and only its hash
@@ -9254,6 +9268,15 @@ wss.on("connection", (ws) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "pair" && msg.code) {
+        // Only a code in the Mac app's own shape, a code no other Mac holds,
+        // and no more than a few dozen waiting at once: a stranger opening
+        // connections can't fill the table or take over a code.
+        const offered = String(msg.code).toUpperCase();
+        const waiting = [...bridgeConnections.keys()].filter((k) => !k.startsWith("user:")).length;
+        if (!BRIDGE_PAIR_CODE.test(offered) || bridgeConnections.has(offered) || waiting >= 50) {
+          ws.send(JSON.stringify({ type: "error", message: "Pairing isn't possible just now. Pair again in a moment." }));
+          return ws.close();
+        }
         // Bridge app registering its pairing code. The code works for ten
         // minutes while this connection stays open, and never goes in the log.
         console.log("[Bridge] A Mac offered a pairing code; it works for ten minutes");
@@ -9275,7 +9298,7 @@ wss.on("connection", (ws) => {
         // itself and handed it to both sides, so its Bridge is paired from
         // the first launch. The row is kept so the dashboard reads it as any
         // other pairing.
-        if (!data && process.env.CLOSEDHAND_DESKTOP && process.env.BRIDGE_TOKEN && msg.token === process.env.BRIDGE_TOKEN) {
+        if (!data && process.env.CLOSEDHAND_DESKTOP && process.env.BRIDGE_TOKEN && crypto.timingSafeEqual(crypto.createHash("sha256").update(String(msg.token)).digest(), crypto.createHash("sha256").update(process.env.BRIDGE_TOKEN).digest())) {
           const adminId = getAdminUserId();
           const { error: pairError } = await supabase.from("user_bridges")
             .upsert({ user_id: adminId, token: bridgeToken.hashBridgeToken(msg.token), status: "connected", paired_at: new Date().toISOString() }, { onConflict: "user_id" });
@@ -9360,6 +9383,7 @@ wss.on("connection", (ws) => {
 // code shown on a Mac left open worked until the Mac disconnected, and a
 // request typed on the dashboard waited for its Mac forever.
 const BRIDGE_PAIR_CODE_MS = 10 * 60 * 1000;
+const BRIDGE_PAIR_CODE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/i;
 setInterval(async () => {
   try {
     for (const [key, ws] of bridgeConnections) {

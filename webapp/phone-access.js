@@ -3,6 +3,9 @@
 const { spawn } = require("child_process");
 const { getConf, setConf } = require("./config");
 const BIN = process.env.CLOUDFLARED_BIN || "cloudflared";
+// What cloudflared may see of the environment: where to run and how to reach
+// out, nothing else (the dashboard's environment holds its keys).
+const TUNNEL_ENV_KEEP = ["PATH", "HOME", "TMPDIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "https_proxy", "http_proxy", "no_proxy"];
 const PORT = process.env.PORT || 3000;
 const URL_RE = /https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com/i;
 let proc = null, url = null, wanted = false, state = "off", lastError = null;
@@ -48,8 +51,10 @@ async function start() {
     }
     if (run !== generation || !wanted) return;
     const args = permanent ? ["tunnel", "--no-autoupdate", "run"] : ["tunnel", "--url", `http://localhost:${PORT}`, "--no-autoupdate"];
-    const options = { stdio: ["ignore", "pipe", "pipe"] };
-    if (permanent) options.env = { ...process.env, TUNNEL_TOKEN: permanent.token };
+    // cloudflared gets only what it runs on and its tunnel token, never the
+    // rest of the dashboard's environment, which holds its keys.
+    const tunnelEnv = Object.fromEntries(TUNNEL_ENV_KEEP.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
+    const options = { stdio: ["ignore", "pipe", "pipe"], env: permanent ? { ...tunnelEnv, TUNNEL_TOKEN: permanent.token } : tunnelEnv };
     const child = spawn(BIN, args, options);
     proc = child;
     let assigned = permanent?.url || null, registered = false, publishing = false;
