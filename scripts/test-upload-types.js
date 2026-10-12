@@ -6,7 +6,9 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { REFUSED, checkFile, acceptChatFile } = require('../lib/upload-types');
+const { REFUSED, checkFile, acceptChatFile, checkWorkspaceFile, filterTar } = require('../lib/upload-types');
+const os = require('node:os');
+const { execFileSync } = require('node:child_process');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 const bytes = (...parts) => Buffer.concat(parts.map((p) => (Buffer.isBuffer(p) ? p : Buffer.from(p, 'latin1'))));
@@ -96,4 +98,62 @@ test('the web chat offers only kinds Closedhand opens', () => {
   const accept = read('webapp/views/index.html').match(/id="fileInput" multiple accept="([^"]+)"/)[1].split(',');
   const opens = /^\.(jpg|jpeg|png|gif|webp|pdf|docx|xlsx|pptx|doc|xls|mp4|m4v|mov|m4a|webm|ogg|oga|opus|mp3|wav|avi|flac|aac|txt|md|csv|json|html|htm|xml|js|py|ts|css|sql|sh|yaml|yml|log|rtf)$/;
   for (const kind of accept) assert.ok(opens.test(kind) || ['image/*', 'video/*', 'audio/*'].includes(kind), kind);
+});
+
+// The sandbox computer, reached from its panel and through the Mac Bridge,
+// takes a wider list, still told by what each file holds.
+const MACHO = bytes('\xcf\xfa\xed\xfe\x0c\x00\x00\x01', Buffer.alloc(32));
+const TIFF = bytes('II*\x00', Buffer.alloc(24));
+const GZ = bytes('\x1f\x8b\x08\x00', Buffer.alloc(24));
+const SQLITE = bytes('SQLite format 3\x00', Buffer.alloc(24));
+const FINDER = bytes('\x00\x00\x00\x01Bud1', Buffer.alloc(24));
+
+test('the sandbox computer takes documents, media, archives and text, and refuses programs', () => {
+  for (const [buf, name] of [[PDF, 'invoice.pdf'], [DOCX, 'letter.docx'], [PNG, 'photo.png'], [HEIC, 'IMG_2001.HEIC'], [TIFF, 'scan.tif'],
+    [MP4, 'clip.mov'], [ZIP, 'photos.zip'], [ZIP, 'minutes.odt'], [GZ, 'backup.tar.gz'], [SQLITE, 'orders.sqlite'],
+    [TEXT, 'run.py'], [TEXT, 'Dockerfile'], [TEXT, 'site.html'], [TEXT, 'config.toml'], [Buffer.alloc(0), 'empty.txt']]) {
+    assert.equal(checkWorkspaceFile(buf, '/workspace/' + name).ok, true, name);
+  }
+  for (const [buf, name] of [[ELF, 'tool'], [EXE, 'setup.exe'], [MACHO, 'helper'], [ZIP, 'plugin.jar'], [ZIP, 'app.apk'],
+    [TEXT, 'invoice.pdf'], [PNG, 'photo.gif.exe'], [FINDER, '.DS_Store'], [Buffer.from([0, 1, 2, 3, 0, 9]), 'blob.bin']]) {
+    const r = checkWorkspaceFile(buf, '/workspace/' + name);
+    assert.equal(r.ok, false, name);
+    assert.match(r.reason, new RegExp('^' + name.replace(/\./g, '\\.') + " wasn't copied: the sandbox computer takes documents, images, audio, video, text and archives, not programs"));
+  }
+});
+
+test('a copied folder keeps the files the sandbox computer takes and names the rest', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ch-tar-'));
+  const src = path.join(dir, 'Brightwater');
+  const deep = path.join(src, 'orders', 'x'.repeat(120));
+  fs.mkdirSync(deep, { recursive: true });
+  fs.writeFileSync(path.join(src, 'totals.csv'), TEXT);
+  fs.writeFileSync(path.join(src, 'logo.png'), PNG);
+  fs.writeFileSync(path.join(src, 'orders', 'importer'), ELF);
+  fs.writeFileSync(path.join(src, '.DS_Store'), FINDER);
+  fs.writeFileSync(path.join(deep, 'week-41.md'), TEXT);
+  fs.symlinkSync('totals.csv', path.join(src, 'latest.csv'));
+  const tar = execFileSync('tar', ['cf', '-', '.'], { cwd: src });
+  const r = filterTar(tar);
+  assert.equal(r.kept, 3);
+  assert.deepEqual(r.leftOut.sort(), ['latest.csv (a link)', 'orders/importer']);
+  const listed = execFileSync('tar', ['tf', '-'], { input: r.tar }).toString().split('\n').filter(Boolean).map((n) => n.replace(/^\.\//, ''));
+  assert.ok(listed.includes('totals.csv') && listed.includes('logo.png') && listed.includes(`orders/${'x'.repeat(120)}/week-41.md`));
+  assert.ok(!listed.some((n) => /importer|DS_Store|latest/.test(n)), 'nothing refused reaches the sandbox computer');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('Workspace and Mac Bridge uploads are checked before anything is written', () => {
+  const server = read('webapp/server.js');
+  const upload = server.slice(server.indexOf('app.post("/api/sandbox/upload"'), server.indexOf('// GET /api/sandbox/download'));
+  assert.ok(upload.indexOf('uploadTypes.checkWorkspaceFile(req.file.buffer, filePath)') < upload.indexOf('sandboxFetch('), 'panel upload: checked first');
+  assert.match(upload, /if \(!found\.ok\) return res\.status\(415\)\.json\(\{ error: found\.reason \}\);/);
+  assert.match(server, /app\.post\("\/api\/bridge\/file-upload", bridgeUploadToken, _bridgeUpload\.single\("file"\)/, 'the token is checked before the body is read');
+  assert.match(server, /app\.post\("\/api\/bridge\/thumb-upload", thumbUploadToken, _bridgeUpload\.single\("file"\)/);
+  const bridge = server.slice(server.indexOf('app.post("/api/bridge/file-upload"'), server.indexOf('function staticSandbox()'));
+  assert.ok(bridge.indexOf('uploadTypes.filterTar(fileBuffer)') < bridge.indexOf('sandboxFetch('), 'folders: filtered first');
+  assert.ok(bridge.indexOf('uploadTypes.checkWorkspaceFile(fileBuffer, destPath)') < bridge.indexOf('sandboxFetch('), 'files: checked first');
+  assert.equal((server.match(/\/api\/bridge\/file-upload\?token=\$\{token\}/g) || []).length, 2, 'both Mac copies send the token in the address');
+  assert.doesNotMatch(server, /Cache-Control", "public/, 'Mac thumbnails are not kept by shared caches');
+  assert.match(read('webapp/views/index.html'), /function monLeftOutNotice\(names\)/);
 });

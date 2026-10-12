@@ -1,5 +1,7 @@
 # API keys
 .env
+# Docker secret files made by install.sh: never committed
+secrets/
 
 # Personal config (name, email accounts, routing)
 config.json

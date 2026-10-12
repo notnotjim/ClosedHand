@@ -25,8 +25,13 @@ test('only the Bridge-signed POST routes pass the dashboard gate', () => {
 });
 
 test('each of those routes refuses a missing or wrong token before doing anything', () => {
-  assert.match(handler('/api/bridge/file-upload'), /_uploadTokens\.get\(token\);\s*if \(!tokenData \|\| Date\.now\(\) > tokenData\.expires\) \{[^}]*status\(401\)/);
-  assert.match(handler('/api/bridge/thumb-upload'), /_thumbTokens\.get\(token\);\s*if \(!pending \|\| pending\.expires < Date\.now\(\)\) return res\.status\(401\)/);
+  // The two upload routes check their one-time token before the body is read.
+  const uploadGate = server.slice(server.indexOf('function bridgeUploadToken('), server.indexOf('app.post("/api/bridge/file-upload"'));
+  assert.match(uploadGate, /const tokenData = _uploadTokens\.get\(token\);\s*if \(!tokenData \|\| Date\.now\(\) > tokenData\.expires\) \{[^}]*status\(401\)/);
+  assert.match(server, /app\.post\("\/api\/bridge\/file-upload", bridgeUploadToken, _bridgeUpload\.single\("file"\)/);
+  const thumbGate = server.slice(server.indexOf('function thumbUploadToken('), server.indexOf('app.post("/api/bridge/thumb-upload"'));
+  assert.match(thumbGate, /_thumbTokens\.get\(String\(req\.query\.token \|\| ""\)\);\s*if \(!pending \|\| pending\.expires < Date\.now\(\)\) return res\.status\(401\)/);
+  assert.match(server, /app\.post\("\/api\/bridge\/thumb-upload", thumbUploadToken, _bridgeUpload\.single\("file"\)/);
   const sync = handler('/api/bridge/sync-cache');
   assert.match(sync, /if \(!token\) return res\.status\(401\)/);
   assert.match(sync, /\.in\("token", bridgeToken\.storedForms\(token\)\)[\s\S]*if \(bridgeErr \|\| !bridge\) return res\.status\(403\)/);

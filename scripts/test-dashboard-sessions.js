@@ -7,6 +7,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+// A password from .env is fingerprinted under a key derived from this one.
+process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || require('node:crypto').randomBytes(32).toString('base64');
 const { createSessions, hashToken } = require('../webapp/dashboard-sessions');
 
 const DAY = 24 * 60 * 60 * 1000;

@@ -5,6 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const crypto = require("node:crypto");
 const root = path.join(__dirname, "..");
+process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || crypto.randomBytes(32).toString("base64");
 function database() {
   const tables = { bug_reports: [], profiles: [] }, uploads = [];
   const db = {
@@ -62,7 +63,7 @@ function reporter(env = { DB_DRIVER: "pg" }) {
   const mod = { exports: {} };
   const sandbox = { module: mod, process: { env }, console: { log() {}, error() {} }, Buffer, Date, AbortSignal,
     fetch: async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); if (network.failures-- > 0) throw new Error("network timeout"); return { ok: true, json: async () => ({ ok: true, id: "central", receipt: "receipt", status: "resolved", resolution_note: "Fixed and verified.", resolved_at: "2026-09-12T00:00:00Z" }) }; },
-    require: n => n === "./context" ? ctx : n === "../user-store" ? { supabase: db, UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
+    require: n => n === "./context" ? ctx : n === "../user-store" ? { supabase: db, UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8"), sandbox);
   return { api: mod.exports, db, ctx, calls, network };
@@ -112,7 +113,8 @@ test("send checks report ownership, and stores the receipt for resolution lookup
   await r.api.handleBugSendReply("alice", "yes");
   assert.equal(r.calls.length, 1);
   assert.equal(row.remote_receipt.id, "central");
-  assert.match(row.remote_receipt.submission_key, /^[a-f0-9]{64}$/);
+  assert.match(row.remote_receipt.submission_key, /^enc:v1:/, "the key that sent it is kept sealed");
+  assert.match(require("../crypto-tokens").decryptString(row.remote_receipt.submission_key), /^[a-f0-9]{64}$/);
   await r.api.sendReport("alice", row.id);
   assert.equal(r.calls.length, 1, "already-sent report is not duplicated");
   const listing = await r.api.handleBugCommand("alice", "/bugs");

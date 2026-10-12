@@ -66,7 +66,7 @@ function register(app, db, userId) {
   app.get('/api/assistant-email/threads/:id', wrap(async (req, res, owner) => {
     if (!p.uuid(req.params.id)) return res.status(400).json({ error: 'Invalid conversation.' });
     const messages = mustWrite(await db.from('assistant_email_messages').select('direction,envelope,state,error,created_at').eq('user_id', owner).eq('thread_id', req.params.id).order('created_at', { ascending: false }).limit(10));
-    res.json({ messages: messages.reverse().map(m => ({ direction: m.direction, from: m.envelope.from, text: m.envelope.text, state: m.state, error: m.error })) });
+    res.json({ messages: messages.reverse().map(m => ({ direction: m.direction, from: m.envelope.from, text: m.envelope.sealed ? 'A Closedhand sign-in code, sealed until it is sent.' : m.envelope.text, state: m.state, error: m.error })) });
   }));
   app.post('/api/assistant-email/threads/:id', wrap(async (req, res, owner) => {
     if (!p.uuid(req.params.id)) return res.status(400).json({ error: 'Invalid conversation.' });

@@ -67,15 +67,19 @@ test('both services check the web chat secret at boot, and no known fallback is 
 });
 
 test('Docker will not start without the generated secrets', () => {
+  // Each is a secret file (secrets/), which compose requires to exist; the
+  // services also refuse to start without one (required-secrets, assertReady).
   const compose = read('docker-compose.yml');
   assert.doesNotMatch(compose, /\$\{(WS_AUTH_SECRET|SANDBOX_TOKEN|POSTGRES_PASSWORD):-/);
-  for (const k of ['WS_AUTH_SECRET', 'SANDBOX_TOKEN', 'POSTGRES_PASSWORD']) assert.match(compose, new RegExp('\\$\\{' + k + ':\\?'));
+  for (const k of ['ws_auth_secret', 'sandbox_token', 'postgres_password', 'token_encryption_key']) assert.match(compose, new RegExp('file: \\./secrets/' + k));
 });
 
 test('the installer makes a real key even without openssl, and keeps .env to its owner', () => {
   const install = read('install.sh');
-  assert.match(install, /setkey TOKEN_ENCRYPTION_KEY "\$\(openssl rand -base64 32 2>\/dev\/null \|\| head -c 32 \/dev\/urandom \| base64 \| tr -d '\\n'\)"/);
-  assert.equal((install.match(/chmod 600 \.env/g) || []).length, 2, 'on first run and on every re-run');
+  assert.match(install, /rand_key\(\) \{ openssl rand -base64 32; \}/);
+  assert.match(install, /rand_key\(\) \{ head -c 32 \/dev\/urandom \| base64 \| tr -d '\\n'; \}/);
+  assert.match(install, /if \[ "\$var" = TOKEN_ENCRYPTION_KEY \]; then value=\$\(rand_key\); else value=\$\(rand\); fi/);
+  assert.ok((install.match(/chmod 600 \.env/g) || []).length >= 2, 'on first run and on every re-run');
 });
 
 test('the web chat socket needs the signed-in session as well as its ticket', () => {

@@ -22,12 +22,15 @@ const STRETCHES = new Set(["password", "password+code"]);
 const hashToken = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
 
 // The stored password is already a salted scrypt hash, so a plain hash of it
-// is enough. A password from .env is plain text and must not be kept in a
-// quickly reversible form, so it goes through scrypt (once per value).
+// is enough. A password from .env is plain text, so its fingerprint is an
+// HMAC under a key of its own derived from the encryption key: without that
+// key the fingerprint in the database can't be tested against guesses, and
+// it differs on every computer. It was once scrypt under a salt every
+// computer shared.
 const _envFp = new Map();
 function passwordFingerprint({ envPassword, storedHash }) {
   if (envPassword) {
-    if (!_envFp.has(envPassword)) _envFp.set(envPassword, "env:" + crypto.scryptSync(envPassword, "closedhand-dashboard-session", 32).toString("hex"));
+    if (!_envFp.has(envPassword)) _envFp.set(envPassword, "env2:" + crypto.createHmac("sha256", require("./crypto-tokens").subkey("dashboard-session-fingerprint")).update(envPassword).digest("hex"));
     return _envFp.get(envPassword);
   }
   if (storedHash) return "hash:" + crypto.createHash("sha256").update("closedhand-dashboard-session\0" + storedHash).digest("hex");
@@ -142,13 +145,23 @@ function createSessions({ db, password, now = () => Date.now(), ended = null, re
     return { ended: true, pending: true, reason: failure.message };
   }
 
+  // The stored password was hashed again at a higher cost: the same password,
+  // so the sessions made with it carry on under its new fingerprint.
+  async function carry(before, after) {
+    const from = passwordFingerprint(before), to = passwordFingerprint(after);
+    if (!from || !to || from === to) return;
+    const { error } = await db.from(TABLE).update({ password_fp: to }).eq("password_fp", from);
+    if (error) throw new Error(error.message);
+    for (const s of known.values()) if (s.fp === from) s.fp = to;
+  }
+
   async function endAll() {
     known.clear();
     const { error } = await db.from(TABLE).delete().neq("token_hash", "");
     if (error) throw new Error(error.message);
   }
 
-  return { start, check, end, endAll, retryPending };
+  return { start, check, end, endAll, retryPending, carry };
 }
 
 module.exports = { createSessions, passwordFingerprint, hashToken, SESSION_SEC };

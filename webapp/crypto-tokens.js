@@ -131,8 +131,9 @@ function _audit(what) {
 }
 
 function decryptString(value, what = "a stored secret") {
-  if (typeof value !== "string" || !value.startsWith(PREFIX)) return value; // legacy plaintext or non-string
+  if (typeof value !== "string" || !value) return value;
   _audit(what);
+  if (!value.startsWith(PREFIX)) return value; // legacy plaintext, read and audited all the same
   _resolveKeys();
   if (!_current && !_old) {
     console.error("[crypto-tokens] Encrypted token found but no keys configured — cannot decrypt.");
@@ -172,7 +173,81 @@ function decryptTokens(tokens) {
   return out;
 }
 
-module.exports = { encryptString, decryptString, encryptTokens, decryptTokens, assertReady };
+// ─── Secrets a service starts with ───────────────────────────────────────
+// The few secrets a service needs before it can reach the database (the
+// encryption key, the database password, the keys the services share) come
+// from Docker secret files in /run/secrets, from the Mac app's Keychain by way
+// of its launch, or from the host's own encrypted store (Railway's variables).
+// guardEnvironment(), called first thing at start, takes every one of them out
+// of the process environment and holds them here. process.env still answers
+// for them, so no caller changes, but every read leaves an audit line like a
+// stored secret's, and they are no longer listed: a program this service
+// starts inherits none of them, and no copy of process.env holds them.
+// A name is a secret when it ends in KEY, TOKEN, SECRET, PASSWORD or PASS
+// (or one of those plus _OLD), and the password inside DATABASE_URL is moved
+// to PGPASSWORD, where the database driver reads it.
+const SECRET_NAME = /(^|_)(KEY|TOKEN|SECRET|PASSWORD|PASS)(_OLD)?$/;
+const _held = new Map();
+let _guarded = false;
+
+function _urlPassword(url) {
+  const m = /^([a-z][a-z0-9+.-]*:\/\/[^:/@]*):([^@]*)@/i.exec(url);
+  if (!m) return null;
+  let pw = m[2];
+  try { pw = decodeURIComponent(pw); } catch (_) { /* kept as written */ }
+  return { password: pw, rest: m[1] + "@" + url.slice(m[0].length) };
+}
+
+function guardEnvironment({ secretsDir = process.env.CLOSEDHAND_SECRETS_DIR || "/run/secrets" } = {}) {
+  if (_guarded) return;
+  _guarded = true;
+  const fs = require("fs");
+  const path = require("path");
+  const real = process.env;
+  let files = [];
+  try { files = fs.readdirSync(secretsDir).filter((f) => !f.startsWith(".")); } catch (_) { /* none: the environment holds them */ }
+  for (const f of files) {
+    try {
+      const value = fs.readFileSync(path.join(secretsDir, f), "utf8").trim();
+      if (value) _held.set(f.toUpperCase().replace(/[^A-Z0-9_]/g, "_"), value);
+    } catch (_) { /* unreadable: left to the environment */ }
+  }
+  if (real.DATABASE_URL) {
+    const split = _urlPassword(real.DATABASE_URL);
+    if (split) {
+      if (!_held.has("PGPASSWORD")) _held.set("PGPASSWORD", split.password);
+      real.DATABASE_URL = split.rest;
+    }
+  }
+  for (const name of Object.keys(real)) {
+    if (!SECRET_NAME.test(name)) continue;
+    if (!_held.has(name)) _held.set(name, real[name]);
+  }
+  for (const name of _held.keys()) delete real[name];
+  process.env = new Proxy(real, {
+    get(t, k) {
+      if (typeof k === "string" && _held.has(k)) { _audit(k); return _held.get(k); }
+      return Reflect.get(t, k);
+    },
+    has(t, k) { return (typeof k === "string" && _held.has(k)) || Reflect.has(t, k); },
+    set(t, k, v) {
+      if (typeof k === "string" && (_held.has(k) || SECRET_NAME.test(k))) { _held.set(k, String(v)); Reflect.deleteProperty(t, k); return true; }
+      return Reflect.set(t, k, v);
+    },
+    deleteProperty(t, k) { _held.delete(k); return Reflect.deleteProperty(t, k); },
+  });
+  console.log(`[secrets] ${_held.size} secret(s) held out of the environment${files.length ? `, ${files.length} from secret files` : ""}; every read is logged.`);
+}
+
+// A key for one purpose, derived from the encryption key (HKDF-SHA256), so
+// that key itself is only ever used to encrypt.
+function subkey(purpose) {
+  _resolveKeys();
+  if (!_current) throw new Error("[crypto-tokens] Cannot derive a key: TOKEN_ENCRYPTION_KEY is missing or invalid");
+  return Buffer.from(crypto.hkdfSync("sha256", _current, Buffer.alloc(0), "closedhand:" + purpose, 32));
+}
+
+module.exports = { encryptString, decryptString, encryptTokens, decryptTokens, assertReady, guardEnvironment, subkey };
 
 // Drift check + roundtrip smoke test. Run: node crypto-tokens.js
 if (require.main === module) {

@@ -53,7 +53,7 @@ function realClient() {
     } else if (driver === "pg") {
       // pg is require()d lazily inside the factory, so the supabase path and the
       // not-configured guard never depend on pg being installed.
-      _client = require("./db-driver-pg").createPgClient({ connectionString: process.env.DATABASE_URL });
+      _client = require("./db-driver-pg").createPgClient({ connectionString: process.env.DATABASE_URL, applicationName: "closedhand-webapp" });
       _client.storage = buildStorage(); // real storage instead of the data driver's stub
       const rt = require("./realtime-driver-poll").createPollRealtime(_client);
       _client.channel = rt.channel;

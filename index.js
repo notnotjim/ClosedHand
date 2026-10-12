@@ -4,6 +4,11 @@
 
 require("dotenv").config();
 
+// Secrets leave the process environment before anything else loads: reads
+// still work through process.env, each one is logged, and programs started
+// from here inherit none of them (crypto-tokens.js, guardEnvironment).
+require("./crypto-tokens").guardEnvironment();
+
 // Stop at boot without a valid encryption key or with a missing or placeholder
 // shared secret, rather than store sign-ins unencrypted or accept forged
 // web chat tickets.

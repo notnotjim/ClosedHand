@@ -6677,7 +6677,15 @@ function jsq(s) {
   function monUpload(){document.getElementById('monUploadInput').click();}
   async function monHandleUpload(files){
     if(!files||!files.length)return;
-    for(var i=0;i<files.length;i++){var f=files[i],form=new FormData();form.append('file',f);form.append('path',_monCloudPath.replace(/\/$/,'')+'/'+f.name);try{var r=await fetch('/api/sandbox/upload',{method:'POST',body:form});if(!r.ok){console.error('Upload failed:',r.status);}}catch(e){}}document.getElementById('monUploadInput').value='';monDropFeedback();monLoadCloud();monLoadStorage();
+    for(var i=0;i<files.length;i++){var f=files[i],form=new FormData();form.append('file',f);form.append('path',_monCloudPath.replace(/\/$/,'')+'/'+f.name);try{var r=await fetch('/api/sandbox/upload',{method:'POST',body:form});if(!r.ok){var d=await r.json().catch(function(){return {};});console.error('Upload failed:',r.status);if(d.error&&r.status===415)monCopyNotice(d.error);}}catch(e){}}document.getElementById('monUploadInput').value='';monDropFeedback();monLoadCloud();monLoadStorage();
+  }
+  // A file the sandbox computer doesn't take is refused by the server
+  // (upload-types.js); say so here, naming it, instead of leaving it missing.
+  function monCopyNotice(msg){if(typeof Delight!=='undefined')Delight.toast(msg,'error');}
+  function monLeftOutNotice(names){
+    if(!names||!names.length)return;
+    var shown=names.slice(0,3).map(function(n){return n.split('/').pop();}).join(', ')+(names.length>3?' and '+(names.length-3)+' more':'');
+    monCopyNotice((names.length===1?'1 file wasn\'t':names.length+' files weren\'t')+' copied, because the sandbox computer doesn\'t take programs or files of a kind it doesn\'t know: '+shown);
   }
   function monDropFeedback(){
     // Subtle pop animation on the screen
@@ -6790,10 +6798,11 @@ function jsq(s) {
       var resp=await fetch('/api/sandbox/copy-from-local',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourcePath:srcPath,destPath:destPath})});
       copyDone=true;clearInterval(pollTimer);
       if(resp.ok){
+        var done=await resp.clone().json().catch(function(){return {};});monLeftOutNotice(done.leftOut);
         // Create sync record so badge shows and "Remove always on" works
         await fetch('/api/sync/mark',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({localPath:srcPath})}).catch(function(){});
         await monLoadSyncList();
-      } else {var errData=await resp.json().catch(function(){return {};});console.error('[CopyToCloud] failed:',errData.error||resp.status);}
+      } else {var errData=await resp.json().catch(function(){return {};});console.error('[CopyToCloud] failed:',errData.error||resp.status);if(resp.status===415&&errData.error)monCopyNotice(errData.error);}
     }catch(e){copyDone=true;console.error('[CopyToCloud] error:',e);}
     monLoadLocal();monLoadCloud();}
 
@@ -6828,7 +6837,8 @@ function jsq(s) {
         var dest = folderPath.replace(/\/$/, '') + '/' + name;
         // Use copy-from-local with the specific destination folder
         fetch('/api/sandbox/copy-from-local', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sourcePath: paths[i], destPath: dest }) }).catch(function(){});
+          body: JSON.stringify({ sourcePath: paths[i], destPath: dest }) })
+          .then(function(r){return r.json().then(function(d){if(r.status===415&&d.error)monCopyNotice(d.error);else monLeftOutNotice(d.leftOut);});}).catch(function(){});
       }
       monDropFeedback();
       setTimeout(monLoadCloud, 2000);

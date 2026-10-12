@@ -5,6 +5,11 @@
 
 require("dotenv").config();
 
+// Secrets leave the process environment before anything else loads: reads
+// still work through process.env, each one is logged, and programs started
+// from here inherit none of them (crypto-tokens.js, guardEnvironment).
+require("./crypto-tokens").guardEnvironment();
+
 // Stop at boot without a valid encryption key or with a missing or placeholder
 // shared secret, rather than store sign-ins unencrypted or accept forged
 // web chat tickets.
@@ -579,16 +584,26 @@ const { getConf: getRuntimeConf, setConf: setRuntimeConf } = require("./config")
 // Settings change only by the keys named, inside the database (settings-patch.js).
 const { patchSettings, changeSettings } = require("./settings-patch");
 
+// scrypt at the cost OWASP recommends (N=2^17, r=8, p=1), which takes 128 MiB
+// per check, so Node's 32 MiB ceiling is raised for it. Stored as
+// "s17:salt:hash". A hash made before used Node's default N=2^14 and reads
+// "salt:hash"; it still checks, and is made again at this cost the next time
+// its password is given (checkDashboardPassword).
+const SCRYPT_COST = { N: 2 ** 17, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString("hex");
-  return `${salt}:${crypto.scryptSync(pw, salt, 32).toString("hex")}`;
+  return `s17:${salt}:${crypto.scryptSync(pw, salt, 32, SCRYPT_COST).toString("hex")}`;
 }
 function verifyPasswordHash(pw, stored) {
-  const [salt, hash] = String(stored).split(":");
+  const parts = String(stored).split(":");
+  const current = parts.length === 3 && parts[0] === "s17";
+  if (!current && parts.length !== 2) return false;
+  const [salt, hash] = current ? parts.slice(1) : parts;
   if (!salt || !hash) return false;
-  const check = crypto.scryptSync(pw, salt, 32).toString("hex");
+  const check = crypto.scryptSync(pw, salt, 32, current ? SCRYPT_COST : undefined).toString("hex");
   return check.length === hash.length && crypto.timingSafeEqual(Buffer.from(check, "hex"), Buffer.from(hash, "hex"));
 }
+const hashIsCurrent = (stored) => String(stored).startsWith("s17:");
 async function passwordConfigured() {
   if (process.env.ADMIN_PASSWORD) return true;
   // Settings that could not be read count as a password being set: a
@@ -606,7 +621,17 @@ async function checkDashboardPassword(pw) {
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
   const stored = await getRuntimeConf("DASHBOARD_PASSWORD_HASH");
-  return stored ? verifyPasswordHash(pw || "", stored) : false;
+  if (!stored || !verifyPasswordHash(pw || "", stored)) return false;
+  if (!hashIsCurrent(stored)) {
+    // Made again at the current cost, keeping every session signed in.
+    try {
+      const next = hashPassword(pw);
+      await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: next });
+      await dashboardSessions.carry({ storedHash: stored }, { storedHash: next });
+      console.log("[auth] The dashboard password's hash was made again at the current scrypt cost.");
+    } catch (e) { console.error("[auth] Could not raise the password hash's cost:", e.message); }
+  }
+  return true;
 }
 
 // Each sign-in is its own session that logging out or a new password ends
@@ -5777,7 +5802,7 @@ async function storeMcpIcon(serverInfo, serverUrl) {
     const got = await fetchIcon(c);
     if (!got) continue;
     try {
-      const key = `mcp/${crypto.createHash("sha1").update(serverUrl).digest("hex").slice(0, 16)}.${got.ext}`;
+      const key = `mcp/${crypto.createHash("sha256").update(serverUrl).digest("hex").slice(0, 16)}.${got.ext}`;
       const { error } = await supabase.storage.from("logos")
         .upload(key, got.buf, { contentType: got.type, upsert: true });
       if (error) { console.log("[mcp-icon] upload failed:", error.message); return null; }
@@ -7503,14 +7528,33 @@ const _sandboxUpload = multer({ storage: multer.memoryStorage(), limits: { fileS
 
 // Bridge curl upload: receives file streamed directly from Bridge's local disk
 const _bridgeUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } }); // 500MB max
-app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, res) => {
-  const token = req.body.token;
+// Files bound for the sandbox computer are checked by what they hold
+// (upload-types.js): one file must be a kind it takes, and a folder keeps
+// only the files that are. What happened is kept here for the copy that
+// asked, so the panel can say what was refused or left out.
+const uploadTypes = require("./upload-types");
+const _uploadResults = new Map(); // upload token -> { refused } or { leftOut }
+// The one-time token travels in the address, so a request without a good one
+// is turned away before its body, up to 500 MB, is read.
+function bridgeUploadToken(req, res, next) {
+  const token = String(req.query.token || "");
   const tokenData = _uploadTokens.get(token);
   if (!tokenData || Date.now() > tokenData.expires) {
     _uploadTokens.delete(token);
     return res.status(401).json({ error: "Invalid or expired upload token" });
   }
   _uploadTokens.delete(token); // one-time use
+  req.uploadToken = token;
+  req.uploadTokenData = tokenData;
+  next();
+}
+app.post("/api/bridge/file-upload", bridgeUploadToken, _bridgeUpload.single("file"), async (req, res) => {
+  const token = req.uploadToken;
+  const tokenData = req.uploadTokenData;
+  if (!req.file) {
+    _uploadResults.set(token, { refused: "Nothing arrived from the Mac." });
+    return res.status(400).json({ error: "No file" });
+  }
 
   try {
     const info = await getSandboxInfo(tokenData.userId);
@@ -7521,7 +7565,19 @@ app.post("/api/bridge/file-upload", _bridgeUpload.single("file"), async (req, re
     const destPath = tokenData.destPath;
     const isDir = tokenData.isDir === true;
     const sh = (v) => "'" + String(v).split("'").join("'\\''") + "'";
-    const fileBuffer = req.file.buffer;
+    let fileBuffer = req.file.buffer;
+    if (isDir) {
+      const filtered = uploadTypes.filterTar(fileBuffer);
+      fileBuffer = filtered.tar;
+      _uploadResults.set(token, { leftOut: filtered.leftOut });
+      if (filtered.leftOut.length) console.log(`[bridge-upload] left out ${filtered.leftOut.length} file(s) of kinds the sandbox computer doesn't take`);
+    } else {
+      const found = uploadTypes.checkWorkspaceFile(fileBuffer, destPath);
+      if (!found.ok) {
+        _uploadResults.set(token, { refused: found.reason });
+        return res.status(415).json({ error: found.reason });
+      }
+    }
 
     const b64 = fileBuffer.toString("base64");
 
@@ -7946,7 +8002,10 @@ app.post("/api/sandbox/upload", _sandboxUpload.single("file"), async (req, res) 
   try {
     const info = await getSandboxInfo(userId);
     if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
-    const filePath = req.body.path || ("/workspace/" + (req.file?.originalname || "upload"));
+    if (!req.file) return res.status(400).json({ error: "No file" });
+    const filePath = req.body.path || ("/workspace/" + (req.file.originalname || "upload"));
+    const found = uploadTypes.checkWorkspaceFile(req.file.buffer, filePath);
+    if (!found.ok) return res.status(415).json({ error: found.reason });
     const content = req.file.buffer.toString("base64");
     await sandboxFetch(info, "POST", "/files/write", { path: filePath, content, encoding: "base64" });
     res.json({ success: true, path: filePath });
@@ -8180,7 +8239,7 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
   }, 5000).catch(() => {});
 
   // Tell Bridge to curl the file directly to our upload endpoint (runs in background)
-  const curlCmd = `bash -c 'curl -s -X POST -F "file=@${cleanPath}" --form-string path=${shDecoded(destPath)} -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'curl -s -X POST -F "file=@${cleanPath}" --form-string path=${shDecoded(destPath)} "${baseUrl}/api/bridge/file-upload?token=${token}" > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl] ${sourcePath} -> ${destPath} (starting curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -8190,6 +8249,11 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
     await new Promise(r => setTimeout(r, 1000));
     // Token consumed means upload endpoint received and processed the file
     if (!_uploadTokens.has(token)) {
+      const result = _uploadResults.get(token);
+      if (result && result.refused) {
+        _uploadResults.delete(token);
+        throw Object.assign(new Error(result.refused), { refused: true });
+      }
       // Verify file exists on sandbox
       try {
         const check = await sandboxFetch(info, "POST", "/exec", {
@@ -8198,7 +8262,8 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
         const size = parseInt((check.stdout || check.output || "0").trim());
         if (size > 0) {
           console.log(`[copy-curl] ${sourcePath} -> ${destPath} complete (${size} bytes)`);
-          return;
+          _uploadResults.delete(token);
+          return { leftOut: [] };
         }
       } catch (e) { /* sandbox check failed, keep polling */ }
     }
@@ -8206,6 +8271,7 @@ async function bridgeCopyFileToSandbox(userId, sourcePath, destPath, info) {
 
   // Clean up token if upload never happened
   _uploadTokens.delete(token);
+  _uploadResults.delete(token);
   throw new Error("File upload timed out. The file may be too large or Bridge lost connection.");
 }
 
@@ -8224,7 +8290,7 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
   }, 5000).catch(() => {});
 
   // Tell Bridge to tar the directory and pipe to curl (runs in background)
-  const curlCmd = `bash -c 'cd "${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" --form-string path=${shDecoded(destPath)} -F "isTar=true" -F "token=${token}" ${baseUrl}/api/bridge/file-upload > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
+  const curlCmd = `bash -c 'cd "${cleanPath}" && tar cf - . 2>/dev/null | curl -s -X POST -F "file=@-;filename=dir.tar" --form-string path=${shDecoded(destPath)} -F "isTar=true" "${baseUrl}/api/bridge/file-upload?token=${token}" > /tmp/.ch_upload_${token.substring(0, 8)} 2>&1 &'`;
 
   console.log(`[copy-curl-dir] ${sourcePath} -> ${destPath} (starting tar+curl upload)`);
   await bridgeWsRequest(userId, "shell.run", { command: curlCmd });
@@ -8233,6 +8299,11 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
   for (let i = 0; i < 120; i++) { // up to 2 minutes
     await new Promise(r => setTimeout(r, 1000));
     if (!_uploadTokens.has(token)) {
+      const result = _uploadResults.get(token);
+      if (result && result.refused) {
+        _uploadResults.delete(token);
+        throw Object.assign(new Error(result.refused), { refused: true });
+      }
       // Verify directory was extracted
       try {
         const check = await sandboxFetch(info, "POST", "/exec", {
@@ -8241,13 +8312,15 @@ async function bridgeCopyDirToSandbox(userId, sourcePath, destPath, info) {
         const count = parseInt((check.stdout || check.output || "0").trim());
         if (count > 0) {
           console.log(`[copy-curl-dir] ${sourcePath} -> ${destPath} complete (${count} entries)`);
-          return;
+          _uploadResults.delete(token);
+          return { leftOut: (result && result.leftOut) || [] };
         }
       } catch (e) { /* keep polling */ }
     }
   }
 
   _uploadTokens.delete(token);
+  _uploadResults.delete(token);
   throw new Error("Directory upload timed out. The directory may be too large or Bridge lost connection.");
 }
 
@@ -8275,17 +8348,15 @@ app.post("/api/sandbox/copy-from-local", async (req, res) => {
     const info = await getSandboxInfo(userId);
     if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
 
-    if (isDirectory) {
-      await bridgeCopyDirToSandbox(userId, sourcePath, destPath, info);
-    } else {
-      await bridgeCopyFileToSandbox(userId, sourcePath, destPath, info);
-    }
+    const copied = isDirectory
+      ? await bridgeCopyDirToSandbox(userId, sourcePath, destPath, info)
+      : await bridgeCopyFileToSandbox(userId, sourcePath, destPath, info);
 
-    res.json({ success: true });
+    res.json({ success: true, leftOut: (copied && copied.leftOut) || [] });
     refreshWorkspaceCache(userId).catch(() => {});
   } catch (err) {
     console.error("Copy from local error:", err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.refused ? 415 : 500).json({ error: err.message });
   }
 });
 
@@ -8457,7 +8528,7 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
   const cached = _thumbCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     res.setHeader("Content-Type", cached.mime);
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Cache-Control", "private, max-age=3600");
     return res.send(cached.buffer);
   }
 
@@ -8479,7 +8550,7 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
     const { buffer, mime } = await thumbPromise;
     _thumbCache.set(cacheKey, { buffer, mime, expires: Date.now() + 3600000 });
     res.setHeader("Content-Type", mime);
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Cache-Control", "private, max-age=3600");
     res.send(buffer);
   } catch (e) {
     console.log(`[Bridge/thumb] Failed for ${filePath}: ${e.message}`);
@@ -8488,17 +8559,23 @@ app.get("/api/bridge/thumbnail", async (req, res) => {
 });
 
 // POST /api/bridge/thumb-upload?token=xxx - receives the file from Bridge curl
-app.post("/api/bridge/thumb-upload", _bridgeUpload.single("file"), (req, res) => {
+// The token is checked before the body is read, and the picture's type comes
+// from what it holds: anything but a JPEG, PNG, GIF or WebP is refused.
+function thumbUploadToken(req, res, next) {
+  const pending = _thumbTokens.get(String(req.query.token || ""));
+  if (!pending || pending.expires < Date.now()) return res.status(401).json({ error: "Invalid token" });
+  next();
+}
+app.post("/api/bridge/thumb-upload", thumbUploadToken, _bridgeUpload.single("file"), (req, res) => {
   const token = req.query.token;
   const pending = _thumbTokens.get(token);
-  if (!pending || pending.expires < Date.now()) return res.status(401).json({ error: "Invalid token" });
+  if (!pending) return res.status(401).json({ error: "Invalid token" });
   clearTimeout(pending.timer);
   _thumbTokens.delete(token);
-  if (!req.file) return res.status(400).json({ error: "No file" });
-  const name = req.file.originalname || "";
-  const ext = name.split(".").pop().toLowerCase();
-  const mime = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp" }[ext] || "image/jpeg";
-  pending.resolve({ buffer: req.file.buffer, mime });
+  if (!req.file) { pending.reject(new Error("no file")); return res.status(400).json({ error: "No file" }); }
+  const found = uploadTypes.checkFile(req.file.buffer, req.file.originalname || "");
+  if (!found.ok || !found.type.startsWith("image/")) { pending.reject(new Error("not a picture")); return res.status(415).json({ error: "Not a picture" }); }
+  pending.resolve({ buffer: req.file.buffer, mime: found.type });
   res.json({ ok: true });
 });
 

@@ -7,6 +7,12 @@
 # the webapp. Copy .env.example to .env first; it boots with nothing configured
 # (setup mode) and you add model/platform keys there or via the dashboard.
 #
+# Secrets are not in .env. The database password, the encryption key and the
+# keys the services share are files in secrets/ (install.sh makes them, and
+# moves them out of an older .env), readable only by your account. Docker
+# hands each one, as a file under /run/secrets, only to the containers that
+# use it, so none is part of any container's settings.
+#
 # Dashboard and chat: http://localhost:3000 (WEBAPP_PORT).
 # The webapp reaches the bot over the internal Docker network.
 
@@ -15,8 +21,13 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-closedhand}
+    secrets: [postgres_password]
+    # Every connection and disconnection is logged with its user and program
+    # name, so a reach into the database from anywhere but Closedhand's own
+    # services shows in the log.
+    command: ["postgres", "-c", "log_connections=on", "-c", "log_disconnections=on"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Auto-applies the full schema on FIRST init (empty data volume only).
@@ -36,12 +47,17 @@ services:
     env_file: [.env]
     environment:
       DB_DRIVER: pg
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}@db:5432/${POSTGRES_DB:-closedhand}
+      DATABASE_URL: postgres://postgres@db:5432/${POSTGRES_DB:-closedhand}?application_name=closedhand-bot
       STORAGE_DIR: /data/storage
-      WS_AUTH_SECRET: ${WS_AUTH_SECRET:?WS_AUTH_SECRET is missing from .env; install.sh generates it}
       SANDBOX_URL: http://sandbox:8080
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "3000"
+    secrets: &service_secrets
+      - source: postgres_password
+        target: pgpassword
+      - token_encryption_key
+      - ws_auth_secret
+      - sandbox_token
+      - cookie_secret
     ports:
       - "127.0.0.1:${BOT_PORT:-3001}:3000" # bot service and health endpoint, this computer only
     volumes:
@@ -66,14 +82,13 @@ services:
     env_file: [.env]
     environment:
       DB_DRIVER: pg
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env; install.sh generates it}@db:5432/${POSTGRES_DB:-closedhand}
+      DATABASE_URL: postgres://postgres@db:5432/${POSTGRES_DB:-closedhand}?application_name=closedhand-webapp
       STORAGE_DIR: /data/storage
-      WS_AUTH_SECRET: ${WS_AUTH_SECRET:?WS_AUTH_SECRET is missing from .env; install.sh generates it}
       BASE_URL: ${BASE_URL:-http://localhost:3000}
       BOT_INTERNAL_URL: http://bot:3000
       SANDBOX_URL: http://sandbox:8080 # the Computers tab shows this box's browser and files
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "3000"
+    secrets: *service_secrets
     ports:
       - "127.0.0.1:${WEBAPP_PORT:-3000}:3000"
     volumes:
@@ -88,17 +103,20 @@ services:
 
   # Code/browser tools: one fixed sandbox container (the hosted product
   # provisions one per user on Railway; self-host is single-tenant, so one
-  # static box). The bot reaches it as http://sandbox:8080; open
-  # localhost:6080 to watch Closedhand's computer work.
+  # static box). The bot reaches it as http://sandbox:8080. Watch it work on
+  # the dashboard's Computers tab: its screen is not published on this
+  # computer's ports, where any program here could watch and use it.
   sandbox:
     image: ghcr.io/notnotjim/closedhand-sandbox:latest
     environment:
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN is missing from .env; install.sh generates it}
       PORT: "8080"
       GATEWAY_URL: http://bot:3000
       USER_ID: admin
-    ports:
-      - "127.0.0.1:${SANDBOX_VNC_PORT:-6080}:6080"
+    secrets: [sandbox_token]
+    # The token arrives as a secret file and is handed to the agent as it
+    # starts; without one the sandbox computer does not start at all.
+    entrypoint: ["/bin/sh", "-c", "SANDBOX_TOKEN=\"$$(cat /run/secrets/sandbox_token 2>/dev/null)\"; [ -n \"$$SANDBOX_TOKEN\" ] || { echo 'No sandbox token in secrets/sandbox_token' >&2; exit 1; }; export SANDBOX_TOKEN; exec /entrypoint.sh \"$$@\"", "sandbox"]
+    command: ["node", "/app/server.js"]
     volumes:
       - sandbox-workspace:/workspace # files + browser profile survive restarts
     # Background work. When the processor is busy, the bot answering someone
@@ -116,3 +134,15 @@ volumes:
   pgdata:
   storage:
   sandbox-workspace:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  token_encryption_key:
+    file: ./secrets/token_encryption_key
+  ws_auth_secret:
+    file: ./secrets/ws_auth_secret
+  sandbox_token:
+    file: ./secrets/sandbox_token
+  cookie_secret:
+    file: ./secrets/cookie_secret

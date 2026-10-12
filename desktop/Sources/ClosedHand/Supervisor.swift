@@ -135,8 +135,16 @@ final class Supervisor: ObservableObject {
         for name in ["postgres", "bot", "web", "agent", "supervisor"] { rotate(name) }
     }
 
-    /// The generated secrets, made once and kept: the same set install.sh puts
-    /// in .env. POSTGRES_PASSWORD must stay with the data it initialised.
+    /// The generated secrets: the same set install.sh puts in secrets/. They
+    /// are made once and kept in the Keychain (Keychain.swift); config.env
+    /// keeps only ports. An older config.env's secrets move to the Keychain
+    /// and leave the file. POSTGRES_PASSWORD must stay with the data it
+    /// initialised, and the encryption key opens every stored sign-in.
+    static let secretKeys = ["POSTGRES_PASSWORD", "WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "BRIDGE_TOKEN", "TOKEN_ENCRYPTION_KEY"]
+    /// Secrets the Keychain would not take: kept in config.env (mode 0600) as
+    /// before, so Closedhand still starts, and tried again next launch.
+    private var secretsOutsideKeychain: Set<String> = []
+
     private func loadConfig() throws {
         var conf: [String: String] = [:]
         if let text = try? String(contentsOf: configFile, encoding: .utf8) {
@@ -146,10 +154,23 @@ final class Supervisor: ObservableObject {
             }
         }
         var changed = false
-        for key in ["POSTGRES_PASSWORD", "WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "BRIDGE_TOKEN"] where conf[key] == nil {
-            conf[key] = randomHex(24); changed = true
+        secretsOutsideKeychain = []
+        for key in Supervisor.secretKeys {
+            if let kept = Keychain.get(key) {
+                if conf[key] != nil { changed = true } // the file's copy goes
+                conf[key] = kept
+                continue
+            }
+            let value = conf[key] ?? (key == "TOKEN_ENCRYPTION_KEY" ? randomBase64(32) : randomHex(24))
+            conf[key] = value
+            if Keychain.set(key, value) {
+                changed = true
+            } else {
+                secretsOutsideKeychain.insert(key)
+                changed = true
+                log("supervisor", "the Keychain did not take \(key); it stays in config.env for now")
+            }
         }
-        if conf["TOKEN_ENCRYPTION_KEY"] == nil { conf["TOKEN_ENCRYPTION_KEY"] = randomBase64(32); changed = true }
         if conf["WEB_PORT"] == nil { conf["WEB_PORT"] = "3000"; changed = true }
         if conf["BOT_PORT"] == nil { conf["BOT_PORT"] = "3001"; changed = true }
         if conf["PG_PORT"] == nil { conf["PG_PORT"] = "54329"; changed = true }
@@ -159,7 +180,8 @@ final class Supervisor: ObservableObject {
     }
 
     private func saveConfig() throws {
-        let text = config.keys.sorted().map { "\($0)=\(config[$0]!)" }.joined(separator: "\n") + "\n"
+        let kept = config.keys.filter { !Supervisor.secretKeys.contains($0) || secretsOutsideKeychain.contains($0) }
+        let text = kept.sorted().map { "\($0)=\(config[$0]!)" }.joined(separator: "\n") + "\n"
         try text.write(to: configFile, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: configFile.path)
     }
@@ -207,7 +229,9 @@ final class Supervisor: ObservableObject {
             guard r.status == 0 else { throw fail("The database could not be created. \(r.output.suffix(300))") }
         }
         if !postgresRunning() {
-            let opts = "-p \(pgPort) -k \(socketDir) -c listen_addresses=127.0.0.1"
+            // Every connection is logged with its user and program name, so a
+            // reach into the database from anywhere but Closedhand shows.
+            let opts = "-p \(pgPort) -k \(socketDir) -c listen_addresses=127.0.0.1 -c log_connections=on -c log_disconnections=on"
             let r = run(pgBin.appendingPathComponent("pg_ctl"), ["-D", pgData.path, "-o", opts, "-l", logsDir.appendingPathComponent("postgres.log").path, "-w", "-t", "60", "start"])
             guard r.status == 0 else { throw fail("The database did not start. \(r.output.suffix(300))") }
         }
@@ -257,6 +281,8 @@ final class Supervisor: ObservableObject {
         let proc = Process()
         proc.executableURL = nodeBin
         var env = environment()
+        // Named in the database's connection log (see startPostgres).
+        env["DATABASE_URL"] = (env["DATABASE_URL"] ?? "") + "?application_name=closedhand-\(which)"
         switch which {
         case "bot":
             proc.currentDirectoryURL = appDir

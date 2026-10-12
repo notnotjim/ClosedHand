@@ -79,6 +79,10 @@ const PAIRS = [
     name: "bank-feeds",
     copies: ["lib/bank-feeds.js", "webapp/bank-feeds.js"],
   },
+  {
+    name: "upload-types",
+    copies: ["lib/upload-types.js", "webapp/upload-types.js"],
+  },
 ];
 
 function normalise(src, name) {

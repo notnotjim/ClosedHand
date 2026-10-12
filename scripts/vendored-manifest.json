@@ -5,7 +5,7 @@
   "settings-patch": "a20d7d9ac1d43a0d",
   "config": "2d1b617e01caba04",
   "required-secrets": "27dc62b0a9877604",
-  "db-driver-pg": "ce5a0717569bace7",
+  "db-driver-pg": "a1850457ced22845",
   "recall-settings": "dd6daae9162dd84a",
   "model-policy": "1ae1f6ec14b5f59e",
   "model-wire": "37c5cd29175233e4",
@@ -15,10 +15,11 @@
   "lexical": "75c74a7230a13203",
   "fact-vectors": "4be86f1d81bbcf74",
   "doc-search": "a16b870d429cde91",
-  "mcp-client": "6bd907e918c31b2c",
-  "crypto-tokens": "28526815bc432c12",
+  "mcp-client": "2d381f2816997a6b",
+  "crypto-tokens": "6320d7dbbfae7417",
   "microsoft-app": "b0c5e2265c0c41dd",
   "google-app": "6e9509a7eb782735",
   "bridge-token": "e52053fd0ccd228a",
-  "bank-feeds": "6a86164e99b72f85"
+  "bank-feeds": "6a86164e99b72f85",
+  "upload-types": "574a9bd13235110f"
 }

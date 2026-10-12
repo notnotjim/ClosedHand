@@ -41,8 +41,14 @@ const MAX_OUTPUT = 8000; // chars
 // --- Auth middleware ---
 // Compared in the same time whatever the guess, so timing can't spell out a secret.
 const sameSecret = (a, b) => crypto.timingSafeEqual(crypto.createHash("sha256").update(String(a || "")).digest(), crypto.createHash("sha256").update(String(b || "")).digest());
+// Without a token nothing is answered: an agent started without one once
+// took every request from anything on its network. SANDBOX_DEV=1 lets a
+// developer run it bare on their own computer.
 function auth(req, res, next) {
-  if (!SANDBOX_TOKEN) return next(); // dev mode
+  if (!SANDBOX_TOKEN) {
+    if (process.env.SANDBOX_DEV === "1") return next();
+    return res.status(503).json({ error: "The sandbox computer has no token set, so it answers nothing." });
+  }
   const token = req.headers["x-sandbox-token"];
   if (!token || !sameSecret(token, SANDBOX_TOKEN)) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -611,5 +617,5 @@ app.post("/packages/list", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Sandbox agent listening on port ${PORT}`);
   console.log(`Workspace: ${WORKSPACE}`);
-  console.log(`Auth: ${SANDBOX_TOKEN ? "enabled" : "disabled (dev mode)"}`);
+  console.log(`Auth: ${SANDBOX_TOKEN ? "enabled" : process.env.SANDBOX_DEV === "1" ? "disabled (SANDBOX_DEV=1)" : "no token, so every request is refused"}`);
 });

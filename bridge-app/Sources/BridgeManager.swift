@@ -3,6 +3,7 @@ import Combine
 import ServiceManagement
 import EventKit
 import Contacts
+import Security
 
 @MainActor
 class BridgeManager: ObservableObject {
@@ -65,7 +66,14 @@ class BridgeManager: ObservableObject {
     func loadSettings() {
         isPaired = defaults.bool(forKey: "isPaired")
         userId = defaults.string(forKey: "userId")
-        bridgeToken = defaults.string(forKey: "bridgeToken")
+        // The token lives in the login Keychain, which macOS keeps encrypted.
+        // A token from an earlier version, kept in the app's preferences,
+        // moves there once and leaves the preferences.
+        bridgeToken = BridgeManager.keychainToken()
+        if bridgeToken == nil, let old = defaults.string(forKey: "bridgeToken"), BridgeManager.keepTokenInKeychain(old) {
+            bridgeToken = old
+        }
+        if bridgeToken != nil { defaults.removeObject(forKey: "bridgeToken") }
         serverUrl = defaults.string(forKey: "serverUrl") ?? "ws://localhost:3000/bridge"
         shareCalendar = defaults.object(forKey: "shareCalendar") == nil ? true : defaults.bool(forKey: "shareCalendar")
         shareReminders = defaults.object(forKey: "shareReminders") == nil ? true : defaults.bool(forKey: "shareReminders")
@@ -82,7 +90,13 @@ class BridgeManager: ObservableObject {
     func saveSettings() {
         defaults.set(isPaired, forKey: "isPaired")
         defaults.set(userId, forKey: "userId")
-        defaults.set(bridgeToken, forKey: "bridgeToken")
+        if let token = bridgeToken {
+            if BridgeManager.keepTokenInKeychain(token) { defaults.removeObject(forKey: "bridgeToken") }
+            else { defaults.set(token, forKey: "bridgeToken") } // the Keychain refused it: kept where it was, tried again next save
+        } else {
+            BridgeManager.forgetKeychainToken()
+            defaults.removeObject(forKey: "bridgeToken")
+        }
         defaults.set(serverUrl, forKey: "serverUrl")
         defaults.set(shareCalendar, forKey: "shareCalendar")
         defaults.set(shareReminders, forKey: "shareReminders")
@@ -93,6 +107,36 @@ class BridgeManager: ObservableObject {
         defaults.set(shareBrowser, forKey: "shareBrowser")
         defaults.set(unrestrictedMode, forKey: "unrestrictedMode")
         defaults.set(keepAwake, forKey: "keepAwake")
+    }
+
+    private static let tokenItem: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                                   kSecAttrService as String: "com.closedhand.bridge",
+                                                   kSecAttrAccount as String: "bridgeToken"]
+
+    private static func keychainToken() -> String? {
+        var q = tokenItem
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: AnyObject?
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    @discardableResult
+    private static func keepTokenInKeychain(_ token: String) -> Bool {
+        let data = Data(token.utf8)
+        var status = SecItemUpdate(tokenItem as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = tokenItem
+            add[kSecValueData as String] = data
+            add[kSecAttrLabel as String] = "Closedhand Bridge token"
+            status = SecItemAdd(add as CFDictionary, nil)
+        }
+        return status == errSecSuccess && keychainToken() == token
+    }
+
+    private static func forgetKeychainToken() {
+        SecItemDelete(tokenItem as CFDictionary)
     }
 
     func startPairing() {
