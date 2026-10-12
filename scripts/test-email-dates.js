@@ -217,9 +217,8 @@ test("a booking is read from the whole email, and dates the email doesn't give a
 });
 
 test("invisible padding at the top of an email is stripped before a reader sees it", () => {
-  const src = read("lib/mail-attachments.js");
-  const box = {};
-  vm.runInNewContext(src.slice(src.indexOf("const INVISIBLE"), src.indexOf("\n}\n", src.indexOf("function readable")) + 3) + "\nthis.readable = readable;", box);
+  assert.match(read("lib/mail-attachments.js"), /const \{ readable \} = require\("\.\/readable-text"\);/);
+  const box = { readable: require("../lib/readable-text").readable };
   const padded = "Booking Confirmation " + "\u034f\ufeff ".repeat(300) + "\n\n  You are going\u00a0to Example Hostel";
   assert.equal(box.readable(padded), "Booking Confirmation\nYou are going to Example Hostel");
   const flights = read("lib/flights.js");

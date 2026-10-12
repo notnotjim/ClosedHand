@@ -5207,7 +5207,7 @@ app.get("/api/automations", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("automations")
-      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, created_at, updated_at")
+      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, run_once, watch_words, expires_at, fired_at, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
@@ -5309,6 +5309,28 @@ app.get("/api/automations/stats", async (req, res) => {
   }
 });
 
+// A routine for "when something happens" is a watch (lib/watches.js in the
+// bot): it reads new email, bank transactions or synced chat messages as they
+// arrive. A watch for one thing stops after it fires, or after 30 days with
+// nothing. Saving one, new or edited, arms it from now: it looks only at what
+// arrives after.
+const WATCH_SOURCES = ["email", "bank", "messages"];
+function watchFields(body, now = Date.now()) {
+  if (body.trigger_type !== "event") return { ok: true, fields: { run_once: false, watch_words: [], expires_at: null } };
+  const source = body.trigger_event_source || "email";
+  if (!WATCH_SOURCES.includes(source)) return { ok: false, error: "A routine can watch new email, bank transactions or chat messages as they arrive." };
+  const condition = String(body.trigger_event_condition || "").trim();
+  if (!condition) return { ok: false, error: "Say what it waits for." };
+  const once = body.run_once !== false;
+  const words = (Array.isArray(body.watch_words) ? body.watch_words : String(body.watch_words || "").split(","))
+    .map((w) => String(w).trim()).filter((w) => w.length >= 2 && w.length <= 60).slice(0, 5);
+  return { ok: true, fields: {
+    trigger_event_source: source, trigger_event_condition: condition, run_once: once, watch_words: words,
+    expires_at: once ? new Date(now + 30 * 86400000).toISOString() : null,
+    watched_until: new Date(now).toISOString(), watch_seen: [], fired_at: null, status: "active",
+  } };
+}
+
 // Create saved automation
 app.post("/api/automations", async (req, res) => {
   try {
@@ -5319,6 +5341,8 @@ app.post("/api/automations", async (req, res) => {
       task_use_cloud, output_destinations, output_urgent, chain_target_id } = req.body;
 
     if (!name || !task_prompt) return res.status(400).json({ error: "Name and task prompt required" });
+    const watch = watchFields(req.body);
+    if (!watch.ok) return res.status(400).json({ error: watch.error });
 
     // Rules travel in the instructions as a list, as the dashboard writes them.
     let fullPrompt = task_prompt;
@@ -5342,6 +5366,7 @@ app.post("/api/automations", async (req, res) => {
         output_urgent: output_urgent || false,
         chain_target_id: chain_target_id || null,
         platform: "dashboard", chat_id: null,
+        ...watch.fields,
       })
       .select()
       .single();
@@ -5361,7 +5386,16 @@ app.put("/api/automations/:id", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     // Which automation and whose it is come from the address and the
     // session, never from the body.
-    const { id: _id, user_id: _owner, created_at: _made, updated_at: _changed, ...changes } = req.body || {};
+    const { id: _id, user_id: _owner, created_at: _made, updated_at: _changed,
+      watched_until: _looked, watch_seen: _judged, fired_at: _fired, expires_at: _ends, ...changes } = req.body || {};
+    // How far a watch has looked and when it ends are its own to keep. Saving
+    // it as a watch arms it again from now; saving it as anything else clears
+    // the watch.
+    if (changes.trigger_type) {
+      const watch = watchFields(changes);
+      if (!watch.ok) return res.status(400).json({ error: watch.error });
+      Object.assign(changes, watch.fields);
+    }
     const { data, error } = await supabase
       .from("automations")
       .update({ ...changes, updated_at: new Date().toISOString() })
@@ -5466,9 +5500,14 @@ app.post("/api/automations/:id/resume", async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
+    // A watch for one thing past its end date gets 30 more days, so resuming
+    // it does not end it again a minute later (lib/watches.js).
+    const { data: was } = await supabase.from("automations").select("trigger_type, run_once, expires_at").eq("id", req.params.id).eq("user_id", userId).maybeSingle();
+    const more = was && was.trigger_type === "event" && was.run_once && (!was.expires_at || Date.parse(was.expires_at) <= Date.now())
+      ? { expires_at: new Date(Date.now() + 30 * 86400000).toISOString() } : {};
     const { data, error } = await supabase
       .from("automations")
-      .update({ status: "active", updated_at: new Date().toISOString() })
+      .update({ status: "active", ...more, updated_at: new Date().toISOString() })
       .eq("id", req.params.id)
       .eq("user_id", userId)
       .select()

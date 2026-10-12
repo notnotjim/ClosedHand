@@ -193,7 +193,7 @@ test("secrets are compared in constant time, and records are read by owner as we
   assert.match(web, /from\("canvases"\)\.select\("id, filename, mime_type, content"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);
   assert.match(web, /from\("canvases"\)\.select\("\*"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", getUserIdFromRequest\(req\)\)/);
   assert.match(web, /\.select\("id, title, messages"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", userId\)/);
-  assert.match(web, /const \{ id: _id, user_id: _owner, created_at: _made, updated_at: _changed, \.\.\.changes \} = req\.body \|\| \{\};/, "an automation's id and owner never come from the body");
+  assert.match(web, /const \{ id: _id, user_id: _owner, created_at: _made, updated_at: _changed,\n\s+watched_until: _looked, watch_seen: _judged, fired_at: _fired, expires_at: _ends, \.\.\.changes \} = req\.body \|\| \{\};/, "an automation's id and owner never come from the body");
   assert.match(web, /const BRIDGE_PAIR_CODE = \/\^\[ABCDEFGHJKLMNPQRSTUVWXYZ23456789\]\{6\}\$\/i;/);
   assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(String\(code\)\)\) return res\.status\(400\)/);
   assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(offered\) \|\| bridgeConnections\.has\(offered\) \|\| waiting >= 50\)/);

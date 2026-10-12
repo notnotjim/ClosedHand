@@ -6616,7 +6616,9 @@
       var hasActiveRun = a.latest_run && (a.latest_run.status === 'running' || a.latest_run.status === 'pending');
       var displayStatus = hasActiveRun ? 'running' : a.status;
       var statusClass = displayStatus === 'active' ? 'active' : displayStatus === 'paused' ? 'paused' : displayStatus === 'running' ? 'active' : 'idle';
-      var triggerText = a.trigger_human_schedule || (a.trigger_type === 'event' ? 'When ' + (a.trigger_event_condition || a.trigger_event_source) : 'Run manually');
+      var triggerText = a.trigger_human_schedule || (a.trigger_type === 'event' ? watchLine(a) : 'Run manually');
+      if (a.trigger_type === 'event' && displayStatus === 'active') displayStatus = 'watching';
+      if (displayStatus === 'expired') displayStatus = 'ended';
       var triggerTitle = a.trigger_type === 'manual' ? 'Ask Closedhand to run it or tap Run' : '';
 
       var actionsHtml = '<div class="auto-card-actions">';
@@ -6652,6 +6654,16 @@
       '</div>';
     }
 
+    // What a watch looks at and for, and where it stands (lib/watches.js).
+    function watchLine(a) {
+      var looks = { email: 'each new email', bank: 'each new bank transaction', messages: 'each new chat message' }[a.trigger_event_source] || 'each new email';
+      var what = a.trigger_event_condition || a.description || '';
+      var day = function(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
+      if (a.status === 'done') return 'Came ' + day(a.fired_at) + ': ' + what;
+      if (a.status === 'expired') return 'Nothing came by ' + day(a.expires_at) + ': ' + what;
+      return 'Watching ' + looks + ' for: ' + what + (a.run_once && a.expires_at ? ' (until ' + day(a.expires_at) + ')' : '');
+    }
+
     function truncatePrompt(text, max) {
       if (!text || text.length <= max) return esc(text);
       return esc(text.substring(0, max)) + '<span style="color:rgba(239,230,214,0.6);">...</span>';
@@ -6683,6 +6695,12 @@
           }
         } else {
           selectTrigger(a.trigger_type || 'manual');
+        }
+        if (a.trigger_type === 'event') {
+          document.getElementById('auto-event-source').value = a.trigger_event_source || 'email';
+          document.getElementById('auto-event-condition').value = a.trigger_event_condition || '';
+          document.getElementById('auto-event-words').value = (a.watch_words || []).join(', ');
+          document.getElementById('auto-event-once').checked = a.run_once !== false;
         }
         // Mark as editing so save updates instead of creates
         document.getElementById('auto-create-modal').dataset.editId = id;
@@ -6845,6 +6863,10 @@
       var modal = document.getElementById('auto-create-modal');
       if (modal) delete modal.dataset.editId;
       _selectedSkills = [];
+      document.getElementById('auto-event-source').value = 'email';
+      document.getElementById('auto-event-condition').value = '';
+      document.getElementById('auto-event-words').value = '';
+      document.getElementById('auto-event-once').checked = true;
       selectTrigger('manual');
       selectModel('sonnet');
       selectDest('chat_platforms');
@@ -6913,9 +6935,13 @@
         }
       }
 
-      var eventCondition = null;
+      var eventCondition = null, eventSource = null, eventWords = [], eventOnce = false;
       if (_selectedTrigger === 'event') {
         eventCondition = document.getElementById('auto-event-condition').value.trim();
+        if (!eventCondition) { errEl.textContent = 'Say what it waits for.'; errEl.style.display = 'block'; return; }
+        eventSource = document.getElementById('auto-event-source').value;
+        eventWords = document.getElementById('auto-event-words').value.split(',').map(function(w) { return w.trim(); }).filter(Boolean);
+        eventOnce = document.getElementById('auto-event-once').checked;
       }
 
       btn.disabled = true; btn.textContent = 'Saving...';
@@ -6937,6 +6963,9 @@
             trigger_cron: triggerCron,
             trigger_human_schedule: humanSchedule,
             trigger_event_condition: eventCondition,
+            trigger_event_source: eventSource,
+            watch_words: eventWords,
+            run_once: eventOnce,
             task_prompt: withRules(prompt, document.getElementById('auto-quality-input').value),
             task_model: _selectedModel,
             task_tools: taskTools.length > 0 ? taskTools : [],
@@ -8560,9 +8589,19 @@
         <input type="text" id="auto-cron-input" placeholder="Cron expression (e.g. 0 8 * * *)" style="display:none;margin-top:6px;width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
       </div>
 
-      <!-- Event picker (hidden by default) -->
+      <!-- Event picker (hidden by default): a watch, lib/watches.js -->
       <div id="auto-event-picker" style="display:none;margin-bottom:10px;">
-        <input type="text" id="auto-event-condition" placeholder="e.g. When a Shopify order over 500 comes in" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
+        <select id="auto-event-source" style="width:100%;padding:8px 10px;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;margin-bottom:6px;">
+          <option value="email">Each new email</option>
+          <option value="bank">Each new bank transaction</option>
+          <option value="messages">Each new chat message (Slack, WhatsApp)</option>
+        </select>
+        <input type="text" id="auto-event-condition" placeholder="What it waits for, e.g. Lego's email saying my order has shipped" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+        <input type="text" id="auto-event-words" placeholder="Words it will contain, if you know them: an order number, the sender (optional)" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:#B6AFA4;font-weight:400;cursor:pointer;">
+          <input type="checkbox" id="auto-event-once" checked style="width:16px;height:16px;margin:0;accent-color:#D0563F;">
+          Stop after the first one (it ends after 30 days if nothing comes)
+        </label>
       </div>
 
       <!-- Skills preference -->

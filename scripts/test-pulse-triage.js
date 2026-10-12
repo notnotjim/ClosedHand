@@ -68,8 +68,8 @@ test('mail sent to a list is marked, and the screen knows what that means', asyn
   assert.match(system, /Mail marked \[mailing list\] went out to many people, however personally it is addressed/);
   assert.match(system, /A nudge that would only matter if something you do not know is true/);
   const pulse = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
-  assert.match(pulse, /select\("external_id, data->>from, data->>subject, data->labels, data->>body"\)/);
+  assert.match(pulse, /select\("source, type, external_id, data, data->>from, data->>subject, data->labels, data->>body"\)/);
   assert.match(pulse, /EMAIL\$\{fromMailingList\(e\) \? " \[mailing list\]" : ""\}/);
   assert.match(pulse, /its "call me" is not a request waiting on \$\{userName\}/, 'the writer holds the same line');
-  assert.match(pulse, /filter\(e => !JUNK_SENDER\.test\(e\.from \|\| ""\) && !sortedAsBulk\(e\.labels\)\)/, 'what Gmail filed as bulk never reaches the screen');
+  assert.match(pulse, /filter\(e => !JUNK_SENDER\.test\(e\.from \|\| ""\) && !sortedAsBulk\(e\.labels\)\n/, 'what Gmail filed as bulk never reaches the screen');
 });

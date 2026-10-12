@@ -203,6 +203,9 @@ async function main() {
   require("./lib/goal-check-ins").startGoalCheckIns();
   resumeAgents();
   await registerAutomationCrons();
+  // Routines that wait for something to happen look at what the sync
+  // brought in, once a minute (lib/watches.js).
+  require("./lib/watches").start();
   await startPulse();
   // Warm the runtime-config cache before anything reads it synchronously.
   // getConfCached returns undefined on a cold cache, so an unwarmed read of
