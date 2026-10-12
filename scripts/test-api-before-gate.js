@@ -15,6 +15,7 @@ const PUBLIC = new Set([
   "/api/setup/qr",        // a QR picture of a t.me link
   "/api/setup/provider",  // always refuses
   "/api/login",           // signing in
+  "/api/login/code",      // its second step, which needs the challenge a right password made
   "/api/telegram/session",// Telegram's own signed proof
 ]);
 const GUARDS = /requireSetupAccess\(req, res\)|hasAdminSession\(req, res\)|hereHeaders\(req, res\)|checkDashboardPassword\(|validateTelegramInitData\(/;

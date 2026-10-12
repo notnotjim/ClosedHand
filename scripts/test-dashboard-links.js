@@ -108,7 +108,7 @@ test('successful login preserves the Agents tab and rejects external redirects',
     let submit;
     const location = { origin: 'https://my.example.com', search: '?next=' + encodeURIComponent(next), hash: '#agents' };
     vm.runInNewContext(script, { URL, URLSearchParams, location,
-      document: { getElementById: id => id === 'login-form' ? { addEventListener: (_, fn) => { submit = fn; } } : { style: {}, value: 'fixture' } },
+      document: { getElementById: id => id === 'login-form' ? { addEventListener: (_, fn) => { submit = fn; } } : { style: {}, value: 'fixture', addEventListener() {}, focus() {} } },
       fetch: async () => ({ ok: true, json: async () => ({ success: true }) }) });
     submit({ preventDefault() {} });
     await flush();

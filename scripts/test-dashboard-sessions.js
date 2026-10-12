@@ -127,9 +127,9 @@ test('a password session lasts 30 days from its last use, stretched at most once
   const { sessions, clock } = setup();
   const s = await sessions.start();
   clock.t += 2 * 60 * 60 * 1000;
-  assert.deepEqual(await sessions.check(s.token), { ok: true }, 'used again the same day: not stretched yet');
+  assert.deepEqual(await sessions.check(s.token), { ok: true, kind: 'password' }, 'used again the same day: not stretched yet');
   clock.t += 2 * DAY;
-  assert.deepEqual(await sessions.check(s.token), { ok: true, refreshSec: 30 * 24 * 60 * 60 }, 'stretched, and the cookie is sent again');
+  assert.deepEqual(await sessions.check(s.token), { ok: true, kind: 'password', refreshSec: 30 * 24 * 60 * 60 }, 'stretched, and the cookie is sent again');
   clock.t += 29 * DAY;
   assert.equal((await sessions.check(s.token)).ok, true, 'still inside 30 days of last use');
   clock.t += 31 * DAY;
@@ -141,7 +141,7 @@ test('a Telegram session keeps its own length and does not stretch', async () =>
   const s = await sessions.start({ kind: 'telegram', lastsSec: 12 * 60 * 60 });
   assert.equal(s.maxAgeSec, 12 * 60 * 60);
   clock.t += 11 * 60 * 60 * 1000;
-  assert.deepEqual(await sessions.check(s.token), { ok: true });
+  assert.deepEqual(await sessions.check(s.token), { ok: true, kind: 'telegram' });
   clock.t += 2 * 60 * 60 * 1000;
   assert.equal((await sessions.check(s.token)).ok, false);
 });
@@ -166,7 +166,7 @@ test('the dashboard starts, checks and ends sessions through this module', () =>
   assert.match(logout, /await dashboardSessions\.end\(readCookie\(req, browserAccess\.sessionName\(req\)\)\)/);
   assert.match(logout, /sessionCookie\(req, "", 0\)/);
   const setPw = server.slice(server.indexOf('app.post("/api/setup/password"'), server.indexOf('app.post("/api/setup/detect"'));
-  assert.match(setPw, /await dashboardSessions\.endAll\(\);\n\s*await startAdminSession\(req, res\);/);
+  assert.match(setPw, /await dashboardSessions\.endAll\(\);\n(\s*\/\/.*\n)*\s*await startAdminSession\(req, res, viaTunnel\(req\) \? \{ kind: signInCode\.KIND \} : undefined\);/);
   const login = server.slice(server.indexOf('app.post("/api/login"'), server.indexOf('// --- Reach the dashboard from your phone'));
   assert.match(login, /await startAdminSession\(req, res\);/);
   const calls = server.replace('async function hasAdminSession(req, res)', '').match(/(await )?hasAdminSession\(req[^)]*\)/g) || [];

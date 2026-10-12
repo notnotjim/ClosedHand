@@ -4,9 +4,11 @@
 // all. Before, every sign-in got the same signed value for a year, which
 // neither logging out nor changing the password could take back.
 //
-// A session made with the password lasts 30 days from its last use. One made
+// A session made with the password (and, through the personal URL, the code
+// sent to the person's chat app) lasts 30 days from its last use. One made
 // by Telegram's in-app sign-in keeps the length it was given and does not
-// stretch. Each session also carries a fingerprint of the password it was
+// stretch. check() reports the kind, so the server can ask for the code-made
+// kind through the personal URL. Each session also carries a fingerprint of the password it was
 // made under, so a password changed any way at all (the setup page, or
 // ADMIN_PASSWORD in .env) ends every session made before it.
 const crypto = require("crypto");
@@ -15,6 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SESSION_SEC = 30 * 24 * 60 * 60;
 const RECHECK_MS = 60 * 1000; // trust a checked session this long before asking the database again
 const TABLE = "dashboard_sessions";
+const STRETCHES = new Set(["password", "password+code"]);
 
 const hashToken = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
 
@@ -53,8 +56,8 @@ function createSessions({ db, password, now = () => Date.now() }) {
     return { token, maxAgeSec: lastsSec };
   }
 
-  // { ok, refreshSec }: refreshSec is set when the session was stretched and
-  // the browser's cookie should be sent again with that lifetime.
+  // { ok, kind, refreshSec }: refreshSec is set when the session was
+  // stretched and the browser's cookie should be sent again with that lifetime.
   async function check(token) {
     if (!token) return { ok: false };
     const hash = hashToken(token);
@@ -80,15 +83,15 @@ function createSessions({ db, password, now = () => Date.now() }) {
       return { ok: false };
     }
     // Stretch a password session at most once a day.
-    if (s.kind === "password" && s.expires - now() < SESSION_SEC * 1000 - DAY_MS) {
+    if (STRETCHES.has(s.kind) && s.expires - now() < SESSION_SEC * 1000 - DAY_MS) {
       const expires = now() + SESSION_SEC * 1000;
       const { error } = await db.from(TABLE).update({ expires_at: new Date(expires).toISOString() }).eq("token_hash", hash);
       if (!error) {
         s.expires = expires;
-        return { ok: true, refreshSec: SESSION_SEC };
+        return { ok: true, kind: s.kind, refreshSec: SESSION_SEC };
       }
     }
-    return { ok: true };
+    return { ok: true, kind: s.kind };
   }
 
   async function end(token) {

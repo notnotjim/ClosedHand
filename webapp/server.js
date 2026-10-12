@@ -631,11 +631,18 @@ async function startAdminSession(req, res, opts) {
   const { token, maxAgeSec } = await dashboardSessions.start(opts);
   res.append("Set-Cookie", sessionCookie(req, token, maxAgeSec));
 }
+// The second step of signing in through the personal URL (sign-in-code.js).
+const signInCode = require("./sign-in-code");
+const _signInCodes = signInCode.createChallenges();
 // res, when given, gets the cookie again if the session was stretched.
+// Through the personal URL only a session that also passed the code counts:
+// one made with the password alone, or by Telegram's one-tap sign-in, before
+// the code step existed signs in again.
 async function hasAdminSession(req, res) {
   try {
     const token = readCookie(req, browserAccess.sessionName(req));
     const r = await dashboardSessions.check(token);
+    if (r.ok && viaTunnel(req) && r.kind !== signInCode.KIND) return false;
     if (r.ok && r.refreshSec && res) res.append("Set-Cookie", sessionCookie(req, token, r.refreshSec));
     return r.ok;
   } catch (_) {
@@ -735,6 +742,10 @@ app.post("/api/login", async (req, res) => {
       return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     }
     if (await checkDashboardPassword((req.body || {}).password)) {
+      // Through the personal URL the password is the first step: the second
+      // is a code sent to the person's chat app. The address keeps its count
+      // of wrong tries until the code is right.
+      if (viaTunnel(req)) return sendSignInCode(req, res);
       _loginFails.delete(ip);
       try {
         await startAdminSession(req, res);
@@ -751,6 +762,73 @@ app.post("/api/login", async (req, res) => {
     return res.status(403).json({ error: "Wrong password" });
   } catch (e) {
     return res.status(500).json({ error: "login failed" });
+  }
+});
+
+// The code goes to the person through the bot, which holds their chat apps.
+// The browser keeps only the challenge's random id, in a cookie for these
+// two routes alone.
+const CODE_COOKIE = "ch_signin_code";
+function codeCookie(req, value, maxAgeSec) {
+  return `${CODE_COOKIE}=${value}; Path=/api/login; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSec}${browserAccess.publicHttps(req) ? "; Secure" : ""}`;
+}
+async function sendSignInCode(req, res) {
+  if (!_signInCodes.canIssue()) {
+    signInRecord("password right, but no code sent: five already went out this hour", req);
+    return res.status(429).json({ error: "Closedhand has sent five sign-in codes in the last hour. Wait a while, then try again." });
+  }
+  const { id, code } = _signInCodes.issue();
+  try {
+    const { getAdminUserId } = require("./admin");
+    const r = await fetch(`${BOT_INTERNAL_URL}/internal/sign-in-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-closedhand-token": botToken(getAdminUserId()) },
+      body: JSON.stringify({ code, from: maskedIp(clientIp(req)) }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !Array.isArray(j.sentTo) || !j.sentTo.length) {
+      _signInCodes.withdraw(id);
+      signInRecord("password right, but the code could not be sent", req);
+      return res.status(503).json({ error: (r.status === 409 && j.error) || "Closedhand couldn't send your sign-in code just now. Try again in a minute." });
+    }
+    res.append("Set-Cookie", codeCookie(req, id, Math.floor(signInCode.CODE_TTL_MS / 1000)));
+    signInRecord(`password right; code sent to ${j.sentTo.join(" and ")}`, req);
+    return res.json({ needsCode: true, sentTo: j.sentTo });
+  } catch (e) {
+    _signInCodes.withdraw(id);
+    console.error("[login] sign-in code not sent:", e.message);
+    return res.status(503).json({ error: "Closedhand couldn't send your sign-in code just now. Try again in a minute." });
+  }
+}
+app.post("/api/login/code", async (req, res) => {
+  try {
+    const ip = clientIp(req);
+    if (lockedOut(ip, req)) {
+      signInRecord("code refused, too many tries", req);
+      return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
+    }
+    const result = _signInCodes.verify(readCookie(req, CODE_COOKIE), (req.body || {}).code);
+    if (result === "ok") {
+      _loginFails.delete(ip);
+      res.append("Set-Cookie", codeCookie(req, "", 0));
+      try {
+        await startAdminSession(req, res, { kind: signInCode.KIND });
+      } catch (e) {
+        console.error("[login] could not start a session:", e.message);
+        return res.status(503).json({ error: "Could not sign you in just now. Try again in a moment." });
+      }
+      signInRecord("signed in with password and code", req);
+      return res.json({ success: true });
+    }
+    if (result === "gone") return res.status(400).json({ restart: true, error: "That code has run out or was already used. Sign in again for a new one." });
+    signInRecord("wrong sign-in code", req);
+    noteWrongPassword(ip, req);
+    await new Promise((r) => setTimeout(r, 400));
+    if (result === "used-up") return res.status(403).json({ restart: true, error: "That was the last try for this code. Sign in again for a new one." });
+    return res.status(403).json({ error: "That code isn't right. Use the latest one Closedhand sent." });
+  } catch (e) {
+    return res.status(500).json({ error: "sign-in failed" });
   }
 });
 
@@ -1157,7 +1235,9 @@ app.post("/api/setup/password", async (req, res) => {
     await setRuntimeConf({ DASHBOARD_PASSWORD_HASH: hashPassword(pw) });
     // A new password signs every browser out, then this one back in.
     await dashboardSessions.endAll();
-    await startAdminSession(req, res);
+    // Through the personal URL this request came from a session that passed
+    // the code, and the current password was given again.
+    await startAdminSession(req, res, viaTunnel(req) ? { kind: signInCode.KIND } : undefined);
     signInRecord("dashboard password set; every other session ended", req);
     res.json({ success: true });
   } catch (e) {
@@ -1567,6 +1647,9 @@ app.get("/tg/open", (req, res) => {
 });
 app.post("/api/telegram/session", async (req, res) => {
   try {
+    // Telegram alone is one step. Through the personal URL signing in takes
+    // the password and a code, so /tg/open goes on to the sign-in page.
+    if (viaTunnel(req)) return res.status(403).json({ error: "Sign in with your password and the code Closedhand sends you." });
     const initData = String((req.body || {}).initData || "");
     const tgUser = validateTelegramInitData(initData, await telegramBotToken(), TELEGRAM_PROOF_MAX_AGE_SEC);
     if (!tgUser || !tgUser.id) return res.status(403).json({ error: "Telegram could not confirm who opened this." });
@@ -1610,6 +1693,8 @@ app.use(async (req, res, next) => {
     if (req.method === "POST" && SIGNED_BY_BRIDGE.has(req.path)) return next();
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
     if (scheme === "Basic" && encoded) {
+      // Through the personal URL a password alone never signs in.
+      if (viaTunnel(req)) return res.status(401).json({ error: "Through your personal URL, sign in on the sign-in page. A password sent with a request works only on the computer running Closedhand." });
       // Scripts may send the password with each request, under the same
       // five tries as the sign-in form; without that this was a way round it.
       const ip = clientIp(req);
