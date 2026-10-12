@@ -5174,7 +5174,7 @@
           return '<div class="usage-price-row"><span class="m">' + escHtml(m) + '</span>' +
             '<label>$<input type="number" min="0" step="0.01" id="' + id + '-in" value="' + (p.in !== undefined ? escHtml(String(p.in)) : '') + '" placeholder="in"></label>' +
             '<label>$<input type="number" min="0" step="0.01" id="' + id + '-out" value="' + (p.out !== undefined ? escHtml(String(p.out)) : '') + '" placeholder="out"></label>' +
-            '<button type="button" onclick="saveUsagePrice(\'' + escHtml(m).replace(/'/g, "\\'") + '\', \'' + id + '\')">Save</button></div>';
+            '<button type="button" onclick="saveUsagePrice(\'' + jsq(m) + '\', \'' + id + '\')">Save</button></div>';
         }).join('');
     }
     async function saveUsagePrice(model, id) {
@@ -7148,7 +7148,7 @@
           var d = datasets[i];
           var colNames = (d.columns || []).map(function(c) { return c.name; }).join(', ');
           var updated = d.updated_at ? new Date(d.updated_at).toLocaleDateString() : '';
-          html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor=\'rgba(239,230,214,0.28)\'" onmouseout="this.style.borderColor=\'rgba(239,230,214,0.1)\'" onclick="openDatasetDetail(\'' + d.id + '\',\'' + d.name.replace(/'/g, "\\'") + '\')">'
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor=\'rgba(239,230,214,0.28)\'" onmouseout="this.style.borderColor=\'rgba(239,230,214,0.1)\'" onclick="openDatasetDetail(\'' + d.id + '\',\'' + jsq(d.name) + '\')">'
             + '<div><div style="font-size:13px;color:#EFE6D6;">' + escapeHtml(d.name) + '</div>'
             + '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + escapeHtml(colNames) + '</div></div>'
             + '<div style="display:flex;align-items:center;gap:10px;">'
@@ -7519,7 +7519,7 @@
             return '<span style="font-size: 13px;color:rgba(239,230,214,0.6);background:rgba(239,230,214,0.05);padding:1px 6px;border-radius:4px;margin-left:4px;">' + t.replace(/</g, '&lt;') + '</span>';
           }).join('');
           var timeStr = n.updated_at ? new Date(n.updated_at).toLocaleDateString() : '';
-          html += '<div onclick="openBrainNode(\'' + n.title.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-radius:6px;transition:background 0.1s;" onmouseover="this.style.background=\'rgba(239,230,214,0.04)\'" onmouseout="this.style.background=\'transparent\'">';
+          html += '<div onclick="openBrainNode(\'' + jsq(n.title) + '\')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-radius:6px;transition:background 0.1s;" onmouseover="this.style.background=\'rgba(239,230,214,0.04)\'" onmouseout="this.style.background=\'transparent\'">';
           html += '<span style="font-size: 13px;color:rgba(239,230,214,0.6);">&#128196;</span>';
           html += '<span style="font-size:13px;color:#EFE6D6;flex:1;">' + n.title.replace(/</g, '&lt;') + '</span>';
           html += tagHtml;
@@ -7839,7 +7839,7 @@
         // Render content with wiki-links made clickable
         var content = escHtml(note.content || '');
         content = content.replace(/\[\[([^\]]+)\]\]/g, function(match, title) {
-          return '<a style="color:#D8624B;cursor:pointer;text-decoration:none;" onclick="openBrainNode(\'' + escHtml(title).replace(/'/g, "\\'") + '\')">' + escHtml(title) + '</a>';
+          return '<a style="color:#D8624B;cursor:pointer;text-decoration:none;" onclick="openBrainNode(\'' + jsq(title) + '\')">' + escHtml(title) + '</a>';
         });
         document.getElementById('brain-panel-content').innerHTML = content;
 
@@ -7898,7 +7898,16 @@
     }
 
     function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    function escapeAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+    function escapeAttr(s) { return jsq(s); }
+    // A value inside a quoted JavaScript string in an HTML attribute, as in
+    // onclick="open('...')": backslashes, quotes and line breaks escaped for the
+    // script, then the whole escaped for the attribute, so no file or folder name
+    // can end either one early. Names come from files anyone can make, a
+    // downloaded file or an email attachment, so a name is never trusted.
+    function jsq(s) {
+      return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
     function _isPulseNode(node) {
       var title = (node.title || '').toLowerCase();

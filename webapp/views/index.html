@@ -5025,7 +5025,7 @@
   function addCanvasMessage(msg) {
     var div = document.createElement('div');
     div.className = 'message bot canvas-msg';
-    div.innerHTML = '<span style="color:#D8624B;">&#9654;</span> ' + msg.filename;
+    div.innerHTML = '<span style="color:#D8624B;">&#9654;</span> ' + escapeHtml(String(msg.filename || ''));
     div.onclick = function() { openCanvas(msg.id, msg.filename, msg.mime_type, msg.content); };
     messagesEl.insertBefore(div, typingEl);
     scrollToBottom();
@@ -5682,7 +5682,7 @@ async function ragBrowse(origin, path, folderName, account) {
     var b = _ragBreadcrumbs[ci];
     if (ci > 0) crumbHtml += ' <span style="color:rgba(239,230,214,0.5);margin:0 2px;">/</span> ';
     if (ci < _ragBreadcrumbs.length - 1) {
-      crumbHtml += '<a href="#" onclick="event.preventDefault();ragBrowse(\'' + origin + '\',\'' + b.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.5);text-decoration:none;">' + escapeHtml(b.name) + '</a>';
+      crumbHtml += '<a href="#" onclick="event.preventDefault();ragBrowse(\'' + origin + '\',\'' + jsq(b.path) + '\')" style="color:rgba(239,230,214,0.5);text-decoration:none;">' + escapeHtml(b.name) + '</a>';
     } else {
       crumbHtml += '<span style="color:#B6AFA4;">' + escapeHtml(b.name) + '</span>';
     }
@@ -5728,7 +5728,7 @@ async function ragBrowse(origin, path, folderName, account) {
     if (showIndexCta) {
       var ctaLabel = isAtRoot ? 'Index all ' + label + ' files' : 'Index this folder';
       if (docFiles.length > 0) ctaLabel += ' (' + docFiles.length + ' indexable file' + (docFiles.length === 1 ? '' : 's') + ' here)';
-      html += '<div class="rag-browse-item" onclick="ragConnectSource(\'' + origin + '\',\'' + path.replace(/'/g, "\\'") + '\')" style="background:rgba(208,86,63,0.06);border-color:rgba(208,86,63,0.2);color:var(--accent);font-weight:500;">'
+      html += '<div class="rag-browse-item" onclick="ragConnectSource(\'' + origin + '\',\'' + jsq(path) + '\')" style="background:rgba(208,86,63,0.06);border-color:rgba(208,86,63,0.2);color:var(--accent);font-weight:500;">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
         + ctaLabel + '</div>';
     } else {
@@ -5738,7 +5738,7 @@ async function ragBrowse(origin, path, folderName, account) {
     // Back button (only if not at root)
     if (path !== rootPath && _ragBreadcrumbs.length > 1) {
       var parentCrumb = _ragBreadcrumbs[_ragBreadcrumbs.length - 2];
-      html += '<div class="rag-browse-item" onclick="ragBrowse(\'' + origin + '\',\'' + parentCrumb.path.replace(/'/g, "\\'") + '\')" style="color:rgba(239,230,214,0.5);">'
+      html += '<div class="rag-browse-item" onclick="ragBrowse(\'' + origin + '\',\'' + jsq(parentCrumb.path) + '\')" style="color:rgba(239,230,214,0.5);">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'
         + 'Back</div>';
     }
@@ -5753,8 +5753,8 @@ async function ragBrowse(origin, path, folderName, account) {
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       var navTarget = (origin === 'gdrive') ? f.id : (path.replace(/\/$/, '') + '/' + f.name);
-      var esc = navTarget.replace(/'/g, "\\'");
-      var nameEsc = (f.name || '').replace(/'/g, "\\'");
+      var esc = jsq(navTarget);
+      var nameEsc = jsq((f.name || ''));
       html += '<div class="rag-browse-item" onclick="ragBrowse(\'' + origin + '\',\'' + esc + '\',\'' + nameEsc + '\')">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(239,230,214,0.15)" stroke="rgba(239,230,214,0.3)" stroke-width="2" style="flex-shrink:0;"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
         + escapeHtml(f.name) + '</div>';
@@ -5780,7 +5780,7 @@ async function ragBrowse(origin, path, folderName, account) {
           + '</div>';
       }
       html += '<div id="ragSelectActions" style="display:none;padding:4px 0;">'
-        + '<div class="rag-browse-item" onclick="ragIndexSelected(\'' + origin + '\',\'' + path.replace(/'/g, "\\'") + '\')" style="background:rgba(216,98,75,0.06);border-color:rgba(216,98,75,0.2);color:#D0563F;font-weight:500;">'
+        + '<div class="rag-browse-item" onclick="ragIndexSelected(\'' + origin + '\',\'' + jsq(path) + '\')" style="background:rgba(216,98,75,0.06);border-color:rgba(216,98,75,0.2);color:#D0563F;font-weight:500;">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>'
         + 'Index <span id="ragSelectCount">0</span> selected files</div></div>';
       html += '</div>';
@@ -6152,7 +6152,7 @@ function ragRenderResults(allResults) {
       html += '<div class="rag-zero-placeholder">'
         + '<div class="rag-zero-placeholder-text">Content not stored (zero residency). Open or download the original to view.</div>'
         + '<div class="rag-zero-placeholder-actions">'
-        + (r.document_id ? '<button class="rag-result-btn" onclick="ragRetrieveDoc(\'' + r.document_id + '\',\'' + escapeHtml(r.document_name || 'file') + '\')">Download</button>' : '')
+        + (r.document_id ? '<button class="rag-result-btn" onclick="ragRetrieveDoc(\'' + jsq(r.document_id) + '\',\'' + jsq(r.document_name || 'file') + '\')">Download</button>' : '')
         + (openUrl ? '<a class="rag-result-btn" href="' + openUrl + '" target="_blank" rel="noopener">Open original</a>' : '')
         + '</div></div>';
     } else {
@@ -6166,7 +6166,7 @@ function ragRenderResults(allResults) {
     }
     html += '<button class="rag-result-btn rag-ask-btn" onclick="ragAskAbout(' + i + ')">Ask about this</button>';
     if (!isZeroResidency) {
-      html += (r.document_id ? '<button class="rag-result-btn" onclick="ragRetrieveDoc(\'' + r.document_id + '\',\'' + escapeHtml(r.document_name || 'file') + '\')">Download</button>' : '')
+      html += (r.document_id ? '<button class="rag-result-btn" onclick="ragRetrieveDoc(\'' + jsq(r.document_id) + '\',\'' + jsq(r.document_name || 'file') + '\')">Download</button>' : '')
         + (openUrl ? '<a class="rag-result-btn" href="' + openUrl + '" target="_blank" rel="noopener">Open original</a>' : '');
     }
     html += '</div>'
@@ -6361,7 +6361,16 @@ async function loadRAGModeState() {
 
 function escapeHtml(s) {
   if (typeof s !== 'string') return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// A value inside a quoted JavaScript string in an HTML attribute, as in
+// onclick="open('...')": backslashes, quotes and line breaks escaped for the
+// script, then the whole escaped for the attribute, so no file or folder name
+// can end either one early. Names come from files anyone can make, a
+// downloaded file or an email attachment, so a name is never trusted.
+function jsq(s) {
+  return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 </script>
 
@@ -6407,11 +6416,11 @@ function escapeHtml(s) {
     // Back button (shows when deeper than root)
     if(parts.length > 1) {
       var parentPath = '/' + parts.slice(0, -1).join('/');
-      html += '<span class="mon-crumb-back" onclick="monNav(\'' + parentPath.replace(/'/g, "\\'") + '\')" title="Go up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>';
+      html += '<span class="mon-crumb-back" onclick="monNav(\'' + jsq(parentPath) + '\')" title="Go up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>';
     }
     for(var i=0;i<parts.length;i++){cum+='/'+parts[i];if(i>0)html+='<span class="mon-crumb-sep">/</span>';
-      if(i<parts.length-1)html+='<span onclick="monNav(\''+cum.replace(/'/g,"\\'")+'\')">' +parts[i]+'</span>';
-      else html+='<span>'+parts[i]+'</span>';}
+      if(i<parts.length-1)html+='<span onclick="monNav(\''+jsq(cum)+'\')">' +escapeHtml(parts[i])+'</span>';
+      else html+='<span>'+escapeHtml(parts[i])+'</span>';}
     el.innerHTML=html||'<span>/</span>';
   }
 
@@ -6442,18 +6451,18 @@ function escapeHtml(s) {
       var isImg=!isDir&&['jpg','jpeg','png','gif','webp'].includes(ext);
       var icon=isImg?monImgIcon(f.name,fp,null,side):monIcon(f.name,isDir);
       var isSynced = side==='local'&&_syncedPaths.has(fp);
-      html+='<div class="mon-tile'+(isSynced?' mon-synced':'')+'" draggable="true" data-name="'+f.name.replace(/"/g,'&quot;')+'" data-path="'+fp.replace(/"/g,'&quot;')+'" ondragstart="monDragStart(event,\''+side+'\',\''+fp.replace(/'/g,"\\'")+'\')"';
+      html+='<div class="mon-tile'+(isSynced?' mon-synced':'')+'" draggable="true" data-name="'+escapeHtml(String(f.name))+'" data-path="'+escapeHtml(String(fp))+'" ondragstart="monDragStart(event,\''+side+'\',\''+jsq(fp)+'\')"';
       if(isDir){
-        html+=' ondblclick="'+navFn+'(\''+fp.replace(/'/g,"\\'")+'\')"';
+        html+=' ondblclick="'+navFn+'(\''+jsq(fp)+'\')"';
         html+=' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"';
         html+=' ondragleave="this.classList.remove(\'drag-over\')"';
-        html+=' ondrop="event.stopPropagation();this.classList.remove(\'drag-over\');monMoveToFolder(event,\''+fp.replace(/'/g,"\\'")+'\',\''+side+'\')"';
+        html+=' ondrop="event.stopPropagation();this.classList.remove(\'drag-over\');monMoveToFolder(event,\''+jsq(fp)+'\',\''+side+'\')"';
       }
-      html+=' oncontextmenu="monCtx(event,\''+fp.replace(/'/g,"\\'")+'\',\''+side+'\','+(isDir?'true':'false')+')"';
+      html+=' oncontextmenu="monCtx(event,\''+jsq(fp)+'\',\''+side+'\','+(isDir?'true':'false')+')"';
       var badgeHtml='';
       if(_syncingPaths.has(fp))badgeHtml='<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if(isSynced)badgeHtml='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
-      html+='><div class="mon-tile-icon">'+icon+badgeHtml+'</div><div class="mon-tile-name" title="'+f.name.replace(/"/g,'&quot;')+'">'+f.name;
+      html+='><div class="mon-tile-icon">'+icon+badgeHtml+'</div><div class="mon-tile-name" title="'+escapeHtml(f.name)+'">'+escapeHtml(f.name);
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html+='</div>';
       if(!isDir)html+='<div class="mon-tile-meta">'+monFmtSize(f.size)+'</div>';
@@ -6464,10 +6473,10 @@ function escapeHtml(s) {
   function monRenderList(files,el,side) {
     var navFn=side==='cloud'?'monNav':'monNavLocal';
     var html='';for(var i=0;i<files.length;i++){var f=files[i],isDir=f.type==='directory',fp=(side==='cloud'?_monCloudPath:_monLocalPath).replace(/\/$/,'')+'/'+f.name;
-      var esc=fp.replace(/'/g,"\\'");
+      var esc=jsq(fp);
       var isSyncedRow = side==='local'&&_syncedPaths.has(fp);
       html+='<div>';
-      html+='<div class="mon-row'+(isSyncedRow?' mon-synced':'')+'" draggable="true" data-name="'+f.name.replace(/"/g,'&quot;')+'" data-path="'+fp.replace(/"/g,'&quot;')+'" ondragstart="monDragStart(event,\''+side+'\',\''+esc+'\')"';
+      html+='<div class="mon-row'+(isSyncedRow?' mon-synced':'')+'" draggable="true" data-name="'+escapeHtml(String(f.name))+'" data-path="'+escapeHtml(String(fp))+'" ondragstart="monDragStart(event,\''+side+'\',\''+esc+'\')"';
       if(isDir){
         html+=' ondblclick="'+navFn+'(\''+esc+'\')"';
         html+=' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"';
@@ -6478,7 +6487,7 @@ function escapeHtml(s) {
       html+='>';
       if(isDir)html+='<span class="mon-row-disc" onclick="event.stopPropagation();monUnfurl(this,\''+side+'\',\''+esc+'\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></span>';
       else html+='<span style="width:14px;flex-shrink:0"></span>';
-      html+=monIcon(f.name,isDir,20)+'<span class="mon-row-name">'+f.name;
+      html+=monIcon(f.name,isDir,20)+'<span class="mon-row-name">'+escapeHtml(f.name);
       if(side==='local'&&_syncingPaths.has(fp))html+='<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if(side==='local'&&_syncedPaths.has(fp))html+='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
@@ -6486,7 +6495,7 @@ function escapeHtml(s) {
       if(side==='local'&&!isDir)html+='<span class="mon-row-upload" title="Copy to the sandbox computer" onclick="event.stopPropagation();monCopyToCloud(\''+esc+'\')">'+'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8624B" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>';
       html+='<span class="mon-row-meta">'+(isDir?'':monFmtSize(f.size))+'</span>';
       html+='<span class="mon-row-meta" style="min-width:60px;text-align:right;">'+monFmtDate(f.modified)+'</span></div>';
-      html+='<div class="mon-row-children" style="display:none" data-path="'+fp.replace(/"/g,'&quot;')+'" data-side="'+side+'"></div>';
+      html+='<div class="mon-row-children" style="display:none" data-path="'+escapeHtml(String(fp))+'" data-side="'+side+'"></div>';
       html+='</div>';}
     el.innerHTML=html;el.className='mon-list';el.style.display='';el.style.flexDirection='';el.style.flex='';
   }
@@ -6652,7 +6661,7 @@ function escapeHtml(s) {
     // Back button only when not at home
     if(!isHome && parts.length > 0) {
       var parentPath = parts.length === 1 ? '~' : '~/' + parts.slice(0, -1).join('/');
-      html += '<span class="mon-crumb-back" onclick="monNavLocal(\'' + parentPath.replace(/'/g, "\\'") + '\')" title="Go up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>';
+      html += '<span class="mon-crumb-back" onclick="monNavLocal(\'' + jsq(parentPath) + '\')" title="Go up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>';
     }
     // Home link
     html += '<span onclick="monNavLocal(\'~\')">Home</span>';
@@ -6660,7 +6669,7 @@ function escapeHtml(s) {
     for(var i = 0; i < parts.length; i++) {
       html += '<span class="mon-crumb-sep">/</span>';
       var cumPath = '~/' + parts.slice(0, i + 1).join('/');
-      if(i < parts.length - 1) html += '<span onclick="monNavLocal(\'' + cumPath.replace(/'/g, "\\'") + '\')">' + parts[i] + '</span>';
+      if(i < parts.length - 1) html += '<span onclick="monNavLocal(\'' + jsq(cumPath) + '\')">' + escapeHtml(parts[i]) + '</span>';
       else html += '<span>' + parts[i] + '</span>';
     }
     el.innerHTML = html;
@@ -6761,7 +6770,7 @@ function escapeHtml(s) {
     var filesEl=document.getElementById('monCloudFiles');
     var placeholder=document.createElement('div');
     placeholder.className='mon-tile mon-copying';
-    placeholder.innerHTML='<div class="mon-tile-icon"><span class="mon-spin"></span></div><div class="mon-tile-name">Uploading '+name+'...</div>';
+    placeholder.innerHTML='<div class="mon-tile-icon"><span class="mon-spin"></span></div><div class="mon-tile-name">Uploading '+escapeHtml(String(name))+'...</div>';
     var grid=filesEl.querySelector('.mon-grid');
     if(grid)grid.appendChild(placeholder);
     else{filesEl.className='mon-grid';filesEl.appendChild(placeholder);}
@@ -6838,7 +6847,7 @@ function escapeHtml(s) {
 
   // Context menu
   var _monCtx=null;
-  function monCtx(ev,path,side,isDir){ev.preventDefault();monCloseCtx();var esc=path.replace(/'/g,"\\'");var m=document.createElement('div');m.className='mon-context-menu';m.style.left=ev.clientX+'px';m.style.top=ev.clientY+'px';
+  function monCtx(ev,path,side,isDir){ev.preventDefault();monCloseCtx();var esc=jsq(path);var m=document.createElement('div');m.className='mon-context-menu';m.style.left=ev.clientX+'px';m.style.top=ev.clientY+'px';
     var html='';
     if(side==='local'){
       var isSynced=_syncedPaths.has(path);
@@ -6976,9 +6985,9 @@ function escapeHtml(s) {
       var html = '';
       for (var i = 0; i < files.length; i++) {
         var f = files[i], isDir = f.type === 'directory', fp = path.replace(/\/$/, '') + '/' + f.name;
-        var esc = fp.replace(/'/g, "\\'");
+        var esc = jsq(fp);
         html += '<div>';
-        html += '<div class="mon-row" style="padding:4px 12px;" draggable="true" data-path="' + fp.replace(/"/g, '&quot;') + '" ondragstart="monDragStart(event,\'' + side + '\',\'' + esc + '\')"';
+        html += '<div class="mon-row" style="padding:4px 12px;" draggable="true" data-path="' + escapeHtml(String(fp)) + '" ondragstart="monDragStart(event,\'' + side + '\',\'' + esc + '\')"';
         if (isDir) {
           html += ' ondblclick="' + navFn + '(\'' + esc + '\')"';
           html += ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"';
@@ -6988,10 +6997,10 @@ function escapeHtml(s) {
         html += '>';
         if (isDir) html += '<span class="mon-row-disc" onclick="event.stopPropagation();monUnfurl(this,\'' + side + '\',\'' + esc + '\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></span>';
         else html += '<span style="width:14px;flex-shrink:0"></span>';
-        html += monIcon(f.name, isDir, 16) + '<span class="mon-row-name" style="font-size:12px;">' + f.name + '</span>';
+        html += monIcon(f.name, isDir, 16) + '<span class="mon-row-name" style="font-size:12px;">' + escapeHtml(f.name) + '</span>';
         html += '<span class="mon-row-meta">' + (isDir ? '' : monFmtSize(f.size)) + '</span>';
         html += '</div>';
-        html += '<div class="mon-row-children" style="display:none" data-path="' + fp.replace(/"/g, '&quot;') + '" data-side="' + side + '"></div>';
+        html += '<div class="mon-row-children" style="display:none" data-path="' + escapeHtml(String(fp)) + '" data-side="' + side + '"></div>';
         html += '</div>';
       }
       childContainer.innerHTML = html;
@@ -7405,7 +7414,7 @@ function escapeHtml(s) {
     if (view === 'grid') monRenderSearchGrid(side, files, container);
     else monRenderSearchList(side, files, container);
   }
-  function _monSearchJsAttr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+  function _monSearchJsAttr(s){ return jsq(s); }
   function monRenderSearchGrid(side, files, container) {
     var html = '';
     for (var i = 0; i < files.length; i++) {
@@ -7422,11 +7431,11 @@ function escapeHtml(s) {
       var isSyncing = _syncingPaths.has(fp);
       html += '<div class="mon-tile'+(isSynced?' mon-synced':'')+'" draggable="true"';
       html += ' data-name="'+String(f.name||'').replace(/"/g,'&quot;')+'"';
-      html += ' data-path="'+fp.replace(/"/g,'&quot;')+'"';
+      html += ' data-path="'+escapeHtml(String(fp))+'"';
       html += ' ondragstart="monDragStart(event,\''+side+'\',\''+fpAttr+'\')"';
       html += ' ondblclick="monOpenSearchResult(\''+side+'\',\''+parentAttr+'\','+(isDir?'true':'false')+',\''+fpAttr+'\')"';
       html += ' oncontextmenu="monCtx(event,\''+fpAttr+'\',\''+side+'\','+(isDir?'true':'false')+')"';
-      html += ' title="'+(parent+'/'+f.name).replace(/"/g,'&quot;')+'">';
+      html += ' title="'+escapeHtml(String((parent+'/'+f.name)))+'">';
       var badgeHtml = '';
       if (isSyncing) badgeHtml = '<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if (isSynced) badgeHtml = '<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
@@ -7456,7 +7465,7 @@ function escapeHtml(s) {
       var isSyncing = side === 'local' && _syncingPaths.has(fp);
       html += '<div class="mon-row'+(isSynced?' mon-synced':'')+'" draggable="true"';
       html += ' data-name="'+String(f.name||'').replace(/"/g,'&quot;')+'"';
-      html += ' data-path="'+fp.replace(/"/g,'&quot;')+'"';
+      html += ' data-path="'+escapeHtml(String(fp))+'"';
       html += ' ondragstart="monDragStart(event,\''+side+'\',\''+fpAttr+'\')"';
       html += ' ondblclick="monOpenSearchResult(\''+side+'\',\''+parentAttr+'\','+(isDir?'true':'false')+',\''+fpAttr+'\')"';
       html += ' oncontextmenu="monCtx(event,\''+fpAttr+'\',\''+side+'\','+(isDir?'true':'false')+')"';
