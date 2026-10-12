@@ -53,7 +53,7 @@ test("the sandbox computer is never Workspace, cloud or online", () => {
   assert.doesNotMatch(panel, /<span>Closedhand's sandbox computer<\/span>/, "named once, not twice");
   assert.doesNotMatch(index, /(?<![\w\/.-])[Ww]orkspace(?![\w\/-])/, "no Workspace in anything the web chat shows");
   assert.doesNotMatch(index, /cloud: 'Cloud'|cloud \$|Your online workspace/);
-  assert.doesNotMatch(read("desktop/Sources/Closedhand/MenuView.swift"), /row\("Workspace"/);
+  assert.doesNotMatch(read("desktop/Sources/ClosedHand/MenuView.swift"), /row\("Workspace"/);
   assert.doesNotMatch(readable("desktop/workspace/host.js"), /Preparing Workspace|Starting Workspace|Workspace (?:could not|took|stopped|disconnected|is closing|starts|did not)/, "the Mac app's startup messages");
   for (const f of ["closedhand-com/views/terms.html", "webapp/views/terms.html", "webapp/views/privacy.html", "closedhand-com/views/architecture.html"]) {
     assert.doesNotMatch(visibleText(f), /\b[Ww]orkspace\b/, f);
