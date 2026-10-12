@@ -24,8 +24,6 @@ import Websock from "./websock.js";
 import KeyTable from "./input/keysym.js";
 import XtScancode from "./input/xtscancodes.js";
 import { encodings } from "./encodings.js";
-import RSAAESAuthenticationState from "./ra2.js";
-import legacyCrypto from "./crypto/crypto.js";
 
 import RawDecoder from "./decoders/raw.js";
 import CopyRectDecoder from "./decoders/copyrect.js";
@@ -123,7 +121,6 @@ export default class RFB extends EventTargetMixin {
         this._rfbInitState = '';
         this._rfbAuthScheme = -1;
         this._rfbCleanDisconnect = true;
-        this._rfbRSAAESAuthenticationState = null;
 
         // Server capabilities
         this._rfbVersion = 0;
@@ -202,8 +199,6 @@ export default class RFB extends EventTargetMixin {
             handleMouse: this._handleMouse.bind(this),
             handleWheel: this._handleWheel.bind(this),
             handleGesture: this._handleGesture.bind(this),
-            handleRSAAESCredentialsRequired: this._handleRSAAESCredentialsRequired.bind(this),
-            handleRSAAESServerVerification: this._handleRSAAESServerVerification.bind(this),
         };
 
         // main setup
@@ -416,15 +411,9 @@ export default class RFB extends EventTargetMixin {
         this._sock.off('error');
         this._sock.off('message');
         this._sock.off('open');
-        if (this._rfbRSAAESAuthenticationState !== null) {
-            this._rfbRSAAESAuthenticationState.disconnect();
-        }
     }
 
     approveServer() {
-        if (this._rfbRSAAESAuthenticationState !== null) {
-            this._rfbRSAAESAuthenticationState.approveServer();
-        }
     }
 
     sendCredentials(creds) {
@@ -1430,16 +1419,12 @@ export default class RFB extends EventTargetMixin {
     }
 
     _isSupportedSecurityType(type) {
+        // Closedhand: the sandbox computer's screen server asks for no
+        // password (Closedhand's own short-lived token guards the way in), so
+        // this copy offers only that. The password methods and the DES, MD5,
+        // DH, RSA and AES code they needed are removed.
         const clientTypes = [
             securityTypeNone,
-            securityTypeVNCAuth,
-            securityTypeRA2ne,
-            securityTypeTight,
-            securityTypeVeNCrypt,
-            securityTypeXVP,
-            securityTypeARD,
-            securityTypeMSLogonII,
-            securityTypePlain,
         ];
 
         return clientTypes.includes(type);
@@ -1655,95 +1640,6 @@ export default class RFB extends EventTargetMixin {
         return true;
     }
 
-    _negotiateStdVNCAuth() {
-        if (this._sock.rQwait("auth challenge", 16)) { return false; }
-
-        if (this._rfbCredentials.password === undefined) {
-            this.dispatchEvent(new CustomEvent(
-                "credentialsrequired",
-                { detail: { types: ["password"] } }));
-            return false;
-        }
-
-        // TODO(directxman12): make genDES not require an Array
-        const challenge = Array.prototype.slice.call(this._sock.rQshiftBytes(16));
-        const response = RFB.genDES(this._rfbCredentials.password, challenge);
-        this._sock.sQpushBytes(response);
-        this._sock.flush();
-        this._rfbInitState = "SecurityResult";
-        return true;
-    }
-
-    _negotiateARDAuth() {
-
-        if (this._rfbCredentials.username === undefined ||
-            this._rfbCredentials.password === undefined) {
-            this.dispatchEvent(new CustomEvent(
-                "credentialsrequired",
-                { detail: { types: ["username", "password"] } }));
-            return false;
-        }
-
-        if (this._rfbCredentials.ardPublicKey != undefined &&
-            this._rfbCredentials.ardCredentials != undefined) {
-            // if the async web crypto is done return the results
-            this._sock.sQpushBytes(this._rfbCredentials.ardCredentials);
-            this._sock.sQpushBytes(this._rfbCredentials.ardPublicKey);
-            this._sock.flush();
-            this._rfbCredentials.ardCredentials = null;
-            this._rfbCredentials.ardPublicKey = null;
-            this._rfbInitState = "SecurityResult";
-            return true;
-        }
-
-        if (this._sock.rQwait("read ard", 4)) { return false; }
-
-        let generator = this._sock.rQshiftBytes(2);   // DH base generator value
-
-        let keyLength = this._sock.rQshift16();
-
-        if (this._sock.rQwait("read ard keylength", keyLength*2, 4)) { return false; }
-
-        // read the server values
-        let prime = this._sock.rQshiftBytes(keyLength);  // predetermined prime modulus
-        let serverPublicKey = this._sock.rQshiftBytes(keyLength); // other party's public key
-
-        let clientKey = legacyCrypto.generateKey(
-            { name: "DH", g: generator, p: prime }, false, ["deriveBits"]);
-        this._negotiateARDAuthAsync(keyLength, serverPublicKey, clientKey);
-
-        return false;
-    }
-
-    async _negotiateARDAuthAsync(keyLength, serverPublicKey, clientKey) {
-        const clientPublicKey = legacyCrypto.exportKey("raw", clientKey.publicKey);
-        const sharedKey = legacyCrypto.deriveBits(
-            { name: "DH", public: serverPublicKey }, clientKey.privateKey, keyLength * 8);
-
-        const username = encodeUTF8(this._rfbCredentials.username).substring(0, 63);
-        const password = encodeUTF8(this._rfbCredentials.password).substring(0, 63);
-
-        const credentials = window.crypto.getRandomValues(new Uint8Array(128));
-        for (let i = 0; i < username.length; i++) {
-            credentials[i] = username.charCodeAt(i);
-        }
-        credentials[username.length] = 0;
-        for (let i = 0; i < password.length; i++) {
-            credentials[64 + i] = password.charCodeAt(i);
-        }
-        credentials[64 + password.length] = 0;
-
-        const key = await legacyCrypto.digest("MD5", sharedKey);
-        const cipher = await legacyCrypto.importKey(
-            "raw", key, { name: "AES-ECB" }, false, ["encrypt"]);
-        const encrypted = await legacyCrypto.encrypt({ name: "AES-ECB" }, cipher, credentials);
-
-        this._rfbCredentials.ardCredentials = encrypted;
-        this._rfbCredentials.ardPublicKey = clientPublicKey;
-
-        this._resumeAuthentication();
-    }
-
     _negotiateTightUnixAuth() {
         if (this._rfbCredentials.username === undefined ||
             this._rfbCredentials.password === undefined) {
@@ -1871,87 +1767,6 @@ export default class RFB extends EventTargetMixin {
         return this._fail("No supported sub-auth types!");
     }
 
-    _handleRSAAESCredentialsRequired(event) {
-        this.dispatchEvent(event);
-    }
-
-    _handleRSAAESServerVerification(event) {
-        this.dispatchEvent(event);
-    }
-
-    _negotiateRA2neAuth() {
-        if (this._rfbRSAAESAuthenticationState === null) {
-            this._rfbRSAAESAuthenticationState = new RSAAESAuthenticationState(this._sock, () => this._rfbCredentials);
-            this._rfbRSAAESAuthenticationState.addEventListener(
-                "serververification", this._eventHandlers.handleRSAAESServerVerification);
-            this._rfbRSAAESAuthenticationState.addEventListener(
-                "credentialsrequired", this._eventHandlers.handleRSAAESCredentialsRequired);
-        }
-        this._rfbRSAAESAuthenticationState.checkInternalEvents();
-        if (!this._rfbRSAAESAuthenticationState.hasStarted) {
-            this._rfbRSAAESAuthenticationState.negotiateRA2neAuthAsync()
-                .catch((e) => {
-                    if (e.message !== "disconnect normally") {
-                        this._fail(e.message);
-                    }
-                })
-                .then(() => {
-                    this._rfbInitState = "SecurityResult";
-                    return true;
-                }).finally(() => {
-                    this._rfbRSAAESAuthenticationState.removeEventListener(
-                        "serververification", this._eventHandlers.handleRSAAESServerVerification);
-                    this._rfbRSAAESAuthenticationState.removeEventListener(
-                        "credentialsrequired", this._eventHandlers.handleRSAAESCredentialsRequired);
-                    this._rfbRSAAESAuthenticationState = null;
-                });
-        }
-        return false;
-    }
-
-    _negotiateMSLogonIIAuth() {
-        if (this._sock.rQwait("mslogonii dh param", 24)) { return false; }
-
-        if (this._rfbCredentials.username === undefined ||
-            this._rfbCredentials.password === undefined) {
-            this.dispatchEvent(new CustomEvent(
-                "credentialsrequired",
-                { detail: { types: ["username", "password"] } }));
-            return false;
-        }
-
-        const g = this._sock.rQshiftBytes(8);
-        const p = this._sock.rQshiftBytes(8);
-        const A = this._sock.rQshiftBytes(8);
-        const dhKey = legacyCrypto.generateKey({ name: "DH", g: g, p: p }, true, ["deriveBits"]);
-        const B = legacyCrypto.exportKey("raw", dhKey.publicKey);
-        const secret = legacyCrypto.deriveBits({ name: "DH", public: A }, dhKey.privateKey, 64);
-
-        const key = legacyCrypto.importKey("raw", secret, { name: "DES-CBC" }, false, ["encrypt"]);
-        const username = encodeUTF8(this._rfbCredentials.username).substring(0, 255);
-        const password = encodeUTF8(this._rfbCredentials.password).substring(0, 63);
-        let usernameBytes = new Uint8Array(256);
-        let passwordBytes = new Uint8Array(64);
-        window.crypto.getRandomValues(usernameBytes);
-        window.crypto.getRandomValues(passwordBytes);
-        for (let i = 0; i < username.length; i++) {
-            usernameBytes[i] = username.charCodeAt(i);
-        }
-        usernameBytes[username.length] = 0;
-        for (let i = 0; i < password.length; i++) {
-            passwordBytes[i] = password.charCodeAt(i);
-        }
-        passwordBytes[password.length] = 0;
-        usernameBytes = legacyCrypto.encrypt({ name: "DES-CBC", iv: secret }, key, usernameBytes);
-        passwordBytes = legacyCrypto.encrypt({ name: "DES-CBC", iv: secret }, key, passwordBytes);
-        this._sock.sQpushBytes(B);
-        this._sock.sQpushBytes(usernameBytes);
-        this._sock.sQpushBytes(passwordBytes);
-        this._sock.flush();
-        this._rfbInitState = "SecurityResult";
-        return true;
-    }
-
     _negotiateAuthentication() {
         switch (this._rfbAuthScheme) {
             case securityTypeNone:
@@ -1965,12 +1780,6 @@ export default class RFB extends EventTargetMixin {
             case securityTypeXVP:
                 return this._negotiateXvpAuth();
 
-            case securityTypeARD:
-                return this._negotiateARDAuth();
-
-            case securityTypeVNCAuth:
-                return this._negotiateStdVNCAuth();
-
             case securityTypeTight:
                 return this._negotiateTightAuth();
 
@@ -1982,12 +1791,6 @@ export default class RFB extends EventTargetMixin {
 
             case securityTypeUnixLogon:
                 return this._negotiateTightUnixAuth();
-
-            case securityTypeRA2ne:
-                return this._negotiateRA2neAuth();
-
-            case securityTypeMSLogonII:
-                return this._negotiateMSLogonIIAuth();
 
             default:
                 return this._fail("Unsupported auth scheme (scheme: " +
@@ -2927,12 +2730,6 @@ export default class RFB extends EventTargetMixin {
         );
     }
 
-    static genDES(password, challenge) {
-        const passwordChars = password.split('').map(c => c.charCodeAt(0));
-        const key = legacyCrypto.importKey(
-            "raw", passwordChars, { name: "DES-ECB" }, false, ["encrypt"]);
-        return legacyCrypto.encrypt({ name: "DES-ECB" }, key, challenge);
-    }
 }
 
 // Class Methods

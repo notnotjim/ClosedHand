@@ -97,3 +97,11 @@ test("a Telegram bot token too short to sign proofs safely is neither saved nor 
   assert.match(server, /if \(!TELEGRAM_TOKEN_FORM\.test\(token\)\) return res\.status\(400\)/);
   assert.match(server, /if \(!initData \|\| !token \|\| !TELEGRAM_TOKEN_FORM\.test\(token\)\) return null;/);
 });
+
+test("the bundled screen viewer offers only the no-password sign-in, and carries no DES or MD5", () => {
+  const rfb = read("webapp/public/novnc/core/rfb.js");
+  assert.match(rfb, /const clientTypes = \[\n\s+securityTypeNone,\n\s+\];/);
+  assert.doesNotMatch(rfb, /legacyCrypto|genDES|RSAAES|_negotiateStdVNCAuth|_negotiateARDAuth|_negotiateMSLogonIIAuth/);
+  assert.equal(fs.existsSync(path.join(root, "webapp/public/novnc/core/crypto")), false);
+  assert.equal(fs.existsSync(path.join(root, "webapp/public/novnc/core/ra2.js")), false);
+});
