@@ -6659,8 +6659,8 @@
       var looks = { email: 'each new email', bank: 'each new bank transaction', messages: 'each new chat message' }[a.trigger_event_source] || 'each new email';
       var what = a.trigger_event_condition || a.description || '';
       var day = function(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
-      if (a.status === 'done') return 'Came ' + day(a.fired_at) + ': ' + what;
-      if (a.status === 'expired') return 'Nothing came by ' + day(a.expires_at) + ': ' + what;
+      if (a.status === 'done') return 'Arrived ' + day(a.fired_at) + ': ' + what;
+      if (a.status === 'expired') return 'Nothing arrived by ' + day(a.expires_at) + ': ' + what;
       return 'Watching ' + looks + ' for: ' + what + (a.run_once && a.expires_at ? ' (until ' + day(a.expires_at) + ')' : '');
     }
 
@@ -8591,15 +8591,18 @@
 
       <!-- Event picker (hidden by default): a watch, lib/watches.js -->
       <div id="auto-event-picker" style="display:none;margin-bottom:10px;">
+        <div style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 4px;">What it looks at</div>
         <select id="auto-event-source" style="width:100%;padding:8px 10px;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;font-family:inherit;margin-bottom:6px;">
           <option value="email">Each new email</option>
           <option value="bank">Each new bank transaction</option>
           <option value="messages">Each new chat message (Slack, WhatsApp)</option>
         </select>
-        <input type="text" id="auto-event-condition" placeholder="What it waits for, e.g. Lego's email saying my order has shipped" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
-        <input type="text" id="auto-event-words" placeholder="Words it will contain, if you know them: an order number, the sender (optional)" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
+        <div style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 4px;">What it waits for</div>
+        <input type="text" id="auto-event-condition" placeholder="e.g. the shop's email saying my order has shipped" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;margin-bottom:6px;">
+        <div style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 4px;">Words it will contain (optional)</div>
+        <input type="text" id="auto-event-words" placeholder="An order number or the sender, separated by commas" style="width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
         <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:#B6AFA4;font-weight:400;cursor:pointer;">
-          <input type="checkbox" id="auto-event-once" checked style="width:16px;height:16px;margin:0;accent-color:#D0563F;">
+          <input type="checkbox" id="auto-event-once" checked style="width:16px;height:16px;margin:0;accent-color:#8DBD79;">
           Stop after the first one (it ends after 30 days if nothing comes)
         </label>
       </div>
