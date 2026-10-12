@@ -28,17 +28,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget gnupg && \
     fi && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Minimal display stack: Xvfb + VNC + openbox (lightweight WM for browser window)
+# Minimal display stack: Xvfb + VNC + openbox (lightweight WM for browser window).
+# websockify only relays the screen; the viewer is the dashboard's own copy
+# (webapp/public/novnc), so Debian's noVNC pages, with their password
+# sign-in code, are not installed.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    xvfb x11vnc novnc python3-websockify \
+    xvfb x11vnc python3-websockify \
     openbox \
     xdotool scrot fonts-liberation dbus-x11 procps \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# websockify serves this directory, and the novnc package ships no index, so
-# the bare port answered with a file listing instead of the screen. Land
-# anyone who opens it straight on the connected client.
-RUN printf '%s' '<!doctype html><meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=1&resize=scale"><title>Closedhand'"'"'s computer</title>' > /usr/share/novnc/index.html
 
 # Copy gateway + browser Python helpers to importable path
 COPY agent/gateway_client.py /usr/local/lib/python3.12/gateway_client.py

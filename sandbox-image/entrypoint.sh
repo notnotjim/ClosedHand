@@ -104,7 +104,7 @@ x11vnc_supervisor &
 sleep 0.3
 
 # 7. Start websockify on IPv6 (Railway routes internal traffic via IPv6)
-gosu sandbox websockify --web=/usr/share/novnc/ [::]:6080 localhost:5900 &
+gosu sandbox websockify [::]:6080 localhost:5900 &
 
 # 8. Run the CMD (agent server)
 exec gosu sandbox env DISPLAY=:99 "$@"
