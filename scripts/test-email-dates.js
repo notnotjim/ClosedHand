@@ -64,8 +64,8 @@ test("both readers are told to anchor on the email, and stored records heal", ()
   const flights = read("lib/flights.js");
   assert.match(flights, /flight\.sourceEmailAt && implausiblyLate\(flight\.departure\?\.dateTime, flight\.sourceEmailAt\)/, "a stored flight long after its email is re-dated, and goes if past");
   const bookings = read("lib/bookings.js");
-  assert.match(bookings, /if \(b\.reference && flightRefs\.has\(String\(b\.reference\)/, "a flight is never also kept as a booking");
-  assert.match(bookings, /let drop = !!ref && flightRefs\.has\(ref\);/);
+  assert.match(bookings, /if \(isTrackedFlight\(\{ \.\.\.b, kind \}, flights\)\) continue;/, "a flight is never also kept as a booking");
+  assert.match(bookings, /const isFlight = isTrackedFlight\(/, "and one already kept as a booking goes in the repair");
 });
 
 test("a flight is labelled a flight: never a train or other, and never kept twice", () => {
