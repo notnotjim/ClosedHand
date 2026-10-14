@@ -2446,7 +2446,7 @@
           <div class="mc-section-label" style="margin-top:24px;">Upcoming</div>
           <div class="flights-loading" id="flights-loading" style="display:none;">Checking flights…</div>
           <div id="upcoming-list"></div>
-          <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. One-off reminders, dated actions like a timezone change on a set day, tracked flights, bookings picked out of your mail (trains, hotels, tickets, tables) and goal check-ins appear here. Meetings live in your calendar. Anything that repeats is an agent.</div>
+          <div id="flights-empty" style="display:none;font-size:13px;color:rgba(239,230,214,0.6);padding:8px 0;">Nothing coming up. Reminders and bookings from your mail show here.</div>
 
           <!-- Past: reminders that ran, flights already flown and bookings already over, folded away -->
           <div id="past-section" hidden>
@@ -4707,10 +4707,7 @@
         loadSkills();
         startAutomationPolling();
         loadPulse();
-        loadFlights();
-        loadBookings();
-        loadReminders();
-        loadGoalCheckIns();
+        loadUpcoming();
       } else {
         stopAutomationPolling();
       }
@@ -5640,7 +5637,7 @@
         </div>
         ${details.length ? `<div class="flight-details" style="padding:0 14px 10px;">${details.join('')}</div>` : ''}
         ${sourceDocsHtml(f.source_mail)}
-        ${timeNote ? `<p class="flight-details" style="padding:0 14px 14px;margin:0;">${noteHtml}</p>` : ''}
+        ${timeNote ? `<p class="flight-details" style="display:block;padding:0 14px 14px;margin:0;">${noteHtml}</p>` : ''}
       </div>`;
     }
 
@@ -5718,8 +5715,10 @@
       const emptyEl = document.getElementById('flights-empty');
       const loadingEl = document.getElementById('flights-loading');
       try {
-        loadingEl.style.display = 'block';
-        emptyEl.style.display = 'none';
+        if (!document.getElementById('upcoming-list').children.length) {
+          loadingEl.style.display = 'block';
+          emptyEl.style.display = 'none';
+        }
         const res = await fetch('/api/flights');
         if (!res.ok) throw new Error('Failed');
         const flights = await res.json();
@@ -5770,6 +5769,13 @@
     // any arrives. Every heading and time comes from one helper, in the
     // timezone of the thing itself, so the dates all read the same.
     var _upcoming = { reminders: [], checkins: [], flights: [], bookings: [] };
+    var _upcomingHtml = null;
+    function loadUpcoming() {
+      loadFlights();
+      loadBookings();
+      loadReminders();
+      loadGoalCheckIns();
+    }
     function upcomingItem(iso, point, html) {
       var at = Date.parse(iso);
       return { at: isNaN(at) ? Infinity : at, date: FlightTime.dateLabel(iso, point || {}), away: FlightTime.daysAway(iso, point || {}), html: html };
@@ -5788,7 +5794,8 @@
         }
         html += item.html;
       });
-      el.innerHTML = html;
+      // Redrawn only when something changed, so a refresh never flickers.
+      if (html !== _upcomingHtml) { el.innerHTML = html; _upcomingHtml = html; }
       updateUpcomingEmpty();
     }
     function updateUpcomingEmpty() {
@@ -6987,10 +6994,22 @@
       }
     }
 
+    // Upcoming is asked again too: a flight found in mail a minute after the
+    // tab opened stayed missing until a reload, because the list was fetched
+    // once. Every 30 seconds while on screen, and on coming back to it.
+    var _upcomingPolledAt = 0;
     function startAutomationPolling() {
       stopAutomationPolling();
-      _autoPollTimer = setInterval(function() { loadAutomationStats(); }, 10000);
+      _upcomingPolledAt = Date.now();
+      _autoPollTimer = setInterval(function() {
+        if (document.hidden) return;
+        loadAutomationStats();
+        if (Date.now() - _upcomingPolledAt >= 30000) { _upcomingPolledAt = Date.now(); loadUpcoming(); }
+      }, 10000);
     }
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && _autoPollTimer) { _upcomingPolledAt = Date.now(); loadAutomationStats(); loadUpcoming(); }
+    });
 
     function stopAutomationPolling() {
       if (_autoPollTimer) { clearInterval(_autoPollTimer); _autoPollTimer = null; }

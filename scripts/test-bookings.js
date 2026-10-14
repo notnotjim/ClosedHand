@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { sameBooking, sameFromEmail, findMatch, mergePlan, mergeInto } = require('../lib/booking-identity');
+const { sameBooking, sameFromEmail, findMatch, mergePlan, mergeInto, isTrackedFlight } = require('../lib/booking-identity');
 
 // Four rows that one Porto stay grew across three scanner passes and two emails.
 const A = 'mailA', B = 'mailB';
@@ -69,4 +69,15 @@ test('existing duplicates merge down to the row with the reference', () => {
   assert.equal(plan.keep[0].patch.details.room, 'Entire home/flat, hosted by Sam');
   const none = mergePlan([stay3, { id: 'r', kind: 'car', provider: 'Bolt', reference: 'X1', starts_at: '2026-09-16T11:05:00Z', ends_at: '2026-09-16T11:30:00Z' }]);
   assert.deepEqual(none, { keep: [], drop: [] });
+});
+
+test('a flight booked through an agency is the tracked flight, not a second one', () => {
+  // The agency's email gives its own order number; the airline's code is what the tracker keeps.
+  const tracked = [{ ref: 'TST9QX', departs: Date.parse('2026-11-02T22:15:00+01:00') }];
+  const agency = { kind: 'flight', provider: 'Example Air', reference: '100 200 300', starts_at: '2026-11-02T21:15:00.000Z' };
+  assert.ok(isTrackedFlight(agency, tracked), 'same departure, different reference');
+  assert.ok(isTrackedFlight({ kind: 'other', reference: 'tst9qx', starts_at: '2026-12-01T09:00:00Z' }, tracked), 'the airline code, however filed');
+  assert.equal(isTrackedFlight({ ...agency, starts_at: '2026-11-03T09:00:00Z' }, tracked), false, 'the return leg is another flight');
+  assert.equal(isTrackedFlight({ kind: 'hotel', provider: 'Example Inn', starts_at: '2026-11-02T21:15:00Z' }, tracked), false, 'a stay starting then is not the flight');
+  assert.equal(isTrackedFlight(agency, []), false);
 });
