@@ -1926,14 +1926,17 @@
   .mon-signins { display:flex; align-items:center; gap:12px; padding:6px 12px; min-height:40px; background:rgba(26,24,23,0.95); border-bottom:1px solid rgba(239,230,214,0.06); flex-shrink:0; }
   .mon-signins[hidden] { display:none; }
   .mon-signins-text { flex:0 1 auto; min-width:0; font-size:12px; line-height:1.4; color:rgba(239,230,214,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mon-signins-sites { display:flex; gap:4px; flex:none; }
   .mon-signins-status { flex:1 1 auto; min-width:0; font-size:12px; color:rgba(239,230,214,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mon-signins-short { display:flex; align-items:center; gap:8px; flex:none; margin-left:auto; }
+  .mon-signins-label { font-size:12px; color:rgba(239,230,214,0.45); }
+  .mon-signins-sites { display:flex; gap:4px; }
   .mon-signin { position:relative; display:inline-flex; align-items:center; padding:5px; border:0; border-radius:6px; background:transparent; color:#B6AFA4; font:500 12px/1.3 inherit; font-family:inherit; cursor:pointer; white-space:nowrap; opacity:0.8; }
-  .mon-signin:hover, .mon-signin:focus-visible { opacity:1; background:rgba(239,230,214,0.07); color:#EFE6D6; outline:none; }
+  .mon-signin:hover { opacity:1; color:#EFE6D6; }
+  .mon-signin:focus-visible { opacity:1; color:#EFE6D6; outline:1px solid rgba(239,230,214,0.4); outline-offset:1px; }
   .mon-signin img { width:16px; height:16px; display:block; }
   .mon-signin.is-done { opacity:1; }
   .mon-signin.is-done::after { content:"\2713"; position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; background:#8DBD79; color:#1A1817; font-size:8px; line-height:10px; text-align:center; font-weight:700; }
-  @media (max-width: 899px) { .mon-signins { flex-wrap:wrap; } .mon-signins-text { flex-basis:100%; white-space:normal; } .mon-signins-sites { overflow-x:auto; max-width:100%; } .mon-signins-status { flex-basis:100%; white-space:normal; } .mon-signins-status:empty { display:none; } }
+  @media (max-width: 899px) { .mon-signins { flex-wrap:wrap; } .mon-signins-text { flex-basis:100%; white-space:normal; } .mon-signins-sites { overflow-x:auto; max-width:100%; } .mon-signins-status { flex-basis:100%; white-space:normal; } .mon-signins-status:empty { display:none; } .mon-signins-short { margin-left:0; } }
   .mon-crumb-row .mon-crumb { flex:1; min-width:0; }
   .mon-search { background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.06); border-radius:6px; padding:3px 8px; color:#B6AFA4; font-size:11px; font-family:inherit; width:80px; outline:none; flex-shrink:0; transition:border-color 0.2s,width 0.2s; }
   .mon-search:focus { border-color:rgba(208,86,63,0.3); width:130px; }
@@ -2475,7 +2478,7 @@
             <div id="monCloudFiles"></div>
           </div>
           <!-- Desktop VNC view (hidden by default, shown when Desktop toggle is clicked) -->
-          <div class="mon-signins" id="monSignins" hidden><div class="mon-signins-text"></div><div class="mon-signins-sites"></div><div class="mon-signins-status" role="status"></div></div>
+          <div class="mon-signins" id="monSignins" hidden><div class="mon-signins-text"></div><div class="mon-signins-status" role="status"></div><div class="mon-signins-short"><span class="mon-signins-label">Shortcuts</span><div class="mon-signins-sites"></div></div></div>
           <div id="monDesktop" style="display:none;flex:1;position:relative;background:#100E0D;">
             <iframe id="monVncFrame" style="width:100%;height:100%;border:none;" allow="clipboard-read; clipboard-write"></iframe>
             <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;line-height:1.5;color:rgba(239,230,214,0.7);font-size:14px;">Starting browser...</div>
@@ -7840,7 +7843,7 @@ function jsq(s) {
   // has gone wrong, and a site not yet signed in to is an invitation, which
   // the strip itself makes.
   var _monSignins = null, _monSigninPoll = null;
-  var MON_SIGNIN_INTRO = 'Sign in here to anything you want Closedhand to have persistent access to, for example:';
+  var MON_SIGNIN_INTRO = 'Sign in here to anything you want Closedhand to have persistent access to.';
   // Each example shows as its mark; a site without one shows its name.
   var MON_SIGNIN_LOGOS = { google: 1, instagram: 1, tiktok: 1, x: 1, facebook: 1 };
   async function monLoadSignins(fresh) {
@@ -7854,8 +7857,9 @@ function jsq(s) {
   function monRenderSignins() {
     var bar = document.getElementById('monSignins');
     if (!bar || !_monSignins) return;
-    // The words stay put: anything said about a site goes to the right of the
-    // marks, so nothing moves under the pointer.
+    // The shortcuts sit at the far end and the words never change; what is
+    // said about a site goes between the two, so nothing moves under the
+    // pointer.
     var text = bar.querySelector('.mon-signins-text'), list = bar.querySelector('.mon-signins-sites');
     text.textContent = MON_SIGNIN_INTRO;
     list.replaceChildren();
