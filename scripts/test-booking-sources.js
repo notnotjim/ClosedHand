@@ -67,11 +67,13 @@ test('nothing is linked when nothing is known', async () => {
   assert.equal(await load(Date.now()).sourceMail('u1', { emailId: '../x', reference: 'a b' }), null, 'odd ids and references are not searched');
 });
 
-test('a booking with no end is over a few hours after it starts', () => {
+test('a booking with no end moves to Past an hour after it starts', () => {
   const dinner = { kind: 'restaurant', starts_at: '2026-10-06T19:00:00+07:00' };
   const at = (iso) => load(Date.parse(iso)).bookingOver(dinner, Date.parse(iso));
-  assert.equal(at('2026-10-06T20:30:00+07:00'), false, 'during dinner it is still on');
-  assert.equal(at('2026-10-07T00:43:00+07:00'), true, 'after midnight it is over');
+  assert.equal(at('2026-10-06T19:40:00+07:00'), false, 'arriving, it is still on');
+  assert.equal(at('2026-10-06T20:30:00+07:00'), true, 'once it is under way it is no longer coming up');
+  const viewing = { kind: 'event', starts_at: '2026-10-14T10:30:00+01:00' };
+  assert.equal(load(0).bookingOver(viewing, Date.parse('2026-10-14T13:30:00+01:00')), true, 'a morning viewing is past by the afternoon');
   const hotel = { kind: 'hotel', starts_at: '2026-10-06T14:00:00+07:00', ends_at: '2026-10-09T12:00:00+07:00' };
   assert.equal(load(0).bookingOver(hotel, Date.parse('2026-10-08T10:00:00+07:00')), false, 'a stated end wins');
 });

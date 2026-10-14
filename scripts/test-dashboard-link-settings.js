@@ -321,6 +321,26 @@ test("clicking the temperature flips it between Celsius and Fahrenheit, and the 
   assert.match(handlers, /temperature: deg\(current\.temperature_2m\)/);
 });
 
+test("a town's name comes from a second map service when the first can't be reached", async () => {
+  const asked = [];
+  const answers = { nominatim: null, photon: { features: [{ properties: { city: "Testville", county: "Sample County" } }] } };
+  const box = { Map, AbortSignal, fetch: async (url) => {
+    asked.push(url);
+    const which = url.includes("nominatim") ? "nominatim" : "photon";
+    if (!answers[which]) throw new Error("unreachable");
+    return { ok: true, json: async () => answers[which] };
+  } };
+  vm.runInNewContext(region(source, "const OLD_STAND_IN", "\napp.get(\"/api/here\"") + "\nthis.placeNameAt = placeNameAt;", box);
+  assert.equal(await box.placeNameAt(12.34, 56.78), "Testville", "Photon answers when Nominatim can't");
+  assert.ok(asked.every((u) => u.includes("lat=12.34") && u.includes("lon=56.78")), "only the rounded position is sent");
+  asked.length = 0;
+  assert.equal(await box.placeNameAt(12.34, 56.78), "Testville");
+  assert.equal(asked.length, 0, "a place already named is not asked again");
+  answers.photon = null;
+  assert.equal(await box.placeNameAt(1.5, 2.5), null, "no name when neither answers");
+  assert.match(source, /if \(!name && Date\.now\(\) - \(_placeRetry\.get\(userId\) \|\| 0\) > 10 \* 60000\) \{\n\s*_placeRetry\.set\(userId, Date\.now\(\)\);\n\s*placeNameAt\(lat, lon\)\.then\(/, "a saved place with no name is looked up again on load, without waiting for it");
+});
+
 test("a place whose town couldn't be looked up has no name, never a stand-in", () => {
   // Some networks block OpenStreetMap, where the town's name comes from.
   const chat = fs.readFileSync(require.resolve("../webapp/views/index.html"), "utf8");

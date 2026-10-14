@@ -148,6 +148,37 @@ test("a scan with no new mail still heals the stored bookings", async () => {
   assert.deepEqual(left, { b3: "flight", b4: "hotel" }, "the flight kept as a train goes, the past trip goes, the airline 'bus' is a flight");
 });
 
+test("a booking whose email came after it began was a record, and goes", async () => {
+  const Module = require("node:module");
+  const hour = 3600000, at = (ms) => new Date(ms).toISOString(), now = Date.now();
+  const tables = {
+    facts: [],
+    data_cache: [
+      { user_id: "u1", type: "email", external_id: "m-fwd", received_at: at(now - 1 * hour), data: { subject: "Fwd: Viewing confirmation", body: "Viewing at 10:30" } },
+      { user_id: "u1", type: "email", external_id: "m-ahead", received_at: at(now - 5 * hour), data: { subject: "Table confirmed", body: "Table for two" } },
+    ],
+    bookings: [
+      { id: "v1", user_id: "u1", kind: "event", provider: "Example Lettings", title: "Viewing at 1 Sample Road", starts_at: at(now - 3 * hour), source_email_id: "m-fwd" },
+      { id: "t1", user_id: "u1", kind: "restaurant", provider: "Example Bistro", title: "Example Bistro", starts_at: at(now + 3 * hour), source_email_id: "m-ahead" },
+    ],
+  };
+  const load = Module._load;
+  Module._load = function (request, parent, ...rest) {
+    if (parent && /lib\/bookings\.js$/.test(parent.filename)) {
+      if (request === "./db") return { supabase: memoryDb(tables) };
+      if (request === "./services/data-access") return { searchCache: async () => ({ results: [] }) };
+      if (request === "./llm") return { getInternalClient: () => ({}) };
+      if (request === "./mail-attachments") return { bodyForScan: (e) => e.body || "" };
+    }
+    return load.call(this, request, parent, ...rest);
+  };
+  try {
+    delete require.cache[require.resolve("../lib/bookings")];
+    await require("../lib/bookings").scanBookings("u1");
+  } finally { Module._load = load; delete require.cache[require.resolve("../lib/bookings")]; }
+  assert.deepEqual(tables.bookings.map((b) => b.id), ["t1"], "the viewing forwarded after it happened goes; the table booked ahead stays");
+});
+
 test("a finished stay dated a year ahead by a host's message heals on the next scan", async () => {
   const Module = require("node:module");
   const day = 86400000, at = (ms) => new Date(ms).toISOString(), now = Date.now();
