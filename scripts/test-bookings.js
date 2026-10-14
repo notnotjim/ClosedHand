@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { sameBooking, sameFromEmail, findMatch, mergePlan, mergeInto, isTrackedFlight } = require('../lib/booking-identity');
+const { sameBooking, sameFromEmail, findMatch, mergePlan, mergeInto, isTrackedFlight, noEndOver } = require('../lib/booking-identity');
 
 // Four rows that one Porto stay grew across three scanner passes and two emails.
 const A = 'mailA', B = 'mailB';
@@ -80,4 +80,12 @@ test('a flight booked through an agency is the tracked flight, not a second one'
   assert.equal(isTrackedFlight({ ...agency, starts_at: '2026-11-03T09:00:00Z' }, tracked), false, 'the return leg is another flight');
   assert.equal(isTrackedFlight({ kind: 'hotel', provider: 'Example Inn', starts_at: '2026-11-02T21:15:00Z' }, tracked), false, 'a stay starting then is not the flight');
   assert.equal(isTrackedFlight(agency, []), false);
+});
+
+test('with no end time, a booking is over an hour in, an all-day one at the end of its day, a stay a day later', () => {
+  const start = '2026-11-02T10:00:00+00:00', ms = Date.parse(start), hour = 3600000;
+  assert.equal(noEndOver({ kind: 'restaurant', starts_at: start }), ms + hour);
+  assert.equal(noEndOver({ kind: 'hotel', starts_at: start }), ms + 24 * hour);
+  assert.equal(noEndOver({ kind: 'event', starts_at: start, timezone: 'Europe/London', details: { all_day: true } }), Date.parse('2026-11-03T00:00:00+00:00'), 'midnight where it is');
+  assert.equal(noEndOver({ kind: 'event', starts_at: new Date(ms), details: {} }), ms + hour, 'a stored date works too');
 });

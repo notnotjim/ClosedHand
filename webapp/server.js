@@ -6248,13 +6248,26 @@ async function sourceMail(userId, { emailId, reference } = {}) {
   return { open_url: openUrl, mailbox, documents };
 }
 
-// A booking is over once it ends. Most don't say when they end (a table at
-// 19:00, a viewing at 10:30), so those move to Past an hour after they start:
-// once it has begun it is no longer coming up. A stay with no check-out
-// counts a day.
-const BOOKING_HOURS = { hotel: 24 };
+// A booking is over once it ends. Most don't say when they end: an all-day
+// one (a festival or day pass, a ticket for a date) is over at the end of its
+// own day; any other (a table at 19:00, a viewing at 10:30) moves to Past an
+// hour after it starts, since once it has begun it is not coming up; a stay
+// with no check-out counts a day. Same rule as noEndOver in
+// lib/booking-identity.js, which the webapp cannot import.
 function bookingOver(b, now = Date.now()) {
-  const end = b.ends_at ? Date.parse(b.ends_at) : Date.parse(b.starts_at) + (BOOKING_HOURS[b.kind] || 1) * 3600000;
+  const iso = (v) => (v && typeof v.toISOString === "function" ? v.toISOString() : v);
+  let end = b.ends_at ? Date.parse(iso(b.ends_at)) : Date.parse(iso(b.starts_at));
+  if (!b.ends_at && !isNaN(end)) {
+    if (b.kind === "hotel") end += 24 * 3600000;
+    else if (!(b.details && b.details.all_day)) end += 3600000;
+    else {
+      try {
+        const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: b.timezone || "UTC", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+          .formatToParts(new Date(end)).map((x) => [x.type, x.value]));
+        end += ((24 - Number(p.hour)) * 60 - Number(p.minute)) * 60000;
+      } catch { end += 24 * 3600000; }
+    }
+  }
   return !isNaN(end) && end < now;
 }
 

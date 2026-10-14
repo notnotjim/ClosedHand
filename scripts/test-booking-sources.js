@@ -35,7 +35,8 @@ function fakeDb() {
   } };
 }
 function load(now) {
-  const box = { supabase: fakeDb(), Date: { now: () => now, parse: Date.parse }, encodeURIComponent, String, Number, isNaN, crypto: require('node:crypto'), process, BOT_INTERNAL_URL: 'http://bot:3000' };
+  const FixedDate = class extends Date {}; FixedDate.now = () => now;
+  const box = { supabase: fakeDb(), Date: FixedDate, Intl, encodeURIComponent, String, Number, isNaN, crypto: require('node:crypto'), process, BOT_INTERNAL_URL: 'http://bot:3000' };
   vm.runInNewContext(helpers + '\nthis.sourceMail = sourceMail; this.bookingOver = bookingOver;', box);
   return box;
 }
@@ -74,6 +75,9 @@ test('a booking with no end moves to Past an hour after it starts', () => {
   assert.equal(at('2026-10-06T20:30:00+07:00'), true, 'once it is under way it is no longer coming up');
   const viewing = { kind: 'event', starts_at: '2026-10-14T10:30:00+01:00' };
   assert.equal(load(0).bookingOver(viewing, Date.parse('2026-10-14T13:30:00+01:00')), true, 'a morning viewing is past by the afternoon');
+  const festival = { kind: 'event', starts_at: '2026-10-14T10:00:00+01:00', timezone: 'Europe/London', details: { all_day: true } };
+  assert.equal(load(0).bookingOver(festival, Date.parse('2026-10-14T18:00:00+01:00')), false, 'an all-day event lasts its day');
+  assert.equal(load(0).bookingOver(festival, Date.parse('2026-10-15T00:30:00+01:00')), true, 'and is over after midnight');
   const hotel = { kind: 'hotel', starts_at: '2026-10-06T14:00:00+07:00', ends_at: '2026-10-09T12:00:00+07:00' };
   assert.equal(load(0).bookingOver(hotel, Date.parse('2026-10-08T10:00:00+07:00')), false, 'a stated end wins');
 });
