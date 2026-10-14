@@ -5,6 +5,7 @@
   "/api/*",
   "/art/*",
   "/auth/*",
+  "/canvas/*",
   "/chat*",
   "/delight.css*",
   "/delight.js*",
@@ -27,7 +28,9 @@
   "/model-settings.js*",
   "/models/*",
   "/novnc/*",
+  "/page/*",
   "/phone-pair.js*",
+  "/report/*",
   "/style.css*",
   "/wordmark.png*"
 ]
