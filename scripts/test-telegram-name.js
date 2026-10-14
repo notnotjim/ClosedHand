@@ -66,6 +66,6 @@ test("it runs when the bot starts and at every rename, and setup says so", () =>
   assert.match(read("lib/onboarding.js"), /await saveProfileSetting\("bot_name", got\.bot\);\n\s*have\.bot = got\.bot;\n\s*require\("\.\/telegram-name"\)\.showName\(got\.bot\);/);
   assert.match(read("lib/tools/handlers.js"), /if \(toolInput\.bot_name\) require\("\.\.\/telegram-name"\)\.showName\(toolInput\.bot_name\);/);
   const setup = read("webapp/views/setup.html");
-  assert.match(setup, /Any name will do: once you&rsquo;ve told Closedhand what to call it, the bot takes that name\./);
+  assert.match(setup, /with any name: the bot takes whatever you call Closedhand\./);
   assert.doesNotMatch(setup, /coming soon/i, "nothing promised that is not there");
 });

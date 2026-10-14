@@ -420,7 +420,7 @@
 
   <section class="hero">
     <h1>Bring Closedhand <em>to life</em></h1>
-    <p>Closedhand runs on a computer you control. Set up the essentials here and you can connect more later from the dashboard.</p>
+    <p>Your conversations, mail and files live on your computer, not on closedhand.com.</p>
   </section>
 
   <section class="ready" id="ready-banner">
@@ -444,17 +444,13 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Database</h2>
-            <p class="whisper">Stores your conversations, settings and Context Brain where Closedhand runs.</p>
+            <p class="whisper">Where Closedhand keeps what it learns, on your computer.</p>
           </span>
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>Closedhand keeps what it learns about you, its index of your mail and your settings in a database that belongs
-             to you. It arrives with Closedhand and starts on its own, so this step usually
-             lights up before you ever see it.</p>
-          <p class="note">Not lit yet? The database can take a minute on first boot. If it stays
-             dark, something went wrong when Closedhand was installed; re-running the installer is
-             the quickest fix.</p>
+          <p>It starts by itself with Closedhand.</p>
+          <p class="note">Still not lit after a minute? Run the installer again.</p>
         </div>
       </article>
     </li>
@@ -465,13 +461,13 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>AI models</h2>
-            <p class="whisper">Connect a model provider and choose the models Closedhand will use.</p>
+            <p class="whisper">Choose the AI Closedhand uses.</p>
             <p class="done-note" id="model-done-note"></p>
           </span>
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>Use a hosted provider or models you run yourself.</p>
+          <p>The provider you choose sees what you ask. With a model on your own computer, no company does.</p>
           <div id="model-configuration"></div>
             <div class="memory-note" id="memory-note">
               <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
@@ -523,27 +519,24 @@
           <span class="state-chip">Recommended</span>
         </button>
         <div class="card-body">
-          <p>Connect the account that holds your mail and calendar. Either works, and you can add the other later.</p>
+          <p>Connect the account with your mail and calendar. You can add more later.</p>
           <p class="note hint">This access goes to Closedhand on your computer, not to closedhand.com.</p>
           <div class="fb-block chooser" id="g-block">
           <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span><span class="fb-again" id="g-again-badge" style="display:none;">sign in again</span></span></h3>
           <div class="choice-body">
           <p class="note warn" id="g-again" hidden>Google stopped accepting Closedhand's sign-in for <span id="g-again-who">this account</span>. Sign in again to carry on.</p>
           <div id="g-quick" hidden>
-            <p class="note">Google sends your mail, calendar and Drive straight to Closedhand on your computer.
-               Its sign-in page shows Closedhand's name, but nothing passes through closedhand.com or any other company on the way.</p>
+            <p class="note">Google's sign-in shows Closedhand's name, but your mail comes straight to your computer.</p>
             <a class="cta" id="g-quick-start" href="/auth/google?return=setup&amp;quick=1" target="_blank" rel="noopener">Sign in with Google</a>
             <p class="note hint">On Google's last screen, tick Select all.</p>
             <p class="note">Rather own the connection yourself? <a href="#g-intro" id="g-own-open">Use a Google Cloud project of your own</a>.</p>
           </div>
-          <p id="g-intro">Closedhand uses Google’s usual sign-in, through a free Google Cloud project you own. This one-time setup keeps the connection to your mail, calendar and Drive under your control, with no company account in between.</p>
-          <p class="note hint" id="g-ownership">Setting this up takes about 5 minutes but gives you digital sovereignty over the connection.</p>
+          <p id="g-intro">Google’s usual sign-in, through a free Google Cloud project you own, so no company sits between you and your mail.</p>
+          <p class="note hint" id="g-ownership">About 5 minutes.</p>
           <button class="cta" type="button" id="g-start">Connect to Google</button>
 
           <div id="g-connected" style="display:none;">
-            <p><span id="g-account">Connected.</span> Closedhand reads this account's mail, calendar
-               and Drive so it can recall them, and changes nothing unless you ask. Other Google
-               accounts can be added later from the dashboard.</p>
+            <p><span id="g-account">Connected.</span> Closedhand reads this account's mail, calendar and Drive, and changes nothing unless you ask.</p>
             <p class="quiet-links"><a href="/auth/google?return=setup" target="_blank" rel="noopener">Connect a different account</a></p>
           </div>
 
@@ -553,8 +546,6 @@
 
             <div class="g-step" data-g="1">
               <h3>Create your project</h3>
-              <p class="note">Google keeps the access in your free Google Cloud project, which only you can use and
-                 can delete later.</p>
               <p class="g-do">Open the New Project screen below and fill it in like this:</p>
               <div class="gform">
                 <div><span class="gf-label">Project name</span><p class="gf-how">Anything you like.</p></div>
@@ -583,8 +574,7 @@
                 <div><span class="gf-label">App name</span><div class="gf-box"><span class="gf-val">Closedhand</span><button class="copy" type="button">Copy</button></div></div>
                 <div><span class="gf-label">User support email</span><p class="gf-how">Choose your email address from the list.</p></div>
                 <div><span class="gf-label">Audience</span><p class="gf-how">Choose <strong>External</strong>.</p>
-                  <p class="gf-aside">This won't share anything with anyone. It is Google's word for an app that
-                     ordinary Google accounts like yours can sign in to, rather than one locked to a company's workspace.</p></div>
+                  <p class="gf-aside">Google's word for an app ordinary accounts can sign in to. It shares nothing.</p></div>
                 <div><span class="gf-label">Contact information</span><p class="gf-how">Type your email address.</p></div>
                 <div><span class="gf-label">Finish</span><p class="gf-how">Tick to agree, then click <strong>Create</strong>.</p></div>
               </div>
@@ -607,8 +597,7 @@
               <p class="note hint"><strong>Important:</strong> Google shows that file only once. If you
                  miss it, create another client.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open the Clients page</a>
-              <p class="g-do">Then hand Closedhand the file you downloaded. Pick it here, or drop it on
-                 the box, or open it and paste the contents.</p>
+              <p class="g-do">Then give Closedhand the file you downloaded: pick it, drop it on the box or paste its contents.</p>
               <div class="g-file">
                 <label class="deep" for="g-file">Choose the downloaded file</label>
                 <input type="file" id="g-file" accept=".json,application/json" style="display:none;">
@@ -633,7 +622,7 @@
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener">Open the Branding page</a>
               <p class="g-do">Then open the Audience page below, click <strong>Publish app</strong> and
                  <strong>Confirm</strong>.</p>
-              <p class="note">The "Push to production?" box that appears is Google’s standard wording. Nobody else can reach your data through this app and no verification is needed.</p>
+              <p class="note">The “Push to production?” box is Google’s standard wording. Nobody else can reach your data through this app.</p>
               <a class="deep" data-deep href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Open the Audience page</a>
             </div>
 
@@ -658,12 +647,10 @@
           <div class="choice-body">
             <p class="note warn" id="m-again" hidden>Microsoft stopped accepting Closedhand's sign-in for <span id="m-again-who">this account</span>. Sign in again to carry on.</p>
             <div id="m-connected" style="display:none;">
-              <p><span id="m-account">Connected.</span> Closedhand reads this account's mail, calendar
-                 and OneDrive so it can recall them, and changes nothing unless you ask.</p>
+              <p><span id="m-account">Connected.</span> Closedhand reads this account's mail, calendar and OneDrive, and changes nothing unless you ask.</p>
             </div>
             <div id="m-intro">
-              <p class="note">Microsoft sends your mail, calendar and OneDrive straight to Closedhand on your computer.
-                 Its sign-in page shows Closedhand's name, but nothing passes through closedhand.com or any other company on the way.</p>
+              <p class="note">Microsoft's sign-in shows Closedhand's name, but your mail comes straight to your computer.</p>
               <button class="cta" type="button" id="m-start">Sign in with Microsoft</button>
             </div>
             <div id="m-code-wrap" style="display:none;">
@@ -716,7 +703,7 @@
         <div class="card-body">
             <section id="setup-personal-url" aria-labelledby="personal-url-heading">
               <p id="url-password-note">Connect Google or Microsoft above first.</p>
-              <p>Use Closedhand’s web chat and dashboard from any device at a personal URL like amber-fox-42.closedhand.ai. It reaches Closedhand whenever the computer running it is awake and online. Claiming one creates your Closedhand account, which stores your email and nothing else.</p>
+              <p>Open Closedhand from your phone or any device at an address like amber-fox-42.closedhand.ai. Claiming one creates your Closedhand account, which stores your email and nothing else.</p>
               <p id="url-auto" hidden>Your Microsoft sign-in above claimed it.</p>
               <div id="url-controls" hidden>
                 <form id="url-form">
@@ -741,7 +728,7 @@
                   <div class="field">
                     <label for="url-code">Paste the code from closedhand.com</label>
                     <input id="url-code" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234" aria-describedby="url-code-help">
-                    <p id="url-code-help">Claim it on closedhand.com and it shows you a code with a Copy button. Paste it here and it finishes by itself. The code means the address can only ever open your Closedhand.</p>
+                    <p id="url-code-help">closedhand.com shows you a code once you've claimed it.</p>
                   </div>
                   <button class="save-btn" id="url-code-submit" type="submit">Finish</button>
                 </form>
@@ -759,7 +746,7 @@
         <button class="card-head" aria-expanded="false">
           <span>
             <h2>Chat apps</h2>
-            <p class="whisper">Recommended for talking to Closedhand on the go. You can also use the web chat.</p>
+            <p class="whisper">Talk to Closedhand from WhatsApp or Telegram.</p>
             <p class="done-note" id="tg-done-note"></p>
           </span>
           <span class="state-chip">Recommended</span>
@@ -768,8 +755,7 @@
           <div class="fb-block chooser" id="wa-linked-block">
             <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></span></h3>
             <div class="choice-body">
-            <p class="note">Closedhand lives in your "Message Yourself" chat and never speaks in any
-               other conversation.</p>
+            <p class="note">Closedhand lives in your “Message Yourself” chat and never speaks anywhere else.</p>
             <button class="cta" type="button" id="wa-enable">Link WhatsApp</button>
             <div id="wa-qr-wrap" style="display:none;margin-top:10px;">
               <p class="note">Scan this with the WhatsApp camera to link the device.</p>
@@ -783,7 +769,7 @@
           <div class="fb-block chooser" id="tg-block">
             <h3 class="choose" data-choose="tg"><span>Telegram <span class="fb-done" id="tg-done" style="display:none;">connected</span></span></h3>
             <div class="choice-body">
-            <p class="note">A separate bot identity instead of your own number. Three taps in BotFather.</p>
+            <p class="note">Closedhand gets a bot of its own instead of your number. About a minute.</p>
 
           <div id="tg-setup">
             <div class="qr-row">
@@ -792,10 +778,9 @@
                 <ol class="mini" style="margin-bottom:8px;">
                   <li>Scan to open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, or tap it if you're on this device.</li>
 
-                  <li>Send <strong>/newbot</strong>. Any name will do: once you&rsquo;ve told Closedhand what to call it, the bot takes that name. The username has to end in &ldquo;bot&rdquo;.</li>
+                  <li>Send <strong>/newbot</strong> with any name: the bot takes whatever you call Closedhand. The username must end in &ldquo;bot&rdquo;.</li>
                   <li>Paste the token it gives you below.</li>
                 </ol>
-                <p class="note" style="margin:0;">Telegram has no way to create a bot for you, so this part is yours. It takes about a minute.</p>
               </div>
             </div>
             <form id="tg-form">
@@ -811,15 +796,13 @@
             <div class="qr-row">
               <img class="qr" id="tg-qr" src="" alt="QR code opening your Closedhand bot in Telegram" width="140" height="140">
               <div>
-                <p style="margin-bottom:6px;">Scan this, then send your bot any message. That locks it
-                   to your Telegram account: it answers you and refuses everyone else.</p>
+                <p style="margin-bottom:6px;">Scan this and send your bot any message. From then on it answers only you.</p>
                 <p class="note" style="margin:0;">On this device instead? <a id="tg-link" href="#" target="_blank" rel="noopener">Open your bot</a>.</p>
               </div>
             </div>
           </div>
           </div>
           </div>
-          <p class="note">You can also use the web chat any time.</p>
           <button class="skip" type="button">Skip for now</button>
         </div>
       </article>
@@ -830,8 +813,7 @@
 
   <section class="finish" id="finish" hidden>
     <h2>All set. <span>Closedhand is yours.</span></h2>
-    <p id="finish-line">Your dashboard is the control room. Everything Closedhand keeps lives there, yours to
-       read or delete, along with every connection and setting. The web chat and your chat apps are where you talk to it.</p>
+    <p id="finish-line">Everything Closedhand keeps is in your dashboard, yours to read or delete. Talk to it in the web chat or your chat apps.</p>
     <p class="hint" id="finish-home" hidden></p>
     <div class="finish-actions">
       <a class="go" href="/">Open Closedhand</a>
@@ -848,7 +830,7 @@
         <h2 id="done-title" tabindex="-1" autofocus>All set.</h2>
         <div class="ch-welcome-message" id="done-words">Getting your welcome ready...</div>
         <p class="ch-welcome-status" id="done-status" role="status"></p>
-        <p class="done-signins">Closedhand's sandbox computer has its own browser. Sign in there to Google, Instagram or any other site you want Closedhand to use for you. It stays signed in.</p>
+        <p class="done-signins">Closedhand's sandbox computer has its own browser. Sign in there to anything you want Closedhand to have persistent access to.</p>
         <div class="ch-welcome-actions">
           <a class="ch-welcome-primary" href="/">Open Closedhand</a>
           <a class="done-signins-link" href="/#computers">Sign in on the sandbox computer</a>
@@ -1147,8 +1129,8 @@
       // way it was set up: the Mac app's menu bar, or Docker's own start-up.
       var home = $("#finish-home");
       home.textContent = state.desktop
-        ? "Closedhand answers whenever this Mac is awake. If this Mac stays on, turn on Keep Mac Awake and Launch at Login in the menu bar: Closedhand is then there day and night, and starts again when you log in after a restart. A laptop still sleeps when its lid closes."
-        : "Closedhand answers whenever the computer running it is awake. On a computer that stays on, set Docker to start with the computer and Closedhand starts with it.";
+        ? "Closedhand answers whenever this Mac is awake and online. To keep it there day and night, turn on Keep Mac Awake in the menu bar."
+        : "Closedhand answers whenever the computer running it is awake and online.";
       home.hidden = false;
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
       // Show the welcome once per install when the last step lands.
