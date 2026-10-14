@@ -202,3 +202,18 @@ test('the route Worker reports when each computer was last connected, from its t
   assert.equal(tunnels[0].address, a); assert.ok(Date.parse(tunnels[0].seen) >= before, 'connected now');
   assert.deepEqual(tunnels[1], { address: b, tunnel: list[1].id, seen: '2026-06-01T00:00:00Z' });
 });
+
+// A person's conversations, mail, files and pages never pass through
+// Closedhand's relay: on a personal URL they go straight to the computer
+// through the tunnel. The relay carries only fixed page layouts, the offline
+// page and one-time setup links. A new page route has to be one or the other.
+test("everything that carries a person's data skips the relay", () => {
+  const direct = JSON.parse(fs.readFileSync(path.join(workers, 'edge', 'direct-routes.json'), 'utf8'));
+  const skips = (p) => direct.some((r) => (r.endsWith('*') ? p.startsWith(r.slice(0, -1)) : p === r));
+  for (const p of ['/api/', '/auth/', '/chat', '/mail', '/page/', '/report/', '/canvas/']) assert.ok(skips(p), p + ' skips the relay');
+  const layouts = new Set(['/', '/dashboard', '/keep', '/login', '/logout', '/setup', '/setup/google', '/privacy', '/terms',
+    '/telegram-app', '/line-app', '/line-setup-complete', '/tg/open', '/bot-connect', '/link/whatsapp/:token', '/closedhand-here', '/storage/logos/*']);
+  const server = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'server.js'), 'utf8');
+  const routes = [...server.matchAll(/app\.(?:get|post|put|delete|all)\("(\/[^"]*)"/g)].map((m) => m[1]).filter((p) => !p.startsWith('/api/') && !p.startsWith('/auth/'));
+  for (const p of routes) assert.ok(layouts.has(p) || skips(p), p + ': a page with no data of the person\'s, or add it to direct-routes.json');
+});

@@ -46,8 +46,15 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   used to sign in to the other. Setup has two
   Google or Microsoft sign-ins and the copy always says which one it is: claiming the personal
   URL happens on closedhand.com, while connecting mail and calendar gives access to Closedhand
-  on the person's computer, not to closedhand.com. Never write "closedhand.com never sees your
-  mail": remote dashboard pages pass through Closedhand's relay on Cloudflare. Wherever the
+  on the person's computer, not to closedhand.com. A person's conversations, mail, files and
+  pages never reach closedhand.com or pass through Closedhand's relay on Cloudflare: on a
+  personal URL they go straight to the computer through the tunnel
+  (`closedhand-com/workers/edge/direct-routes.json`), and the relay carries only fixed page
+  layouts, the offline page and one-time setup links. A new route that carries a person's data
+  joins that list (`scripts/test-address-workers.js` checks). Copy may say they never reach
+  closedhand.com; Cloudflare still carries personal-URL traffic, so never say no company
+  carries it. Mail to Closedhand's own email address, if turned on, passes through
+  closedhand.com sealed to the computer's key: name it wherever "never" is said in full. Wherever the
   account is named, the copy says what it keeps, the email, in those words: "stores your email
   and nothing else" is right, a bare "keeps nothing" is not. The privacy page carries the full
   list (the sign-in's account number and the URL's routing details). Signing in to take a personal URL is "claim", never
