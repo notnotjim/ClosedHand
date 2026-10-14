@@ -16,8 +16,8 @@ const CACHE = [
   { source: 'gmail', external_id: 'order11', data: { subject: 'Your order', body: 'Booking QZX7KP confirmed', threadId: 'thr11', account: 'pat@example.com', attachments: [],
     webLink: 'https://mail.google.com/mail/?authuser=pat%40example.com#all/thr11' } },
   { source: 'gmail', external_id: 'airline22', data: { subject: 'Travel Reservation - QZX7KP', body: 'see attached', threadId: 'thr22', account: 'pat@example.com',
-    attachments: [{ filename: 'logo.png', mimeType: 'image/png', attachmentId: 'a0', inline: true }, { filename: 'E-ticket QZX7KP.pdf', mimeType: 'application/pdf', attachmentId: 'a1', inline: false }] } },
-  { source: 'outlook', external_id: 'AAMk33=', data: { subject: 'QZX7KP receipt', body: '', attachments: [{ filename: 'Receipt.pdf', mimeType: 'application/pdf', attachmentId: 'b1', inline: false }],
+    attachments: [{ filename: 'logo.png', mimeType: 'image/png', attachmentId: 'a0', inline: true }, { filename: 'QZX7KP.ics', mimeType: 'text/calendar', attachmentId: 'a2', inline: false }, { filename: 'E-ticket QZX7KP.pdf', mimeType: 'application/pdf', attachmentId: 'a1', inline: false }, { filename: 'terms_and_conditions.pdf', mimeType: 'application/pdf', attachmentId: 'a3', inline: false }] } },
+  { source: 'outlook', external_id: 'AAMk33=', data: { subject: 'QZX7KP receipt', body: '', attachments: [{ filename: 'Receipt.pdf', mimeType: 'application/pdf', attachmentId: 'b1', inline: false }, { filename: 'Boarding pass.pkpass', mimeType: 'application/vnd.apple.pkpass', attachmentId: 'b2', inline: false }],
     webLink: 'https://outlook.office.com/owa/?ItemID=AAMk33' } },
   { source: 'imap', external_id: 'imap-7-42', data: { subject: 'Table at Rosa\'s', body: 'Booking ROSA77X', attachments: [{ filename: 'menu.pdf', mimeType: 'application/pdf', attachmentId: '0', inline: false }], webLink: null } },
   { source: 'gmail', external_id: 'evil99', data: { subject: 'phish', webLink: 'https://evil.example/login', attachments: [] } },
@@ -40,19 +40,24 @@ function load(now) {
   return box;
 }
 
-test('a flight opens its own email in the right account, with files from every email naming the booking', async () => {
+test('a flight opens its own email in the right account, with the files worth having from every email naming the booking', async () => {
   const sm = JSON.parse(JSON.stringify(await load(Date.now()).sourceMail('u1', { emailId: 'order11', reference: 'QZX7KP' })));
   assert.equal(sm.open_url, 'https://mail.google.com/mail/?authuser=pat%40example.com#all/thr11');
-  assert.deepEqual(sm.documents.map((d) => d.name), ['E-ticket QZX7KP.pdf', 'Receipt.pdf'], 'Gmail and Outlook alike; inline pictures left out');
-  assert.equal(sm.documents[0].url, '/api/mail/attachment?source=gmail&id=airline22&n=0');
-  assert.equal(sm.documents[1].url, '/api/mail/attachment?source=outlook&id=AAMk33%3D&n=0');
+  assert.equal(sm.mailbox, 'gmail');
+  assert.deepEqual(sm.documents.map((d) => d.name), ['E-ticket QZX7KP.pdf', 'Boarding pass.pkpass'],
+    'Gmail and Outlook alike; inline pictures, calendar files, terms and receipts left out');
+  assert.equal(sm.documents[0].url, '/api/mail/attachment?source=gmail&id=airline22&n=1', 'numbered as the email numbers its files');
+  assert.equal(sm.documents[1].url, '/api/mail/attachment?source=outlook&id=AAMk33%3D&n=1');
 });
 
 test('Outlook opens in Outlook; IMAP, with no web address, opens Closedhand\'s copy; a strange link is not trusted', async () => {
   const box = load(Date.now());
-  assert.equal((await box.sourceMail('u1', { emailId: 'AAMk33=' })).open_url, 'https://outlook.office.com/owa/?ItemID=AAMk33');
+  const outlook = await box.sourceMail('u1', { emailId: 'AAMk33=' });
+  assert.equal(outlook.open_url, 'https://outlook.office.com/owa/?ItemID=AAMk33');
+  assert.equal(outlook.mailbox, 'outlook');
   const imap = JSON.parse(JSON.stringify(await box.sourceMail('u1', { emailId: 'imap-7-42' })));
   assert.equal(imap.open_url, '/mail?source=imap&id=imap-7-42');
+  assert.equal(imap.mailbox, null, 'no mark for a mailbox without a web address');
   assert.deepEqual(imap.documents.map((d) => d.url), ['/api/mail/attachment?source=imap&id=imap-7-42&n=0']);
   assert.equal((await box.sourceMail('u1', { emailId: 'evil99' })).open_url, '/mail?source=gmail&id=evil99');
 });

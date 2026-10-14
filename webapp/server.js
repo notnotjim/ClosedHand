@@ -6173,6 +6173,18 @@ function openUrlFor(row) {
   return "/mail?" + mailQuery(row.source, row.external_id);
 }
 
+// A card offers what you'd want with you: the ticket, the boarding pass, the
+// voucher, the itinerary. A calendar file only adds what Upcoming already
+// shows, and asks your calendar app where to put it; terms, policies,
+// invoices and receipts stay in the email, which the card opens.
+const HANDY_TYPE = /^(application\/pdf|image\/|application\/vnd\.apple\.pkpass)/i;
+const HANDY_NAME = /\.(pdf|png|jpe?g|heic|webp|pkpass)$/i;
+const NOT_HANDY = /terms|conditions|t\s*&\s*c|polic(y|ies)|privacy|gdpr|invoice|receipt|newsletter/i;
+function handyFile(f) {
+  const name = String(f.filename || "");
+  return (HANDY_TYPE.test(f.mimeType || "") || HANDY_NAME.test(name)) && !NOT_HANDY.test(name);
+}
+
 async function sourceMail(userId, { emailId, reference } = {}) {
   const rows = [];
   const add = (list) => { for (const r of list || []) if (MAIL_SOURCE.test(r.source) && !rows.some((x) => x.source === r.source && x.external_id === r.external_id)) rows.push(r); };
@@ -6193,13 +6205,17 @@ async function sourceMail(userId, { emailId, reference } = {}) {
   const source = rows.find((r) => r.external_id === String(emailId)) || null;
   const documents = [];
   for (const r of rows) {
+    // n counts every file in the email, as /api/mail/attachment does.
     mailFiles(r.data).forEach((f, n) => {
-      if (documents.some((d) => d.name === f.filename)) return;
+      if (!handyFile(f) || documents.some((d) => d.name === f.filename)) return;
       documents.push({ name: f.filename, type: f.mimeType || "", url: "/api/mail/attachment?" + mailQuery(r.source, r.external_id) + "&n=" + n });
     });
   }
   if (!source && !documents.length) return null;
-  return { open_url: source ? openUrlFor(source) : null, documents };
+  const openUrl = source ? openUrlFor(source) : null;
+  // Which mailbox the email opens in, so the card can show its mark.
+  const mailbox = /^https:\/\/mail\.google\.com\//.test(openUrl || "") ? "gmail" : /^https:\/\/outlook\./.test(openUrl || "") ? "outlook" : null;
+  return { open_url: openUrl, mailbox, documents };
 }
 
 // A booking is over once it ends. Most don't say when they end (a table at
