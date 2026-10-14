@@ -64,6 +64,9 @@ class BridgeManager: ObservableObject {
     }
 
     func loadSettings() {
+        // Nothing saved yet means the first launch ever. Read before anything
+        // below, since setting a value here saves them all.
+        let firstLaunch = defaults.object(forKey: "serverUrl") == nil
         isPaired = defaults.bool(forKey: "isPaired")
         userId = defaults.string(forKey: "userId")
         // The token lives in the login Keychain, which macOS keeps encrypted.
@@ -84,6 +87,12 @@ class BridgeManager: ObservableObject {
         shareBrowser = defaults.object(forKey: "shareBrowser") == nil ? true : defaults.bool(forKey: "shareBrowser")
         unrestrictedMode = defaults.bool(forKey: "unrestrictedMode")
         keepAwake = defaults.bool(forKey: "keepAwake")
+        // The app starts with the Mac by default from its first launch, so a
+        // restart doesn't leave it off until someone opens it. Anyone already
+        // using it keeps what they have, and switching it off is kept.
+        if firstLaunch && SMAppService.mainApp.status != .enabled {
+            try? SMAppService.mainApp.register()
+        }
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 

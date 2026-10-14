@@ -107,7 +107,7 @@ RAM needs depend on your provider. With a full-service key (DeepInfra, OpenAI, G
 
 Closedhand lives on one computer and you reach it from anywhere. On a laptop it is there while the laptop is awake. When it wakes, it fetches the mail and calendar changes it missed and answers WhatsApp messages sent in the last 12 hours, but a schedule due while it slept is skipped. On a computer that stays on (a desktop, a Mac mini, an old PC or a small VPS), Pulse, schedules and agents run day and night.
 
-With the Mac app, turn on Keep Mac Awake and Launch at Login in the menu bar. Keep Mac Awake can't stop a laptop sleeping when its lid is closed. After a restart, Closedhand starts again when someone logs in, and a Mac with FileVault turned on waits for that login. With Docker, Closedhand restarts by itself whenever Docker starts, so set Docker to start with the computer.
+Closedhand starts again by itself after a restart, once someone logs in; a Mac with FileVault turned on waits for that login. The Mac app turns on Launch at Login the first time it opens, and the installer turns on Docker Desktop's "Start Docker Desktop when you sign in". Either can be turned off: Launch at Login in the menu bar, or that setting in Docker Desktop. On Linux, Docker itself must start with the computer (`sudo systemctl enable docker`). With the Mac app, also turn on Keep Mac Awake in the menu bar; it can't stop a laptop sleeping when its lid is closed.
 
 There is no supported way to move Closedhand's data to another computer. Setting it up again elsewhere can take your personal URL with it, but starts with an empty Context Brain, no connections and no history, so choose its home before you set it up.
 

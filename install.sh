@@ -10,6 +10,7 @@
 #   CLOSEDHAND_REPO    git URL to clone            (default: the public repo)
 #   CLOSEDHAND_DIR     directory to install into   (default: ./closedhand)
 #   CLOSEDHAND_NO_UP   set to 1 to skip docker compose up
+#   CLOSEDHAND_NO_AUTOSTART  set to 1 to leave Docker's start-at-sign-in as it is
 #   CLOSEDHAND_PLAIN   set to 1 to force plain output with no drawing
 #   CLOSEDHAND_RESET   set to 1 to tear this install down before rebuilding it.
 #                      DESTROYS the database, stored files and settings. Meant
@@ -509,10 +510,12 @@ step 20 "Code ready"
 # --- .env (first run only) ----------------------------------------------------
 # Settings only. The secrets that used to be generated into it live in
 # secrets/ (next step).
+FIRST_INSTALL=0
 if [ -f .env ]; then
   chmod 600 .env  # earlier installs left it readable by every account here
   step 28 "Keeping your settings"
 else
+  FIRST_INSTALL=1
   cp .env.example .env
   chmod 600 .env
   step 28 "Settings ready"
@@ -637,6 +640,32 @@ if [ "$tries" -lt 45 ] && [ -n "$PREVIOUS_IMAGES" ]; then
   done
 fi
 
+# Closedhand's containers start again whenever Docker does, so it is back after
+# a restart only if Docker is. Docker Desktop doesn't open at sign-in unless
+# asked: a Mac that restarted itself overnight left Closedhand off until
+# someone opened Docker. A new install turns on Docker's own "Start Docker
+# Desktop when you sign in", which its Settings show and can turn off again;
+# a re-run to update leaves whatever the person chose.
+AUTOSTART=""
+start_with_computer() {
+  [ "$FIRST_INSTALL" = "1" ] && [ "${CLOSEDHAND_NO_AUTOSTART:-0}" != "1" ] || return 0
+  case "$(uname -s 2>/dev/null)" in
+    Darwin)
+      sock="$HOME/Library/Containers/com.docker.docker/Data/backend.sock"
+      { [ -S "$sock" ] && command -v curl >/dev/null 2>&1; } || { AUTOSTART=ask; return 0; }
+      autostart_on() { curl -fsS --max-time 5 --unix-socket "$sock" http://localhost/app/settings 2>/dev/null | grep -Eq '"autoStart": ?true'; }
+      autostart_on && return 0
+      curl -fsS --max-time 5 --unix-socket "$sock" -X POST -H 'Content-Type: application/json' \
+        -d '{"desktop":{"autoStart":true}}' http://localhost/app/settings >/dev/null 2>&1 || true
+      if autostart_on; then AUTOSTART=set; else AUTOSTART=ask; fi ;;
+    Linux)
+      command -v systemctl >/dev/null 2>&1 || return 0
+      systemctl is-enabled docker >/dev/null 2>&1 || systemctl --user is-enabled docker-desktop >/dev/null 2>&1 \
+        || AUTOSTART=linux ;;
+  esac
+}
+start_with_computer
+
 step 100 "Ready"
 
 # Over SSH the browser belongs on the connecting computer, not this host.
@@ -659,6 +688,21 @@ elif [ "$OPENED" = "1" ]; then
 else
   say "Open $DASH_URL in a browser to reach the setup page."
 fi
+case "$AUTOSTART" in
+  set)
+    say ""
+    say "Closedhand starts again by itself after this computer restarts: Docker Desktop"
+    say "now opens when you sign in. To stop that, turn off \"Start Docker Desktop when"
+    say "you sign in\" in Docker Desktop's settings." ;;
+  ask)
+    say ""
+    say "To have Closedhand start again by itself after this computer restarts, turn on"
+    say "\"Start Docker Desktop when you sign in\" in Docker Desktop's settings." ;;
+  linux)
+    say ""
+    say "To have Closedhand start again by itself after this computer restarts, run:"
+    say "  sudo systemctl enable docker" ;;
+esac
 say ""
 say "Closedhand browses and runs code on its own sandboxed computer. It can't see"
 say "your files or the rest of your machine unless you give it explicit permission."
