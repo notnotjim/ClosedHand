@@ -89,10 +89,10 @@ test('the file route is behind the login, checks its inputs, asks the bot and ne
   assert.match(view, /"Content-Security-Policy": "default-src 'none'/, 'Closedhand\'s copy of an email runs no script');
 });
 
-test('the dashboard opens the email from the card, lists the files and moves finished bookings to Past', () => {
+test('the dashboard opens the email from its own chip, lists the files and moves finished bookings to Past', () => {
   const dash = read('webapp/views/dashboard.html');
-  assert.match(dash, /onclick="openSourceMail\(event, this\.dataset\.mail\)" title="Open the email this came from"/);
-  assert.match(dash, /if \(!url \|\| ev\.target\.closest\('a, button'\)\) return;/);
+  assert.match(dash, /'<a class="source-doc source-mail" href="' \+ escHtml\(mail\)/);
+  assert.doesNotMatch(dash, /openSourceMail|has-source/, 'the card itself is not a second link to the same email');
   assert.match(dash, /\(docs\.length > 2 \? '<button type="button" class="source-doc-more"/);
   assert.match(dash, /var over = rows\.filter\(function\(b\) \{ return b\.over; \}\);/);
   assert.match(dash, /<div id="recent-bookings"><\/div>/);

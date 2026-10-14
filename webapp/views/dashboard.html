@@ -1288,8 +1288,6 @@
       display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;
     }
     /* A card made from an email opens it; the booking's files sit under it. */
-    .flight-card.has-source { cursor: pointer; }
-    .flight-card.has-source:hover { border-color: rgba(239,230,214,0.22); }
     .source-docs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
     .source-doc { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 10px; border: 1px solid rgba(239,230,214,0.12); border-radius: 6px; font-size: 12px; color: #D9D1C4; text-decoration: none; }
     .source-doc svg { flex-shrink: 0; color: #B6AFA4; }
@@ -5527,9 +5525,7 @@
       var moved = movedFrom && movedFrom !== when ? ' <span class="booking-moved">moved from ' + escHtml(movedFrom) + '</span>' : '';
       // The venue's name is often the provider's too; say it once.
       var showProvider = b.provider && String(b.provider).trim().toLowerCase() !== String(b.title).trim().toLowerCase();
-      var mail = b.source_mail && b.source_mail.open_url;
-      return '<div class="flight-card' + (mail ? ' has-source' : '') + '" style="' + (cancelled ? 'opacity:0.55;' : '') + '"' +
-        (mail ? ' data-mail="' + escHtml(mail) + '" onclick="openSourceMail(event, this.dataset.mail)" title="Open the email this came from"' : '') + '>' +
+      return '<div class="flight-card" style="' + (cancelled ? 'opacity:0.55;' : '') + '">' +
         '<div class="flight-status-bar ' + (cancelled ? 'cancelled' : 'scheduled') + '"></div>' +
         '<div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
           '<div style="min-width:110px;"><span style="font-size:13px;margin-right:6px;" title="' + escHtml(b.kind) + '">' + icon + '</span><span class="flight-number">' + escHtml(b.title) + '</span>' +
@@ -5562,11 +5558,6 @@
     function showMoreDocs(btn) {
       btn.parentNode.querySelectorAll('.source-doc.more').forEach(function(a) { a.hidden = false; });
       btn.remove();
-    }
-    // A click anywhere on the card opens its email, except on its own links and buttons.
-    function openSourceMail(ev, url) {
-      if (!url || ev.target.closest('a, button')) return;
-      window.open(url, '_blank', 'noopener');
     }
     async function loadBookings() {
       try {
@@ -5621,8 +5612,10 @@
       if (f.confirmationCode) details.push(`<span class="flight-detail">Booking ref <span>${escHtml(String(f.confirmationCode))}</span></span>`);
       if (live.delay && live.delay > 0) details.push(`<span class="flight-detail delay-highlight">Delayed <span>${live.delay}min</span></span>`);
 
-      const mail = f.source_mail && f.source_mail.open_url;
-      return `<div class="flight-card${mail ? ' has-source' : ''}"${mail ? ` data-mail="${escHtml(mail)}" onclick="openSourceMail(event, this.dataset.mail)" title="Open the email this came from"` : ''}>
+      // The card itself does nothing on a click: the email and files are
+      // the chips below it, and there is nothing more to unfold.
+      const duration = flightDuration(live.departureTime || f.departure?.dateTime, live.arrivalTime || f.arrival?.dateTime);
+      return `<div class="flight-card">
         <div class="flight-status-bar ${status.cls}"></div>
         <div style="padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <div style="min-width:110px;">
@@ -5636,6 +5629,7 @@
             </div>
             <div style="flex:1;height:1px;background:rgba(239,230,214,0.16);position:relative;">
               <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(239,230,214,0.6);">&#9992;</span>
+              ${duration ? `<span style="position:absolute;top:7px;left:50%;transform:translateX(-50%);font-size:11px;color:#B6AFA4;white-space:nowrap;" title="Flight time">${duration}</span>` : ''}
             </div>
             <div style="text-align:center;">
               <div style="font-size:15px;font-weight:600;color:#EFE6D6;">${arrCode}</div>
@@ -5648,6 +5642,14 @@
         ${sourceDocsHtml(f.source_mail)}
         ${timeNote ? `<p class="flight-details" style="display:block;padding:0 14px 14px;margin:0;">${escHtml(timeNote)}</p>` : ''}
       </div>`;
+    }
+
+    // How long a flight takes, from its two times and their own offsets.
+    function flightDuration(dep, arr) {
+      var ms = Date.parse(arr) - Date.parse(dep);
+      if (!(ms > 0) || ms > 30 * 3600000) return '';
+      var m = Math.round(ms / 60000), h = Math.floor(m / 60);
+      return h + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '');
     }
 
     // === Load flights ===
