@@ -195,11 +195,11 @@ body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
     align-items: center;
     justify-content: center;
     gap: .625rem;
-    font-size: var(--hero-copy-size);
+    font-size: clamp(1rem, 1.6vw, 1.1875rem);
     font-weight: 400;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.01em;
     text-align: center;
-    color: rgba(239,230,214,0.5);
+    color: rgba(239,230,214,0.68);
     line-height: 1.4;
     max-width: 66.25rem;
     text-wrap: balance;
@@ -223,10 +223,10 @@ body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
     justify-content: center;
   }
 .hero-footer span {
-    font-size: var(--hero-copy-size);
-    line-height: 1.4;
-    letter-spacing: -0.2px;
-    color: #B6AFA4;
+    font-size: clamp(.8125rem, 1.1vw, .9375rem);
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: rgba(239,230,214,0.55);
     max-width: 100%;
     text-align: center;
     text-wrap: pretty;
@@ -882,7 +882,7 @@ body.chat-active .mon-area { display:none; }
   <div class="hero-area" id="heroSection">
     <div class="hero-space-top" style="flex:0.55"></div>
     <div class="hero-heading"><span class="hero-heading-first">Keep a <span class="grip">grip</span> on your life.</span><span class="hero-heading-more" id="heroMore">And your personal data.</span></div>
-    <div class="hero-heading-sub">Give any LLM the power to know your world and anticipate what you need, before you have to ask.</div>
+    <div class="hero-heading-sub">An AI assistant that already knows your world.</div>
 
     <!-- Phones and tablets: the Closedhand someone already uses, one tap
          away, with the smoke ring drifting round the fist. On a phone that
