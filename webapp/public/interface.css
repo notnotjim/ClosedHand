@@ -244,6 +244,7 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 #platform-pills { display: block; }
 .notification-help, #platform-pills .pulse-no-platforms { margin: 0; color: var(--ui-muted); font-size: var(--ui-body); line-height: 1.65; }
 .notification-options { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.notification-options:first-child { margin-top: 0; }
 .notification-options + .pulse-no-platforms { margin-top: 20px !important; }
 .notification-options .pill[aria-pressed="true"]::before { content: "✓ "; }
 .notification-options .pill { display: inline-flex; align-items: center; gap: 8px; }

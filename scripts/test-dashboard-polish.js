@@ -29,7 +29,7 @@ test('usage shows a cost from the prices the person enters', () => {
   assert.match(server, /app\.post\("\/api\/usage\/prices"/);
   assert.match(server, /res\.json\(\{ days, rows, prices: /);
   assert.match(dash, /function usageCost\(rows\)/);
-  assert.match(dash, /Add their prices below to see what it costs\./);
+  assert.match(dash, /Add your provider's prices below to see it\./);
 });
 
 test('wallet currency starts from the browser region', () => {

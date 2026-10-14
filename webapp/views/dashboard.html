@@ -2177,7 +2177,7 @@
              any added by pasting a link into the box under Connect anything. -->
         <div class="section" id="skills-section">
           <h2>Skills</h2>
-          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">A skill is a package of instructions and resources that Closedhand follows to complete a particular type of task. Add one in the Connect box below.</p>
+          <p style="color:rgba(239,230,214,0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">Instructions Closedhand follows for a particular kind of task. Add one in the Connect box below.</p>
           <div class="integrations-grid" id="skills-connected"></div>
         </div>
 
@@ -2316,7 +2316,8 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Closedhand sends out agents when a job needs more than a quick answer. Here is what they are working on, the routines you have set up and what is coming up.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Closedhand sends out agents when a job needs more than a quick answer.</p>
+
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
@@ -2494,7 +2495,7 @@
 
       <div class="tab-content" id="tab-pages">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">A page is something Closedhand makes whenever it serves you better than a chat reply, like a trip plan, a guide or a comparison worth keeping or sharing. Open it here or download it as PDF or Word.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Trip plans, guides and comparisons Closedhand made for you, to open here or download as PDF or Word.</p>
           <div id="pages-list"></div>
           <p id="pages-error" class="auto-card-meta" role="status" hidden>Could not load your pages. Please try again shortly.</p>
           <!-- Files sent in chat and tables kept up to date: the rest of what
@@ -2509,7 +2510,7 @@
               <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="files-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files Closedhand has sent you: things it made, and documents it pulled from your email or Drive. Each says which.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files Closedhand sent you, made by it or found in your email or Drive.</p>
               <div id="files-list"></div>
             </div>
           </div>
@@ -2524,7 +2525,7 @@
             <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables Closedhand keeps up to date as it works, so it remembers what it has already done.</p>
             <div id="datasets-list"></div>
             <div id="datasets-empty" style="display:none;padding:16px;text-align:center;color:rgba(239,230,214,0.6);font-size:13px;">
-              Nothing here yet. Ask Closedhand to keep track of something in a table, a list of ad campaigns or a content calendar for instance, and it will build one and keep it up to date.
+              Nothing yet. Ask Closedhand to keep track of something, like a content calendar, and it keeps a table here.
             </div>
             </div>
           </div>
@@ -2579,14 +2580,14 @@
               </div>
             </div>
             <div id="phone-setup" hidden>
-              <p>Your personal URL, like amber-fox-42.closedhand.ai, opens the web chat and the dashboard from any device. To claim the address, you sign in with Google or Microsoft on closedhand.com, which creates your Closedhand account to hold it. closedhand.com keeps only the email you sign in with, linked to your address. You can change the name afterwards. Connecting your mail and calendar is separate: that access goes to Closedhand on your computer, not to closedhand.com. Your dashboard password is separate too.</p>
+              <p>Opens the web chat and dashboard from any device, at an address like amber-fox-42.closedhand.ai. You claim it by signing in on closedhand.com, which creates your Closedhand account. It stores your email and nothing else.</p>
               <p>Closedhand and Cloudflare connect the address to the computer running Closedhand, so it works whenever that computer is awake and online.</p>
               <button class="account-action-btn" id="phone-start" onclick="startDashboardLink()">Claim your personal URL</button>
               <a id="phone-setup-link" target="_blank" rel="noopener" hidden>Claim your personal URL</a>
               <div id="phone-code" hidden>
                 <label for="phone-code-input">Paste the code from closedhand.com</label>
                 <input id="phone-code-input" oninput="codeTypedInSettings()" class="settings-input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="ABC 234">
-                <p>After you claim it on closedhand.com, it shows a code with a Copy button. Paste it here and it finishes by itself. Only your Closedhand can finish it, so your address can never be pointed at somebody else's computer.</p>
+                <p>closedhand.com shows you a code once you've claimed it.</p>
                 <button class="account-action-btn" id="phone-code-submit" onclick="claimDashboardLink()">Finish</button>
                 <p id="phone-code-status" role="status"></p>
               </div>
@@ -2596,7 +2597,7 @@
             <details id="phone-options" hidden>
               <summary>Link options</summary>
               <div class="dashboard-link-options">
-                <p id="phone-link-help">Bookmark this link, pin it in a chat app or save it to your home screen. You can use it on any device.</p>
+                <p id="phone-link-help">Save it to your home screen or pin it in a chat app.</p>
                 <a id="phone-save" href="/keep" target="_top">How to create a shortcut on your phone’s home screen</a>
                 <div id="phone-qr-details">
                   <p>Scan with another device to open your dashboard.</p>
@@ -2621,7 +2622,7 @@
           <div class="settings-group">
             <div class="settings-group-header">
               <h2>Notifications</h2>
-              <p class="section-desc">Choose where Pulse and tasks set to run later send their updates. Tasks started in a conversation answer in that same chat.</p>
+              <p class="section-desc">Where Pulse and scheduled tasks send updates. A task started in a chat answers in that chat.</p>
             </div>
             <div class="settings-group-body" id="pulse-delivery">
               <div class="platform-pills" id="platform-pills" aria-live="polite"><p class="pulse-no-platforms">Loading notification settings…</p></div>
@@ -2633,7 +2634,7 @@
           <div class="settings-group" style="border-color:rgba(239,230,214,0.16);flex:1;min-width:280px;">
             <div class="settings-group-header">
               <h2>Pulse</h2>
-              <p class="section-desc">Closedhand monitors your email, calendar and other connections in the background. When something needs your attention, it reaches out proactively.</p>
+              <p class="section-desc">Closedhand watches your mail, calendar and connections, and tells you when something needs you.</p>
             </div>
             <div class="settings-group-body">
               <div class="segmented-control" id="pulse-level" style="margin-bottom:10px;">
@@ -2657,10 +2658,10 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Choose which cards Closedhand can use at checkout and when it must ask.<br>Purchases need your approval unless you change the rules here.</p>
+              <p class="section-desc">Cards Closedhand may use at checkout. It asks you first unless your rules say otherwise.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
-              <p class="section-desc">Card numbers are encrypted with a key stored only on your own computer. Closedhand uses them at checkout; the AI model never sees them.</p>
+              <p class="section-desc">Card numbers are encrypted on your computer, and the AI model never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:#B6AFA4;"></div>
               <div id="wallet-main" style="display:none;">
                 <div class="wallet-confirm" id="wallet-confirm" hidden>
@@ -2696,7 +2697,7 @@
                 <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
                 <button class="account-action-btn" id="wallet-add-toggle" onclick="toggleAddCard()">Add a card</button>
                 <div id="wallet-add" style="display:none;margin-top:14px;padding:14px;background:#100E0D;border:1px solid rgba(239,230,214,0.16);border-radius:10px;">
-                  <div style="font-size:12.5px;color:#B6AFA4;margin-bottom:10px;line-height:1.5;">The rules you set above and the card's own limits below are what cap the spending.</div>
+                  
                   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
                     <label class="wallet-field" style="grid-column:1/-1;"><span>Card number</span><input type="text" id="wc-number" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456"></label>
                     <label class="wallet-field"><span>Expiry month</span><input type="text" id="wc-exp-month" inputmode="numeric" placeholder="MM" maxlength="2"></label>
@@ -2705,7 +2706,7 @@
                     <label class="wallet-field"><span>Name on card</span><input type="text" id="wc-holder" placeholder="As printed"></label>
                     <label class="wallet-field"><span>Billing postcode</span><input type="text" id="wc-postcode" placeholder="Optional"></label>
                     <label class="wallet-field"><span>Label</span><input type="text" id="wc-label" placeholder="e.g. Monzo virtual"></label>
-                    <div style="grid-column:1/-1;margin-top:6px;"><div style="font-size:12px;color:#B6AFA4;margin-bottom:6px;">Limits for this card alone. The rules above still apply.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;max-width:480px;"><label class="wallet-field"><span>Max per purchase</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label><label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label></div></div>
+                    <div style="grid-column:1/-1;margin-top:6px;"><div style="font-size:12px;color:#B6AFA4;margin-bottom:6px;">Limits for this card alone.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;max-width:480px;"><label class="wallet-field"><span>Max per purchase</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label><label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label></div></div>
                   </div>
                   <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
                     <button class="account-action-btn" onclick="addWalletCard()">Save card</button>
@@ -2725,7 +2726,7 @@
           <div class="settings-group" id="rules-section">
             <div class="settings-group-header">
               <h2>Preferences</h2>
-              <p class="section-desc">How you want Closedhand to work. Add them here or tell Closedhand, and turn them off or remove them at any time.</p>
+              <p class="section-desc">How you want Closedhand to work. Add them here or just tell it.</p>
             </div>
             <div class="settings-group-body">
               <div class="name-row">
@@ -2781,7 +2782,7 @@
             <div class="account-action" id="action-clear-conversations">
               <div class="account-action-info">
                 <div class="account-action-title">Clear conversation history</div>
-                <div class="account-action-desc">Erases every conversation and the Context Notes distilled from them. Pinned facts, schedules and connections are kept.</div>
+                <div class="account-action-desc">Conversations and their Context Notes. Pinned facts, schedules and connections stay.</div>
               </div>
               <button class="account-action-btn" onclick="startAccountAction('clear-conversations')">Clear</button>
             </div>
@@ -2798,7 +2799,7 @@
             <div class="account-action" id="action-clear-data">
               <div class="account-action-info">
                 <div class="account-action-title">Wipe all data</div>
-                <div class="account-action-desc">Deletes conversations, Context Notes, Pinned facts, preferences, schedules, tables, routines and indexed files. Your profile and connected services stay, and mail and calendar keep syncing from them.</div>
+                <div class="account-action-desc">Everything Closedhand has built up. Your profile and connections stay.</div>
               </div>
               <button class="account-action-btn account-action-btn-warn" onclick="startAccountAction('clear-data')">Wipe</button>
             </div>
@@ -2816,7 +2817,7 @@
             <div class="account-action" id="action-delete-account">
               <div class="account-action-info">
                 <div class="account-action-title danger">Delete account</div>
-                <div class="account-action-desc">Deletes your Closedhand account and everything Closedhand keeps for you on your own computer. This cannot be undone.</div>
+                <div class="account-action-desc">Your Closedhand account and everything kept on your computer.</div>
               </div>
               <button class="account-action-btn account-action-btn-danger" onclick="startAccountAction('delete-account')">Delete</button>
             </div>
@@ -2853,7 +2854,7 @@
             <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">Ongoing</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
-              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are long-term memory: they live on beyond the current conversation. Your live chat is held in full until it outgrows Closedhand's working memory; only then are older stretches condensed into Context Notes here. Empty means nothing has been condensed, not that anything is missing.</div>
+              <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#B6AFA4;box-shadow:0 8px 24px rgba(16,14,13,0.5);">Context Notes are summaries of past conversations, written when a chat grows too long to keep in full. Empty means none has yet.</div>
             </span>
             <span id="context-gauge" style="font-size:11px;color:rgba(239,230,214,0.6);margin-left:auto;align-self:center;"></span>
           </div>
@@ -2885,7 +2886,7 @@
               <button id="uploads-clear-all" onclick="event.stopPropagation();clearAllUploads()" title="Delete every stored copy in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="uploads-body" style="display:none;">
-              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent Closedhand, kept so it can re-read them when you refer back. Deleting one removes Closedhand's copy only; whatever you sent it from is untouched.</p>
+              <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent Closedhand. Deleting one removes only Closedhand's copy.</p>
               <div id="uploads-list"></div>
             </div>
           </div>
@@ -2897,7 +2898,7 @@
           <div class="usage-toolbar">
             <div>
               <h2 style="margin-bottom:2px;">Usage</h2>
-              <p style="margin:0;font-size:13px;color:#B6AFA4;">Where your key money goes. Token counts come from your providers' own responses. Add their prices below to see what it costs.</p>
+              <p style="margin:0;font-size:13px;color:#B6AFA4;">What Closedhand's AI use costs you. Add your provider's prices below to see it.</p>
             </div>
             <div class="spacer"></div>
             <div class="usage-range" id="usage-range">
@@ -2922,7 +2923,7 @@
           <div class="usage-prices" id="usage-prices"></div>
           <div class="usage-table" id="usage-table"></div>
           <div class="usage-empty" id="usage-empty" style="display:none;">
-            No usage recorded yet. Numbers appear here after Closedhand's first model call.
+            No usage yet.
           </div>
         </div>
       </div>
@@ -4428,10 +4429,11 @@
       const note = businessWhatsApp && pulseState.deliveryPlatforms.includes("whatsapp")
         ? '<p class="pulse-no-platforms">WhatsApp accepts these updates within 24 hours of your last message there. Outside that window, Closedhand uses your other selected apps.</p>'
         : "";
+      // The section's own line says what this is for; only an empty choice needs saying.
       const help = pulseState.deliveryPlatforms.length
-        ? "Choose the apps where you want to receive updates and scheduled results."
+        ? ""
         : "No apps selected. Closedhand will not send updates or scheduled results to your chat apps.";
-      container.innerHTML = '<p class="notification-help">' + help + '</p><div class="notification-options">' + pills + adds + '</div>' + note;
+      container.innerHTML = (help ? '<p class="notification-help">' + help + '</p>' : '') + '<div class="notification-options">' + pills + adds + '</div>' + note;
       const more = container.querySelector("#pill-add-more");
       if (more) more.addEventListener("click", () => { container.dataset.showAdds = "1"; renderPlatformPills(platforms); });
       container.querySelectorAll(".pill-add").forEach(pill => {
@@ -8602,7 +8604,7 @@
         <button type="button" class="auto-trigger-btn" data-trigger="event" onclick="selectTrigger('event')">When something happens</button>
       </div>
 
-      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">When I ask: it runs when you ask for it in any chat or when you press Run on its card under Routines.</div>
+      <div id="auto-manual-hint" style="font-size: 13px;color:rgba(239,230,214,0.6);margin-bottom:14px;margin-top:-4px;">Runs when you ask in any chat or press Run on its card under Routines.</div>
 
       <!-- Schedule picker (hidden by default) -->
       <div id="auto-schedule-picker" style="display:none;margin-bottom:10px;">
@@ -8639,7 +8641,7 @@
 
       <!-- Skills preference -->
       <div id="auto-skills-section" style="margin-bottom:10px;">
-        <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional, always used when picked; add a skill by pasting its link on Connections)</span></label>
+        <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional; add one on Connections)</span></label>
         <div id="auto-skills-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:28px;">
           <span style="font-size: 13px;color:rgba(239,230,214,0.6);">Loading skills...</span>
         </div>
@@ -8786,7 +8788,7 @@
       <p id="disconnect-body" style="font-size:13px;color:#B6AFA4;line-height:1.55;margin:0 0 14px;"></p>
       <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#EFE6D6;cursor:pointer;margin-bottom:18px;">
         <input type="checkbox" id="disconnect-purge" style="width:14px;height:14px;margin:3px 0 0;accent-color:#D0563F;flex:none;">
-        <span id="disconnect-purge-text">Also delete everything Closedhand synced from this account: the mail and calendar it kept, and what it learned from them. Leave this off and it stays as good as it is now when you reconnect. Turn it on for a clean break: it will have to sync and learn again from scratch.</span>
+        <span id="disconnect-purge-text">Also delete the mail and calendar Closedhand kept from this account, and what it learned from them. Leave it off to carry on where you left off if you reconnect.</span>
       </label>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>
