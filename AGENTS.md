@@ -148,10 +148,7 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   that Closedhand is waiting, where it asked and when, and repeats the question.
   It never expects the answer there.
 
-## Workflow
-- Plan first for anything with 3+ steps.
-- When something goes sideways, stop and re-plan. Don't keep pushing the same approach.
-- Verify before marking done. Don't just assume it works.
+## Test data
 - Tests, examples and prompts use invented people, places, bookings and ids, never ones from
   a real Closedhand, even when the bug came from one. `scripts/check-own-data.js` compares each
   outgoing commit with the database of the Docker setup on your computer and lists any match.
