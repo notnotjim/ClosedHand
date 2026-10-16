@@ -98,10 +98,38 @@ test('before a password exists, only requests addressed to this computer by name
   const at = (host) => addressedLocally({ headers: { host } });
   for (const h of ['localhost:3000', '127.0.0.1:3000', '[::1]:3000', 'webapp:3000', 'closedhand.localhost', 'LOCALHOST:3100']) assert.equal(at(h), true, h);
   for (const h of ['evil.example', 'evil.example:3000', 'localhost.evil.example', '192.168.1.20:3000', 'name.closedhand.ai', '']) assert.equal(at(h), false, h);
+  // The only other way in before a password: the setup code (setup-code.js).
+  assert.match(server, /function setupAllowed\(req\) \{\n\s*return addressedLocally\(req\) \|\| setupCode\.passed\(readCookie\(req, setupCode\.COOKIE\)\);\n\}/);
   const access = server.slice(server.indexOf('async function requireSetupAccess('), server.indexOf('app.get("/login"'));
-  assert.match(access, /if \(addressedLocally\(req\)\) return true;\n\s*res\.status\(403\)/);
+  assert.match(access, /if \(setupAllowed\(req\)\) return true;\n\s*res\.status\(403\)/);
   const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));
-  assert.match(gate, /if \(!\(await passwordConfigured\(\)\)\) \{\n\s*if \(addressedLocally\(req\)\) return next\(\);/);
+  assert.match(gate, /if \(!\(await passwordConfigured\(\)\)\) \{\n\s*if \(setupAllowed\(req\)\) return next\(\);/);
+  const codeRoutes = server.slice(server.indexOf('app.get("/setup-code"'), server.indexOf('const SIGNED_BY_BRIDGE = new Set('));
+  assert.equal((codeRoutes.match(/if \(!setupCode\.enabled \|\| \(await passwordConfigured\(\)\)\)/g) || []).length, 2, 'both setup code routes close once a password exists');
+});
+
+test('the setup code: only the exact code, a pass that cannot be forged or outlive it, and a wait after each wrong try', async () => {
+  const { createSetupCode } = require('../webapp/setup-code');
+  let clock = Date.parse('2026-10-16T12:00:00Z'), waited = 0;
+  const make = (code) => createSetupCode({ code, secret: 's'.repeat(64), now: () => clock, wait: async (ms) => { waited += ms; } });
+  assert.equal(make(undefined).enabled, false, 'no SETUP_CODE, setup stays on localhost');
+  assert.equal(make('SHORT').enabled, false, 'a guessable code is refused');
+  assert.equal(createSetupCode({ code: 'K7M2Q9X4P8R3T6W5', secret: '' }).enabled, false, 'no cookie secret, no setup code');
+  const sc = make('K7M2Q9X4P8R3T6W5');
+  assert.equal(sc.enabled, true);
+  assert.equal(await sc.check('K7M2Q9X4P8R3T6W4', true), null);
+  assert.equal(waited, 1000, 'a wrong code waits a second');
+  assert.equal(await sc.check(undefined, true), null);
+  const cookie = await sc.check(' K7M2Q9X4P8R3T6W5 ', true);
+  assert.match(cookie, /^ch_setup_pass=\d+\.[\w-]+; Path=\/; HttpOnly; SameSite=Strict; Max-Age=7200; Secure$/);
+  const pass = cookie.split(';')[0].split('=')[1];
+  assert.equal(sc.passed(pass), true);
+  const [exp, sig] = pass.split('.');
+  assert.equal(sc.passed(`${Number(exp) + 3600}.${sig}`), false, 'a longer pass cannot be made from a real one');
+  assert.equal(sc.passed(`${exp}.${sig.slice(0, -2)}AA`), false);
+  assert.equal(make('Z7M2Q9X4P8R3T6W5').passed(pass), false, 'a new code ends old passes');
+  clock += 7201 * 1000;
+  assert.equal(sc.passed(pass), false, 'a pass lasts two hours');
 });
 
 test('replacing the dashboard password takes the current one, under the same lockout', () => {

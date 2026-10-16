@@ -50,6 +50,29 @@ jobs:
         run: node --test closedhand-com/test/assistant-email.js
         env:
           DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
+  # A database that starts empty (Railway's, a managed Postgres) gets its
+  # whole schema from the bot rather than Docker's first-start scripts.
+  fresh-database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install the Postgres client for the test
+        run: npm install --prefix "$RUNNER_TEMP/pg-test" --ignore-scripts --no-audit --no-fund pg@8
+      - name: Baseline and migrations on an empty database
+        run: NODE_PATH="$RUNNER_TEMP/pg-test/node_modules" node --test scripts/test-fresh-database.js
+        env:
+          DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
   checks:
     runs-on: ubuntu-latest
     steps:

@@ -81,8 +81,15 @@ app.use("/novnc", express.static(path.join(__dirname, "public", "novnc")));
 // browser via getPublicUrl). Attachments stay private — fetched via the authed
 // download route, never here. No-op on a Supabase deployment (those logo URLs
 // point at Supabase's CDN, not here). safeJoin blocks path traversal.
-app.get("/storage/logos/*", (req, res) => {
+app.get("/storage/logos/*", async (req, res) => {
   try {
+    if ((process.env.STORAGE_DRIVER || "").toLowerCase() === "pg") {
+      const key = req.params[0] || "";
+      const { data, error } = await supabase.storage.from("logos").download(key);
+      if (error || !data) return res.status(error && /Invalid/.test(error.message) ? 400 : 404).end();
+      res.set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+      return res.type(data.type || path.extname(key) || "application/octet-stream").send(Buffer.from(await data.arrayBuffer()));
+    }
     const { safeJoin } = require("./storage-driver-local");
     const dir = path.resolve(process.env.STORAGE_DIR || "./data/storage");
     // Logos come from connected services and may be SVG, which can carry a
@@ -562,9 +569,12 @@ app.get("/api/setup/hello", async (req, res) => {
 app.get("/setup", async (req, res) => {
   res.set("Cache-Control", "no-cache, must-revalidate");
   try {
-    if ((await passwordConfigured()) && !(await hasAdminSession(req, res))) {
+    const configured = await passwordConfigured();
+    if (configured && !(await hasAdminSession(req, res))) {
       return res.redirect("/login?next=" + encodeURIComponent(req.originalUrl || "/setup"));
     }
+    // With a setup code, a browser elsewhere types it before seeing setup.
+    if (!configured && setupCode.enabled && !setupAllowed(req)) return res.redirect("/setup-code");
     assets.sendPage(res, "setup.html");
   } catch (e) {
     res.status(500).send("Could not check setup access. Try again.");
@@ -697,13 +707,21 @@ function addressedLocally(req) {
   return LOCAL_NAMES.has(host) || host.endsWith(".localhost");
 }
 const FIRST_RUN_ELSEWHERE = "Finish setting up on the computer running Closedhand, at http://localhost:3000.";
+// Where there is no localhost to reach (Railway), a browser that typed the
+// setup code (SETUP_CODE, setup-code.js) counts as being at this computer
+// until a password exists.
+const setupCode = require("./setup-code").createSetupCode();
+function setupAllowed(req) {
+  return addressedLocally(req) || setupCode.passed(readCookie(req, setupCode.COOKIE));
+}
+const SETUP_CODE_FIRST = "Type the setup code first, at /setup-code.";
 
 // Wizard write APIs: open until a password exists (first run on this
 // computer), session-only after. Returns false after sending the answer itself.
 async function requireSetupAccess(req, res) {
   if (!(await passwordConfigured())) {
-    if (addressedLocally(req)) return true;
-    res.status(403).json({ error: FIRST_RUN_ELSEWHERE });
+    if (setupAllowed(req)) return true;
+    res.status(403).json({ error: setupCode.enabled ? SETUP_CODE_FIRST : FIRST_RUN_ELSEWHERE });
     return false;
   }
   if (await hasAdminSession(req, res)) return true;
@@ -1723,11 +1741,24 @@ app.post("/api/telegram/session", async (req, res) => {
 // file transfers, thumbnails, the Bridge's sync and its Remove button all
 // failed. Each of these handlers refuses a missing or wrong token itself
 // (scripts/test-bridge-routes.js checks that they do).
+// The setup code's own page and check, open only until a password exists.
+app.get("/setup-code", async (req, res) => {
+  if (!setupCode.enabled || (await passwordConfigured())) return res.redirect("/");
+  assets.sendPage(res, "setup-code.html", { "Cache-Control": "no-store" });
+});
+app.post("/api/setup-code", async (req, res) => {
+  if (!setupCode.enabled || (await passwordConfigured())) return res.status(404).json({ error: "Not found" });
+  const cookie = await setupCode.check(req.body && req.body.code, browserAccess.publicHttps(req));
+  if (!cookie) return res.status(401).json({ error: "That isn't the setup code. Check it and try again." });
+  res.append("Set-Cookie", cookie);
+  res.json({ ok: true, next: "/setup" });
+});
 const SIGNED_BY_BRIDGE = new Set(["/api/bridge/file-upload", "/api/bridge/thumb-upload", "/api/bridge/sync-cache", "/api/bridge/disconnect"]);
 app.use(async (req, res, next) => {
   try {
     if (!(await passwordConfigured())) {
-      if (addressedLocally(req)) return next();
+      if (setupAllowed(req)) return next();
+      if (setupCode.enabled) return req.path.startsWith("/api/") ? res.status(403).json({ error: SETUP_CODE_FIRST }) : res.redirect("/setup-code");
       return req.path.startsWith("/api/") ? res.status(403).json({ error: FIRST_RUN_ELSEWHERE }) : res.status(403).send(FIRST_RUN_ELSEWHERE);
     }
     if (await hasAdminSession(req, res)) return next();

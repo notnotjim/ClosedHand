@@ -211,7 +211,7 @@ test("everything that carries a person's data skips the relay", () => {
   const direct = JSON.parse(fs.readFileSync(path.join(workers, 'edge', 'direct-routes.json'), 'utf8'));
   const skips = (p) => direct.some((r) => (r.endsWith('*') ? p.startsWith(r.slice(0, -1)) : p === r));
   for (const p of ['/api/', '/auth/', '/chat', '/mail', '/page/', '/report/', '/canvas/']) assert.ok(skips(p), p + ' skips the relay');
-  const layouts = new Set(['/', '/dashboard', '/keep', '/login', '/logout', '/setup', '/setup/google', '/privacy', '/terms',
+  const layouts = new Set(['/', '/dashboard', '/keep', '/login', '/logout', '/setup', '/setup-code', '/setup/google', '/privacy', '/terms',
     '/telegram-app', '/line-app', '/line-setup-complete', '/tg/open', '/bot-connect', '/link/whatsapp/:token', '/closedhand-here', '/storage/logos/*']);
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'server.js'), 'utf8');
   const routes = [...server.matchAll(/app\.(?:get|post|put|delete|all)\("(\/[^"]*)"/g)].map((m) => m[1]).filter((p) => !p.startsWith('/api/') && !p.startsWith('/auth/'));
