@@ -15,11 +15,19 @@ const guides = {
   github: ['https://github.com/settings/developers', 'Create an OAuth application in GitHub.'],
   gitlab: ['https://gitlab.com/-/user_settings/applications', 'Create an application in GitLab.'],
 };
+// Each company's own MCP server. A tile with one connects through it and
+// nothing else (no app of Closedhand's or the person's), and Closedhand's
+// recall reads it like any connection. GitHub's asks for a token pasted in;
+// the rest sign in by themselves. Checked 2026-10-16: HubSpot's needs an app
+// made in each account, Salesforce's an admin's setup, Spotify has none.
 const remote = {
   notion: 'https://mcp.notion.com/mcp',
   atlassian: 'https://mcp.atlassian.com/v2/mcp?tools=all',
   stripe: 'https://mcp.stripe.com',
   github: 'https://api.githubcopilot.com/mcp/',
+  gitlab: 'https://gitlab.com/api/v4/mcp',
+  dropbox: 'https://mcp.dropbox.com/mcp',
+  meta_ads: 'https://mcp.facebook.com/ads',
 };
 function validClient(value) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 4096 && !/[\r\n\0]/.test(value);
@@ -48,6 +56,9 @@ function createCatalogue({db, services, userId, baseUrl}) {
         if(clients.error||connections.error||mcps.error)throw new Error('Could not load connections. Try again.');
         const own=new Set((clients.data||[]).map(x=>x.service));
         const linked=new Set((connections.data||[]).map(x=>x.service.replace(/^(google|microsoft)_extra_.+$/, '$1')));
+        // A tile shows only when it connects without the person making a
+        // developer app: the rest wait for apps Closedhand registers. One
+        // already connected, or set up with the person's own app, stays.
         const rows=Object.entries(services).filter(([key,s])=>!s.isChatPlatform).map(([key,s])=>{
           const ready=own.has(key)||!!(s.clientId&&s.clientSecret);
           // Microsoft without an app of the person's own signs in by code
@@ -56,10 +67,10 @@ function createCatalogue({db, services, userId, baseUrl}) {
           const url=remote[key];
           const mcpLinked=url&&(mcps.data||[]).some(m=>m.status==='connected'&&m.server_url?.replace(/\/$/,'')===url.replace(/\/$/,''));
           return {key,name:s.name,description:s.description||'',logoUrl:s.logoUrl||'',connected:linked.has(key)||!!mcpLinked,
-            mode:s.pasteForm?s.pasteForm:s.needsStoreDomain?'shopify':microsoftCode?'microsoft':ready?'oauth':url?'mcp':key==='google'?'google':'setup',
-            url:!ready&&url?url:null,manualMode:(url||microsoftCode)&&guides[key]?(ready?'oauth':'setup'):null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
+            mode:s.pasteForm?s.pasteForm:s.needsStoreDomain?'shopify':microsoftCode?'microsoft':url?'mcp':ready?'oauth':key==='google'?'google':'setup',
+            url:url||null,manualMode:microsoftCode&&guides[key]?'setup':null,guide:guides[key]?.[0],instruction:guides[key]?.[1],
             redirectUri:baseUrl+'/auth/'+key+'/callback',scopes:s.scopes||[],personalClient:own.has(key)};
-        });
+        }).filter(r=>r.mode!=='setup'||r.connected||r.personalClient);
         res.json({services:rows});
       } catch(e){res.status(503).json({error:e.message});}
     });
