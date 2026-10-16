@@ -53,6 +53,8 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
   app.set('trust proxy', Number(env.TRUSTED_PROXY_HOPS || 2));
   app.use((req, res, next) => {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY' });
+    // Browsers that have seen the site once use HTTPS for it from then on.
+    if (baseUrl.startsWith('https://')) res.set('Strict-Transport-Security', 'max-age=31536000');
     next();
   });
   // Visitors arrive through Cloudflare, which adds a header carrying
@@ -80,6 +82,8 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
   }));
 
   app.get('/health', (req, res) => res.json({ ok: true }));
+  // Browsers and crawlers ask for /favicon.ico whatever a page names.
+  app.get('/favicon.ico', (req, res) => res.type('png').sendFile(path.join(PUBLIC, 'logocircle.png')));
   // Lets Microsoft confirm closedhand.com publishes these sign-in apps, so
   // its permission screen names closedhand.com.
   app.get('/.well-known/microsoft-identity-association.json', (req, res) => {

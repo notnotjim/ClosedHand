@@ -13,7 +13,7 @@ It is strictly single-tenant. Each Closedhand serves one person, and the first a
 
 ## Quickstart
 
-**Download the Closedhand app for Mac** from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. The current download is for Apple Silicon Macs. It runs Closedhand from the menu bar and opens the setup page on first launch. Access to that Mac’s files and apps is built in; choose what to allow from the menu bar. Your data lives in `~/Library/Application Support/ClosedHand`. The app is signed and notarised; source is in [`desktop/`](desktop/).
+**Download the Closedhand app for Mac** from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. The current download is for Apple Silicon Macs with macOS 14 or later. It runs Closedhand from the menu bar and opens the setup page on first launch. Access to that Mac’s files and apps is built in; choose what to allow from the menu bar. Your data lives in `~/Library/Application Support/ClosedHand`. The app is signed and notarised; source is in [`desktop/`](desktop/).
 
 **Or install with Docker** on Mac, Windows or Linux, including a rented server (VPS). Docker is software that runs each part of Closedhand (the assistant, the dashboard, its database and the sandbox computer) in its own sealed-off container, so nothing else needs installing. On a Mac or Windows PC that means installing [Docker Desktop](https://www.docker.com/products/docker-desktop/), free for personal use; on Linux, [Docker Engine](https://docs.docker.com/engine/install/). A Mac can use either installation method. With Docker installed, run:
 

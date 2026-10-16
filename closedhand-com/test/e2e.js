@@ -695,3 +695,11 @@ test('the insights page shows everything closedhand.com holds, and only to a Goo
   assert.equal(data.urls.dnsCeiling, 190);
   for (const key of ['working', 'day', 'week', 'month', 'setting_up', 'errors', 'used', 'limit']) assert.equal(typeof data.urls[key], 'number', key);
 });
+
+test('the favicon and HTTPS-only are in place', async () => {
+  const home = await fetch(base + '/');
+  assert.equal(home.headers.get('strict-transport-security'), 'max-age=31536000');
+  const icon = await fetch(base + '/favicon.ico');
+  assert.equal(icon.status, 200);
+  assert.match(icon.headers.get('content-type'), /^image\/png/);
+});

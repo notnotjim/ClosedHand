@@ -781,6 +781,7 @@ body.chat-active .mon-area { display:none; }
   .install button {
     flex: none; font: 500 .8125rem/1 var(--font-ui); color: #EFE6D6; background: rgba(239,230,214,0.08);
     border: 1px solid rgba(239,230,214,0.14); border-radius: .5rem; padding: .5625rem .875rem; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    min-width: 4.875rem; /* room for "Copied", so the box keeps its width when it changes */
   }
   .install button:hover { background: rgba(208,86,63,0.14); border-color: rgba(208,86,63,0.4); }
   .ways-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .375rem 1.125rem; margin: .75rem 0 0; font-size: .8125rem; color: #B6AFA4; }
@@ -788,7 +789,7 @@ body.chat-active .mon-area { display:none; }
   .ways-note a:hover { color: #EFE6D6; }
   .ways-divider { display: flex; align-items: center; gap: .75rem; margin: 1.25rem 0; font-size: .875rem; line-height: 1; color: #B6AFA4; }
   .ways-divider::before, .ways-divider::after { content: ''; flex: 1; height: 1px; background: rgba(239,230,214,0.08); }
-  .install { max-width: 45rem; margin: 0 auto; text-align: left; }
+  .install { width: fit-content; max-width: 100%; margin: 0 auto; text-align: left; }
   .way-actions { display: flex; flex-direction: column; align-items: center; gap: .625rem; margin: 0; }
   .way-meta { font-size: .78125rem; color: #B6AFA4; letter-spacing: 0.01em; }
   /* The one call to action on the page: solid madder, the only filled thing here. */
@@ -912,7 +913,7 @@ body.chat-active .mon-area { display:none; }
       <div class="way way-app" id="wayApp">
         <p class="way-actions">
           <a class="dl" id="macAppLink" href="https://github.com/notnotjim/ClosedHand/releases/latest" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>Download Closedhand for Mac</a>
-          <span class="way-meta" id="macAppNote">For Apple Silicon Macs</span>
+          <span class="way-meta" id="macAppNote">For Apple Silicon Macs with macOS 14 or later</span>
         </p>
       </div>
       <div class="ways-divider">Or</div>
@@ -1050,7 +1051,7 @@ body.chat-active .mon-area { display:none; }
     <div class="feat-table-wrap">
       <table class="feat-table">
         <tbody>
-          <tr><th scope="row">A home for it</th><td>The Mac app on any Apple Silicon Mac, or Docker on a Mac, a Windows or Linux PC or a rented server (VPS). You then use Closedhand from any device through the web chat at your personal URL or through your chat apps.</td></tr>
+          <tr><th scope="row">A home for it</th><td>The Mac app on an Apple Silicon Mac with macOS 14 or later, or Docker on a Mac, a Windows or Linux PC or a rented server (VPS). You then use Closedhand from any device through the web chat at your personal URL or through your chat apps.</td></tr>
           <tr><th scope="row">Your AI model</th><td>Use a local model or a hosted provider. Hosted providers process requests under their own terms and may charge for usage.</td></tr>
           <tr><th scope="row">Your personal URL</th><td>Setup gives Closedhand a personal URL that opens its web chat and dashboard from any device. Both stay on the computer running it, protected by your dashboard password.</td></tr>
           <tr><th scope="row">Mac access</th><td>Built into the Closedhand app for Mac. With Docker, add the optional Bridge app on the Mac you want Closedhand to use.</td></tr>
@@ -1567,7 +1568,7 @@ body.chat-active .mon-area { display:none; }
       if (!pick) return;
       var link = document.getElementById('macAppLink'), note = document.getElementById('macAppNote');
       link.href = pick.browser_download_url;
-      note.textContent = (arm ? 'Apple Silicon' : 'Intel') + ' \u00b7 ' + Math.round(pick.size / 1048576) + ' MB \u00b7 ' + rel.tag_name;
+      note.textContent = (arm ? 'Apple Silicon' : 'Intel') + ', macOS 14 or later \u00b7 ' + Math.round(pick.size / 1048576) + ' MB \u00b7 ' + rel.tag_name;
       if (arm && intel) { var alt = document.createElement('a'); alt.href = intel.browser_download_url; alt.textContent = 'Intel version'; alt.className = 'way-meta'; alt.style.textDecoration = 'underline'; note.after(alt); }
     })
     .catch(function () { /* The release-page link remains usable. */ });
