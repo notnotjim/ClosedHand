@@ -13,6 +13,12 @@ require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") }
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+// A Docker setup keeps the database password in a secret file that the
+// services load at start (crypto-tokens.js); without it this script could not
+// sign in from inside the bot container. Only that one file is read.
+if (!process.env.PGPASSWORD && !/^[a-z][a-z0-9+.-]*:\/\/[^:/@]*:[^@]*@/i.test(process.env.DATABASE_URL || "")) {
+  try { process.env.PGPASSWORD = fs.readFileSync(path.join(process.env.CLOSEDHAND_SECRETS_DIR || "/run/secrets", "pgpassword"), "utf8").trim(); } catch (_) { /* none: the environment holds it */ }
+}
 const { supabase, isDbConfigured } = require("../lib/db");
 if (!isDbConfigured()) {
   console.error("bug-queue: database not configured. Run this inside the bot container, or supply the database environment.");
