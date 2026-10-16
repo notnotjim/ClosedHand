@@ -13,7 +13,7 @@ const env = {
   BASE_URL: 'https://closedhand.com', SESSION_SECRET: crypto.randomBytes(32).toString('hex'),
   TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY, PHONE_ENROLLMENT_ENABLED: '1', PHONE_PROVISIONER_SECRET: 'p'.repeat(40),
   GOOGLE_CLIENT_ID: 'google-client', GOOGLE_CLIENT_SECRET: 'g-secret', MICROSOFT_CLIENT_ID: 'ms-client', MICROSOFT_CLIENT_SECRET: 'm-secret',
-  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'Closedhand <download@assist.closedhand.ai>', MAIL_AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', MAIL_AWS_SECRET_ACCESS_KEY: 'x', ALERT_EMAIL: 'operator@example.com', ADDRESS_RATE_PER_MINUTE: '1000',
+  MAIL_SES_REGION: 'ap-southeast-2', MAIL_FROM: 'Closedhand <download@assist.closedhand.ai>', MAIL_AWS_ACCESS_KEY_ID: 'AKIDEXAMPLE', MAIL_AWS_SECRET_ACCESS_KEY: 'x', ALERT_EMAIL: 'operator@example.com', OPERATOR_EMAILS: 'Operator@Example.com', ADDRESS_RATE_PER_MINUTE: '1000',
 };
 const mails = [];
 const idToken = claims => 'x.' + Buffer.from(JSON.stringify(claims)).toString('base64url') + '.y';
@@ -33,6 +33,13 @@ const request = async (url, opts) => {
     return new Response(JSON.stringify({ id_token: idToken({ ...nextClaims, nonce }) }));
   }
   if (url.startsWith('https://email.ap-southeast-2.amazonaws.com/')) { mails.push(JSON.parse(opts.body)); return new Response('{}'); }
+  if (url === 'https://api.github.com/repos/notnotjim/ClosedHand') return new Response(JSON.stringify({ stargazers_count: 7, forks_count: 2 }));
+  if (url.startsWith('https://api.github.com/repos/notnotjim/ClosedHand/releases')) {
+    return new Response(JSON.stringify([
+      { tag_name: 'v2.1.0', draft: false, assets: [{ name: 'Closedhand-2.1.0-arm64.dmg', download_count: 5 }, { name: 'checksums.txt', download_count: 40 }] },
+      { tag_name: 'v2.0.9', draft: false, assets: [{ name: 'Closedhand-2.0.9-arm64.dmg', download_count: 3 }] },
+    ]));
+  }
   if (url.includes('/.well-known/closedhand-installation')) {
     const nonce = new URL(url).searchParams.get('nonce');
     return new Response(JSON.stringify({ proof: crypto.createHmac('sha256', challengeSecret).update('closedhand-address:' + nonce).digest('hex') }));
@@ -643,4 +650,48 @@ test('a sign-in straight on from connecting mail names that account, so the prov
       assert.equal(plain.searchParams.get('prompt'), 'select_account');
     }
   }
+});
+
+test('the insights page shows everything closedhand.com holds, and only to a Google-verified operator email', async () => {
+  const hidden = async cookie => {
+    const page = await fetch(base + '/insights', { headers: cookie ? { cookie } : {} });
+    assert.equal(page.status, 404);
+    assert.match(await page.text(), /<html/i, 'the ordinary not-found page');
+    assert.equal((await fetch(base + '/api/insights', { headers: cookie ? { cookie } : {} })).status, 404);
+  };
+  await hidden(null);
+  await hidden((await signIn('google', google('insights-other', 'someone@example.com'))).cookie);
+  await hidden((await signIn('google', google('insights-unverified', 'operator@example.com', false))).cookie);
+  await hidden((await signIn('microsoft', microsoft('11111111-2222-4333-8444-555555555555', 'aaaaaaaa-2222-4333-8444-555555555555', 'operator@example.com'))).cookie);
+
+  const before = Number((await db.query('SELECT coalesce(sum(fetches), 0) AS n FROM install_fetches')).rows[0].n);
+  const install = await fetch(base + '/install', { redirect: 'manual' });
+  assert.equal(install.status, 302);
+  assert.equal(install.headers.get('location'), 'https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh');
+  await fetch(base + '/install', { redirect: 'manual' });
+
+  const { cookie } = await signIn('google', google('insights-operator', 'operator@example.com'));
+  const page = await fetch(base + '/insights', { headers: { cookie } });
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get('cache-control'), 'no-store');
+  assert.equal(page.headers.get('x-robots-tag'), 'noindex');
+  const response = await fetch(base + '/api/insights', { headers: { cookie } });
+  assert.equal(response.status, 200);
+  const text = await response.text(), data = JSON.parse(text);
+  const owners = (await db.query('SELECT count(*)::int AS n FROM owners')).rows[0].n;
+  assert.equal(data.people.length, owners, 'one row per Closedhand account');
+  const me = data.people.find(p => p.email === 'operator@example.com' && p.provider === 'google' && p.email_verified);
+  assert.ok(me && me.signed_up, 'each row carries the sign-in and when it was made');
+  const held = (await db.query("SELECT a.hostname, o.email FROM addresses a JOIN owners o ON o.id = a.owner_id WHERE a.activated_at IS NOT NULL LIMIT 1")).rows[0];
+  if (held) assert.ok(data.people.some(p => p.hostname === held.hostname && p.email === held.email && p.last_online), 'a claimed personal URL shows with its owner');
+  assert.ok(Array.isArray(data.reports) && data.reports.length > 0, 'recent bug reports are listed');
+  assert.ok(!/tunnel_token|secret_hash/.test(text), 'connection secrets never reach the page');
+  assert.equal(data.accounts.total, owners);
+  assert.equal(data.accounts.google + data.accounts.microsoft, owners);
+  assert.equal(data.installs.total, before + 2);
+  assert.equal(data.weeks.length, 8);
+  assert.equal(data.weeks.at(-1).installs >= 2, true, 'this week counts today\'s fetches');
+  assert.deepEqual(data.github, { stars: 7, forks: 2, macTotal: 8, macLatest: { version: 'v2.1.0', downloads: 5 } }, 'only .dmg files count as Mac downloads');
+  assert.equal(data.urls.dnsCeiling, 190);
+  for (const key of ['working', 'day', 'week', 'month', 'setting_up', 'errors', 'used', 'limit']) assert.equal(typeof data.urls[key], 'number', key);
 });

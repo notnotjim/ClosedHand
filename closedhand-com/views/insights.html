@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Insights</title>
+  <link rel="icon" href="/logocircle.png">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body>
+  <header class="site-head">
+    <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>Closedhand</span></a>
+  </header>
+  <main class="site-main insights-main">
+    <h1 class="title">Insights</h1>
+    <p class="lede">Everything closedhand.com holds, and GitHub's public counts. Only you can open this page.</p>
+    <section class="card insights-card"><h2>People</h2><dl class="stats" id="people"></dl></section>
+    <section class="card insights-card"><h2>Each week</h2>
+      <table class="weeks"><thead><tr><th scope="col">Week of</th><th scope="col">Personal URLs claimed</th><th scope="col">Install command</th></tr></thead><tbody id="weeks"></tbody></table>
+    </section>
+    <section class="card insights-card"><h2>Downloads</h2><dl class="stats" id="downloads"></dl></section>
+    <section class="card insights-card"><h2>Room left</h2><dl class="stats" id="room"></dl></section>
+    <section class="card insights-card"><h2>Other</h2><dl class="stats" id="other"></dl></section>
+    <section class="card insights-card"><h2 id="everyone-title">Everyone</h2>
+      <label class="people-search"><span>Search</span><input id="search" type="search" placeholder="Email or personal URL" autocomplete="off" spellcheck="false"></label>
+      <ol class="people" id="people-list"></ol>
+    </section>
+    <section class="card insights-card"><h2>Bug reports</h2><ol class="people" id="reports"></ol></section>
+    <p class="aside" id="updated"></p>
+    <p class="status" id="status" role="status" aria-live="polite">Loading…</p>
+  </main>
+  <script src="/insights.js" defer></script>
+</body>
+</html>

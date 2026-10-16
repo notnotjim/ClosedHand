@@ -18,7 +18,7 @@ It is strictly single-tenant. Each Closedhand serves one person, and the first a
 **Or install with Docker** on Mac, Windows or Linux, including a rented server (VPS). Docker is software that runs each part of Closedhand (the assistant, the dashboard, its database and the sandbox computer) in its own sealed-off container, so nothing else needs installing. On a Mac or Windows PC that means installing [Docker Desktop](https://www.docker.com/products/docker-desktop/), free for personal use; on Linux, [Docker Engine](https://docs.docker.com/engine/install/). A Mac can use either installation method. With Docker installed, run:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh
+curl -fsSL https://closedhand.com/install | sh
 ```
 
 Or, if piping strangers' scripts into your shell is exactly what you self-host to avoid, download it, read it (it is short), then run it:

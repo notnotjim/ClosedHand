@@ -1,7 +1,7 @@
 #!/bin/sh
 # Closedhand one-line installer.
 #
-#   curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh | sh
+#   curl -fsSL https://closedhand.com/install | sh
 #
 # Clones the repo, creates .env with generated secrets, and starts the stack.
 # Idempotent: safe to re-run in place (it never overwrites an existing .env).
