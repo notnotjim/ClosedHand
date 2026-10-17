@@ -25,6 +25,8 @@ const PROVIDERS = {
   },
   openai: {
     label: "OpenAI",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "$10 per 1,000 searches, plus the AI use for each",
     complete: true,
     chatBackend: "openai", // chat model comes from MODEL_MAP, not saved here
     chatDisplay: "gpt-4o", // mirrors MODEL_MAP.openai.default (display only)
@@ -48,6 +50,8 @@ const PROVIDERS = {
   },
   anthropic: {
     label: "Anthropic",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "$10 per 1,000 searches, plus the AI use for each",
     complete: false,
     chatBackend: "anthropic",
     chatDisplay: "claude-sonnet-5", // mirrors MODEL_MAP.anthropic.default (display only)
@@ -69,6 +73,8 @@ const PROVIDERS = {
   },
   xai: {
     label: "xAI (Grok)",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "$5 per 1,000 searches, plus the AI use for each",
     complete: false,
     chatBackend: "custom",
     base: "https://api.x.ai/v1",
@@ -87,6 +93,8 @@ const PROVIDERS = {
   },
   deepseek: {
     label: "DeepSeek",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "$0.75 per 1,000 searches",
     complete: false,
     chatBackend: "custom",
     base: "https://api.deepseek.com/v1",
@@ -98,6 +106,8 @@ const PROVIDERS = {
   },
   openrouter: {
     label: "OpenRouter",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "about $1 per 1,000 searches, plus the AI use for each",
     complete: false,
     publicModels: true,
     chatBackend: "custom",
@@ -111,6 +121,8 @@ const PROVIDERS = {
   },
   moonshot: {
     label: "Moonshot",
+    // Its own web search (lib/provider-search.js), price from its docs on 2026-10-17.
+    search: "$2 per 1,000 searches",
     complete: false,
     chatBackend: "custom",
     base: "https://api.moonshot.ai/v1",

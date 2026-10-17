@@ -4731,6 +4731,44 @@ app.post("/api/settings/confirm-sends", async (req, res) => {
   }
 });
 
+// Web search through the person's AI provider, when it has one (on unless
+// switched off); off leaves the free search every Closedhand has. The bot's
+// lib/provider-search.js does the searching; this only names the provider
+// and its price for Settings.
+app.get("/api/settings/provider-search", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const { data: profile, error } = await supabase.from("profiles").select("settings").eq("id", userId).single();
+    if (error) throw error;
+    const settings = profile?.settings || {};
+    const policy = require("./model-policy");
+    // The chat model's connection, read without opening its key.
+    const config = settings.model_config;
+    const conn = config?.connections?.[config?.roles?.chat?.connection] || null;
+    const base = String(conn?.baseUrl || "").replace(/\/+$/, "");
+    const provider = conn && (conn.provider === "custom" ? Object.keys(policy.BASES).find((k) => policy.BASES[k] === base) : conn.provider);
+    const entry = provider && require("./provider-capabilities").PROVIDERS[provider];
+    if (!entry?.search) return res.set("Cache-Control", "no-store").json({ available: false });
+    res.set("Cache-Control", "no-store").json({ available: true, provider: entry.label.replace(/ \(.*\)$/, ""), price: entry.search, enabled: settings.web_search_provider !== false });
+  } catch (e) {
+    console.error("provider-search read error:", e.message);
+    res.status(500).json({ error: "Could not read that setting." });
+  }
+});
+
+app.post("/api/settings/provider-search", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const settings = await patchSettings(supabase, userId, { set: { web_search_provider: req.body?.enabled !== false } });
+    res.json({ success: true, enabled: settings.web_search_provider !== false });
+  } catch (e) {
+    console.error("provider-search save error:", e.message);
+    res.status(500).json({ error: "Could not save that setting." });
+  }
+});
+
 app.put("/api/pulse", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

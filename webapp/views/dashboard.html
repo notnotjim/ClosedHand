@@ -2760,6 +2760,13 @@
               <div id="byok-panel"></div>
               <div id="byok-status" style="margin-top:8px;"></div>
               <p id="llm-desc" hidden></p>
+              <div id="provider-search-row" hidden style="margin-top:16px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#EFE6D6;cursor:pointer;">
+                  <input type="checkbox" id="provider-search" onchange="saveProviderSearch(this.checked)" style="width:14px;height:14px;margin:0;accent-color:#D0563F;">
+                  <span id="provider-search-label">Search the web through your provider</span>
+                </label>
+                <p id="provider-search-note" class="account-action-desc" style="margin:4px 0 0 22px;line-height:1.5;"></p>
+              </div>
             </div>
           </div>
 
@@ -4323,9 +4330,44 @@
     function selectLLM() {
       document.getElementById("byok-panel").style.display = "";
       document.getElementById("llm-desc").textContent = "Choose your primary model, support model and image model.";
-      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); });
+      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); loadProviderSearch(); });
     }
     selectLLM();
+
+    // Web search through the primary model's provider, shown only when that
+    // provider has a search of its own. Off, or when it fails, Closedhand
+    // uses the free search every Closedhand has.
+    async function loadProviderSearch() {
+      var row = document.getElementById("provider-search-row");
+      if (!row) return;
+      try {
+        var res = await fetch("/api/settings/provider-search");
+        var data = res.ok ? await res.json() : null;
+        if (!data || !data.available) { row.hidden = true; return; }
+        document.getElementById("provider-search-label").textContent = "Search the web through " + data.provider;
+        document.getElementById("provider-search-note").textContent = data.provider + " charges " + data.price + ". When this is off, or a search through " + data.provider + " fails, Closedhand uses free web search through DuckDuckGo and Brave.";
+        document.getElementById("provider-search").checked = data.enabled !== false;
+        row.hidden = false;
+      } catch (e) {
+        row.hidden = true;
+      }
+    }
+    loadProviderSearch();
+
+    async function saveProviderSearch(enabled) {
+      try {
+        var res = await fetch("/api/settings/provider-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: !!enabled }),
+        });
+        if (!res.ok) throw new Error("save failed");
+        showToast(enabled ? "Closedhand will search the web through your provider." : "Closedhand will use free web search.");
+      } catch (e) {
+        document.getElementById("provider-search").checked = !enabled;
+        showToast("Could not save that setting. Try again.");
+      }
+    }
 
     // --- Pulse Settings ---
     let pulseState = { proactiveLevel: "medium", quietStart: 22, quietEnd: 7, quietEnabled: true, deliveryPlatforms: [] };
