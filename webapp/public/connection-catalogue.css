@@ -6,7 +6,7 @@
 #mcp-section.setting-up #apple-local-section {display:none!important;}
 #mcp-list:not(:empty) {margin-top:8px;}
 .catalogue-tiles {display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:0 0 32px;}
-.catalogue-tile {display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 12px;border:1px solid rgba(239,230,214,.16);border-radius:10px;background:#1A1817;color:#EFE6D6;font:inherit;font-size:14px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;}
+.catalogue-tile {display:flex;align-items:center;gap:10px;min-width:0;min-height:48px;padding:10px 12px;border:1px solid rgba(239,230,214,.16);border-radius:10px;background:#1A1817;color:#EFE6D6;font:inherit;font-size:14px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;}
 .catalogue-tile:hover {border-color:rgba(208,86,63,.4);background:#211D1A;}
 .catalogue-tile img {flex:none;border-radius:5px;}
 .catalogue-tile span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -51,7 +51,10 @@
 .connection-catalogue .mcp-browse {justify-content:center;}
 .connection-catalogue :is(button,input,textarea,summary,a):focus-visible {outline:2px solid #E59B89;outline-offset:4px;}
 .connection-catalogue [hidden] {display:none!important;}
-@media(max-width:480px){.catalogue-tiles{grid-template-columns:1fr 1fr}}
+/* Two columns on a phone, each half the width whatever the names: a plain 1fr
+   column grows to fit the longest name, which pushed the page past the screen.
+   A long name takes a second line there rather than being cut short. */
+@media(max-width:480px){.catalogue-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.catalogue-tile span{white-space:normal;overflow-wrap:break-word;line-height:1.3}}
 
 
 .mcp-setup-choice {text-align:left;padding:20px 0;border-top:1px solid rgba(239,230,214,.16);margin-top:20px;overflow-wrap:anywhere;}
