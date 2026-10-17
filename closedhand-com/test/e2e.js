@@ -696,9 +696,16 @@ test('the insights page shows everything closedhand.com holds, and only to a Goo
   for (const key of ['working', 'day', 'week', 'month', 'setting_up', 'errors', 'used', 'limit']) assert.equal(typeof data.urls[key], 'number', key);
 });
 
-test('the favicon and HTTPS-only are in place', async () => {
+test('link previews, the favicon and HTTPS-only are in place', async () => {
   const home = await fetch(base + '/');
   assert.equal(home.headers.get('strict-transport-security'), 'max-age=31536000');
+  const html = await home.text();
+  for (const tag of ['og:title', 'og:description', 'og:image', 'og:url']) assert.match(html, new RegExp(`property="${tag}" content="[^"]+"`), tag);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+  for (const page of ['/ethos', '/architecture', '/pcl']) assert.match(await (await fetch(base + page)).text(), /property="og:image" content="https:\/\/closedhand\.com\/og\.png"/, page);
+  const og = await fetch(base + '/og.png');
+  assert.equal(og.status, 200);
+  assert.equal(og.headers.get('content-type'), 'image/png');
   const icon = await fetch(base + '/favicon.ico');
   assert.equal(icon.status, 200);
   assert.match(icon.headers.get('content-type'), /^image\/png/);
