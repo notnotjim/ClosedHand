@@ -3228,6 +3228,12 @@
       }
       if (params.get("mcp_connected")) {
         showToast(decodeURIComponent(params.get("mcp_connected")) + " connected via MCP!");
+        // A voice it brought is said where it stays put, under the connect box.
+        var voiceId = params.get("mcp_voice");
+        if (voiceId) fetch('/api/mcps').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+          var m = (list || []).find(function(x) { return x.id === voiceId; });
+          if (m && m.caps && m.caps.voice) mcpStatus(mcpVoiceText(m.name, m.caps.voice, true));
+        }).catch(function() {});
         window.history.replaceState({}, "", "/dashboard");
       }
       if (params.get("mcp_error")) {
@@ -3861,6 +3867,19 @@
             }).join('');
           }
 
+          // A service that can speak or write out speech can be Closedhand's
+          // voice (webapp/voice-tools.js); this is its switch.
+          var voice = caps.voice;
+          if (voice && (voice.speak || voice.hear)) {
+            detailHtml += '<hr class="conn-divider">';
+            detailHtml += '<label onclick="event.stopPropagation()" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">' +
+              '<input type="checkbox" data-mcp-voice="' + m.id + '" data-mcp-name="' + escHtml(m.name) + '" data-voice-jobs="' + (voice.speak ? 'speak ' : '') + (voice.hear ? 'hear' : '') + '"' + (voice.on ? ' checked' : '') + ' onchange="saveMcpVoice(\'' + m.id + '\', this)" style="margin-top:3px;accent-color:#D0563F;">' +
+              '<span><span style="font-size:14px;">Closedhand\u2019s voice</span>' +
+              '<span class="account-action-desc mcp-voice-desc" style="display:block;margin-top:2px;line-height:1.5;">' + escHtml(mcpVoiceText(m.name, voice, false)) + '</span>' +
+              (voice.on && voice.fallback ? '<span class="account-action-desc" style="display:block;margin-top:4px;line-height:1.5;">' + escHtml('Last time, the built-in voice stood in: ' + voice.fallback.why + '.') + '</span>' : '') +
+              '</span></label>';
+          }
+
           // Action buttons
           detailHtml += '<div class="conn-drawer-actions">';
           detailHtml += '<button onclick="event.stopPropagation();testMcp(\'' + m.id + '\')" class="conn-btn conn-btn-manage">Test</button>';
@@ -3889,6 +3908,48 @@
     // What the person pasted, kept while the server asks for more (a key, a
     // client ID, a nod past a warning) so the retry carries the same input.
     var _mcpPending = null;
+
+    // What a connection does as Closedhand's voice, said when it's connected
+    // (news) and on its tile: what it does, where your voice goes, and the
+    // built-in voice it replaces.
+    function mcpVoiceText(name, voice, news) {
+      var both = voice.speak && voice.hear;
+      var goes = both ? 'What you say to it and its spoken replies go to ' + name
+        : voice.speak ? 'Its spoken replies go to ' + name : 'What you say to it goes to ' + name;
+      if (news) {
+        var will = both ? 'listen and speak' : voice.speak ? 'speak' : 'write out what you say';
+        return 'Closedhand will now ' + will + ' with ' + name + '. ' + goes + ', which may charge your account for it. You can switch this off on its tile under Connected.';
+      }
+      if (!voice.on) {
+        var could = both ? 'listen and speak' : voice.speak ? 'speak' : 'write out what you say';
+        return 'Closedhand uses its built-in voice, which never leaves your computer. Switch this on to ' + could + ' with ' + name + ' instead.';
+      }
+      var does = both ? 'listens and speaks' : voice.speak ? 'speaks' : 'writes out what you say';
+      return 'Closedhand ' + does + ' with ' + name + ' instead of its built-in voice. ' + goes + ', which may charge your account for it. The built-in voice never leaves your computer.';
+    }
+
+    // The words beside a voice switch, after it changes.
+    function mcpVoiceRedescribe(box) {
+      var desc = box.closest('label') && box.closest('label').querySelector('.mcp-voice-desc');
+      var jobs = box.getAttribute('data-voice-jobs') || '';
+      if (desc) desc.textContent = mcpVoiceText(box.getAttribute('data-mcp-name'), { speak: jobs.indexOf('speak') >= 0, hear: jobs.indexOf('hear') >= 0, on: box.checked }, false);
+    }
+
+    async function saveMcpVoice(id, box) {
+      var on = box.checked;
+      try {
+        var res = await fetch('/api/mcps/' + id + '/voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: on }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) throw new Error(data.error || 'Could not change that just now.');
+        // One voice at a time: turning this one on turns any other off.
+        if (on) document.querySelectorAll('input[data-mcp-voice]').forEach(function(b) { if (b !== box && b.checked) { b.checked = false; mcpVoiceRedescribe(b); } });
+        mcpVoiceRedescribe(box);
+        showToast(on ? 'Closedhand will use this voice.' : 'Closedhand will use its built-in voice.');
+      } catch (e) {
+        box.checked = !on;
+        showToast(e.message, true);
+      }
+    }
 
     function mcpStatus(text) {
       var el = document.getElementById('mcp-auth-status');
@@ -3991,6 +4052,9 @@
         }
         if (probs.length) {
           mcpStatus(probs.map(function(p) { return p.error; }).join(' '));
+        } else {
+          var voiced = (data.connected || []).filter(function(c) { return c.voice_new && c.caps && c.caps.voice; })[0];
+          if (voiced) mcpStatus(mcpVoiceText(voiced.name, voiced.caps.voice, true));
         }
         await loadMcps();
       } catch (e) {
@@ -4094,6 +4158,10 @@
           if (data.resources) found.push(data.resources + ' resources');
           if (data.prompts?.length) found.push(data.prompts.length + ' prompts');
           showToast('Connected. ' + found.join(', ') + '.');
+          if (data.voice_new && data.voice) {
+            var tested = (await (await fetch('/api/mcps')).json()).find(function(x) { return x.id === id; });
+            if (tested) mcpStatus(mcpVoiceText(tested.name, data.voice, true));
+          }
           miniCelebration();
         } else {
           showToast('Connection failed: ' + (data.error || 'Unknown error'), true);

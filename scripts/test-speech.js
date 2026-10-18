@@ -103,6 +103,23 @@ test('speech results go only to requesting socket; disconnect cancels work', asy
   await new Promise(r => setImmediate(r)); assert.equal(sent.length, 1);
 });
 
+test('a connected voice reads the message out whole, and the built-in voice stands in when it can\'t', async () => {
+  const ws = new EventEmitter(); ws.OPEN = ws.readyState = 1;
+  const sent = []; ws.send = data => sent.push(JSON.parse(data));
+  const builtIn = []; let next = { buffer: Buffer.from('mp3 sound') };
+  const handle = attachSpeech(ws, { streamSpeech: async (text, cb) => { builtIn.push(text); cb(Buffer.from('wav')); } }, 'u1',
+    { speak: async (text, opts) => { assert.deepEqual([opts.userId, opts.target, opts.builtIn], ['u1', 'browser', false]); return next; } });
+  handle({ type: 'speech', id: 'one', text: 'Read this' });
+  await new Promise(r => setTimeout(r, 5));
+  assert.deepEqual(sent, [{ type: 'speech_chunk', id: 'one', audio: Buffer.from('mp3 sound').toString('base64') }, { type: 'speech_end', id: 'one' }]);
+  assert.deepEqual(builtIn, []);
+  sent.length = 0; next = null;
+  handle({ type: 'speech', id: 'two', text: 'And this' });
+  await new Promise(r => setTimeout(r, 5));
+  assert.deepEqual(builtIn, ['And this']);
+  assert.deepEqual(sent.map(m => m.type), ['speech_chunk', 'speech_end']);
+});
+
 test('WAV and Ogg Opus carry correct sample rate, duration, CRC and end marker', () => {
   const samples = Float32Array.from({ length: 24000 }, (_, i) => Math.sin(i * 440 * 2 * Math.PI / 24000) * 0.2);
   const wave = wav(samples); assert.equal(wave.readUInt32LE(24), 24000); assert.equal(wave.readUInt32LE(40), 48000);

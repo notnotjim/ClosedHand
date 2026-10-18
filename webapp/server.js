@@ -2554,9 +2554,39 @@ function mcpRowPatchFrom(found, previousCaps = {}) {
   };
 }
 
+// Whether a connection can be Closedhand's voice (webapp/voice-tools.js). The
+// first time it is found the voice is switched on, since connecting a voice
+// service is the sign it's wanted; after that the person's switch stays as
+// they left it. A check that couldn't run keeps what was found before.
+async function mcpVoiceFor(userId, tools, previous) {
+  const selected = (await scanModelFor(userId, "background").catch(() => null)) || (await scanModelFor(userId).catch(() => null));
+  const plan = await require("./voice-tools").findVoiceTools(tools, selected);
+  if (plan === undefined) return previous || null;
+  if (!plan) return null;
+  return { ...plan, on: previous ? !!previous.on : true, checked_at: new Date().toISOString(), ...(previous?.fallback ? { fallback: previous.fallback } : {}) };
+}
+
+// One connection is Closedhand's voice at a time: switching one on switches
+// the others off.
+async function mcpVoiceOnlyHere(userId, id) {
+  const { data, error } = await supabase.from("user_mcps").select("id, caps").eq("user_id", userId).neq("id", id);
+  if (error) throw new Error(error.message);
+  for (const r of data || []) {
+    if (!r.caps?.voice?.on) continue;
+    const { error: e2 } = await supabase.from("user_mcps").update(mcpClient.sealRow({ caps: { ...r.caps, voice: { ...r.caps.voice, on: false } }, updated_at: new Date().toISOString() })).eq("id", r.id).eq("user_id", userId);
+    if (e2) throw new Error(e2.message);
+  }
+}
+
 async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
   const toolNames = found.tools.map((t) => t.name);
   const isStdio = row.transport === "stdio";
+  // What the connection already keeps, such as its voice switch, survives
+  // pasting it again: the upsert writes caps whole.
+  const { data: existing, error: existingError } = await supabase.from("user_mcps").select("caps").eq("user_id", userId).eq("server_url", row.server_url).maybeSingle();
+  if (existingError) throw existingError;
+  const previousCaps = { ...(existing?.caps || {}), ...(row.caps || {}) };
+  const voice = await mcpVoiceFor(userId, found.tools, previousCaps.voice);
   const record = {
     user_id: userId,
     name: String(explicitName || "").trim() || row.name || await resolveMcpName(found.serverInfo, row.server_url, toolNames, await scanModelFor(userId, "background")),
@@ -2577,15 +2607,17 @@ async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
     status: "connected",
     installed_via: row.auth_type === "oauth" ? "oauth" : "manual",
     updated_at: new Date().toISOString(),
-    ...mcpRowPatchFrom(found, row.caps),
+    ...mcpRowPatchFrom(found, previousCaps),
   };
+  if (voice) record.caps.voice = voice; else delete record.caps.voice;
   const { data, error } = await supabase
     .from("user_mcps")
     .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
     .select("id, name, server_url, status, transport, caps")
     .single();
   if (error) throw error;
-  return data;
+  if (voice?.on) await mcpVoiceOnlyHere(userId, data.id);
+  return { ...data, voice_new: !!voice && !previousCaps.voice };
 }
 
 // MCP credentials saved before they were stored encrypted are sealed once, at
@@ -2756,7 +2788,7 @@ app.get("/auth/mcp-oauth/callback", async (req, res) => {
     }
     const saved = await mcpSaveRow(pending.userId, row, found, opened.transportKind, pending.name);
     console.log(`MCP OAuth connected: ${saved.name} for user ${String(pending.userId).substring(0, 8)}`);
-    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(saved.name));
+    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(saved.name) + (saved.voice_new ? "&mcp_voice=" + saved.id : ""));
   } catch (e) {
     console.error("MCP OAuth callback error:", e);
     res.redirect("/dashboard?mcp_error=" + encodeURIComponent(e.message));
@@ -6070,14 +6102,19 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
   try {
     const found = await mcpClient.discover(opened.client);
     const patch = { ...mcpRowPatchFrom(found, mcp.caps), status: "connected" };
+    const voice = await mcpVoiceFor(userId, found.tools, mcp.caps?.voice);
+    if (voice) patch.caps.voice = voice; else delete patch.caps.voice;
     if (opened.transportKind !== "stdio" && opened.transportKind !== mcp.transport) patch.transport = opened.transportKind;
     const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id).eq("user_id", userId);
     if (e3) console.error("[mcp] check update failed:", e3.message);
+    if (voice?.on) await mcpVoiceOnlyHere(userId, id);
     return {
       status: 200,
       body: {
         success: true,
         fixed: true,
+        voice: voice || null,
+        voice_new: !!voice && !mcp.caps?.voice,
         transport: opened.transportKind,
         tools: found.tools.map((t) => t.name),
         resources: found.resources.length + found.resourceTemplates.length,
@@ -6093,6 +6130,29 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
     await mcpClient.closeQuietly(opened.client, opened.transport);
   }
 }
+
+// The "Closedhand's voice" switch on a connection's tile. On makes it the
+// voice and switches any other off; off goes back to the built-in voice. The
+// bot reads it fresh for each voice note and reply (lib/voice-connections.js).
+app.post("/api/mcps/:id/voice", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const { data: row, error } = await supabase.from("user_mcps").select("id, caps").eq("id", req.params.id).eq("user_id", userId).single();
+    if (error || !row) return res.status(404).json({ error: "That connection is gone." });
+    if (!row.caps?.voice) return res.status(400).json({ error: "This connection can't be Closedhand's voice." });
+    const on = req.body?.on === true;
+    const { error: e2 } = await supabase.from("user_mcps")
+      .update(mcpClient.sealRow({ caps: { ...row.caps, voice: { ...row.caps.voice, on } }, updated_at: new Date().toISOString() }))
+      .eq("id", row.id).eq("user_id", userId);
+    if (e2) throw new Error(e2.message);
+    if (on) await mcpVoiceOnlyHere(userId, row.id);
+    res.json({ on });
+  } catch (e) {
+    console.error("[mcp] voice switch failed:", e.message);
+    res.status(500).json({ error: "Could not change that just now." });
+  }
+});
 
 app.post("/api/mcps/:id/test", async (req, res) => {
   const userId = getUserIdFromRequest(req);
