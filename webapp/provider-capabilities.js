@@ -99,8 +99,11 @@ const PROVIDERS = {
     chatBackend: "custom",
     base: "https://api.deepseek.com/v1",
     auth: "bearer",
-    chat: { prefer: [/^deepseek-v4-pro$/, /^deepseek-flash$/, /deepseek/i], fallback: "deepseek-flash" },
-    enrich: { prefer: [/^deepseek-flash$/, /deepseek/i], fallback: "deepseek-flash" },
+    // One exact model for chat, images and background work, chosen for the
+    // best balance of capability and cost and changed only by hand: nothing
+    // here picks a newer model by itself.
+    chat: { prefer: [/^deepseek-flash$/], fallback: "deepseek-flash" },
+    enrich: { prefer: [/^deepseek-flash$/], fallback: "deepseek-flash" },
     localMemory: true,
     noEmbeddings: "DeepSeek doesn't offer an embedding model",
   },
@@ -113,9 +116,12 @@ const PROVIDERS = {
     chatBackend: "custom",
     base: "https://openrouter.ai/api/v1",
     auth: "bearer",
-    // Hundreds of models behind one key; a strong general one with tool calling first.
-    chat: { prefer: [/^anthropic\/claude-sonnet-5/, /^openai\/gpt-5/, /^deepseek\/deepseek-v4(?!.*flash)/, /^google\/gemini-.*pro/], fallback: "anthropic/claude-sonnet-5" },
-    enrich: { prefer: [/^deepseek\/deepseek-v4.*flash/, /^google\/gemini-.*flash/, /^openai\/gpt-5.*mini/], fallback: "deepseek/deepseek-v4-flash" },
+    // Hundreds of models behind one key. The default is one exact model for
+    // chat, images and background work (background runs it at a lower
+    // effort), chosen for the best balance of capability and cost and changed
+    // only by hand: nothing here picks a newer model by itself.
+    chat: { prefer: [/^deepseek\/deepseek-v4\.1-flash$/], fallback: "deepseek/deepseek-v4.1-flash" },
+    enrich: { prefer: [/^deepseek\/deepseek-v4\.1-flash$/], fallback: "deepseek/deepseek-v4.1-flash" },
     localMemory: true,
     noEmbeddings: "OpenRouter doesn't offer an embedding model",
   },
