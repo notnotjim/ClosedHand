@@ -176,6 +176,12 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/lint" --ignore-scripts --no-audit --no-fund eslint@8.57.1
           "$RUNNER_TEMP/lint/node_modules/.bin/eslint" --no-eslintrc --env node,es2022 --parser-options=ecmaVersion:2022 --rule '{"no-undef":"error"}' --ignore-pattern lib/flight-time.js lib index.js user-store.js crypto-tokens.js webapp/server.js webapp/*.js sandbox-image/agent/server.js
 
+      # Sound and files a connected service sends back reach the person.
+      - name: Connected services' sound and files
+        run: |
+          npm install --prefix "$RUNNER_TEMP/mcp-test" --ignore-scripts --no-audit --no-fund @modelcontextprotocol/sdk@1.32.1
+          NODE_PATH="$RUNNER_TEMP/mcp-test/node_modules" node --test scripts/test-connection-media.js
+
       - name: Vendored copies have not drifted
         run: node scripts/check-vendored-identical.js
 

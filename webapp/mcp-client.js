@@ -578,17 +578,44 @@ const MAX_RESOURCE_TEXT = 20000;
 
 function kb(n) { return Math.max(1, Math.round(n / 1024)) + " KB"; }
 
+const AUDIO_EXT = { "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg", "audio/opus": "opus", "audio/mp4": "m4a", "audio/aac": "aac", "audio/webm": "webm", "audio/flac": "flac" };
+// A name for a file a tool sent back: the resource's own, or what kind it is.
+function fileNameFor(mimeType, uri, n) {
+  const own = String(uri || "").split(/[/?#]/).filter(Boolean).pop() || "";
+  if (/^[\w .()-]{1,120}\.[a-z0-9]{1,8}$/i.test(own)) return own;
+  const type = String(mimeType || "");
+  const ext = AUDIO_EXT[type] || (type.split("/")[1] || "").replace(/[^a-z0-9]/gi, "").slice(0, 8) || "bin";
+  return `${type.startsWith("audio/") ? "audio" : "file"}-${n}.${ext}`;
+}
+
 // Turns a tools/call result into text. Images go through opts.describeImages
 // when a vision model is available, so the model gets a description rather
-// than a wall of base64. Returns { text, isError }.
+// than a wall of base64. Sound and files (binary resources) go to the person
+// through opts.deliverFile when the caller can send them: a voice a service
+// made is for the person to hear, and the model is only told it went.
+// Returns { text, isError }.
 async function renderToolResult(result, opts = {}) {
   const parts = [];
   const images = [];
+  let handed = 0;
+  async function handOver(file, otherwise) {
+    if (!opts.deliverFile || !file.data) return otherwise;
+    const buffer = Buffer.from(String(file.data), "base64");
+    const mimeType = file.mimeType || "application/octet-stream";
+    const name = fileNameFor(mimeType, file.uri, ++handed);
+    try {
+      await opts.deliverFile({ buffer, mimeType, name });
+      return `[sent to the person as ${name} (${mimeType}, ${kb(buffer.length)})]`;
+    } catch (e) {
+      return `${otherwise} (it could not be sent to the person: ${e.message})`;
+    }
+  }
   for (const c of (result && result.content) || []) {
     if (!c || typeof c !== "object") continue;
     if (c.type === "text") parts.push(String(c.text || ""));
     else if (c.type === "image" && c.data) images.push({ mediaType: c.mimeType || "image/png", base64: c.data, slot: parts.push(null) - 1 });
-    else if (c.type === "audio") parts.push(`[audio, ${c.mimeType || "unknown type"}, ${kb(Buffer.byteLength(String(c.data || ""), "base64"))}]`);
+    else if (c.type === "audio") parts.push(await handOver({ data: c.data, mimeType: c.mimeType }, `[audio, ${c.mimeType || "unknown type"}, ${kb(Buffer.byteLength(String(c.data || ""), "base64"))}]`));
+    else if (c.type === "resource" && c.resource && c.resource.blob) parts.push(await handOver({ data: c.resource.blob, mimeType: c.resource.mimeType, uri: c.resource.uri }, renderResource(c.resource)));
     else if (c.type === "resource" && c.resource) parts.push(renderResource(c.resource));
     else if (c.type === "resource_link") parts.push(`[link] ${c.name || c.uri}${c.description ? ": " + c.description : ""} (${c.uri})`);
     else parts.push(JSON.stringify(c).slice(0, 2000));
