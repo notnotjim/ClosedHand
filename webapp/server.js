@@ -4769,6 +4769,41 @@ app.post("/api/settings/provider-search", async (req, res) => {
   }
 });
 
+// The web chat's mic: the recording (16 kHz mono WAV) goes to the bot, which
+// writes it out with its built-in speech to text (lib/dictation.js), and the
+// words come back for the message box.
+app.post("/api/dictation", express.raw({ type: "audio/wav", limit: "8mb" }), async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "No recording came through. Tap the mic and try again." });
+  try {
+    const r = await fetch(`${BOT_INTERNAL_URL}/internal/dictation`, {
+      method: "POST",
+      headers: { "Content-Type": "audio/wav", "x-closedhand-token": botToken(userId) },
+      body: req.body,
+      signal: AbortSignal.timeout(120000),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status === 400 ? 400 : 503).json({ error: j.error || "Closedhand couldn't write that out just now. Try again, or type it." });
+    res.json({ text: String(j.text || "") });
+  } catch (e) {
+    console.error("dictation error:", e.message);
+    res.status(503).json({ error: "Closedhand couldn't write that out just now. Try again, or type it." });
+  }
+});
+
+// Tapping the mic loads the speech to text while the person is still talking.
+app.post("/api/dictation/warm", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  try {
+    const r = await fetch(`${BOT_INTERNAL_URL}/internal/dictation/warm`, { method: "POST", headers: { "x-closedhand-token": botToken(userId) }, signal: AbortSignal.timeout(10000) });
+    res.json({ warming: !!(await r.json().catch(() => ({}))).warming });
+  } catch (e) {
+    res.json({ warming: false });
+  }
+});
+
 app.put("/api/pulse", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

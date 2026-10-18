@@ -467,6 +467,14 @@
     background: rgba(239,230,214,0.15);
     color: #B6AFA4;
   }
+  .toolbar-btn.recording { color: #E07A64; background: rgba(216,98,75,0.14); border-color: rgba(216,98,75,0.55); animation: micListening 1.4s ease-in-out infinite; }
+  .toolbar-btn.busy { opacity: 0.55; cursor: progress; }
+  @keyframes micListening { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,98,75,0.35); } 50% { box-shadow: 0 0 0 5px rgba(216,98,75,0); } }
+  @media (prefers-reduced-motion: reduce) { .toolbar-btn.recording { animation: none; } }
+  /* Sits just above the message box, so it never moves the mic while you
+     tap it to start and again to stop. */
+  .dictation-note { position: absolute; left: 12px; bottom: calc(100% + 10px); z-index: 5; max-width: calc(100% - 24px); box-sizing: border-box; padding: 8px 12px; border-radius: 12px; background: #1A1817; border: 1px solid rgba(239,230,214,0.14); box-shadow: 0 6px 20px rgba(0,0,0,0.4); font-size: 13px; line-height: 1.4; color: rgba(239,230,214,0.82); pointer-events: none; }
+  .dictation-note[hidden] { display: none; }
   .toolbar-btn svg {
     width: 17px; height: 17px;
     stroke: currentColor; fill: none;
@@ -2305,6 +2313,7 @@
       <div class="input-box" id="heroInputBox">
         <div class="input-textarea-wrap">
           <textarea id="chatInput" placeholder="Ask anything or drop any type of file..." rows="1"></textarea>
+          <div class="dictation-note" id="dictationNote" role="status" aria-live="polite" hidden></div>
         </div>
         <div class="input-toolbar">
           <div class="toolbar-left">
@@ -2324,7 +2333,7 @@
               <a href="/auth/line" class="via-icon" data-label="Continue on LINE" id="viaLine" hidden><img src="/logos/line.svg" alt="LINE"></a>
             </div>
             <!-- RAG toggle removed: document search is always-on via unified recall -->
-            <button class="toolbar-btn" id="micBtn" title="Voice input">
+            <button class="toolbar-btn" id="micBtn" type="button" title="Speak instead of typing" aria-label="Speak instead of typing">
               <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg>
             </button>
             <button class="send-btn" id="sendBtn" disabled>
@@ -2718,6 +2727,7 @@
 
 <!-- Three.js: Oil-slick blob + starfield -->
 <script src="/speech-playback.js?v=2.0.17"></script>
+<script src="/dictation.js?v=3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -3430,25 +3440,9 @@
     if (input.value.trim() || pendingFiles.length > 0) sendMessage();
   });
 
-  // Mic button: Web Speech API
-  var micBtn = document.getElementById('micBtn');
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (micBtn && SpeechRecognition) {
-    micBtn.addEventListener('click', function() {
-      var recognition = new SpeechRecognition();
-      recognition.lang = 'en-GB';
-      recognition.interimResults = false;
-      micBtn.style.color = 'rgba(216,98,75,0.9)';
-      recognition.start();
-      recognition.onresult = function(event) {
-        input.value = (input.value ? input.value + ' ' : '') + event.results[0][0].transcript;
-        input.dispatchEvent(new Event('input'));
-        micBtn.style.color = '';
-      };
-      recognition.onend = function() { micBtn.style.color = ''; };
-      recognition.onerror = function() { micBtn.style.color = ''; };
-    });
-  }
+  // Mic button: written out by Closedhand's built-in speech to text, the
+  // same as a voice note from a chat app (/dictation.js).
+  if (window.ClosedhandDictation) ClosedhandDictation.attach(document.getElementById('micBtn'), input, document.getElementById('dictationNote'));
 
   // Pressing the paperclip leaves focus where it is, so the box does not
   // grow under the pointer. While the picker is open the page has no focus;

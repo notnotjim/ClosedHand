@@ -49,7 +49,6 @@ async function getSetupState() {
     process.env.OPENAI_API_KEY ||
     process.env.ANTHROPIC_API_KEY ||
     process.env.CLAUDE_API_KEY ||
-    process.env.GROQ_API_KEY ||
     process.env.OLLAMA_BASE_URL ||
     conf.DEEPINFRA_API_KEY ||
     (settings.llm_provider === "anthropic" && settings.anthropic_api_key) ||

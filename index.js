@@ -168,6 +168,8 @@ ctx.expressApp.get("/health", (req, res) => {
 // The files on emails Closedhand keeps, asked for by the dashboard (lib/mail-file.js).
 require("./lib/mail-file").register(ctx.expressApp);
 require("./lib/sign-in-code").register(ctx.expressApp);
+// The web chat's mic, written out by the built-in speech to text (lib/dictation.js).
+require("./lib/dictation").register(ctx.expressApp);
 
 // Keepalive: prevent Railway container sleep, warm DB connection
 setInterval(async () => {
