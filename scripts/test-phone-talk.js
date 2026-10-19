@@ -11,7 +11,7 @@ const vm = require("vm");
 const ROOT = path.join(__dirname, "..");
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
 
-function browser(words) {
+function browser(words, extra = {}) {
   const fetched = [];
   let processor = null;
   class AudioContext {
@@ -23,7 +23,8 @@ function browser(words) {
   }
   const window = {
     AudioContext,
-    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) } },
+    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) }, ...(extra.navigator || {}) },
+    localStorage: extra.localStorage,
     fetch: async (url) => {
       fetched.push(url);
       return { ok: true, json: async () => (url === "/api/dictation" ? { text: words } : { warming: true }) };
@@ -43,7 +44,9 @@ function browser(words) {
   let focused = 0;
   const input = { value: "", dispatchEvent() {}, focus() { focused++; } };
   const note = { textContent: "", hidden: true };
-  const speak = () => processor.onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array(16000) } });
+  // A second of a voice-like tone, or of nothing at all.
+  const tone = () => Float32Array.from({ length: 16000 }, (_, i) => 0.2 * Math.sin(i / 8));
+  const speak = (silent) => processor.onaudioprocess({ inputBuffer: { getChannelData: () => (silent ? new Float32Array(16000) : tone()) } });
   const settle = () => new Promise((r) => setTimeout(r, 20));
   return { api: window.ClosedhandDictation, button, input, note, fetched, handlers, classes, attrs, speak, settle, focused: () => focused };
 }
@@ -95,6 +98,37 @@ test("on a wider screen the mic writes into the box to edit, and loads no voice"
   assert.equal(b.focused(), 1);
 });
 
+test("silence from the microphone is not sent to be written out, and says so", async () => {
+  const b = browser("you");
+  const sent = [];
+  b.api.attach(b.button, b.input, b.note, { send: true, onWords: (w) => sent.push(w), thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
+  b.handlers.click();
+  await b.settle();
+  b.speak(true);
+  b.handlers.click();
+  await b.settle();
+  assert.equal(b.note.textContent, "No sound came through from the microphone. Tap the fist and try again.");
+  assert.deepEqual(sent, [], "nothing sent, so no stray \"you\"");
+  assert.ok(!b.fetched.includes("/api/dictation"), "nothing uploaded");
+});
+
+test("on an iPhone that would ask again, the tip to allow the microphone is given once", async () => {
+  const store = {};
+  const localStorage = { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } };
+  const navigator = { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1", permissions: { query: async () => ({ state: "prompt" }) } };
+  for (const round of [1, 2]) {
+    const b = browser("what's on tomorrow", { navigator, localStorage });
+    b.api.attach(b.button, b.input, b.note, { send: true, onWords: () => {}, thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
+    b.handlers.click();
+    await b.settle();
+    b.speak();
+    b.handlers.click();
+    await b.settle();
+    if (round === 1) assert.match(b.note.textContent, /page menu beside the address, then the three dots, and under Website Settings set Microphone to Allow/);
+    else assert.equal(b.note.textContent, "Tap the fist to talk", "said once on this device");
+  }
+});
+
 test("too short a recording says which button to tap", async () => {
   const b = browser("");
   b.api.attach(b.button, b.input, b.note, { send: true, thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
@@ -117,4 +151,8 @@ test("the page: the fist and the chat apps on phones only, the reply read aloud 
   assert.match(page, /: window\.talkFirst && window\.talkFirst\(\) \? \(document\.body\.classList\.contains\('chat-active'\) \? 'Type a message' : 'Or type here'\)/);
   const play = read("webapp/public/speech-playback.js");
   assert.match(play, /window\.ClosedHandSpeech = \{ addControl: addControl, receive: receive, stop: stop, prime: prime \};/);
+  // An iPhone on silent mutes page audio unless it says it is playback.
+  assert.match(play, /navigator\.audioSession\.type = "playback"/);
+  assert.ok(play.indexOf("asPlayback();\n        context = context || new AudioContext();") > 0, "Read aloud asks for it in the tap");
+  assert.ok(play.indexOf("asPlayback();\n    try { context = context || new AudioContext(); context.resume()") > 0, "and so does a reply read after talking");
 });

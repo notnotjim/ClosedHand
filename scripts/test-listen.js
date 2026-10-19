@@ -90,3 +90,13 @@ test('voice notes are written out on this computer', async () => {
     delete require.cache[require.resolve('../lib/voice')];
   }
 });
+
+test('a voice note or the mic skips line times, which only a video needs, and voice asks for that', async () => {
+  const asked = [];
+  const worker = fakeWorker((msg) => { asked.push(msg.timestamps); return { type: 'done', language: 'en', lines: [], text: 'back by six' }; });
+  const svc = createListeningService({ directory: fakeModel(), spawn: worker.spawn, idleMs: 10 });
+  await svc.transcribe(new Float32Array(1600), { timestamps: false });
+  await svc.transcribe(new Float32Array(1600));
+  assert.deepEqual(asked, [false, true], 'a video still gets its times');
+  assert.match(fs.readFileSync(path.join(__dirname, '../lib/voice.js'), 'utf8'), /listen\.transcribe\(samples, \{ timestamps: false \}\)/);
+});

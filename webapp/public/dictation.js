@@ -9,6 +9,40 @@
   var RATE = 16000;
   var MAX_MS = 2 * 60000;
   var MIN_SECONDS = 0.3;
+  // Louder than this somewhere, or nothing reached the microphone: a phone
+  // can hand over silence (just after its permission question, say), and
+  // speech to text writes silence out as a stray "you".
+  var HEARD = 0.004;
+
+  function loudest(parts) {
+    var peak = 0;
+    for (var p = 0; p < parts.length; p++) {
+      var s = parts[p];
+      for (var i = 0; i < s.length; i++) { var v = s[i] < 0 ? -s[i] : s[i]; if (v > peak) peak = v; }
+    }
+    return peak;
+  }
+
+  // Safari on an iPhone asks for the microphone every time unless the site
+  // is set to Allow, and a page can't change that. Said once on this device,
+  // and only while it would still ask.
+  var ALLOW_TIP = "Safari asks for the microphone each time unless you allow it for this site: tap the page menu beside the address, then the three dots, and under Website Settings set Microphone to Allow.";
+  function iphoneSafari() {
+    var ua = (root.navigator && root.navigator.userAgent) || "";
+    return /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  }
+  function allowTip(say) {
+    try {
+      if (!iphoneSafari() || root.localStorage.getItem("closedhand.micAllowTip")) return;
+      var perms = root.navigator.permissions;
+      if (!perms || !perms.query) return;
+      perms.query({ name: "microphone" }).then(function (state) {
+        if (state.state !== "prompt") return;
+        root.localStorage.setItem("closedhand.micAllowTip", "1");
+        say(ALLOW_TIP, true);
+      }).catch(function () {});
+    } catch (_) {}
+  }
 
   // Mono samples at any rate to 16 kHz, each output sample the average of the
   // input samples it covers.
@@ -94,6 +128,11 @@
         say('That was too short to hear. Tap ' + thing + ', speak, then tap it again.');
         return;
       }
+      if (loudest(t.parts) < HEARD) {
+        look('idle');
+        say('No sound came through from the microphone. Tap ' + thing + ' and try again.');
+        return;
+      }
       var all = new Float32Array(length), at = 0;
       t.parts.forEach(function (p) { all.set(p, at); at += p.length; });
       busy = true;
@@ -115,6 +154,7 @@
           var sending = typeof opts.send === 'function' ? opts.send() : !!opts.send;
           if (sending && opts.onWords) opts.onWords(words);
           else input.focus();
+          allowTip(say);
         })
         .catch(function (e) { say(e.message); })
         .then(function () { busy = false; look('idle'); });
@@ -131,7 +171,9 @@
       // does the voice when the reply will be read aloud.
       var sending = typeof opts.send === 'function' ? opts.send() : !!opts.send;
       fetch('/api/dictation/warm' + (sending ? '?voice=1' : ''), { method: 'POST' }).catch(function () {});
-      // Made inside the tap, as phones only let sound start from one.
+      // Made inside the tap, as phones only let sound start from one. Safari
+      // picks the recording kind of audio session itself while it records.
+      try { if (root.navigator && "audioSession" in root.navigator) root.navigator.audioSession.type = "auto"; } catch (_) {}
       var context = new Context();
       media.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
         var source = context.createMediaStreamSource(stream);

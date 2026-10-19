@@ -37,6 +37,12 @@
       reset(item);
     }
   }
+  // On an iPhone, page audio is "ambient" unless told otherwise, and the
+  // silent switch mutes ambient sound: Read aloud played to nobody on a phone
+  // set to silent. As playback, it plays like a video does.
+  function asPlayback() {
+    try { if ("audioSession" in navigator) navigator.audioSession.type = "playback"; } catch (_) {}
+  }
   function addControl(tools, text, send) {
     var button = document.createElement('button');
     button.type = 'button';
@@ -55,6 +61,7 @@
       if (!AudioContext) { status.textContent = 'This browser cannot play the voice.'; return; }
       try {
         // Resume during the tap, so delayed audio also works on mobile browsers.
+        asPlayback();
         context = context || new AudioContext();
         var resumed = context.resume();
         var item = { button: button, status: status, send: send, id: 'voice-' + (++sequence),
@@ -83,6 +90,7 @@
   function prime() {
     var AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
+    asPlayback();
     try { context = context || new AudioContext(); context.resume().catch(function () {}); } catch (_) {}
   }
   function receive(message) {
