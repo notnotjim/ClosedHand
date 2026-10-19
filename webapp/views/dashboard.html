@@ -2264,19 +2264,19 @@
           <div class="mcp-hero">
             <div class="mcp-copy">
               <h3 class="add-sub">Connect anything</h3>
-              <p class="mcp-description">Paste an MCP server or a skill</p>
+              <p class="mcp-description">Paste an MCP server, a skill or an API key</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="Server, skill or GitHub link, command, JSON or API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
 
-            <!-- Every pasted server is scanned before it is switched on -->
-            <p class="mcp-scan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Connections are scanned for security risks</p>
+            <!-- Every pasted server and skill is scanned before it is switched on; a key has no code to scan, and goes only to the address the person confirmed -->
+            <p class="mcp-scan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Servers and skills are scanned for security risks</p>
 
             <div class="mcp-browse">
               <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
@@ -3828,6 +3828,13 @@
           if (caps.resources) bits.push(caps.resources + (caps.resources === 1 ? ' resource' : ' resources'));
           if (caps.prompts) bits.push(caps.prompts + (caps.prompts === 1 ? ' prompt' : ' prompts'));
           if (m.transport === 'stdio') bits.push('runs alongside Closedhand');
+          // A service connected with a key (lib/api-connections.js).
+          var api = m.transport === 'api' ? (caps.api || {}) : null;
+          var apiHost = '';
+          if (api) {
+            try { apiHost = new URL(m.server_url).host; } catch (e) {}
+            bits.push(api.endpoints ? api.endpoints + ' endpoints' : 'reads its documentation');
+          }
           var statusBadge = m.status === 'connected'
             ? '<span class="int-badge">Connected &#10003;</span>'
             : m.status === 'needs_auth'
@@ -3837,12 +3844,14 @@
             : '<span style="font-size: 13px;color:#B6AFA4;background:rgba(239,230,214,0.1);padding:2px 6px;border-radius:4px;white-space:nowrap;">Pending</span>';
 
           // Unfurl detail rows
-          var detailHtml = m.transport === 'stdio'
+          var detailHtml = api
+            ? '<div class="conn-row"><span class="conn-row-label">API address</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>'
+            : m.transport === 'stdio'
             ? '<div class="conn-row"><span class="conn-row-label">Runs</span><span class="conn-row-value" style="word-break:break-all;font-family:ui-monospace,monospace;font-size:12px;">' + escHtml([m.command].concat(m.args || []).join(' ')) + '</span></div>'
             : '<div class="conn-row"><span class="conn-row-label">Server URL</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(m.server_url) + '</span></div>';
           if (bits.length) detailHtml += '<div class="conn-row"><span class="conn-row-label">Offers</span><span class="conn-row-value">' + escHtml(bits.join(' · ')) + '</span></div>';
-          var authLabel = m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'No server key required';
-          detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + authLabel + '</span></div>';
+          var authLabel = api ? 'Key, sent only to ' + apiHost : m.auth_type === 'oauth' ? 'Signed in' : m.auth_type ? 'Key' : 'No server key required';
+          detailHtml += '<div class="conn-row"><span class="conn-row-label">Auth</span><span class="conn-row-value">' + escHtml(authLabel) + '</span></div>';
           detailHtml += '<div class="conn-row"><span class="conn-row-label">Status</span><span class="conn-row-value">' + escHtml(m.status || 'unknown') + '</span></div>';
           if (m.connected_at) {
             var d = new Date(m.connected_at);
@@ -4009,6 +4018,7 @@
 
         if (data.setup_choices) { renderMcpChoices(data); return; }
         if (data.skill) { installSkill(false, data.url); return; }
+        if (data.api_key) { renderApiKey(data.api_key); return; }
 
         if (data.auth_required && data.redirect_url) {
           var host = ''; try { host = new URL(data.server_url).hostname.replace(/^(www|mcp|api)\./, ''); } catch (e) {}
@@ -4066,6 +4076,101 @@
         btn.textContent = 'Connect';
         box.removeAttribute('aria-busy');
       }
+    }
+
+    // A key pasted on its own (webapp/api-finder.js). Closedhand finds the
+    // service's API and shows the one address the key will go to; nothing is
+    // sent until the person connects it. An AI provider's key goes to Models.
+    function renderApiKey(info) {
+      if (info.models) { renderKeyForModels(info.models); return; }
+      if (info.signed) { mcpStatus((info.service || 'That service') + ' needs more than a key on each request, so it can\u2019t be connected with a key alone.'); return; }
+      if (info.service) { findApiFor(info.service); return; }
+      askKeyService('');
+    }
+
+    function keyPanel() {
+      var panel = document.getElementById('mcp-auth-status');
+      panel.style.display = 'block'; panel.replaceChildren();
+      var section = document.createElement('div'); section.className = 'mcp-setup-choice';
+      panel.append(section);
+      return section;
+    }
+
+    function askKeyService(note) {
+      var section = keyPanel();
+      if (note) { var said = document.createElement('p'); said.textContent = note; section.append(said); }
+      var label = document.createElement('label'), input = document.createElement('input');
+      label.textContent = 'Which service is this key for?';
+      input.type = 'text'; input.autocomplete = 'off'; input.placeholder = 'For example, ElevenLabs';
+      label.append(input);
+      var button = document.createElement('button'); button.className = 'conn-btn conn-btn-manage'; button.textContent = 'Find it';
+      button.onclick = function() { if (input.value.trim()) findApiFor(input.value.trim()); else input.focus(); };
+      input.onkeydown = function(e) { if (e.key === 'Enter') { e.preventDefault(); button.onclick(); } };
+      section.append(label, button);
+      input.focus();
+    }
+
+    async function findApiFor(service) {
+      mcpStatus('Finding ' + service + '\u2019s API\u2026');
+      try {
+        var res = await fetch('/api/mcps/api/find', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service: service }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (data.models) { renderKeyForModels(data.models); return; }
+        if (!res.ok || !data.ticket) { askKeyService(data.error || 'Couldn\u2019t find that just now. Try again in a moment.'); return; }
+        var section = keyPanel();
+        var title = document.createElement('strong'); title.textContent = data.service;
+        var where = document.createElement('p'); where.textContent = 'Closedhand will send this key only to ' + data.host + ', ' + data.service + '\u2019s own address.';
+        var how = document.createElement('p'); how.className = 'account-action-desc';
+        how.textContent = data.endpoints ? data.service + ' publishes the list of its ' + data.endpoints + ' endpoints, so Closedhand can use any of them.'
+          : 'Closedhand will read ' + data.service + '\u2019s documentation when it needs to.';
+        var connect = document.createElement('button'); connect.className = 'conn-btn conn-btn-manage'; connect.textContent = 'Connect ' + data.service;
+        connect.onclick = function() { connectApiKey(data, connect); };
+        var other = document.createElement('button'); other.className = 'conn-btn conn-btn-manage'; other.textContent = 'It\u2019s for something else';
+        other.onclick = function() { askKeyService(''); };
+        var row = document.createElement('div'); row.className = 'conn-drawer-actions'; row.append(connect, other);
+        section.append(title, where, how, row);
+      } catch (e) { askKeyService('Couldn\u2019t find that just now. Try again in a moment.'); }
+    }
+
+    async function connectApiKey(found, btn) {
+      if (!_mcpPending) return;
+      btn.disabled = true; btn.textContent = 'Connecting\u2026';
+      try {
+        var res = await fetch('/api/mcps/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: found.ticket, key: _mcpPending.input }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) { mcpStatus(data.error || 'Couldn\u2019t connect it just now.'); return; }
+        var box = document.getElementById('mcp-url-input'); box.value = ''; mcpGrowInput(box);
+        _mcpPending = null;
+        mcpStatus(data.checked ? '' : 'Closedhand couldn\u2019t check the key with ' + found.service + ' yet. It will find out the first time it uses it.');
+        showToast('Added ' + found.service + '.');
+        miniCelebration();
+        await loadMcps();
+      } catch (e) { mcpStatus('Couldn\u2019t connect it: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = 'Connect ' + found.service; }
+    }
+
+    // An AI provider's key: Models takes it, and runs its own check.
+    function renderKeyForModels(models) {
+      var section = keyPanel();
+      var said = document.createElement('p'); said.textContent = 'That\u2019s a key for ' + models.label + ', the kind Closedhand uses for its AI.';
+      var button = document.createElement('button'); button.className = 'conn-btn conn-btn-manage'; button.textContent = 'Use it under Models';
+      button.onclick = function() {
+        var key = _mcpPending ? _mcpPending.input : '';
+        var box = document.getElementById('mcp-url-input'); box.value = ''; mcpGrowInput(box);
+        _mcpPending = null; mcpStatus('');
+        switchTab('settings');
+        var root = document.getElementById('byok-panel');
+        var editor = root.querySelector('details.model-editor'); if (editor) editor.open = true;
+        var provider = root.querySelector('[data-field="provider"]');
+        if (provider && provider.querySelector('option[value="' + models.provider + '"]')) {
+          provider.value = models.provider;
+          provider.dispatchEvent(new Event('change', { bubbles: true }));
+          var keyField = root.querySelector('[data-field="apiKey"]');
+          if (keyField) { keyField.value = key; keyField.dispatchEvent(new Event('input', { bubbles: true })); }
+        }
+        setTimeout(function() { root.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+      };
+      section.append(said, button);
     }
 
     function renderMcpChoices(data) {
@@ -4159,7 +4264,7 @@
           var found = [(data.tools?.length || 0) + ' tools'];
           if (data.resources) found.push(data.resources + ' resources');
           if (data.prompts?.length) found.push(data.prompts.length + ' prompts');
-          showToast('Connected. ' + found.join(', ') + '.');
+          showToast(data.message || ('Connected. ' + found.join(', ') + '.'));
           if (data.voice_new && data.voice) {
             var tested = (await (await fetch('/api/mcps')).json()).find(function(x) { return x.id === id; });
             if (tested) mcpStatus(mcpVoiceText(tested.name, data.voice, true));
@@ -4209,7 +4314,7 @@
         var res = await fetch('/api/mcps/' + id + '/fix', { method: 'POST' });
         var data = await res.json();
         if (data.fixed) {
-          showToast('Fixed. Found ' + (data.tools?.length || 0) + ' tools.');
+          showToast(data.message || ('Fixed. Found ' + (data.tools?.length || 0) + ' tools.'));
           miniCelebration();
           loadMcps();
         } else if (data.needs_reauth && data.redirect_url) {
@@ -6697,7 +6802,7 @@
         onedrive_search: 'OneDrive', onedrive_read: 'OneDrive', onedrive_list_recent: 'OneDrive',
         sandbox_exec: 'the sandbox computer', sandbox_file_read: 'the sandbox computer', sandbox_file_list: 'the sandbox computer',
         sandbox_file_write: 'the sandbox computer', sandbox_browse: "the sandbox computer's browser", sandbox_gateway: 'connected services',
-        api_request: 'connected services', fetch_attachment: 'attachments', view_attachment: 'attachments', list_attachments: 'attachments',
+        api_request: 'connected services', api_endpoints: 'connected services', fetch_attachment: 'attachments', view_attachment: 'attachments', list_attachments: 'attachments',
         gmail_send: 'email', gmail_reply: 'email', gmail_create_draft: 'email drafts', gmail_draft_update: 'email drafts',
         gcal_create_event: 'the calendar', gcal_update_event: 'the calendar', add_schedule: 'schedules', list_schedules: 'schedules',
         agent_map: 'parallel sub-tasks', list_connections: 'account settings', save_note: 'Context Brain', pin_fact: 'Context Brain'

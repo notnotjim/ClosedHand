@@ -83,13 +83,13 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.match(connected, /id="mcp-list"/, "pasted servers sit with everything else that is live");
   const add = dashboard.slice(dashboard.indexOf('id="mcp-section"'), dashboard.indexOf("<!-- Workers Tab Content -->"));
   for (const want of ["<h2>Add a connection</h2>", 'id="apple-local-section"', '<h3 class="add-sub" id="catalogue-apps-heading">Apps</h3>',
-    '<h3 class="add-sub">Connect anything</h3>', '<p class="mcp-description">Paste an MCP server or a skill</p>', "Connections are scanned for security risks</p>"]) {
+    '<h3 class="add-sub">Connect anything</h3>', '<p class="mcp-description">Paste an MCP server, a skill or an API key</p>', "Servers and skills are scanned for security risks</p>"]) {
     assert.ok(add.includes(want), want);
   }
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
   assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
-  assert.match(dashboard, /placeholder="Server, skill or GitHub link, command or JSON" aria-label="MCP server or skill"/, "one box takes a server or a skill");
+  assert.match(dashboard, /placeholder="Server, skill or GitHub link, command, JSON or API key" aria-label="MCP server, skill or API key"/, "one box takes a server, a skill or a key");
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
   assert.match(dashboard, /var all = _builtinSkills\.map\(function \(skill\) \{ return \{ skill: skill, builtin: true \}; \}\)\n\s*\.concat\(_installedSkills\.map/, "built-in skills are listed, not only added ones");
   assert.match(dashboard, /\(item\.builtin \? '' : '<div class="conn-drawer-actions"><button onclick="event\.stopPropagation\(\);deleteSkill\(/, "only an added skill can be removed");

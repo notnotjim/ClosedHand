@@ -30,6 +30,7 @@ const { supabase } = require("./db");
 
 const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./security-scan");
 const mcpClient = require("./mcp-client");
+const apiKeys = require("./api-keys");
 const bridgeToken = require("./bridge-token");
 
 const app = express();
@@ -2645,6 +2646,14 @@ async function connectMcpHandler(req, res) {
     const body = req.body || {};
     const input = body.input || body.server_url || "";
     if (typeof input !== 'string' || input.length > 65536) return res.status(400).json({error:'Paste just the connection details.'});
+    // A key on its own: the dashboard asks which service it is for, where
+    // that isn't plain from the key, then finds the service's API
+    // (/api/mcps/api/find). The key goes nowhere yet, and isn't sent back.
+    if (!body.auth_token && apiKeys.bareKey(input)) {
+      const known = apiKeys.recognise(input.trim());
+      const models = known?.provider ? aiProviderNamed(known.provider) : null;
+      return res.json({ api_key: { service: known?.service || null, models, signed: !!known?.signed } });
+    }
     let resolved;
     try { resolved = await require('./mcp-input-resolver').resolveInput(input); }
     catch (e) { return res.status(400).json({error:e.message}); }
@@ -2750,6 +2759,108 @@ require("./microsoft-device").register(app, {
 
 app.post("/api/mcps/probe", connectMcpHandler);
 app.post("/api/mcps", connectMcpHandler);
+
+// The AI provider a service name means, if any: its key belongs in Models,
+// not under Connections.
+function aiProviderNamed(name) {
+  const want = String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!want) return null;
+  for (const [id, p] of Object.entries(require("./provider-capabilities").PROVIDERS)) {
+    const label = String(p.label || "").toLowerCase();
+    const forms = [id, label, label.replace(/\(.*\)/, ""), (label.match(/\(([^)]*)\)/) || [])[1]]
+      .filter(Boolean).map((f) => f.replace(/[^a-z0-9]/g, ""));
+    if (forms.includes(want)) return { provider: id, label: p.label };
+  }
+  return null;
+}
+
+// A key for a service with no MCP of its own (webapp/api-finder.js). Find
+// comes first, and the person sees the one address the key will go to before
+// it goes anywhere; the ticket holds that address, so Connect can't send the
+// key somewhere else. Connect checks the key there and saves it, sealed, as a
+// connection like any other (lib/api-connections.js uses it).
+const apiPlans = new Map(); // ticket -> { userId, plan, at }
+const API_PLAN_MS = 15 * 60 * 1000;
+
+app.post("/api/mcps/api/find", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const service = String(req.body?.service || "").trim().slice(0, 80);
+  if (!service) return res.status(400).json({ error: "Say which service the key is for." });
+  const named = aiProviderNamed(service);
+  if (named) return res.json({ models: named });
+  try {
+    const selected = (await scanModelFor(userId, "background").catch(() => null)) || (await scanModelFor(userId).catch(() => null));
+    const plan = await require("./api-finder").findApi(service, selected);
+    if (!plan.found) return res.status(400).json({ error: plan.why });
+    const found = aiProviderNamed(plan.service);
+    if (found) return res.json({ models: found });
+    for (const [t, v] of apiPlans) if (Date.now() - v.at > API_PLAN_MS) apiPlans.delete(t);
+    const ticket = crypto.randomBytes(16).toString("hex");
+    apiPlans.set(ticket, { userId, plan, at: Date.now() });
+    res.json({ ticket, service: plan.service, host: new URL(plan.base).host, endpoints: plan.endpoints, docs: plan.docs });
+  } catch (e) {
+    console.error("[api-key] find failed:", e.message);
+    res.status(500).json({ error: "Closedhand couldn't work that out just now. Try again in a moment." });
+  }
+});
+
+app.post("/api/mcps/api/connect", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const ticket = String(req.body?.ticket || "");
+  const held = apiPlans.get(ticket);
+  const key = String(req.body?.key || "").trim();
+  if (!held || held.userId !== userId || Date.now() - held.at > API_PLAN_MS) return res.status(400).json({ error: "That took a while. Paste the key again." });
+  if (!key || key.length > 2000 || /\s/.test(key)) return res.status(400).json({ error: "Paste just the key." });
+  const { plan } = held;
+  try {
+    const tested = await require("./api-finder").testKey(plan, key);
+    if (tested.ok === false) return res.status(400).json({ error: `${plan.service} didn't accept that key. Check it was copied whole.` });
+    apiPlans.delete(ticket);
+    const { data: existing, error: existingError } = await supabase.from("user_mcps").select("caps").eq("user_id", userId).eq("server_url", plan.base).maybeSingle();
+    if (existingError) throw existingError;
+    const record = {
+      user_id: userId,
+      name: plan.service,
+      logo_url: await storeMcpIcon(null, plan.base),
+      server_url: plan.base,
+      transport: "api",
+      command: null, args: null, env: null, headers: null,
+      auth_token: key,
+      auth_type: "api_key",
+      oauth_client_id: null, oauth_client_secret: null, oauth_refresh_token: null, oauth_token_expiry: null, oauth_scope: null,
+      status: "connected",
+      installed_via: "manual",
+      tools_discovered: [],
+      prompts_discovered: [],
+      // How the key is sent and where the endpoints are listed: no secrets.
+      caps: { ...(existing?.caps || {}), api: { auth: plan.auth, openapi: plan.openapi, docs: plan.docs, endpoints: plan.endpoints, check: plan.check, checked: tested.ok === true } },
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase.from("user_mcps")
+      .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
+      .select("id, name").single();
+    if (error) throw error;
+    res.json({ connected: [{ id: data.id, name: data.name }], checked: tested.ok === true });
+  } catch (e) {
+    console.error("[api-key] connect failed:", e.message);
+    res.status(500).json({ error: "Couldn't save the connection just now. Try again in a moment." });
+  }
+});
+
+// Test and Fix for a key connection: does the service still take the key?
+async function apiCheckRow(userId, row) {
+  const api = row.caps?.api || {};
+  const tested = api.auth
+    ? await require("./api-finder").testKey({ base: String(row.server_url).replace(/\/+$/, ""), auth: api.auth, check: api.check }, row.auth_token || "")
+    : { ok: false };
+  const status = tested.ok === false ? "error" : "connected";
+  const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow({ status, caps: { ...row.caps, api: { ...api, checked: tested.ok === true } } })).eq("id", row.id).eq("user_id", userId);
+  if (error) console.error("[api-key] status update failed:", error.message);
+  if (tested.ok === false) return { status: 200, body: { success: false, error: `${row.name} no longer takes this key. Paste a new one in the box under Add a connection.` } };
+  return { status: 200, body: { success: true, fixed: true, api: true, message: tested.ok ? `${row.name} takes the key.` : `Couldn't check the key with ${row.name} just now. Closedhand will find out the next time it uses it.` } };
+}
 
 // MCP OAuth callback (must be BEFORE /auth/:service/callback to avoid conflict)
 app.get("/auth/mcp-oauth/callback", async (req, res) => {
@@ -3522,11 +3633,12 @@ app.post("/api/chat/send", async (req, res) => {
     // Get or create user
     let userId = getUserIdFromRequest(req);
 
-    // Insert inbound message
+    // Insert inbound message. A pasted key is stored as a placeholder, which
+    // the bot answers with where keys go (lib/key-catch.js).
     const { data, error } = await supabase.from("web_messages").insert({
       user_id: userId,
       direction: "inbound",
-      content: message.trim(),
+      content: apiKeys.withhold(message.trim()).text,
       status: "pending",
     }).select().single();
 
@@ -6085,6 +6197,7 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
     .single();
   if (error || !stored) return { status: 404, body: { error: "Not found" } };
   const mcp = mcpClient.openRow(stored);
+  if (mcp.transport === "api") return apiCheckRow(userId, mcp);
 
   const state = crypto.randomBytes(16).toString("hex");
   let opened;
