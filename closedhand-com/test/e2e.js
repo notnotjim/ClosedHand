@@ -691,6 +691,7 @@ test('the insights page shows everything closedhand.com holds, and only to a Goo
   assert.equal(data.installs.total, before + 2);
   assert.equal(data.weeks.length, 8);
   assert.equal(data.weeks.at(-1).installs >= 2, true, 'this week counts today\'s fetches');
+  assert.equal(data.weeks.at(-1).accounts >= 1, true, 'this week counts the accounts made today');
   assert.deepEqual(data.github, { stars: 7, forks: 2, macTotal: 8, macLatest: { version: 'v2.1.0', downloads: 5 } }, 'only .dmg files count as Mac downloads');
   assert.equal(data.urls.dnsCeiling, 190);
   for (const key of ['working', 'day', 'week', 'month', 'setting_up', 'errors', 'used', 'limit']) assert.equal(typeof data.urls[key], 'number', key);

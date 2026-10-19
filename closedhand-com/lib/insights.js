@@ -91,6 +91,7 @@ function register(app, { db, sessions, render, env = process.env, request = fetc
       FROM addresses`);
     const dns = await one("SELECT value FROM service_alerts WHERE name = 'dns-records'");
     const weeks = (await db.query(`SELECT to_char(w, 'YYYY-MM-DD') AS week,
+        (SELECT count(*)::int FROM owners WHERE created_at >= w AND created_at < w + interval '7 days') AS accounts,
         (SELECT count(*)::int FROM addresses WHERE activated_at >= w AND activated_at < w + interval '7 days') AS claimed,
         (SELECT coalesce(sum(fetches), 0)::int FROM install_fetches WHERE day >= w::date AND day < (w + interval '7 days')::date) AS installs
       FROM generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') AS w

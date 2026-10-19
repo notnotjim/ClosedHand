@@ -147,27 +147,3 @@ html:not(.handheld) .handheld-only, html.handheld .computer-only { display: none
 .who form { margin: 0; flex: none; }
 .who button.link { background: none; border: 0; padding: 0; font: 400 .8125rem/1.4 var(--font-ui); color: #B6AFA4; text-decoration: underline; text-underline-offset: .1875rem; cursor: pointer; }
 #confirm .confirm-text .nowrap { white-space: nowrap; font-weight: 500; }
-
-/* The operator's insights page: label on the left, number on the right. */
-.insights-card h2 { margin-bottom: .75rem; }
-.stats { margin: 0; }
-.stats div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: .625rem 0; border-top: 1px solid rgba(239,230,214,0.08); }
-.stats div:first-child { border-top: 0; padding-top: 0; }
-.stats dt { color: #B6AFA4; font-size: .875rem; }
-.stats dd { margin: 0; text-align: right; font: 500 1.0625rem/1.3 var(--font-ui); font-variant-numeric: tabular-nums; color: #EFE6D6; }
-.stats dd small { display: block; max-width: 16rem; font: 400 .75rem/1.4 var(--font-ui); color: #8C857B; }
-.weeks { width: 100%; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; }
-.weeks th { font-weight: 400; font-size: .75rem; color: #8C857B; text-align: right; padding: 0 0 .5rem; }
-.weeks th:first-child, .weeks td:first-child { text-align: left; }
-.weeks td { text-align: right; padding: .4375rem 0; border-top: 1px solid rgba(239,230,214,0.08); color: #EFE6D6; }
-.weeks td:first-child { color: #B6AFA4; }
-.site-main.insights-main { max-width: 46rem; }
-.people-search { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; font-size: .8125rem; color: #8C857B; }
-.people-search input { flex: 1; min-width: 0; height: 2.25rem; padding: 0 .75rem; border-radius: .625rem; border: 1px solid rgba(239,230,214,0.14); background: #100E0D; color: #EFE6D6; font: 400 .875rem/1 var(--font-ui); }
-.people { list-style: none; margin: 0; padding: 0; }
-.people li { padding: .75rem 0; border-top: 1px solid rgba(239,230,214,0.08); }
-.people li:first-child { border-top: 0; padding-top: .25rem; }
-.card .people p { margin: .125rem 0 0; font-size: .8125rem; color: #8C857B; overflow-wrap: anywhere; }
-.card .people .person-head { display: flex; justify-content: space-between; gap: 1rem; margin: 0; font-size: .875rem; color: #EFE6D6; }
-.people .person-seen { flex: none; color: #B6AFA4; font-size: .8125rem; }
-.people a { color: #B6AFA4; text-underline-offset: .1875rem; }
