@@ -231,7 +231,7 @@ const VOICE_DESCRIPTION = {
     "/listen": { post: { summary: "Speech to text", requestBody: { content: { "multipart/form-data": { schema: { type: "object", required: ["model"], properties: { audio: { type: "string", format: "binary" }, model: { type: "string", examples: ["kv-listen-1"] } } } } } } } },
   },
 };
-const voiceReport = (input) => async () => ({ content: [{ type: "tool_use", name: "report_voice_tools", input }] });
+const voiceReport = (input) => async () => ({ content: [{ type: "tool_use", name: "report_jobs", input }] });
 const VOICE_ANSWER = {
   speak: { found: true, tool: "POST /speech/{voice_id}", text_argument: "text", format_argument: "format", fixed_arguments: {}, choose_argument: "voice_id", choose_from: "GET /voices" },
   hear: { found: true, tool: "POST /listen", audio_argument: "audio", audio_as: "file", fixed_arguments: { model: "kv-listen-1" } },
@@ -244,25 +244,25 @@ test("a key connection can be the voice: the speech endpoint, its voice picked f
   const voices = (items) => net((url, opts) => (url.endsWith("/voices") && opts.headers["X-Kestrel-Key"] === KEY && opts.redirect === "manual" ? { body: { voices: items } } : { status: 404, body: "" }));
 
   const listed = voices([{ voice_id: "kv-ash", name: "Ash" }, { voice_id: "kv-wren", name: "Wren" }]);
-  const voice = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
+  const { voice } = await finder.jobsFor(plan, KEY, MODEL, null, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
   assert.deepEqual(voice.speak.fixed, { voice_id: "kv-wren" }, "the voice its documentation gives as the example, when the person has it");
   assert.deepEqual(voice.speak.chosen, { arg: "voice_id", value: "kv-wren", name: "Wren" });
   assert.deepEqual(voice.speak.format, { arg: "format", values: ["mp3_44100", "opus_48000", "pcm_24000"] });
   assert.deepEqual(voice.hear, { tool: "POST /listen", audio: "audio", as: "file", fixed: { model: "kv-listen-1" } });
   assert.equal(voice.on, true, "on from the start, as for any voice service");
 
-  const other = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: voices([{ voice_id: "kv-ash", name: "Ash" }]).fetch, request: voiceReport(VOICE_ANSWER) });
+  const { voice: other } = await finder.jobsFor(plan, KEY, MODEL, null, { fetch: voices([{ voice_id: "kv-ash", name: "Ash" }]).fetch, request: voiceReport(VOICE_ANSWER) });
   assert.equal(other.speak.fixed.voice_id, "kv-ash", "else the first in the list");
-  const kept = await finder.voiceFor(plan, KEY, MODEL, { on: false, speak: { chosen: { value: "kv-ash" } } }, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
+  const { voice: kept } = await finder.jobsFor(plan, KEY, MODEL, { voice: { on: false, speak: { chosen: { value: "kv-ash" } } } }, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
   assert.equal(kept.speak.fixed.voice_id, "kv-ash", "the one picked before stays");
   assert.equal(kept.on, false, "and so does the person's switch");
-  const none = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: voices([]).fetch, request: voiceReport(VOICE_ANSWER) });
+  const { voice: none } = await finder.jobsFor(plan, KEY, MODEL, null, { fetch: voices([]).fetch, request: voiceReport(VOICE_ANSWER) });
   assert.equal(none.speak, null, "no voice to pick: it can't speak");
   assert.equal(none.hear.tool, "POST /listen");
 });
 
 test("the voice check keeps a picked id only from a listing that needs nothing else, and an upload only where the definition takes a file", () => {
-  const { check } = require("../webapp/voice-tools");
+  const { check } = require("../webapp/connection-jobs");
   const keys = require("../lib/api-keys");
   const tools = keys.readApiDescription(VOICE_DESCRIPTION, "https://api.kestrel-voice.example").endpoints.map(keys.endpointTool);
   assert.equal(check(tools, { ...VOICE_ANSWER.speak, choose_from: "GET /nowhere" }, "speak"), null);

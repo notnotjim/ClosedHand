@@ -2555,28 +2555,53 @@ function mcpRowPatchFrom(found, previousCaps = {}) {
   };
 }
 
-// Whether a connection can be Closedhand's voice (webapp/voice-tools.js). The
-// first time it is found the voice is switched on, since connecting a voice
-// service is the sign it's wanted; after that the person's switch stays as
-// they left it. A check that couldn't run keeps what was found before.
-async function mcpVoiceFor(userId, tools, previous) {
+// What a connection can do in Closedhand's place (webapp/connection-jobs.js):
+// be its voice, search for it, and so on. Each job is switched on the first
+// time it is found, since connecting a service that does it is the sign it's
+// wanted; after that the person's switch stays as they left it. A check that
+// couldn't run keeps what was found before. Returns { voice, jobs } for caps.
+async function mcpJobsFor(userId, tools, previousCaps) {
   const selected = (await scanModelFor(userId, "background").catch(() => null)) || (await scanModelFor(userId).catch(() => null));
-  const plan = await require("./voice-tools").findVoiceTools(tools, selected);
-  if (plan === undefined) return previous || null;
-  if (!plan) return null;
-  return { ...plan, on: previous ? !!previous.on : true, checked_at: new Date().toISOString(), ...(previous?.fallback ? { fallback: previous.fallback } : {}) };
+  const jobs = require("./connection-jobs");
+  return jobs.saved(await jobs.findJobs(tools, selected), previousCaps?.voice, previousCaps?.jobs);
 }
 
-// One connection is Closedhand's voice at a time: switching one on switches
-// the others off.
-async function mcpVoiceOnlyHere(userId, id) {
+// caps with what a connection can do written in, and what's new since before.
+function withJobs(caps, can, previousCaps) {
+  const out = { ...caps };
+  if (can.voice) out.voice = can.voice; else delete out.voice;
+  if (Object.keys(can.jobs || {}).length) out.jobs = can.jobs; else delete out.jobs;
+  return {
+    caps: out,
+    voice_new: !!can.voice && !previousCaps?.voice,
+    jobs_new: Object.keys(can.jobs || {}).filter((j) => !previousCaps?.jobs?.[j]),
+  };
+}
+
+// One connection does each job at a time: switching it on for one switches
+// it off for the others. part is "voice" or a job's name.
+async function mcpOnlyHere(userId, id, part) {
   const { data, error } = await supabase.from("user_mcps").select("id, caps").eq("user_id", userId).neq("id", id);
   if (error) throw new Error(error.message);
   for (const r of data || []) {
-    if (!r.caps?.voice?.on) continue;
-    const { error: e2 } = await supabase.from("user_mcps").update(mcpClient.sealRow({ caps: { ...r.caps, voice: { ...r.caps.voice, on: false } }, updated_at: new Date().toISOString() })).eq("id", r.id).eq("user_id", userId);
+    const caps = { ...(r.caps || {}) };
+    if (part === "voice") {
+      if (!caps.voice?.on) continue;
+      caps.voice = { ...caps.voice, on: false };
+    } else {
+      if (!caps.jobs?.[part]?.on) continue;
+      caps.jobs = { ...caps.jobs, [part]: { ...caps.jobs[part], on: false } };
+    }
+    const { error: e2 } = await supabase.from("user_mcps").update(mcpClient.sealRow({ caps, updated_at: new Date().toISOString() })).eq("id", r.id).eq("user_id", userId);
     if (e2) throw new Error(e2.message);
   }
+}
+
+// After saving a connection: every job it does with its switch on is its
+// alone.
+async function mcpOnlyHereAll(userId, id, caps) {
+  if (caps?.voice?.on) await mcpOnlyHere(userId, id, "voice");
+  for (const [job, plan] of Object.entries(caps?.jobs || {})) if (plan?.on) await mcpOnlyHere(userId, id, job);
 }
 
 async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
@@ -2587,7 +2612,7 @@ async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
   const { data: existing, error: existingError } = await supabase.from("user_mcps").select("caps").eq("user_id", userId).eq("server_url", row.server_url).maybeSingle();
   if (existingError) throw existingError;
   const previousCaps = { ...(existing?.caps || {}), ...(row.caps || {}) };
-  const voice = await mcpVoiceFor(userId, found.tools, previousCaps.voice);
+  const can = await mcpJobsFor(userId, found.tools, previousCaps);
   const record = {
     user_id: userId,
     name: String(explicitName || "").trim() || row.name || await resolveMcpName(found.serverInfo, row.server_url, toolNames, await scanModelFor(userId, "background")),
@@ -2610,15 +2635,16 @@ async function mcpSaveRow(userId, row, found, transportKind, explicitName) {
     updated_at: new Date().toISOString(),
     ...mcpRowPatchFrom(found, previousCaps),
   };
-  if (voice) record.caps.voice = voice; else delete record.caps.voice;
+  const news = withJobs(record.caps, can, previousCaps);
+  record.caps = news.caps;
   const { data, error } = await supabase
     .from("user_mcps")
     .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
     .select("id, name, server_url, status, transport, caps")
     .single();
   if (error) throw error;
-  if (voice?.on) await mcpVoiceOnlyHere(userId, data.id);
-  return { ...data, voice_new: !!voice && !previousCaps.voice };
+  await mcpOnlyHereAll(userId, data.id, record.caps);
+  return { ...data, voice_new: news.voice_new, jobs_new: news.jobs_new };
 }
 
 // MCP credentials saved before they were stored encrypted are sealed once, at
@@ -2820,7 +2846,7 @@ app.post("/api/mcps/api/connect", async (req, res) => {
     apiPlans.delete(ticket);
     const { data: existing, error: existingError } = await supabase.from("user_mcps").select("caps").eq("user_id", userId).eq("server_url", plan.base).maybeSingle();
     if (existingError) throw existingError;
-    const voice = await apiVoiceFor(userId, plan, key, existing?.caps?.voice);
+    const can = await apiJobsFor(userId, plan, key, existing?.caps);
     const record = {
       user_id: userId,
       name: plan.service,
@@ -2839,26 +2865,27 @@ app.post("/api/mcps/api/connect", async (req, res) => {
       caps: { ...(existing?.caps || {}), api: { auth: plan.auth, openapi: plan.openapi, docs: plan.docs, endpoints: plan.endpoints, check: plan.check, checked: tested.ok === true } },
       updated_at: new Date().toISOString(),
     };
-    if (voice) record.caps.voice = voice; else delete record.caps.voice;
+    const news = withJobs(record.caps, can, existing?.caps);
+    record.caps = news.caps;
     const { data, error } = await supabase.from("user_mcps")
       .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
       .select("id, name").single();
     if (error) throw error;
-    if (voice?.on) await mcpVoiceOnlyHere(userId, data.id);
-    res.json({ connected: [{ id: data.id, name: data.name }], checked: tested.ok === true, voice: voice || null, voice_new: !!voice && !existing?.caps?.voice });
+    await mcpOnlyHereAll(userId, data.id, record.caps);
+    res.json({ connected: [{ id: data.id, name: data.name }], checked: tested.ok === true, caps: record.caps, voice: record.caps.voice || null, voice_new: news.voice_new, jobs_new: news.jobs_new });
   } catch (e) {
     console.error("[api-key] connect failed:", e.message);
     res.status(500).json({ error: "Couldn't save the connection just now. Try again in a moment." });
   }
 });
 
-// Whether a key connection can be Closedhand's voice (webapp/api-finder.js
-// voiceFor), checked with the person's own model, as for an MCP connection.
-async function apiVoiceFor(userId, plan, key, previous) {
+// What a key connection can do in Closedhand's place (webapp/api-finder.js
+// jobsFor), checked with the person's own model, as for an MCP connection.
+async function apiJobsFor(userId, plan, key, previousCaps) {
   const selected = (await scanModelFor(userId, "background").catch(() => null)) || (await scanModelFor(userId).catch(() => null));
-  return require("./api-finder").voiceFor(plan, key, selected, previous).catch((e) => {
-    console.error("[api-key] voice check failed:", e.message);
-    return previous || null;
+  return require("./api-finder").jobsFor(plan, key, selected, previousCaps).catch((e) => {
+    console.error("[api-key] job check failed:", e.message);
+    return { voice: previousCaps?.voice || null, jobs: previousCaps?.jobs || {} };
   });
 }
 
@@ -2870,17 +2897,16 @@ async function apiCheckRow(userId, row) {
   const tested = api.auth ? await require("./api-finder").testKey(plan, row.auth_token || "") : { ok: false };
   const status = tested.ok === false ? "error" : "connected";
   const caps = { ...row.caps, api: { ...api, checked: tested.ok === true } };
-  let voice = row.caps?.voice || null;
+  let news = { caps, voice_new: false, jobs_new: [] };
   if (tested.ok !== false && api.openapi) {
     plan.list = await require("./api-finder").describe(api.openapi, plan.base).catch(() => []);
-    if (plan.list.length) voice = await apiVoiceFor(userId, plan, row.auth_token || "", row.caps?.voice);
+    if (plan.list.length) news = withJobs(caps, await apiJobsFor(userId, plan, row.auth_token || "", row.caps), row.caps);
   }
-  if (voice) caps.voice = voice; else delete caps.voice;
-  const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow({ status, caps })).eq("id", row.id).eq("user_id", userId);
+  const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow({ status, caps: news.caps })).eq("id", row.id).eq("user_id", userId);
   if (error) console.error("[api-key] status update failed:", error.message);
-  if (voice?.on) await mcpVoiceOnlyHere(userId, row.id);
+  await mcpOnlyHereAll(userId, row.id, news.caps);
   if (tested.ok === false) return { status: 200, body: { success: false, error: `${row.name} no longer takes this key. Paste a new one in the box under Add a connection.` } };
-  return { status: 200, body: { success: true, fixed: true, api: true, voice, voice_new: !!voice && !row.caps?.voice, message: tested.ok ? `${row.name} takes the key.` : `Couldn't check the key with ${row.name} just now. Closedhand will find out the next time it uses it.` } };
+  return { status: 200, body: { success: true, fixed: true, api: true, caps: news.caps, voice: news.caps.voice || null, voice_new: news.voice_new, jobs_new: news.jobs_new, message: tested.ok ? `${row.name} takes the key.` : `Couldn't check the key with ${row.name} just now. Closedhand will find out the next time it uses it.` } };
 }
 
 // MCP OAuth callback (must be BEFORE /auth/:service/callback to avoid conflict)
@@ -2920,7 +2946,7 @@ app.get("/auth/mcp-oauth/callback", async (req, res) => {
     }
     const saved = await mcpSaveRow(pending.userId, row, found, opened.transportKind, pending.name);
     console.log(`MCP OAuth connected: ${saved.name} for user ${String(pending.userId).substring(0, 8)}`);
-    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(saved.name) + (saved.voice_new ? "&mcp_voice=" + saved.id : ""));
+    res.redirect("/dashboard?mcp_connected=" + encodeURIComponent(saved.name) + (saved.voice_new || saved.jobs_new?.length ? "&mcp_new=" + saved.id : ""));
   } catch (e) {
     console.error("MCP OAuth callback error:", e);
     res.redirect("/dashboard?mcp_error=" + encodeURIComponent(e.message));
@@ -6237,19 +6263,21 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
   try {
     const found = await mcpClient.discover(opened.client);
     const patch = { ...mcpRowPatchFrom(found, mcp.caps), status: "connected" };
-    const voice = await mcpVoiceFor(userId, found.tools, mcp.caps?.voice);
-    if (voice) patch.caps.voice = voice; else delete patch.caps.voice;
+    const news = withJobs(patch.caps, await mcpJobsFor(userId, found.tools, mcp.caps), mcp.caps);
+    patch.caps = news.caps;
     if (opened.transportKind !== "stdio" && opened.transportKind !== mcp.transport) patch.transport = opened.transportKind;
     const { error: e3 } = await supabase.from("user_mcps").update(patch).eq("id", id).eq("user_id", userId);
     if (e3) console.error("[mcp] check update failed:", e3.message);
-    if (voice?.on) await mcpVoiceOnlyHere(userId, id);
+    await mcpOnlyHereAll(userId, id, patch.caps);
     return {
       status: 200,
       body: {
         success: true,
         fixed: true,
-        voice: voice || null,
-        voice_new: !!voice && !mcp.caps?.voice,
+        caps: patch.caps,
+        voice: patch.caps.voice || null,
+        voice_new: news.voice_new,
+        jobs_new: news.jobs_new,
         transport: opened.transportKind,
         tools: found.tools.map((t) => t.name),
         resources: found.resources.length + found.resourceTemplates.length,
@@ -6266,27 +6294,42 @@ async function mcpCheckRow(userId, id, { reauth } = {}) {
   }
 }
 
-// The "Closedhand's voice" switch on a connection's tile. On makes it the
-// voice and switches any other off; off goes back to the built-in voice. The
-// bot reads it fresh for each voice note and reply (lib/voice-connections.js).
-app.post("/api/mcps/:id/voice", async (req, res) => {
+// A job's switch on a connection's tile ("Closedhand's voice", "Closedhand's
+// search"): on makes the connection do that job and switches it off for any
+// other; off goes back to Closedhand's own. The bot reads it fresh each time
+// (lib/voice-connections.js, lib/connection-jobs.js). part is "voice" or a
+// job's name; /voice is the voice switch's older address.
+async function switchJob(req, res, part) {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
     const { data: row, error } = await supabase.from("user_mcps").select("id, caps").eq("id", req.params.id).eq("user_id", userId).single();
     if (error || !row) return res.status(404).json({ error: "That connection is gone." });
-    if (!row.caps?.voice) return res.status(400).json({ error: "This connection can't be Closedhand's voice." });
+    const caps = { ...(row.caps || {}) };
     const on = req.body?.on === true;
+    if (part === "voice") {
+      if (!caps.voice) return res.status(400).json({ error: "This connection can't be Closedhand's voice." });
+      caps.voice = { ...caps.voice, on };
+    } else {
+      if (!caps.jobs?.[part]) return res.status(400).json({ error: "This connection can't do that for Closedhand." });
+      caps.jobs = { ...caps.jobs, [part]: { ...caps.jobs[part], on } };
+    }
     const { error: e2 } = await supabase.from("user_mcps")
-      .update(mcpClient.sealRow({ caps: { ...row.caps, voice: { ...row.caps.voice, on } }, updated_at: new Date().toISOString() }))
+      .update(mcpClient.sealRow({ caps, updated_at: new Date().toISOString() }))
       .eq("id", row.id).eq("user_id", userId);
     if (e2) throw new Error(e2.message);
-    if (on) await mcpVoiceOnlyHere(userId, row.id);
+    if (on) await mcpOnlyHere(userId, row.id, part);
     res.json({ on });
   } catch (e) {
-    console.error("[mcp] voice switch failed:", e.message);
+    console.error("[mcp] job switch failed:", e.message);
     res.status(500).json({ error: "Could not change that just now." });
   }
+}
+app.post("/api/mcps/:id/voice", (req, res) => switchJob(req, res, "voice"));
+app.post("/api/mcps/:id/job", (req, res) => {
+  const part = String(req.body?.job || "");
+  if (part !== "voice" && !require("./connection-jobs").TOOL_JOBS[part]) return res.status(400).json({ error: "Not something a connection can do." });
+  return switchJob(req, res, part);
 });
 
 app.post("/api/mcps/:id/test", async (req, res) => {

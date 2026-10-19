@@ -6,7 +6,7 @@
 // built-in voice for that message, and the tile says why.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { findVoiceTools, check } = require("../webapp/voice-tools");
+const { findJobs, check } = require("../webapp/connection-jobs");
 const voice = require("../lib/voice-connections");
 
 // An invented voice service's tools, in the shapes services publish.
@@ -19,12 +19,13 @@ const TOOLS = [
   { name: "speech_to_text", description: "Transcribe an audio recording to text.",
     inputSchema: { type: "object", required: ["audio_base64"], properties: { audio_base64: { type: "string" }, language: { type: "string", default: "auto" } } } },
 ];
-const answer = (input) => async () => ({ content: [{ type: "tool_use", name: "report_voice_tools", input }] });
+const answer = (input) => async () => ({ content: [{ type: "tool_use", name: "report_jobs", input }] });
 
 test("the model's reading is kept only where the tools' own definitions bear it out", async () => {
-  const plan = await findVoiceTools(TOOLS, { model: "kestrel-1" }, { request: answer({
+  const { voice: plan } = await findJobs(TOOLS, { model: "kestrel-1" }, { request: answer({
     speak: { found: true, tool: "text_to_speech", text_argument: "text", format_argument: "output_format", fixed_arguments: {} },
     hear: { found: true, tool: "speech_to_text", audio_argument: "audio_base64", audio_as: "base64" },
+    search: { found: false },
   }) });
   assert.deepEqual(plan.speak, { tool: "text_to_speech", text: "text", format: { arg: "output_format", values: ["mp3_44100_128", "pcm_16000", "opus_48000_64"] }, fixed: {} });
   assert.deepEqual(plan.hear, { tool: "speech_to_text", audio: "audio_base64", as: "base64", fixed: {} });
@@ -38,10 +39,10 @@ test("the model's reading is kept only where the tools' own definitions bear it 
 test("a service with nothing about voice costs no model call, and a failed check keeps what was found", async () => {
   let asked = 0;
   const count = async () => { asked++; throw new Error("down"); };
-  assert.equal(await findVoiceTools([TOOLS[0]], { model: "kestrel-1" }, { request: count }), null);
+  assert.deepEqual(await findJobs([TOOLS[0]], { model: "kestrel-1" }, { request: count }), { voice: null, jobs: { search: null } });
   assert.equal(asked, 0);
-  assert.equal(await findVoiceTools(TOOLS, null), undefined, "no model to ask");
-  assert.equal(await findVoiceTools(TOOLS, { model: "kestrel-1" }, { request: count }), undefined, "the model failed");
+  assert.deepEqual(await findJobs(TOOLS, null), { voice: undefined, jobs: undefined }, "no model to ask");
+  assert.deepEqual(await findJobs(TOOLS, { model: "kestrel-1" }, { request: count }), { voice: undefined, jobs: undefined }, "the model failed");
 });
 
 // A stand-in for the database: one connection with a voice plan.

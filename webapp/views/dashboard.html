@@ -3230,11 +3230,12 @@
       }
       if (params.get("mcp_connected")) {
         showToast(decodeURIComponent(params.get("mcp_connected")) + " connected via MCP!");
-        // A voice it brought is said where it stays put, under the connect box.
-        var voiceId = params.get("mcp_voice");
-        if (voiceId) fetch('/api/mcps').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
-          var m = (list || []).find(function(x) { return x.id === voiceId; });
-          if (m && m.caps && m.caps.voice) mcpStatus(mcpVoiceText(m.name, m.caps.voice, true));
+        // What it took over (its voice, its search) is said where it stays
+        // put, under the connect box.
+        var newId = params.get("mcp_new");
+        if (newId) fetch('/api/mcps').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+          var m = (list || []).find(function(x) { return x.id === newId; });
+          if (m && m.caps) mcpStatus(mcpNews(m.name, m.caps, true, Object.keys(m.caps.jobs || {})));
         }).catch(function() {});
         window.history.replaceState({}, "", "/dashboard");
       }
@@ -3879,7 +3880,7 @@
           }
 
           // A service that can speak or write out speech can be Closedhand's
-          // voice (webapp/voice-tools.js); this is its switch.
+          // voice (webapp/connection-jobs.js); this is its switch.
           var voice = caps.voice;
           if (voice && (voice.speak || voice.hear)) {
             detailHtml += '<hr class="conn-divider">';
@@ -3890,6 +3891,18 @@
               (voice.on && voice.fallback ? '<span class="account-action-desc" style="display:block;margin-top:4px;line-height:1.5;">' + escHtml('Last time, the built-in voice stood in: ' + voice.fallback.why + '.') + '</span>' : '') +
               '</span></label>';
           }
+          // Every other job it does in Closedhand's place, each with its switch.
+          Object.keys(caps.jobs || {}).forEach(function(job) {
+            var j = MCP_JOBS[job], plan = caps.jobs[job];
+            if (!j || !plan) return;
+            detailHtml += '<hr class="conn-divider">';
+            detailHtml += '<label onclick="event.stopPropagation()" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">' +
+              '<input type="checkbox" data-mcp-job="' + job + '" data-mcp-name="' + escHtml(m.name) + '"' + (plan.on ? ' checked' : '') + ' onchange="saveMcpJob(\'' + m.id + '\', \'' + job + '\', this)" style="margin-top:3px;accent-color:#D0563F;">' +
+              '<span><span style="font-size:14px;">' + escHtml(j.title) + '</span>' +
+              '<span class="account-action-desc mcp-job-desc" style="display:block;margin-top:2px;line-height:1.5;">' + escHtml(plan.on ? j.on(m.name) : j.off(m.name)) + '</span>' +
+              (plan.on && plan.fallback ? '<span class="account-action-desc" style="display:block;margin-top:4px;line-height:1.5;">' + escHtml(j.stoodIn + plan.fallback.why + '.') + '</span>' : '') +
+              '</span></label>';
+          });
 
           // Action buttons
           detailHtml += '<div class="conn-drawer-actions">';
@@ -3929,7 +3942,7 @@
         : voice.speak ? 'Its spoken replies go to ' + name : 'What you say to it goes to ' + name;
       if (news) {
         var will = both ? 'listen and speak' : voice.speak ? 'speak' : 'write out what you say';
-        return 'Closedhand will now ' + will + ' with ' + name + '. ' + goes + ', which may charge your account for it. You can switch this off on its tile under Connected.';
+        return 'Closedhand will now ' + will + ' with ' + name + '. ' + goes + ', which may charge your account for it.';
       }
       if (!voice.on) {
         var could = both ? 'listen and speak' : voice.speak ? 'speak' : 'write out what you say';
@@ -3937,6 +3950,52 @@
       }
       var does = both ? 'listens and speaks' : voice.speak ? 'speaks' : 'writes out what you say';
       return 'Closedhand ' + does + ' with ' + name + ' instead of its built-in voice. ' + goes + ', which may charge your account for it. The built-in voice never leaves your computer.';
+    }
+
+    // What a connection does in place of Closedhand's own, for each job other
+    // than the voice (webapp/connection-jobs.js): its switch's name, and what
+    // it means on, off and when it is new.
+    var MCP_JOBS = {
+      search: {
+        title: 'Closedhand\u2019s search',
+        news: function(name) { return 'Closedhand will now search the web with ' + name + ' first. Your searches go to ' + name + ', which may charge your account for them.'; },
+        on: function(name) { return 'Closedhand searches the web with ' + name + ' first. Your searches go to ' + name + ', which may charge your account for them.'; },
+        off: function(name) { return 'Closedhand searches with your primary model\u2019s own search, or free search. Switch this on to search with ' + name + ' first.'; },
+        stoodIn: 'Last time, Closedhand\u2019s own search stood in: ',
+        toastOn: 'Closedhand will search with this first.',
+        toastOff: 'Closedhand will use its own search.'
+      }
+    };
+
+    // What a connection just took over, said where it stays put, under the
+    // connect box: its voice and every other job, then how to switch them off.
+    function mcpNews(name, caps, voiceNew, jobsNew) {
+      var said = [];
+      if (voiceNew && caps && caps.voice) said.push(mcpVoiceText(name, caps.voice, true));
+      (jobsNew || []).forEach(function(job) { if (MCP_JOBS[job] && caps && caps.jobs && caps.jobs[job]) said.push(MCP_JOBS[job].news(name)); });
+      if (!said.length) return '';
+      return said.join(' ') + (said.length > 1 ? ' You can switch these off on its tile under Connected.' : ' You can switch this off on its tile under Connected.');
+    }
+
+    async function saveMcpJob(id, job, box) {
+      var on = box.checked, j = MCP_JOBS[job];
+      function describe(b) {
+        var desc = b.closest('label') && b.closest('label').querySelector('.mcp-job-desc');
+        var name = b.getAttribute('data-mcp-name');
+        if (desc && j) desc.textContent = b.checked ? j.on(name) : j.off(name);
+      }
+      try {
+        var res = await fetch('/api/mcps/' + id + '/job', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: job, on: on }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) throw new Error(data.error || 'Could not change that just now.');
+        // One connection does a job at a time: turning this on turns any other off.
+        if (on) document.querySelectorAll('input[data-mcp-job="' + job + '"]').forEach(function(b) { if (b !== box && b.checked) { b.checked = false; describe(b); } });
+        describe(box);
+        if (j) showToast(on ? j.toastOn : j.toastOff);
+      } catch (e) {
+        box.checked = !on;
+        showToast(e.message, true);
+      }
     }
 
     // The words beside a voice switch, after it changes.
@@ -4065,8 +4124,8 @@
         if (probs.length) {
           mcpStatus(probs.map(function(p) { return p.error; }).join(' '));
         } else {
-          var voiced = (data.connected || []).filter(function(c) { return c.voice_new && c.caps && c.caps.voice; })[0];
-          if (voiced) mcpStatus(mcpVoiceText(voiced.name, voiced.caps.voice, true));
+          var took = (data.connected || []).filter(function(c) { return c.caps && (c.voice_new || (c.jobs_new && c.jobs_new.length)); })[0];
+          if (took) mcpStatus(mcpNews(took.name, took.caps, took.voice_new, took.jobs_new));
         }
         await loadMcps();
       } catch (e) {
@@ -4141,7 +4200,8 @@
         if (!res.ok) { mcpStatus(data.error || 'Couldn\u2019t connect it just now.'); return; }
         var box = document.getElementById('mcp-url-input'); box.value = ''; mcpGrowInput(box);
         _mcpPending = null;
-        mcpStatus(data.voice_new && data.voice ? mcpVoiceText(found.service, data.voice, true)
+        var took = data.caps ? mcpNews(found.service, data.caps, data.voice_new, data.jobs_new) : '';
+        mcpStatus(took ? took
           : data.checked ? '' : 'Closedhand couldn\u2019t check the key with ' + found.service + ' yet. It will find out the first time it uses it.');
         showToast('Added ' + found.service + '.');
         miniCelebration();
@@ -4266,9 +4326,9 @@
           if (data.resources) found.push(data.resources + ' resources');
           if (data.prompts?.length) found.push(data.prompts.length + ' prompts');
           showToast(data.message || ('Connected. ' + found.join(', ') + '.'));
-          if (data.voice_new && data.voice) {
+          if (data.caps && (data.voice_new || (data.jobs_new && data.jobs_new.length))) {
             var tested = (await (await fetch('/api/mcps')).json()).find(function(x) { return x.id === id; });
-            if (tested) mcpStatus(mcpVoiceText(tested.name, data.voice, true));
+            if (tested) mcpStatus(mcpNews(tested.name, data.caps, data.voice_new, data.jobs_new));
           }
           miniCelebration();
         } else {

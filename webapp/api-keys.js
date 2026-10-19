@@ -319,8 +319,9 @@ function searchEndpoints(endpoints, what, max = 6) {
 }
 
 // An endpoint as a tool definition, named "POST /v1/speech", with its
-// parameters and body fields as the arguments: how Closedhand's voice check
-// (webapp/voice-tools.js) reads a service it reaches by its plain API.
+// parameters and body fields as the arguments: how Closedhand's check of
+// what a connection can do (webapp/connection-jobs.js) reads a service it
+// reaches by its plain API.
 function endpointTool(e) {
   const properties = {};
   const required = [];

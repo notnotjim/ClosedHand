@@ -177,36 +177,36 @@ function itemsWith(json, arg) {
   return [];
 }
 
-// Whether a service connected with a key can be Closedhand's voice, as for
-// an MCP connection (webapp/voice-tools.js), from the endpoints most likely
-// to speak, write out speech or list voices. An id the endpoint needs from
-// the person's own account (a voice, say) is picked from the service's list:
-// the one picked before, else the one its documentation gives as the
-// example, else the first. undefined when it couldn't be checked.
-async function voiceFor(plan, key, selected, previous, deps = {}) {
-  if (!plan.list || !plan.list.length) return previous || null;
+// What a service connected with a key can do in Closedhand's place, as for an
+// MCP connection (webapp/connection-jobs.js), from the endpoints most likely
+// to: speak, write out speech, list voices, and each other job. An id the
+// speech needs from the person's own account (a voice, say) is picked from
+// the service's own list: the one picked before, else the one its
+// documentation gives as the example, else the first. Returns { voice, jobs }
+// as saved in caps.
+async function jobsFor(plan, key, selected, previousCaps, deps = {}) {
+  const jobs = require("./connection-jobs");
+  const keep = { voice: previousCaps?.voice || null, jobs: previousCaps?.jobs || {} };
+  if (!plan.list || !plan.list.length) return keep;
   const likely = new Map();
-  for (const q of ["text to speech", "speech to text transcription", "list voices"]) {
-    for (const e of searchEndpoints(plan.list, q, 6)) likely.set(`${e.method} ${e.path}`, e);
-  }
+  const asks = ["text to speech", "speech to text transcription", "list voices", ...Object.values(jobs.TOOL_JOBS).map((j) => j.findWith)];
+  for (const q of asks) for (const e of searchEndpoints(plan.list, q, 6)) likely.set(`${e.method} ${e.path}`, e);
   const tools = [...likely.values()].map(endpointTool);
-  const found = await require("./voice-tools").findVoiceTools(tools, selected, deps);
-  if (found === undefined) return previous || null;
-  if (!found) return null;
+  const found = await jobs.findJobs(tools, selected, deps);
   for (const job of ["speak", "hear"]) {
-    const p = found[job];
+    const p = found.voice && found.voice[job];
     if (!p || !p.choose) continue;
     const from = likely.get(p.choose.from);
     const items = from ? itemsWith(await getWithKey(plan, key, from.path, deps).catch(() => null), p.choose.arg) : [];
     const examples = tools.find((t) => t.name === p.tool)?.inputSchema?.properties?.[p.choose.arg]?.examples || [];
-    const want = [previous?.[job]?.chosen?.value, ...examples].filter(Boolean);
+    const want = [previousCaps?.voice?.[job]?.chosen?.value, ...examples].filter(Boolean);
     const item = want.map((v) => items.find((x) => x[p.choose.arg] === v)).find(Boolean) || items[0];
-    if (!item) { found[job] = null; continue; }
+    if (!item) { found.voice[job] = null; continue; }
     p.fixed = { ...p.fixed, [p.choose.arg]: item[p.choose.arg] };
     p.chosen = { arg: p.choose.arg, value: item[p.choose.arg], name: typeof item.name === "string" ? item.name.slice(0, 60) : null };
   }
-  if (!found.speak && !found.hear) return null;
-  return { ...found, on: previous ? !!previous.on : true, checked_at: new Date().toISOString(), ...(previous?.fallback ? { fallback: previous.fallback } : {}) };
+  if (found.voice && !found.voice.speak && !found.voice.hear) found.voice = null;
+  return jobs.saved(found, previousCaps?.voice, previousCaps?.jobs);
 }
 
 // A service saying the key itself is wrong, whatever status it picks for it:
@@ -238,4 +238,4 @@ async function testKey(plan, key, deps = {}) {
   } catch { return { ok: null }; }
 }
 
-module.exports = { findApi, testKey, describe, voiceFor, REPORT };
+module.exports = { findApi, testKey, describe, jobsFor, REPORT };

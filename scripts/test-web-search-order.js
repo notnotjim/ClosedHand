@@ -1,6 +1,7 @@
-// Web search goes: the person's AI provider's own search when it has one and
-// they left it on, then free search, which every Closedhand has. A provider
-// search that fails goes on to free search.
+// Web search goes: a search service the person connected, with its switch on
+// (test-connection-jobs.js); then the person's AI provider's own search when
+// it has one and they left it on; then free search, which every Closedhand
+// has. A provider search that fails goes on to free search.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { webSearch } = require("../lib/web-search");
