@@ -1,6 +1,24 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const mcp=require('../webapp/mcp-client');
+// The Connect anything box lists everything it takes (dashboard.html);
+// each one is read here, with invented names.
+test('every kind of paste the box lists is one it reads',()=>{
+ for (const [paste, kind] of [["https://mcp.kestrel.example/mcp", "url"], ["npm:@kestrel/mcp-server", "command"], ["pypi:kestrel-mcp", "command"],
+  ["https://www.npmjs.com/package/@kestrel/mcp-server", "command"], ["https://pypi.org/project/kestrel-mcp/", "command"],
+  ["npx -y @kestrel/mcp-server", "command"], ["uvx kestrel-mcp", "command"], ["docker run -i --rm kestrel/mcp", "command"],
+  ['{"mcpServers":{"kestrel":{"command":"npx","args":["-y","@kestrel/mcp-server"]}}}', "json"], ['{"servers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}', "json"],
+  ['{"mcp":{"servers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}}', "json"], ["claude mcp add kestrel -- npx -y @kestrel/mcp-server", "command"],
+  ["https://github.com/kestrel/skills/blob/main/notes/SKILL.md", "skill"]]) assert.equal(mcp.parseServerInput(paste).kind, kind, paste);
+});
+test('a README pasted as text offers the connections it describes',async()=>{
+ const {resolveInput}=require('../webapp/mcp-input-resolver');
+ const readme='# Kestrel\n\nInstall:\n\n```bash\nnpx -y @kestrel/kestrel-mcp\n```\n\nOr in your config:\n\n```json\n{"mcpServers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}\n```\n';
+ const got=await resolveInput(readme,async()=>{throw new Error('nothing is fetched');});
+ assert.equal(got.source,null);
+ assert.equal(got.choices.length,2);
+ assert.equal(await resolveInput('npx -y @kestrel/kestrel-mcp'),null,'a plain command is left to the parser');
+});
 test('GitHub project links explain the correct input',()=>{
  assert.equal(mcp.parseServerInput('https://github.com/example/project').kind,'invalid');
  assert.equal(mcp.parseServerInput('https://example.com/mcp').kind,'url');

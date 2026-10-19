@@ -2265,13 +2265,12 @@
           <div class="mcp-hero">
             <div class="mcp-copy">
               <h3 class="add-sub">Connect anything</h3>
-              <p class="mcp-description">Paste an MCP server, a skill or an API key</p>
             </div>
 
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="A link, a command, JSON or an API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="Paste anything: an MCP server address, a GitHub link, a README, an npm package, a PyPI package, an npx command, a uvx command, a Docker command, a Claude Desktop config, a Cursor config, a VS Code config, a claude mcp add line, a skill or an API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -4050,10 +4049,21 @@
       el.textContent = text;
     }
 
+    // Empty, the box is as tall as its list of everything it takes.
     function mcpGrowInput(el) {
       el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+      var empty = !el.value;
+      if (empty) el.value = el.placeholder;
+      var height = el.scrollHeight;
+      if (empty) el.value = '';
+      if (height) el.style.height = Math.min(height, 220) + 'px';
     }
+    // Again whenever its width changes: the tab opening, a phone turning.
+    (function () {
+      var box = document.getElementById('mcp-url-input'), width = 0;
+      if (!box || !window.ResizeObserver) return;
+      new ResizeObserver(function () { if (box.offsetWidth && box.offsetWidth !== width) { width = box.offsetWidth; mcpGrowInput(box); } }).observe(box);
+    })();
 
     function mcpInputKey(e) {
       // Enter connects; Shift+Enter makes a new line for a JSON block.

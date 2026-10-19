@@ -42,7 +42,8 @@ async function resolveInput(input, fetcher=fetch) {
   let raw=String(input||'').trim();
   const link=raw.match(/^\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/);if(link)raw=link[1];
   if (/^github\.com\//i.test(raw)) raw='https://'+raw;
-  let url;try{url=new URL(raw);}catch{return null;}
+  // A README's text pasted whole: the same read as one fetched from GitHub.
+  let url;try{url=new URL(raw);}catch{const choices=/```/.test(raw)?candidates(raw):[];return choices.length?{source:null,choices}:null;}
   if(!['github.com','www.github.com','raw.githubusercontent.com'].includes(url.hostname))return null;
   if(url.username||url.password||url.port||!['https:','http:'].includes(url.protocol))throw new Error('Use a public HTTPS GitHub link.');
   if (/\/SKILL\.md$/i.test(url.pathname)) return null;

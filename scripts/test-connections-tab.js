@@ -83,13 +83,15 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.match(connected, /id="mcp-list"/, "pasted servers sit with everything else that is live");
   const add = dashboard.slice(dashboard.indexOf('id="mcp-section"'), dashboard.indexOf("<!-- Workers Tab Content -->"));
   for (const want of ["<h2>Add a connection</h2>", 'id="apple-local-section"', '<h3 class="add-sub" id="catalogue-apps-heading">Apps</h3>',
-    '<h3 class="add-sub">Connect anything</h3>', '<p class="mcp-description">Paste an MCP server, a skill or an API key</p>', "Servers and skills are scanned for security risks</p>"]) {
+    '<h3 class="add-sub">Connect anything</h3>', "Servers and skills are scanned for security risks</p>"]) {
     assert.ok(add.includes(want), want);
   }
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
   assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
-  assert.match(dashboard, /placeholder="A link, a command, JSON or an API key" aria-label="MCP server, skill or API key"/, "one box takes a server, a skill or a key");
+  assert.match(dashboard, /placeholder="Paste anything: an MCP server address, a GitHub link, a README, an npm package, a PyPI package, an npx command, a uvx command, a Docker command, a Claude Desktop config, a Cursor config, a VS Code config, a claude mcp add line, a skill or an API key" aria-label="MCP server, skill or API key"/, "one box, and one list of everything it takes");
+  assert.doesNotMatch(dashboard, /class="mcp-description"/, "the list isn't said twice");
+  // Each thing the list names is one the box reads: scripts/test-mcp-setup.js.
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
   assert.match(dashboard, /var all = _builtinSkills\.map\(function \(skill\) \{ return \{ skill: skill, builtin: true \}; \}\)\n\s*\.concat\(_installedSkills\.map/, "built-in skills are listed, not only added ones");
   assert.match(dashboard, /\(item\.builtin \? '' : '<div class="conn-drawer-actions"><button onclick="event\.stopPropagation\(\);deleteSkill\(/, "only an added skill can be removed");
