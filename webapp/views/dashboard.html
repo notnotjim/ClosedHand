@@ -4141,7 +4141,8 @@
         if (!res.ok) { mcpStatus(data.error || 'Couldn\u2019t connect it just now.'); return; }
         var box = document.getElementById('mcp-url-input'); box.value = ''; mcpGrowInput(box);
         _mcpPending = null;
-        mcpStatus(data.checked ? '' : 'Closedhand couldn\u2019t check the key with ' + found.service + ' yet. It will find out the first time it uses it.');
+        mcpStatus(data.voice_new && data.voice ? mcpVoiceText(found.service, data.voice, true)
+          : data.checked ? '' : 'Closedhand couldn\u2019t check the key with ' + found.service + ' yet. It will find out the first time it uses it.');
         showToast('Added ' + found.service + '.');
         miniCelebration();
         await loadMcps();

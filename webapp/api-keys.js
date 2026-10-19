@@ -162,6 +162,21 @@ function typeOf(spec, schema) {
   return s.format === "binary" ? "file" : s.type || "value";
 }
 
+// What a schema says about one value, kept for checking a call against it:
+// its type, the values it allows, its default and examples, and whether it
+// is a file.
+function facts(spec, schema, about) {
+  const s = deref(spec, schema) || {};
+  const out = { kind: s.type === "file" ? "string" : s.type || "string" };
+  if (Array.isArray(s.enum)) out.values = s.enum.filter((v) => typeof v === "string" || typeof v === "number");
+  if (s.default !== undefined) out.default = s.default;
+  const examples = Array.isArray(s.examples) ? s.examples : s.example !== undefined ? [s.example] : [];
+  if (examples.length) out.examples = examples.slice(0, 3);
+  if (s.format === "binary" || s.type === "file") out.binary = true;
+  if (about) out.about = about;
+  return out;
+}
+
 function short(text, max) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
   return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t;
@@ -241,14 +256,14 @@ function readApiDescription(spec, base) {
     const params = rawParams
       .filter((p) => !(auth && p.in === auth.in && p.name.toLowerCase() === auth.name.toLowerCase()))
       .filter((p) => ["path", "query", "header"].includes(p.in))
-      .map((p) => ({ name: p.name, in: p.in, required: !!p.required || p.in === "path", type: typeOf(spec, p.schema || p), about: short(p.description || deref(spec, p.schema)?.description, 90) }));
+      .map((p) => ({ name: p.name, in: p.in, required: !!p.required || p.in === "path", type: typeOf(spec, p.schema || p), about: short(p.description || deref(spec, p.schema)?.description, 90), ...facts(spec, p.schema || p) }));
     let body = null;
     const content = (deref(spec, op.requestBody) || {}).content || {};
     const kind = Object.keys(content).find((k) => /json/.test(k)) || Object.keys(content)[0];
     const bodySchema = kind ? deref(spec, content[kind].schema) : null;
     if (bodySchema) {
       const req = new Set(bodySchema.required || []);
-      body = { kind, fields: Object.entries(bodySchema.properties || {}).slice(0, 40).map(([name, s]) => ({ name, required: req.has(name), type: typeOf(spec, s), about: short(deref(spec, s)?.description, 90) })) };
+      body = { kind, fields: Object.entries(bodySchema.properties || {}).slice(0, 40).map(([name, s]) => ({ name, required: req.has(name), type: typeOf(spec, s), about: short(deref(spec, s)?.description, 90), ...facts(spec, s) })) };
     }
     const ok = (op.responses && (op.responses["200"] || op.responses["201"])) || {};
     const returns = Object.keys((deref(spec, ok) || {}).content || {})[0] || null;
@@ -265,8 +280,20 @@ function readApiDescription(spec, base) {
 }
 
 const STOP = new Set(["the", "and", "for", "with", "from", "into", "that", "this", "what", "get", "list", "make", "use", "using", "api", "endpoint", "call", "via"]);
+// Words cut to a stem, so "voices" finds "voice" and "transcription" finds
+// "transcribe".
 function words(text) {
-  return String(text || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w));
+  return String(text || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w)).map((w) => w.replace(/s$/, "").slice(0, 7));
+}
+
+// How many of the wanted words follow each other, in order, in these words:
+// "speech to text" is not "text to speech".
+function inOrder(want, have) {
+  let n = 0;
+  for (let i = 0; i + 1 < want.length; i++) {
+    for (let j = 0; j + 1 < have.length; j++) if (have[j] === want[i] && have[j + 1] === want[i + 1]) { n++; break; }
+  }
+  return n;
 }
 
 // The endpoints that best match what Closedhand wants to do, best first.
@@ -275,10 +302,12 @@ function searchEndpoints(endpoints, what, max = 6) {
   if (!want.length) return [];
   const scored = [];
   for (const e of endpoints || []) {
-    const inPath = new Set(words(e.path.replace(/\{[^}]*\}/g, " ")));
-    const inName = new Set(words(`${e.summary} ${e.id} ${e.tags.join(" ")}`));
+    const pathWords = words(e.path.replace(/\{[^}]*\}/g, " "));
+    const nameWords = words(`${e.summary} ${e.id}`);
+    const inPath = new Set(pathWords);
+    const inName = new Set([...nameWords, ...words(e.tags.join(" "))]);
     const inAbout = new Set(words(e.about));
-    let score = 0;
+    let score = 2 * Math.max(inOrder(want, pathWords), inOrder(want, nameWords));
     for (const w of want) {
       if (inPath.has(w)) score += 3;
       if (inName.has(w)) score += 2;
@@ -289,4 +318,61 @@ function searchEndpoints(endpoints, what, max = 6) {
   return scored.sort((a, b) => b.score - a.score).slice(0, max).map((x) => x.e);
 }
 
-module.exports = { SHAPES, recognise, keyShaped, bareKey, saysKey, withhold, placeholderFor, readApiDescription, searchEndpoints, hostOf };
+// An endpoint as a tool definition, named "POST /v1/speech", with its
+// parameters and body fields as the arguments: how Closedhand's voice check
+// (webapp/voice-tools.js) reads a service it reaches by its plain API.
+function endpointTool(e) {
+  const properties = {};
+  const required = [];
+  for (const f of [...e.params, ...(e.body ? e.body.fields : [])]) {
+    if (properties[f.name]) continue;
+    properties[f.name] = {
+      type: f.kind,
+      ...(f.about ? { description: f.about } : {}),
+      ...(f.values ? { enum: f.values } : {}),
+      ...(f.default !== undefined ? { default: f.default } : {}),
+      ...(f.examples ? { examples: f.examples } : {}),
+      ...(f.binary ? { format: "binary" } : {}),
+    };
+    if (f.required) required.push(f.name);
+  }
+  return { name: `${e.method} ${e.path}`, description: [e.summary, e.about].filter(Boolean).join(". "), inputSchema: { type: "object", properties, required } };
+}
+
+// The request that calls an endpoint with these arguments: path parameters
+// filled in, query and header parameters set, the rest as its body (JSON, or
+// a form when it takes files, given as Buffers).
+function requestFor(e, base, args = {}) {
+  const used = new Set();
+  let missing = null;
+  const path = e.path.replace(/\{([^}]+)\}/g, (all, name) => {
+    used.add(name);
+    if (args[name] === undefined || args[name] === null || args[name] === "") { missing = missing || name; return all; }
+    return encodeURIComponent(String(args[name]));
+  });
+  if (missing) throw new Error(`${e.method} ${e.path} needs ${missing}`);
+  const url = new URL(base.replace(/\/+$/, "") + path);
+  const headers = {};
+  for (const p of e.params) {
+    if (p.in === "path" || args[p.name] === undefined) continue;
+    used.add(p.name);
+    if (p.in === "query") url.searchParams.set(p.name, String(args[p.name]));
+    if (p.in === "header") headers[p.name] = String(args[p.name]);
+  }
+  let body;
+  const fields = e.body ? e.body.fields.filter((f) => !used.has(f.name) && args[f.name] !== undefined) : [];
+  if (e.body && /form-data/.test(e.body.kind)) {
+    body = new FormData();
+    for (const f of fields) {
+      const v = args[f.name];
+      if (Buffer.isBuffer(v)) body.append(f.name, new Blob([v]), `${f.name}.${args._fileExt || "bin"}`);
+      else body.append(f.name, typeof v === "string" ? v : JSON.stringify(v));
+    }
+  } else if (e.body && fields.length) {
+    body = JSON.stringify(Object.fromEntries(fields.map((f) => [f.name, args[f.name]])));
+    headers["Content-Type"] = "application/json";
+  }
+  return { method: e.method, url: url.toString(), headers, body };
+}
+
+module.exports = { SHAPES, recognise, keyShaped, bareKey, saysKey, withhold, placeholderFor, readApiDescription, searchEndpoints, endpointTool, requestFor, hostOf };

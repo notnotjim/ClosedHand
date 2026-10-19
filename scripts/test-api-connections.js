@@ -216,3 +216,86 @@ test("every way in is covered: the queue, the web chat's store, and the old send
   const mcps = fs.readFileSync(path.join(root, "lib/user-mcp.js"), "utf8");
   assert.match(mcps, /r\.transport !== "api"/, "a key connection is never opened as an MCP server");
 });
+
+// The invented service as a voice: speech that needs a voice from the
+// person's account, a voice list, and speech to text by upload.
+const VOICE_DESCRIPTION = {
+  openapi: "3.1.0",
+  servers: [{ url: "https://api.kestrel-voice.example/v2" }],
+  components: { securitySchemes: { key: { type: "apiKey", in: "header", name: "X-Kestrel-Key" } } },
+  paths: {
+    "/voices": { get: { summary: "List voices" } },
+    "/speech/{voice_id}": { post: { summary: "Text to speech",
+      parameters: [{ name: "voice_id", in: "path", required: true, schema: { type: "string", examples: ["kv-wren"] } }, { name: "format", in: "query", schema: { type: "string", enum: ["mp3_44100", "opus_48000", "pcm_24000"] } }],
+      requestBody: { content: { "application/json": { schema: { type: "object", required: ["text"], properties: { text: { type: "string" } } } } } } } },
+    "/listen": { post: { summary: "Speech to text", requestBody: { content: { "multipart/form-data": { schema: { type: "object", required: ["model"], properties: { audio: { type: "string", format: "binary" }, model: { type: "string", examples: ["kv-listen-1"] } } } } } } } },
+  },
+};
+const voiceReport = (input) => async () => ({ content: [{ type: "tool_use", name: "report_voice_tools", input }] });
+const VOICE_ANSWER = {
+  speak: { found: true, tool: "POST /speech/{voice_id}", text_argument: "text", format_argument: "format", fixed_arguments: {}, choose_argument: "voice_id", choose_from: "GET /voices" },
+  hear: { found: true, tool: "POST /listen", audio_argument: "audio", audio_as: "file", fixed_arguments: { model: "kv-listen-1" } },
+};
+
+test("a key connection can be the voice: the speech endpoint, its voice picked from the person's own list", async () => {
+  const keys = require("../lib/api-keys");
+  const list = keys.readApiDescription(VOICE_DESCRIPTION, "https://api.kestrel-voice.example").endpoints;
+  const plan = { base: "https://api.kestrel-voice.example/v2", auth: { in: "header", name: "X-Kestrel-Key" }, list };
+  const voices = (items) => net((url, opts) => (url.endsWith("/voices") && opts.headers["X-Kestrel-Key"] === KEY && opts.redirect === "manual" ? { body: { voices: items } } : { status: 404, body: "" }));
+
+  const listed = voices([{ voice_id: "kv-ash", name: "Ash" }, { voice_id: "kv-wren", name: "Wren" }]);
+  const voice = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
+  assert.deepEqual(voice.speak.fixed, { voice_id: "kv-wren" }, "the voice its documentation gives as the example, when the person has it");
+  assert.deepEqual(voice.speak.chosen, { arg: "voice_id", value: "kv-wren", name: "Wren" });
+  assert.deepEqual(voice.speak.format, { arg: "format", values: ["mp3_44100", "opus_48000", "pcm_24000"] });
+  assert.deepEqual(voice.hear, { tool: "POST /listen", audio: "audio", as: "file", fixed: { model: "kv-listen-1" } });
+  assert.equal(voice.on, true, "on from the start, as for any voice service");
+
+  const other = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: voices([{ voice_id: "kv-ash", name: "Ash" }]).fetch, request: voiceReport(VOICE_ANSWER) });
+  assert.equal(other.speak.fixed.voice_id, "kv-ash", "else the first in the list");
+  const kept = await finder.voiceFor(plan, KEY, MODEL, { on: false, speak: { chosen: { value: "kv-ash" } } }, { fetch: listed.fetch, request: voiceReport(VOICE_ANSWER) });
+  assert.equal(kept.speak.fixed.voice_id, "kv-ash", "the one picked before stays");
+  assert.equal(kept.on, false, "and so does the person's switch");
+  const none = await finder.voiceFor(plan, KEY, MODEL, null, { fetch: voices([]).fetch, request: voiceReport(VOICE_ANSWER) });
+  assert.equal(none.speak, null, "no voice to pick: it can't speak");
+  assert.equal(none.hear.tool, "POST /listen");
+});
+
+test("the voice check keeps a picked id only from a listing that needs nothing else, and an upload only where the definition takes a file", () => {
+  const { check } = require("../webapp/voice-tools");
+  const keys = require("../lib/api-keys");
+  const tools = keys.readApiDescription(VOICE_DESCRIPTION, "https://api.kestrel-voice.example").endpoints.map(keys.endpointTool);
+  assert.equal(check(tools, { ...VOICE_ANSWER.speak, choose_from: "GET /nowhere" }, "speak"), null);
+  assert.equal(check(tools, { ...VOICE_ANSWER.speak, choose_argument: "", choose_from: "" }, "speak"), null, "a voice id with nowhere to pick it from");
+  assert.equal(check(tools, { ...VOICE_ANSWER.hear, audio_argument: "model", audio_as: "file", fixed_arguments: {} }, "hear"), null, "not a file field");
+});
+
+test("Closedhand's voice calls the endpoints, with the key, and gets sound or words back", async () => {
+  const rows = [{ id: "kv-row", name: "Kestrel Voice", server_url: "https://api.kestrel-voice.example/v2", updated_at: "1", status: "connected", transport: "api", auth_token: "sealed", caps: { api: { auth: { in: "header", name: "X-Kestrel-Key" }, openapi: "https://api.kestrel-voice.example/voice-openapi.json", endpoints: 3 } } }];
+  const db = { from: () => ({ select: () => ({ eq: () => ({ eq: async () => ({ data: rows, error: null }) }) }) }) };
+  const sent = [];
+  const fetch = async (url, opts = {}) => {
+    sent.push({ url, ...opts });
+    const reply = url.endsWith("/voice-openapi.json") ? { type: "application/json", body: Buffer.from(JSON.stringify(VOICE_DESCRIPTION)) }
+      : url.includes("/speech/") ? { type: "audio/ogg", body: Buffer.from("OggS kestrel speech") }
+      : { type: "application/json", body: Buffer.from(JSON.stringify({ text: " Back by six. " })) };
+    return { status: 200, ok: true, headers: new Map([["content-type", reply.type]]), body: [reply.body] };
+  };
+  const deps = { db, openRow: (r) => ({ ...r, auth_token: KEY }), fetch };
+  const spoken = await conns.callEndpoint("u-voice", "kv-row", "POST /speech/{voice_id}", { voice_id: "kv-wren", format: "opus_48000", text: "Back by six" }, deps);
+  const call = sent.find((s) => s.url.includes("/speech/"));
+  assert.equal(call.url, "https://api.kestrel-voice.example/v2/speech/kv-wren?format=opus_48000");
+  assert.equal(call.headers["X-Kestrel-Key"], KEY);
+  assert.equal(Buffer.from(spoken.content[0].data, "base64").toString(), "OggS kestrel speech");
+  assert.equal(spoken.content[0].type, "audio");
+  const heard = await conns.callEndpoint("u-voice", "kv-row", "POST /listen", { model: "kv-listen-1", audio: Buffer.from("OggS a voice note") }, deps);
+  assert.ok(sent.at(-1).body instanceof FormData);
+  assert.equal(require("../lib/voice-connections").textIn(heard), "Back by six.");
+  await assert.rejects(conns.callEndpoint("u-voice", "kv-row", "DELETE /everything", {}, deps), /no longer lists/);
+});
+
+test("the voice reaches a key connection through its endpoints, and an MCP one through its tools", () => {
+  const src = fs.readFileSync(path.join(__dirname, "../lib/voice-connections.js"), "utf8");
+  assert.match(src, /select\("id, name, caps, updated_at, transport"\)/);
+  assert.match(src, /row\?\.transport === "api" \? require\("\.\/api-connections"\)\.callEndpoint : require\("\.\/user-mcp"\)\.callConnectionTool/);
+});

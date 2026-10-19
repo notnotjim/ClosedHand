@@ -104,3 +104,30 @@ test("with no security section, a key header on most endpoints is how the key go
   assert.deepEqual(read.auth, { in: "header", name: "x-kestrel-key" });
   assert.deepEqual(read.endpoints.find((e) => e.path === "/v1/tts").params.map((p) => p.name), ["voice"]);
 });
+
+test("an endpoint reads as a tool, and its arguments make the request", () => {
+  const read = keys.readApiDescription({
+    ...KESTREL,
+    paths: {
+      ...KESTREL.paths,
+      "/listen": { post: { summary: "Speech to text", requestBody: { content: { "multipart/form-data": { schema: { type: "object", required: ["model"], properties: { audio: { type: "string", format: "binary" }, model: { type: "string", examples: ["kv-listen-1"] } } } } } } } },
+    },
+  }, "https://api.kestrel-voice.example");
+  const speak = read.endpoints.find((e) => e.path === "/speech/{voice_id}");
+  const tool = keys.endpointTool(speak);
+  assert.equal(tool.name, "POST /speech/{voice_id}");
+  assert.deepEqual(tool.inputSchema.required, ["voice_id", "text"]);
+  assert.deepEqual(tool.inputSchema.properties.format.enum, ["mp3", "wav"]);
+  const listen = keys.endpointTool(read.endpoints.find((e) => e.path === "/listen"));
+  assert.equal(listen.inputSchema.properties.audio.format, "binary");
+  assert.deepEqual(listen.inputSchema.properties.model.examples, ["kv-listen-1"]);
+
+  const req = keys.requestFor(speak, read.base, { voice_id: "kv 7", text: "Hello", format: "wav" });
+  assert.equal(req.url, "https://api.kestrel-voice.example/v2/speech/kv%207");
+  assert.equal(req.body, '{"text":"Hello","format":"wav"}');
+  assert.throws(() => keys.requestFor(speak, read.base, { text: "Hello" }), /needs voice_id/);
+  const form = keys.requestFor(read.endpoints.find((e) => e.path === "/listen"), read.base, { audio: Buffer.from("OggS"), model: "kv-listen-1", _fileExt: "ogg" });
+  assert.ok(form.body instanceof FormData);
+  assert.deepEqual([...form.body.keys()], ["audio", "model"]);
+  assert.equal(form.headers["Content-Type"], undefined, "a form sets its own type");
+});

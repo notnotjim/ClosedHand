@@ -9,7 +9,7 @@
 // the person before the key goes anywhere, and the key is only ever sent
 // there.
 
-const { readApiDescription, hostOf } = require("./api-keys");
+const { readApiDescription, searchEndpoints, endpointTool, hostOf } = require("./api-keys");
 const { isBlockedUrl } = require("./ssrf");
 
 const MAX_DESCRIPTION = 20 * 1024 * 1024;
@@ -138,8 +138,75 @@ async function findApi(service, selected, deps = {}) {
     openapi,
     docs: docs ? docs.toString() : null,
     endpoints: endpoints.length,
+    list: endpoints,
     check,
   };
+}
+
+// A saved connection's endpoints, read again from its description.
+async function describe(url, base, deps = {}) {
+  const spec = await readDescription(url, deps.fetch || fetch);
+  const read = spec && readApiDescription(spec, base);
+  return read ? read.endpoints : [];
+}
+
+// One GET to the API's own address with the key, for a listing the voice
+// needs (its voices, say). Nothing follows a redirect.
+async function getWithKey(plan, key, path, deps = {}) {
+  const u = new URL(plan.base + path);
+  if (hostOf(u.toString()) !== hostOf(plan.base) || u.protocol !== "https:") return null;
+  const headers = { Accept: "application/json" };
+  if (plan.auth.in === "query") u.searchParams.set(plan.auth.name, key);
+  else headers[plan.auth.name] = (plan.auth.prefix || "") + key;
+  const res = await (deps.fetch || fetch)(u.toString(), { headers, redirect: "manual", signal: AbortSignal.timeout(15000) });
+  if (res.status < 200 || res.status >= 300) return null;
+  return JSON.parse(await res.text());
+}
+
+// The first list of things in a listing that carry arg: its values and names.
+function itemsWith(json, arg) {
+  const queue = [json];
+  for (let n = 0; queue.length && n < 500; n++) {
+    const node = queue.shift();
+    if (Array.isArray(node)) {
+      const items = node.filter((x) => x && typeof x === "object" && typeof x[arg] === "string");
+      if (items.length) return items;
+      queue.push(...node.slice(0, 50));
+    } else if (node && typeof node === "object") queue.push(...Object.values(node));
+  }
+  return [];
+}
+
+// Whether a service connected with a key can be Closedhand's voice, as for
+// an MCP connection (webapp/voice-tools.js), from the endpoints most likely
+// to speak, write out speech or list voices. An id the endpoint needs from
+// the person's own account (a voice, say) is picked from the service's list:
+// the one picked before, else the one its documentation gives as the
+// example, else the first. undefined when it couldn't be checked.
+async function voiceFor(plan, key, selected, previous, deps = {}) {
+  if (!plan.list || !plan.list.length) return previous || null;
+  const likely = new Map();
+  for (const q of ["text to speech", "speech to text transcription", "list voices"]) {
+    for (const e of searchEndpoints(plan.list, q, 6)) likely.set(`${e.method} ${e.path}`, e);
+  }
+  const tools = [...likely.values()].map(endpointTool);
+  const found = await require("./voice-tools").findVoiceTools(tools, selected, deps);
+  if (found === undefined) return previous || null;
+  if (!found) return null;
+  for (const job of ["speak", "hear"]) {
+    const p = found[job];
+    if (!p || !p.choose) continue;
+    const from = likely.get(p.choose.from);
+    const items = from ? itemsWith(await getWithKey(plan, key, from.path, deps).catch(() => null), p.choose.arg) : [];
+    const examples = tools.find((t) => t.name === p.tool)?.inputSchema?.properties?.[p.choose.arg]?.examples || [];
+    const want = [previous?.[job]?.chosen?.value, ...examples].filter(Boolean);
+    const item = want.map((v) => items.find((x) => x[p.choose.arg] === v)).find(Boolean) || items[0];
+    if (!item) { found[job] = null; continue; }
+    p.fixed = { ...p.fixed, [p.choose.arg]: item[p.choose.arg] };
+    p.chosen = { arg: p.choose.arg, value: item[p.choose.arg], name: typeof item.name === "string" ? item.name.slice(0, 60) : null };
+  }
+  if (!found.speak && !found.hear) return null;
+  return { ...found, on: previous ? !!previous.on : true, checked_at: new Date().toISOString(), ...(previous?.fallback ? { fallback: previous.fallback } : {}) };
 }
 
 // A service saying the key itself is wrong, whatever status it picks for it:
@@ -171,4 +238,4 @@ async function testKey(plan, key, deps = {}) {
   } catch { return { ok: null }; }
 }
 
-module.exports = { findApi, testKey, REPORT };
+module.exports = { findApi, testKey, describe, voiceFor, REPORT };

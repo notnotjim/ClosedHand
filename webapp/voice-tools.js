@@ -27,6 +27,8 @@ const REPORT = {
           text_argument: { type: "string", description: "The argument that holds the words to say." },
           format_argument: { type: "string", description: "The argument that chooses the audio format, or empty." },
           fixed_arguments: { type: "object", description: "Values for other required arguments, only where the definition makes the value clear." },
+          choose_argument: { type: "string", description: "A required argument that is an id from the person's own account, such as a voice id, or empty." },
+          choose_from: { type: "string", description: "The tool that lists the values for choose_argument, or empty." },
         },
         required: ["found"],
       },
@@ -36,8 +38,10 @@ const REPORT = {
           found: { type: "boolean" },
           tool: { type: "string" },
           audio_argument: { type: "string", description: "The argument that holds the recording." },
-          audio_as: { type: "string", enum: ["base64", "path", "url"] },
+          audio_as: { type: "string", enum: ["base64", "path", "file", "url"] },
           fixed_arguments: { type: "object" },
+          choose_argument: { type: "string" },
+          choose_from: { type: "string" },
         },
         required: ["found"],
       },
@@ -54,8 +58,9 @@ ${JSON.stringify(tools.map((t) => ({ name: t.name, description: String(t.descrip
 
 Report:
 - speak: a tool that takes words and returns them spoken, as audio or as a link to audio. text_argument is the argument for the words. format_argument is the argument that picks the audio format or encoding, if there is one.
-- hear: a tool that takes a recording of speech and returns the words. audio_argument is the argument for the recording, and audio_as is how it wants it: "base64" (the audio as base64 text), "path" (a file on the same computer) or "url" (a web address).
-- fixed_arguments: values for any other required arguments, only when the definition makes the value clear, such as a default or the one sensible choice of an enum. Never make up ids, such as a voice id.
+- hear: a tool that takes a recording of speech and returns the words. audio_argument is the argument for the recording, and audio_as is how it wants it: "base64" (the audio as base64 text), "path" (a file on the same computer), "file" (a file upload, an argument of format binary) or "url" (a web address).
+- fixed_arguments: values for any other required arguments, only when the definition makes the value clear, such as a default, an example it gives, or the one sensible choice of an enum. Never make up ids, such as a voice id.
+- choose_argument and choose_from: when a required argument is an id from the person's own account (a voice id, say) and another tool here lists them, name the argument and that listing tool, and Closedhand picks one from the list.
 - Tools that make music or sound effects, change one voice into another, or manage voices, agents or accounts are neither.
 - found is false when no tool fits.`;
 }
@@ -85,12 +90,22 @@ function check(tools, report, job) {
     if (values && values.length) format = { arg, values };
     else if ((schema.required || []).includes(arg) && !(arg in fixed)) return null;
   }
-  const given = new Set([main, ...Object.keys(fixed), ...(format ? [format.arg] : [])]);
+  // An id from the person's account, picked from the tool that lists them
+  // when the connection is made: a listing needs nothing else to call.
+  let choose = null;
+  if (report.choose_argument && props[report.choose_argument] && !(report.choose_argument in fixed)) {
+    const lister = tools.find((t) => t.name === report.choose_from);
+    if (!lister || lister.name === tool.name || (lister.inputSchema?.required || []).length) return null;
+    choose = { arg: report.choose_argument, from: lister.name };
+  }
+  const given = new Set([main, ...Object.keys(fixed), ...(format ? [format.arg] : []), ...(choose ? [choose.arg] : [])]);
   for (const r of schema.required || []) if (!given.has(r) && props[r]?.default === undefined) return null;
-  if (job === "speak") return { tool: tool.name, text: main, format, fixed };
-  // A web address would need the recording put online first; that isn't done.
-  if (!["base64", "path"].includes(report.audio_as)) return null;
-  return { tool: tool.name, audio: main, as: report.audio_as, fixed };
+  if (job === "speak") return { tool: tool.name, text: main, format, fixed, ...(choose ? { choose } : {}) };
+  // A web address would need the recording put online first; that isn't
+  // done. An upload has to be what the definition says takes a file.
+  if (!["base64", "path", "file"].includes(report.audio_as)) return null;
+  if (report.audio_as === "file" && props[main].format !== "binary") return null;
+  return { tool: tool.name, audio: main, as: report.audio_as, fixed, ...(choose ? { choose } : {}) };
 }
 
 // tools: [{ name, description, inputSchema }]; selected: the person's model

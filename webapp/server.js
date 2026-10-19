@@ -2820,6 +2820,7 @@ app.post("/api/mcps/api/connect", async (req, res) => {
     apiPlans.delete(ticket);
     const { data: existing, error: existingError } = await supabase.from("user_mcps").select("caps").eq("user_id", userId).eq("server_url", plan.base).maybeSingle();
     if (existingError) throw existingError;
+    const voice = await apiVoiceFor(userId, plan, key, existing?.caps?.voice);
     const record = {
       user_id: userId,
       name: plan.service,
@@ -2838,28 +2839,48 @@ app.post("/api/mcps/api/connect", async (req, res) => {
       caps: { ...(existing?.caps || {}), api: { auth: plan.auth, openapi: plan.openapi, docs: plan.docs, endpoints: plan.endpoints, check: plan.check, checked: tested.ok === true } },
       updated_at: new Date().toISOString(),
     };
+    if (voice) record.caps.voice = voice; else delete record.caps.voice;
     const { data, error } = await supabase.from("user_mcps")
       .upsert(mcpClient.sealRow(record), { onConflict: "user_id,server_url" })
       .select("id, name").single();
     if (error) throw error;
-    res.json({ connected: [{ id: data.id, name: data.name }], checked: tested.ok === true });
+    if (voice?.on) await mcpVoiceOnlyHere(userId, data.id);
+    res.json({ connected: [{ id: data.id, name: data.name }], checked: tested.ok === true, voice: voice || null, voice_new: !!voice && !existing?.caps?.voice });
   } catch (e) {
     console.error("[api-key] connect failed:", e.message);
     res.status(500).json({ error: "Couldn't save the connection just now. Try again in a moment." });
   }
 });
 
-// Test and Fix for a key connection: does the service still take the key?
+// Whether a key connection can be Closedhand's voice (webapp/api-finder.js
+// voiceFor), checked with the person's own model, as for an MCP connection.
+async function apiVoiceFor(userId, plan, key, previous) {
+  const selected = (await scanModelFor(userId, "background").catch(() => null)) || (await scanModelFor(userId).catch(() => null));
+  return require("./api-finder").voiceFor(plan, key, selected, previous).catch((e) => {
+    console.error("[api-key] voice check failed:", e.message);
+    return previous || null;
+  });
+}
+
+// Test and Fix for a key connection: does the service still take the key,
+// and can it still be the voice?
 async function apiCheckRow(userId, row) {
   const api = row.caps?.api || {};
-  const tested = api.auth
-    ? await require("./api-finder").testKey({ base: String(row.server_url).replace(/\/+$/, ""), auth: api.auth, check: api.check }, row.auth_token || "")
-    : { ok: false };
+  const plan = { service: row.name, base: String(row.server_url).replace(/\/+$/, ""), auth: api.auth, check: api.check };
+  const tested = api.auth ? await require("./api-finder").testKey(plan, row.auth_token || "") : { ok: false };
   const status = tested.ok === false ? "error" : "connected";
-  const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow({ status, caps: { ...row.caps, api: { ...api, checked: tested.ok === true } } })).eq("id", row.id).eq("user_id", userId);
+  const caps = { ...row.caps, api: { ...api, checked: tested.ok === true } };
+  let voice = row.caps?.voice || null;
+  if (tested.ok !== false && api.openapi) {
+    plan.list = await require("./api-finder").describe(api.openapi, plan.base).catch(() => []);
+    if (plan.list.length) voice = await apiVoiceFor(userId, plan, row.auth_token || "", row.caps?.voice);
+  }
+  if (voice) caps.voice = voice; else delete caps.voice;
+  const { error } = await supabase.from("user_mcps").update(mcpClient.sealRow({ status, caps })).eq("id", row.id).eq("user_id", userId);
   if (error) console.error("[api-key] status update failed:", error.message);
+  if (voice?.on) await mcpVoiceOnlyHere(userId, row.id);
   if (tested.ok === false) return { status: 200, body: { success: false, error: `${row.name} no longer takes this key. Paste a new one in the box under Add a connection.` } };
-  return { status: 200, body: { success: true, fixed: true, api: true, message: tested.ok ? `${row.name} takes the key.` : `Couldn't check the key with ${row.name} just now. Closedhand will find out the next time it uses it.` } };
+  return { status: 200, body: { success: true, fixed: true, api: true, voice, voice_new: !!voice && !row.caps?.voice, message: tested.ok ? `${row.name} takes the key.` : `Couldn't check the key with ${row.name} just now. Closedhand will find out the next time it uses it.` } };
 }
 
 // MCP OAuth callback (must be BEFORE /auth/:service/callback to avoid conflict)
