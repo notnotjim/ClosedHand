@@ -38,7 +38,8 @@ test("the bot writes out the web chat's recording for the person signed in, and 
   let next = async () => "what's on tomorrow";
   const app = { post: (route, ...handlers) => { routes[route] = handlers[handlers.length - 1]; } };
   const quiet = console.error;
-  register(app, { verifyToken: (t) => (t === "good" ? "u1" : null), transcribe: (wav) => next(wav), warm: (ms) => { warmed.push(ms); return true; }, body: () => {} });
+  const voiced = [];
+  register(app, { verifyToken: (t) => (t === "good" ? "u1" : null), transcribe: (wav) => next(wav), warm: (ms) => { warmed.push(ms); return true; }, warmVoice: (ms) => { voiced.push(ms); return true; }, body: () => {} });
   const handler = routes["/internal/dictation"];
   const call = async (token, body) => {
     const out = { status: 200 };
@@ -63,9 +64,13 @@ test("the bot writes out the web chat's recording for the person signed in, and 
   routes["/internal/dictation/warm"]({ get: () => "bad" }, res);
   assert.equal(out.status, 401);
   warmed.length = 0;
-  routes["/internal/dictation/warm"]({ get: () => "good" }, res);
+  routes["/internal/dictation/warm"]({ get: () => "good", query: {} }, res);
   assert.deepEqual(out.body, { warming: true });
   assert.deepEqual(warmed, [5 * 60000]);
+  assert.deepEqual(voiced, [], "writing into the box reads nothing back, so the voice stays unloaded");
+  // Talking on a phone sends, and the reply is read aloud: the voice loads too.
+  routes["/internal/dictation/warm"]({ get: () => "good", query: { voice: "1" } }, res);
+  assert.deepEqual(voiced, [5 * 60000]);
 });
 
 test("voice is always written out on this computer, never sent to Groq", async () => {

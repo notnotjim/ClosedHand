@@ -1293,6 +1293,35 @@
   @media (max-width: 767px) {
     .toolbar-btn, .send-btn, .page-tab { min-height: 44px; min-width: 44px; }
   }
+  /* Phones talk first ("Talk or type"). Under the greeting,
+     a fist to tap and talk; under it a small box to type instead; under that
+     the chat apps you linked. In a conversation the mic in the box talks the
+     same way. Wider screens keep today's box, with the mic writing into it. */
+  .talk, .continue-on { display: none; }
+  @media (max-width: 600px) {
+    body:not(.no-talk) .talk { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 22px 0 30px; opacity: 0; animation: heroIn 0.8s ease forwards 0.7s; }
+    .talk-btn { width: 136px; height: 136px; padding: 0; border-radius: 50%; border: 1.5px solid rgba(216,98,75,0.6); background: #1A1817; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .talk-btn img { width: 58px; height: 64px; pointer-events: none; }
+    .talk-btn:focus-visible { outline: 2px solid #E59B89; outline-offset: 4px; }
+    .talk-btn.recording { border-color: rgba(216,98,75,0.9); animation: talkRing 1.4s ease-out infinite; }
+    .talk-btn.recording img { animation: talkGrip 1.4s ease-in-out infinite; }
+    .talk-btn.busy { opacity: 0.6; cursor: progress; }
+    .talk-hint { margin: 0; min-height: 22px; max-width: 300px; font-size: 15px; line-height: 1.45; text-align: center; color: rgba(239,230,214,0.75); }
+    body:not(.chat-active):not(.no-talk) #micBtn { display: none; }
+    /* The box to type in, one line until there is more. */
+    body:not(.chat-active) #heroInputBox { display: flex; align-items: flex-end; }
+    body:not(.chat-active) #heroInputBox .input-textarea-wrap { flex: 1; min-width: 0; padding: 12px 4px 12px 16px; }
+    body:not(.chat-active) #heroInputBox textarea, body:not(.chat-active) .input-box-wrap:focus-within #heroInputBox textarea, body:not(.chat-active) .input-box-wrap.composing #heroInputBox textarea { min-height: 24px; }
+    body:not(.chat-active) #heroInputBox .input-toolbar { padding: 6px 6px 6px 0; border-top: none; gap: 6px; }
+    .continue-on { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; font-size: 14px; color: rgba(239,230,214,0.62); }
+    .continue-on:not(:has(.via-icon:not([hidden]))) { display: none; }
+    .continue-on .send-via { gap: 10px; }
+    .continue-on .send-via a { width: 44px; height: 44px; border-radius: 22px; background: transparent; border-color: rgba(239,230,214,0.12); }
+    .continue-on .send-via img { width: 20px; height: 20px; }
+  }
+  @keyframes talkRing { 0% { box-shadow: 0 0 0 0 rgba(216,98,75,0.45); } 100% { box-shadow: 0 0 0 26px rgba(216,98,75,0); } }
+  @keyframes talkGrip { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.9); } }
+  @media (prefers-reduced-motion: reduce) { .talk-btn.recording, .talk-btn.recording img { animation: none; } }
   /* ===== FEATURES SECTION (below fold) ===== */
   .features-page {
     position: relative;
@@ -2306,6 +2335,13 @@
          on the screen rather than in the hero. -->
     <div style="flex:0.35"></div>
     <h1 class="hero-heading" id="chatGreeting">How can I help?</h1>
+    <!-- Phones talk first ("Talk or type"): a tap on the fist listens, the
+         next sends what was said, and the reply is read aloud. Wider screens
+         keep the mic in the box. -->
+    <div class="talk" id="talkArea">
+      <button type="button" class="talk-btn" id="talkBtn" aria-label="Talk to Closedhand"><img src="/fist.png" alt=""></button>
+      <p class="talk-hint" id="talkHint" role="status" aria-live="polite"></p>
+    </div>
     <!-- Sending from here carries on the open conversation only while it is
          recent, and says so; after a few quiet hours it starts a new one. -->
 
@@ -2357,6 +2393,9 @@
       <div class="hero-recent-label">Pick up where you left off</div>
       <div class="hero-recent-list" id="heroRecentList"></div>
     </div>
+    <!-- Phones: the chat apps you linked, under the box rather than in it
+         (moved here from the toolbar while the screen is phone-sized). -->
+    <div class="continue-on" id="continueOn"><span>Continue on</span></div>
     <button class="hero-recent-float" id="heroRecentFloat" type="button" aria-expanded="false" aria-controls="heroRecentPop" hidden>
       <span>Pick up where you left off</span>
       <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
@@ -2726,8 +2765,8 @@
 </script>
 
 <!-- Three.js: Oil-slick blob + starfield -->
-<script src="/speech-playback.js?v=2.0.17"></script>
-<script src="/dictation.js?v=3"></script>
+<script src="/speech-playback.js?v=2.0.18"></script>
+<script src="/dictation.js?v=5"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -3342,7 +3381,7 @@
   });
 
   function step() {
-    if (window._chatModeActive || userFocused || input.value.trim() || document.getElementById('file-preview-area')) {
+    if (window._chatModeActive || userFocused || input.value.trim() || document.getElementById('file-preview-area') || (window.talkFirst && window.talkFirst())) {
       input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file...');
       setTimeout(step, 200);
       return;
@@ -3432,17 +3471,48 @@
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      window._replyAloud = 0;
       if (input.value.trim() || pendingFiles.length > 0) sendMessage();
     }
   });
 
   sendBtn.addEventListener('click', function() {
+    window._replyAloud = 0;
     if (input.value.trim() || pendingFiles.length > 0) sendMessage();
   });
 
   // Mic button: written out by Closedhand's built-in speech to text, the
-  // same as a voice note from a chat app (/dictation.js).
-  if (window.ClosedhandDictation) ClosedhandDictation.attach(document.getElementById('micBtn'), input, document.getElementById('dictationNote'));
+  // same as a voice note from a chat app (/dictation.js). On a phone,
+  // talking sends: the fist under the greeting, and the mic in a
+  // conversation, and the reply is read aloud. On a wider screen the mic
+  // writes into the box, to edit before sending.
+  var phone = window.matchMedia('(max-width: 600px)');
+  var sendVia = document.getElementById('sendVia');
+  var viaHome = sendVia.parentNode, viaNext = sendVia.nextElementSibling;
+  window.talkFirst = function () { return phone.matches && !document.body.classList.contains('no-talk'); };
+  function placeForScreen() {
+    var into = window.talkFirst() ? document.getElementById('continueOn') : viaHome;
+    if (sendVia.parentNode !== into) into.insertBefore(sendVia, window.talkFirst() ? null : viaNext);
+    var words = composerPlaceholder();
+    if (input.placeholder !== words) input.placeholder = words;
+  }
+  if (phone.addEventListener) phone.addEventListener('change', placeForScreen); else phone.addListener(placeForScreen);
+  new MutationObserver(placeForScreen).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  function sendSpoken() { window._replyAloud = Date.now(); sendMessage(); }
+  function readyToSpeak() { if (window.ClosedHandSpeech && window.ClosedHandSpeech.prime) window.ClosedHandSpeech.prime(); }
+  if (window.ClosedhandDictation) {
+    ClosedhandDictation.attach(document.getElementById('micBtn'), input, document.getElementById('dictationNote'),
+      { send: function () { return phone.matches; }, onWords: sendSpoken, onStop: readyToSpeak });
+    var talks = ClosedhandDictation.attach(document.getElementById('talkBtn'), input, document.getElementById('talkHint'), {
+      send: true, onWords: sendSpoken, onStop: readyToSpeak, thing: 'the fist',
+      labels: { idle: 'Talk to Closedhand', recording: 'Stop and send' },
+      hints: { idle: 'Tap the fist to talk', recording: 'Listening, tap to send', busy: 'Writing it out…' }
+    });
+    if (!talks) document.body.classList.add('no-talk');
+  } else document.body.classList.add('no-talk');
+  // Once the rest of this script has run (the placeholder reads the files
+  // waiting to be sent, set up further down).
+  setTimeout(placeForScreen, 0);
 
   // Pressing the paperclip leaves focus where it is, so the box does not
   // grow under the pointer. While the picker is open the page has no focus;
@@ -3555,10 +3625,12 @@
   var pendingFiles = [];
   var picking = false;
 
-  // The placeholder says what fits what is in the box.
+  // The placeholder says what fits what is in the box, and on a phone, that
+  // typing is the other way to talk.
   function composerPlaceholder() {
     return pendingFiles.length > 1 ? 'Ask about these files or just send'
       : pendingFiles.length === 1 ? 'Ask about this file or just send'
+      : window.talkFirst && window.talkFirst() ? (document.body.classList.contains('chat-active') ? 'Type a message' : 'Or type here')
       : 'Ask anything or drop any type of file...';
   }
   window.composerPlaceholder = composerPlaceholder;
@@ -3735,7 +3807,9 @@
       // Grow the blob smoothly
       if (window._setBlobScale) window._setBlobScale(1.5);
 
-      input.focus();
+      // Ready to type on, unless the person talked: on a phone that would
+      // put the keyboard up over the reply they are about to hear.
+      if (!window._replyAloud) input.focus();
     }, 350);
   }
 
@@ -4004,7 +4078,7 @@
     return d.toLocaleDateString('en-GB', opts);
   }
   // The row under a message that shows on hover: when it was said, and copy.
-  function attachMsgTools(div, text, ts) {
+  function attachMsgTools(div, text, ts, live) {
     var tools = document.createElement('div');
     tools.className = 'msg-tools';
     var copy = document.createElement('button');
@@ -4018,11 +4092,17 @@
     });
     tools.appendChild(copy);
     if (div.classList.contains('bot') && text.trim() && window.ClosedHandSpeech) {
-      window.ClosedHandSpeech.addControl(tools, text, function(payload) {
+      // The first reply after the person talked is read aloud, all of it,
+      // follow-on messages too: the tap that sent it made the sound ready.
+      var aloud = live && window._replyAloud && Date.now() - window._replyAloud < 10 * 60000;
+      if (aloud) window._replyAloud = 0;
+      var whole = aloud && typeof div._raw === 'string' ? div._raw.replace(/^[ \t]*\[\[next\]\][ \t]*$/gm, '').trim() : text;
+      var reading = window.ClosedHandSpeech.addControl(tools, whole || text, function(payload) {
         if (!chatWs || chatWs.readyState !== 1) { connectChat(); return false; }
         chatWs.send(JSON.stringify(payload));
         return true;
       });
+      if (aloud && reading) setTimeout(function () { reading.click(); }, 0);
     }
     var when = document.createElement('span');
     when.className = 'msg-time';
@@ -4166,7 +4246,7 @@
       }
     }
     // A live message is stamped now; history passes its own stamp, or null when it has none.
-    attachMsgTools(div, typeof text === 'string' ? text : '', ts === undefined ? new Date().toISOString() : ts);
+    attachMsgTools(div, typeof text === 'string' ? text : '', ts === undefined ? new Date().toISOString() : ts, ts === undefined);
     messagesEl.insertBefore(div, typingEl);
     scrollToBottom();
   }

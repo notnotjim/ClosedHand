@@ -4962,7 +4962,8 @@ app.post("/api/dictation/warm", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
-    const r = await fetch(`${BOT_INTERNAL_URL}/internal/dictation/warm`, { method: "POST", headers: { "x-closedhand-token": botToken(userId) }, signal: AbortSignal.timeout(10000) });
+    const voice = req.query.voice === "1" ? "?voice=1" : "";
+    const r = await fetch(`${BOT_INTERNAL_URL}/internal/dictation/warm${voice}`, { method: "POST", headers: { "x-closedhand-token": botToken(userId) }, signal: AbortSignal.timeout(10000) });
     res.json({ warming: !!(await r.json().catch(() => ({}))).warming });
   } catch (e) {
     res.json({ warming: false });

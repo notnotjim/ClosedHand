@@ -3,7 +3,7 @@
 // note from a chat app (POST /api/dictation, lib/dictation.js). So it works in
 // every browser, and nobody else hears it: the browser's own dictation sent
 // the voice to Apple or Google. Tap to start, tap again to stop, and the words
-// land in the message box.
+// land in the message box, or, for talking (the phone's fist), are sent.
 (function (root) {
   'use strict';
   var RATE = 16000;
@@ -41,27 +41,38 @@
     return bytes;
   }
 
-  // Wires the mic button to the message box. The note under the box says
-  // what is happening: listening, writing it out, or what went wrong.
-  function attach(button, input, note) {
+  // Wires a mic button to the message box. The note says what is happening:
+  // listening, writing it out, or what went wrong. opts: send (true, or a
+  // function asked each time) sends the words instead of leaving them in the
+  // box, calling onWords; onStop runs inside the tap that stops, where a
+  // phone lets sound be started for the reply; thing names the button in
+  // what the note says; labels { idle, recording } are its name; hints
+  // { idle, recording, busy } make the note a line that always shows.
+  // Returns false where the browser can't record.
+  function attach(button, input, note, opts) {
+    opts = opts || {};
     var Context = root.AudioContext || root.webkitAudioContext;
     var media = root.navigator && root.navigator.mediaDevices;
-    if (!button || !input) return;
-    if (!Context || !media || !media.getUserMedia) { button.hidden = true; return; }
+    if (!button || !input) return false;
+    if (!Context || !media || !media.getUserMedia) { button.hidden = true; return false; }
     var take = null, busy = false, noteTimer = null;
+    var thing = opts.thing || 'the mic';
+    var labels = opts.labels || { idle: 'Speak instead of typing', recording: 'Stop and write it out' };
+    var hints = opts.hints || null;
 
     function say(message, stay) {
       if (!note) return;
       clearTimeout(noteTimer);
-      note.textContent = message || '';
-      note.hidden = !message;
+      var shown = message || (hints ? hints.idle : '');
+      note.textContent = shown;
+      note.hidden = !shown;
       if (message && !stay) noteTimer = setTimeout(function () { say(''); }, 8000);
     }
     function look(state) {
       button.classList.toggle('recording', state === 'recording');
       button.classList.toggle('busy', state === 'busy');
       button.setAttribute('aria-pressed', state === 'recording' ? 'true' : 'false');
-      var label = state === 'recording' ? 'Stop and write it out' : 'Speak instead of typing';
+      var label = state === 'recording' ? labels.recording : labels.idle;
       button.title = label;
       button.setAttribute('aria-label', label);
     }
@@ -80,14 +91,14 @@
       t.parts.forEach(function (p) { length += p.length; });
       if (length < rate * MIN_SECONDS) {
         look('idle');
-        say('That was too short to hear. Tap the mic, speak, then tap it again.');
+        say('That was too short to hear. Tap ' + thing + ', speak, then tap it again.');
         return;
       }
       var all = new Float32Array(length), at = 0;
       t.parts.forEach(function (p) { all.set(p, at); at += p.length; });
       busy = true;
       look('busy');
-      say('Writing it out…', true);
+      say(hints ? hints.busy : 'Writing it out…', true);
       fetch('/api/dictation', { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: encodeWav(downsample(all, rate)) })
         .then(function (r) {
           return r.json().catch(function () { return {}; }).then(function (j) {
@@ -100,8 +111,10 @@
           if (!words) { say("Closedhand didn't catch any words. Try again a little closer to the mic."); return; }
           input.value = input.value.trim() ? input.value.replace(/\s*$/, ' ') + words : words;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.focus();
           say('');
+          var sending = typeof opts.send === 'function' ? opts.send() : !!opts.send;
+          if (sending && opts.onWords) opts.onWords(words);
+          else input.focus();
         })
         .catch(function (e) { say(e.message); })
         .then(function () { busy = false; look('idle'); });
@@ -112,10 +125,12 @@
     // under the pointer and move the mic before the tap lands, as with attach.
     button.addEventListener('mousedown', function (e) { e.preventDefault(); });
     button.addEventListener('click', function () {
-      if (take) { stop(); return; }
+      if (take) { if (opts.onStop) opts.onStop(); stop(); return; }
       if (busy) return;
-      // The speech to text loads while the person talks, not after.
-      fetch('/api/dictation/warm', { method: 'POST' }).catch(function () {});
+      // The speech to text loads while the person talks, not after, and so
+      // does the voice when the reply will be read aloud.
+      var sending = typeof opts.send === 'function' ? opts.send() : !!opts.send;
+      fetch('/api/dictation/warm' + (sending ? '?voice=1' : ''), { method: 'POST' }).catch(function () {});
       // Made inside the tap, as phones only let sound start from one.
       var context = new Context();
       media.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
@@ -128,12 +143,14 @@
         if (context.state === 'suspended') context.resume();
         take = { context: context, stream: stream, source: source, processor: processor, parts: parts, timer: setTimeout(stop, MAX_MS) };
         look('recording');
-        say("Listening. Tap the mic again when you're done.", true);
+        say(hints ? hints.recording : "Listening. Tap the mic again when you're done.", true);
       }).catch(function () {
         context.close();
-        say("Closedhand can't hear you yet. Allow the microphone for this page, then tap the mic again.");
+        say("Closedhand can't hear you yet. Allow the microphone for this page, then tap " + thing + ' again.');
       });
     });
+    say('');
+    return true;
   }
 
   var api = { downsample: downsample, encodeWav: encodeWav, attach: attach, RATE: RATE };

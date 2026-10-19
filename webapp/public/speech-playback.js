@@ -76,6 +76,14 @@
     });
     tools.appendChild(button);
     tools.appendChild(status);
+    return button;
+  }
+  // Inside a tap: makes the sound ready, so a reply that arrives later can be
+  // read aloud without a tap of its own (phones only start sound from one).
+  function prime() {
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    try { context = context || new AudioContext(); context.resume().catch(function () {}); } catch (_) {}
   }
   function receive(message) {
     if (!/^speech_(chunk|end|error)$/.test(message.type || '')) return false;
@@ -115,5 +123,5 @@
     return true;
   }
   window.addEventListener('pagehide', function () { stop(); });
-  window.ClosedHandSpeech = { addControl: addControl, receive: receive, stop: stop };
+  window.ClosedHandSpeech = { addControl: addControl, receive: receive, stop: stop, prime: prime };
 }());

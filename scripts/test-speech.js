@@ -50,6 +50,21 @@ test('asset verification rejects same-length corruption', async () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('a voice warmed ahead of a reply is the one that reads it, and stays loaded while kept', async () => {
+  const f = fixture();
+  try {
+    assert.equal(f.service.warm(60000), true);
+    assert.equal(f.workers.length, 1, 'loading starts at once');
+    const w = f.workers[0]; w.ready();
+    const job = f.service.synthesize('Back by six.');
+    assert.equal(f.workers.length, 1, 'the warm voice reads it');
+    assert.equal(w.calls.length, 1);
+    w.done(); await job;
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(w.terminated, undefined, 'kept past the usual idle time');
+  } finally { f.cleanup(); }
+});
+
 test('serialises synthesis, bounds queue and releases worker after idle', async () => {
   const f = fixture();
   try {
