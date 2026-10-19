@@ -16,18 +16,12 @@
 // Saved in the connection's caps: voice (speak and hear, one switch) in
 // caps.voice, every other job in caps.jobs.<job>.
 //
-// A new job is an entry in TOOL_JOBS: what a tool must do, the inputs
-// Closedhand gives it, and the words that make a tool worth asking about.
+// A new job is an entry in tool-jobs.js: the Closedhand tool it replaces,
+// what a service's tool must do, and the inputs it is given.
 
-// Jobs whose tool takes Closedhand's inputs and returns text for the model.
-const TOOL_JOBS = {
-  search: {
-    does: "searches the web for a query and returns the results: titles, links and snippets, or an answer with its sources",
-    inputs: { query: "the words to search for" },
-    words: /search|query|web|serp|google|bing|lookup|look up|find/i,
-    findWith: "search the web query results",
-  },
-};
+// Closedhand's own tools a service can take over, and what each takes
+// (tool-jobs.js, shared with the bot).
+const TOOL_JOBS = require("./tool-jobs").JOBS;
 
 // Only tools that could do one of the jobs go to the model, so most services
 // cost nothing to check.
@@ -44,7 +38,7 @@ const CHOOSE = {
 
 function toolJobReport(job) {
   const properties = { found: { type: "boolean" }, tool: { type: "string" } };
-  for (const [input, about] of Object.entries(job.inputs)) properties[`${input}_argument`] = { type: "string", description: `The argument for ${about}.` };
+  for (const [input, spec] of Object.entries(job.inputs)) properties[`${input}_argument`] = { type: "string", description: `The argument for ${spec.about}${spec.required ? "" : ", or empty if it takes none"}.` };
   properties.fixed_arguments = { type: "object", description: "Values for other required arguments, only where the definition makes the value clear." };
   return { type: "object", properties, required: ["found"] };
 }
@@ -94,10 +88,10 @@ ${JSON.stringify(tools.map((t) => ({ name: t.name, description: String(t.descrip
 Report, for each job:
 - speak: a tool that takes words and returns them spoken, as audio or as a link to audio. text_argument is the argument for the words. format_argument is the argument that picks the audio format or encoding, if there is one.
 - hear: a tool that takes a recording of speech and returns the words. audio_argument is the argument for the recording, and audio_as is how it wants it: "base64" (the audio as base64 text), "path" (a file on the same computer), "file" (a file upload, an argument of format binary) or "url" (a web address).
-${Object.entries(TOOL_JOBS).map(([name, job]) => `- ${name}: a tool that ${job.does}. ${Object.entries(job.inputs).map(([input, about]) => `${input}_argument is the argument for ${about}.`).join(" ")}`).join("\n")}
+${Object.entries(TOOL_JOBS).map(([name, job]) => `- ${name}: a tool that ${job.does}. ${Object.entries(job.inputs).map(([input, spec]) => `${input}_argument is the argument for ${spec.about}${spec.required ? "" : ", if it takes one"}.`).join(" ")}`).join("\n")}
 - fixed_arguments: values for any other required arguments, only when the definition makes the value clear, such as a default, an example it gives, or the one sensible choice of an enum. Never make up ids, such as a voice id.
 - choose_argument and choose_from (speak and hear): when a required argument is an id from the person's own account (a voice id, say) and another tool here lists them, name the argument and that listing tool, and Closedhand picks one from the list.
-- Tools that make music or sound effects, change one voice into another, or manage voices, agents, accounts or files are not speak or hear. A tool that searches only the service's own records, not the web, is not search.
+- Tools that make music or sound effects, change one voice into another, or manage voices, agents, accounts or files are not speak or hear. A tool that searches only the service's own records, not the web, is not search. Report a tool for a job only when doing that job is what the tool is for.
 - found is false when no tool fits.`;
 }
 
@@ -157,9 +151,10 @@ function check(tools, report, job) {
   return { tool: tool.name, audio: main, as: report.audio_as, fixed, ...(choose ? { choose } : {}) };
 }
 
-// Keeps a reported tool for one of TOOL_JOBS only when its definition bears
-// it out: each of Closedhand's inputs goes to an argument the tool has, and
-// nothing it requires is left out. { tool, args: { input: argument }, fixed }.
+// Keeps a reported tool for one of the jobs only when its definition bears
+// it out: each of Closedhand's required inputs, and any other it names, goes
+// to an argument the tool has, and nothing the tool requires is left out.
+// { tool, args: { input: argument }, fixed }.
 function checkTool(tools, report, name) {
   const job = TOOL_JOBS[name];
   if (!job || !report || report.found !== true) return null;
@@ -168,11 +163,13 @@ function checkTool(tools, report, name) {
   const schema = tool.inputSchema || {};
   const props = schema.properties || {};
   const args = {};
-  for (const input of Object.keys(job.inputs)) {
+  for (const [input, spec] of Object.entries(job.inputs)) {
     const arg = report[`${input}_argument`];
-    if (!arg || !props[arg] || Object.values(args).includes(arg)) return null;
+    if (!arg) { if (spec.required) return null; continue; }
+    if (!props[arg] || Object.values(args).includes(arg)) return null;
     args[input] = arg;
   }
+  if (!Object.keys(args).length) return null;
   const fixed = fixedFrom(props, report, new Set(Object.values(args)));
   if (!fixed) return null;
   if (!requiredMet(schema, props, new Set([...Object.values(args), ...Object.keys(fixed)]))) return null;

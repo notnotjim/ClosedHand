@@ -6326,6 +6326,13 @@ async function switchJob(req, res, part) {
   }
 }
 app.post("/api/mcps/:id/voice", (req, res) => switchJob(req, res, "voice"));
+// What the tile and the news say for each job a connection can take over
+// (tool-jobs.js), with {name} where the service's name goes.
+app.get("/api/mcps/job-texts", (req, res) => {
+  if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not logged in" });
+  const { JOBS, texts } = require("./tool-jobs");
+  res.json(Object.fromEntries(Object.keys(JOBS).map((j) => [j, texts(j)])));
+});
 app.post("/api/mcps/:id/job", (req, res) => {
   const part = String(req.body?.job || "");
   if (part !== "voice" && !require("./connection-jobs").TOOL_JOBS[part]) return res.status(400).json({ error: "Not something a connection can do." });

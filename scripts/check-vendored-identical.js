@@ -62,6 +62,7 @@ const PAIRS = [
   },
   { name: "api-keys", copies: ["lib/api-keys.js", "webapp/api-keys.js"] },
   { name: "ssrf", copies: ["lib/ssrf.js", "webapp/ssrf.js"] },
+  { name: "tool-jobs", copies: ["lib/tool-jobs.js", "webapp/tool-jobs.js"] },
   {
     name: "crypto-tokens",
     copies: ["crypto-tokens.js", "webapp/crypto-tokens.js", "closedhand-com/lib/crypto-tokens.js"],

@@ -3233,7 +3233,7 @@
         // What it took over (its voice, its search) is said where it stays
         // put, under the connect box.
         var newId = params.get("mcp_new");
-        if (newId) fetch('/api/mcps').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+        if (newId) mcpJobTexts.then(function() { return fetch('/api/mcps'); }).then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
           var m = (list || []).find(function(x) { return x.id === newId; });
           if (m && m.caps) mcpStatus(mcpNews(m.name, m.caps, true, Object.keys(m.caps.jobs || {})));
         }).catch(function() {});
@@ -3802,6 +3802,7 @@
 
     async function loadMcps() {
       try {
+        await mcpJobTexts;
         var res = await fetch('/api/mcps');
         if (!res.ok) return;
         var mcps = await res.json();
@@ -3953,19 +3954,17 @@
     }
 
     // What a connection does in place of Closedhand's own, for each job other
-    // than the voice (webapp/connection-jobs.js): its switch's name, and what
-    // it means on, off and when it is new.
-    var MCP_JOBS = {
-      search: {
-        title: 'Closedhand\u2019s search',
-        news: function(name) { return 'Closedhand will now search the web with ' + name + ' first. Your searches go to ' + name + ', which may charge your account for them.'; },
-        on: function(name) { return 'Closedhand searches the web with ' + name + ' first. Your searches go to ' + name + ', which may charge your account for them.'; },
-        off: function(name) { return 'Closedhand searches with your primary model\u2019s own search, or free search. Switch this on to search with ' + name + ' first.'; },
-        stoodIn: 'Last time, Closedhand\u2019s own search stood in: ',
-        toastOn: 'Closedhand will search with this first.',
-        toastOff: 'Closedhand will use its own search.'
-      }
-    };
+    // than the voice (tool-jobs.js, from GET /api/mcps/job-texts): its
+    // switch's name, and what it means on, off and when it is new.
+    var MCP_JOBS = {};
+    var mcpJobTexts = fetch('/api/mcps/job-texts').then(function(r) { return r.ok ? r.json() : {}; }).then(function(all) {
+      Object.keys(all || {}).forEach(function(job) {
+        var t = all[job];
+        var fill = function(words) { return function(name) { return String(words).split('{name}').join(name); }; };
+        MCP_JOBS[job] = { title: t.title, news: fill(t.news), on: fill(t.on), off: fill(t.off), stoodIn: t.stoodIn,
+          toastOn: 'Closedhand will use this first.', toastOff: 'Closedhand will use its own.' };
+      });
+    }).catch(function() {});
 
     // What a connection just took over, said where it stays put, under the
     // connect box: its voice and every other job, then how to switch them off.

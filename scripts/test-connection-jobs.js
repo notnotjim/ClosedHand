@@ -10,7 +10,6 @@ const fs = require("fs");
 const path = require("path");
 const { findJobs, saved, checkTool, TOOL_JOBS } = require("../webapp/connection-jobs");
 const jobs = require("../lib/connection-jobs");
-const { webSearch } = require("../lib/web-search");
 
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 const MODEL = { model: "kestrel-1" };
@@ -68,20 +67,35 @@ test("Closedhand searches with the connected service first, unasked, and its own
   const { db, writes } = store(PLAN);
   const calls = [];
   const callTool = async (userId, rowId, tool, args) => { calls.push([tool, args]); return { content: [{ type: "text", text: JSON.stringify({ results: [{ title: "Ferry times", url: "https://ferries.example/times" }] }) }] }; };
-  const providerSearch = { forProvider: () => ({ label: "Provider", search: async () => { throw new Error("should not be asked"); } }) };
-  const freeSearch = async () => { throw new Error("should not be asked"); };
-  const got = await webSearch("ferry times", 5, { userId: "u1", connected: { run: (u, j, i) => jobs.run(u, j, i, { db, callTool }) }, providerSearch, freeSearch });
+  const got = await jobs.takeOver("web_search", { query: "ferry times", _userId: "u1" }, { db, callTool, ctx: {} });
   assert.deepEqual(calls, [["kestrel_web_search", { safe: "on", q: "ferry times" }]]);
-  assert.equal(got.source, "Kestrel Search");
-  assert.deepEqual(got.results, [{ title: "Ferry times", url: "https://ferries.example/times" }]);
+  assert.deepEqual(got, { results: [{ title: "Ferry times", url: "https://ferries.example/times" }], query: "ferry times", count: 1, source: "Kestrel Search" });
 
   const quiet = console.warn; console.warn = () => {};
   try {
     const failing = async () => { throw new Error("monthly limit reached"); };
-    const fallback = await webSearch("ferry times", 5, { userId: "u1", connected: { run: (u, j, i) => jobs.run(u, j, i, { db, callTool: failing }) }, providerSearch: { forProvider: () => null }, freeSearch: async () => ({ results: [{ title: "free" }], source: "DuckDuckGo" }) });
-    assert.equal(fallback.source, "DuckDuckGo");
+    assert.equal(await jobs.takeOver("web_search", { query: "ferry times", _userId: "u1" }, { db, callTool: failing, ctx: {} }), null, "the tool's own search runs");
     assert.match(writes.at(-1).fallback.why, /Kestrel Search couldn't search: monthly limit reached/, "the tile says why");
   } finally { console.warn = quiet; }
+});
+
+test("every lookup tool can be taken over, with the saved location where the tool would use it, and tools on the person's own accounts never are", async () => {
+  const { forTool, JOBS, texts } = require("../lib/tool-jobs");
+  for (const tool of ["web_search", "web_fetch", "watch_video", "weather_lookup", "air_quality", "maps_search_places", "maps_directions", "maps_geocode"]) assert.ok(forTool(tool), tool);
+  for (const tool of ["gmail_send", "gcal_create_event", "drive_search", "add_schedule", "api_request", "sandbox_exec"]) assert.equal(forTool(tool), null, tool);
+  for (const job of Object.keys(JOBS)) assert.ok(texts(job).title && texts(job).on.includes("{name}") && !/\u2014/.test(JSON.stringify(texts(job))), job);
+
+  const row = { id: "heron-row", name: "Heron Weather", updated_at: "1", transport: "api", caps: { jobs: { weather: { tool: "GET /now", args: { latitude: "lat", longitude: "lon" }, fixed: { units: "metric" }, on: true } } } };
+  const db = { from: () => ({ select: () => ({ eq: () => ({ eq: async () => ({ data: [row], error: null }) }) }) }) };
+  const calls = [];
+  const callTool = async (u, id, tool, args) => { calls.push([tool, args]); return { content: [{ type: "text", text: '{"temp":21,"sky":"light rain"}' }] }; };
+  const ctx = { store: { location: { latitude: 38.72, longitude: -9.14, name: "Lisbon" } } };
+  const got = await jobs.takeOver("weather_lookup", { _userId: "u1" }, { db, callTool, ctx });
+  assert.deepEqual(calls, [["GET /now", { units: "metric", lat: 38.72, lon: -9.14 }]], "no place given: the saved one, as the tool itself would");
+  assert.deepEqual(got.result, { temp: 21, sky: "light rain" });
+  assert.equal(got.source, "Heron Weather");
+  assert.equal(await jobs.takeOver("gmail_send", { _userId: "u1", to: "x" }, { db, callTool, ctx }), null);
+  assert.equal(calls.length, 1);
 });
 
 test("switched off, or for someone else, the connection isn't asked", async () => {
@@ -113,10 +127,14 @@ test("the server, tile and privacy pages carry every job, not only the voice", (
   assert.match(server, /async function mcpJobsFor\(userId, tools, previousCaps\)/);
   assert.doesNotMatch(server, /voice-tools/);
   const dash = read("webapp/views/dashboard.html");
-  assert.match(dash, /title: 'Closedhand\\u2019s search'/);
+  assert.match(dash, /var mcpJobTexts = fetch\('\/api\/mcps\/job-texts'\)/);
+  assert.match(server, /app\.get\("\/api\/mcps\/job-texts"/);
   assert.match(dash, /Object\.keys\(caps\.jobs \|\| \{\}\)\.forEach\(function\(job\) \{/);
-  assert.match(read("lib/tools/handlers.js"), /webSearch\(toolInput\.query, toolInput\.count, \{ settings: [^}]+\}, userId: toolInput\._userId \|\| ctx\.activeUserId \}\)/);
+  const handlers = read("lib/tools/handlers.js");
+  const top = handlers.slice(handlers.indexOf("async function handleInternalTool("));
+  assert.ok(top.indexOf('require("../connection-jobs").takeOver(toolName') < top.indexOf("switch (toolName)"), "tried before any tool runs");
   for (const page of ["webapp/views/privacy.html", "closedhand-com/views/privacy.html"]) {
     assert.match(read(page), /web searches go to a search service you connected, if you did, then to your AI provider's own search/);
+    assert.match(read(page), /anything else a service you connect does in Closedhand's place, such as reading web pages, watching videos, the weather or maps/);
   }
 });

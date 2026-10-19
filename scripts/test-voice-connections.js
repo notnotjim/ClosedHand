@@ -39,7 +39,8 @@ test("the model's reading is kept only where the tools' own definitions bear it 
 test("a service with nothing about voice costs no model call, and a failed check keeps what was found", async () => {
   let asked = 0;
   const count = async () => { asked++; throw new Error("down"); };
-  assert.deepEqual(await findJobs([TOOLS[0]], { model: "kestrel-1" }, { request: count }), { voice: null, jobs: { search: null } });
+  const noJobs = Object.fromEntries(Object.keys(require("../webapp/connection-jobs").TOOL_JOBS).map((j) => [j, null]));
+  assert.deepEqual(await findJobs([TOOLS[0]], { model: "kestrel-1" }, { request: count }), { voice: null, jobs: noJobs });
   assert.equal(asked, 0);
   assert.deepEqual(await findJobs(TOOLS, null), { voice: undefined, jobs: undefined }, "no model to ask");
   assert.deepEqual(await findJobs(TOOLS, { model: "kestrel-1" }, { request: count }), { voice: undefined, jobs: undefined }, "the model failed");
