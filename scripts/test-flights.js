@@ -289,3 +289,53 @@ test('scanner reads arrival from attached itinerary even when the body contains 
   await h.api.scanEmailsForFlights('fixture-user',{emails:[{...email,body:'XY648 will now depart 20:00. Please see your full itinerary.',attachments:[{filename:'itinerary.pdf',size:100}]}]});
   assert.equal(reads,1);assert.match(h.prompt(),/arrives 21:20/);
 });
+
+// A landed flight moves the saved location, so the clock, the weather and
+// "where you are" follow without anyone asking. Places and the flight are
+// invented; the airport lookup is a stand-in.
+const landing = { flightNumber: 'XY901', departure: { airport: 'BKK', tz: 'Asia/Bangkok', dateTime: '2026-09-12T01:00:00+07:00' }, arrival: { airport: 'HND', tz: 'Asia/Tokyo', dateTime: '2026-09-12T08:30:00+09:00' } };
+const landedAt = Date.parse(landing.arrival.dateTime); // before `now`
+const beforeTrip = { name: 'Kestrel Bay', latitude: 13.75, longitude: 100.5, timezone: 'Asia/Bangkok', updated: '2026-09-08T09:00:00Z', source: 'browser' };
+const heronField = async code => code === 'HND' ? { name: 'Heron Field Airport', town: 'Heronton', latitude: 35.55, longitude: 139.78 } : null;
+function landingStore(flight, location) { return { facts: { 'flight-XY901-2026-09-12': wrap(flight) }, location }; }
+
+test('a flight that landed after the location was saved moves it there, once, without live status', async () => {
+  const h = loadFlights({}, [], { './time-context': require('../lib/time-context') });
+  const store = landingStore(landing, { ...beforeTrip });
+  let saves = 0;
+  const moved = await h.api.moveToLanding(now, { store, airport: heronField, save: () => saves++ });
+  assert.deepEqual({ ...moved }, { name: 'Heronton', latitude: 35.55, longitude: 139.78, timezone: 'Asia/Tokyo', updated: new Date(landedAt).toISOString(), source: 'flight', flight: 'XY901', landedAt: 'Heron Field Airport (HND)' });
+  assert.equal(saves, 1);
+  assert.equal(await h.api.moveToLanding(now, { store, airport: heronField, save: () => saves++ }), null, 'already moved');
+  assert.equal(saves, 1);
+});
+
+test('a place saved after the landing stays, and an unconfirmed, cancelled, diverted or old flight moves nobody', async () => {
+  const h = loadFlights({}, [], { './time-context': require('../lib/time-context') });
+  const never = () => assert.fail('nothing to save');
+  const sharedLater = { ...beforeTrip, name: 'Wrenford', timezone: 'Asia/Tokyo', updated: new Date(landedAt + 3600000).toISOString() };
+  assert.equal(await h.api.moveToLanding(now, { store: landingStore(landing, sharedLater), airport: heronField, save: never }), null);
+  for (const flight of [{ ...landing, pending: true }, { ...landing, lastStatus: 'Cancelled' }, { ...landing, lastStatus: 'Diverted' }]) {
+    assert.equal(await h.api.moveToLanding(now, { store: landingStore(flight, { ...beforeTrip }), airport: heronField, save: never }), null, JSON.stringify(flight).slice(0, 60));
+  }
+  assert.equal(await h.api.moveToLanding(landedAt + 49 * 3600000, { store: landingStore(landing, { ...beforeTrip }), airport: heronField, save: never }), null, 'cleared away by then');
+  assert.equal(await h.api.moveToLanding(now, { store: landingStore(landing, { ...beforeTrip }), airport: async () => null, save: never }), null, 'no position, so it waits');
+});
+
+test('until the move is saved, the clock already follows a landing newer than the saved place', () => {
+  const { currentTimeContext } = require('../lib/time-context');
+  const store = landingStore(landing, { ...beforeTrip });
+  const clockNow = currentTimeContext(store, new Date(now));
+  assert.equal(clockNow.timezone, 'Asia/Tokyo');
+  assert.match(clockNow.text, /Asia\/Tokyo, inferred from flight XY901 that landed at HND, after their saved location of Kestrel Bay\): Saturday, 12 September 2026, 16:00/);
+  const later = currentTimeContext(landingStore(landing, { ...beforeTrip, updated: new Date(landedAt + 60000).toISOString() }), new Date(now));
+  assert.equal(later.timezone, 'Asia/Bangkok', 'a place saved after it wins');
+  assert.equal(currentTimeContext(landingStore({ ...landing, lastStatus: 'Cancelled' }, { ...beforeTrip }), new Date(now)).timezone, 'Asia/Bangkok');
+});
+
+test('each flight check moves the location before landed flights are cleared, and the prompt says where it came from', () => {
+  const scheduler = fs.readFileSync(path.join(root, 'lib/flights-scheduler.js'), 'utf8');
+  assert.ok(scheduler.indexOf('moveToLanding()') > 0 && scheduler.indexOf('moveToLanding()') < scheduler.indexOf('cleanupExpiredFlights(userId);'));
+  assert.doesNotMatch(scheduler, /update my location to/, 'nobody is asked to move it themselves');
+  assert.match(fs.readFileSync(path.join(root, 'lib/engine.js'), 'utf8'), /Set when their flight landed at \$\{ctx\.store\.location\.landedAt\}/);
+});

@@ -2762,7 +2762,18 @@
     if (!e.target.closest('.wx-place')) return;
     wx.hidden = true; btn.hidden = false; btn.click();
   });
-  load();
+  // A phone sets its clock from the network wherever it is, so its time zone
+  // says when its owner has moved on, with no location permission; the clock,
+  // quiet hours and reminders follow it (phone-zone.js). A computer's clock
+  // may stay on home time, so computers don't send it. The weather loads after,
+  // so a move shows the button to update rather than the old place's weather.
+  function noteZone() {
+    var phone = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) {}
+    if (!phone || !tz) return Promise.resolve();
+    return fetch('/api/here/zone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timezone: tz }) }).catch(function() {});
+  }
+  noteZone().then(load, load);
   setInterval(function() { if (!wx.hidden && !document.hidden) load(); }, 15 * 60000);
 })();
 </script>

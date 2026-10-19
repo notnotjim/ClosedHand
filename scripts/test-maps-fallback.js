@@ -12,6 +12,8 @@ require.cache[httpPath] = { id: httpPath, filename: httpPath, loaded: true, expo
   if (url.includes('air-quality-api.open-meteo.com')) return { statusCode: 200, body: JSON.stringify({ current: { european_aqi: 34, us_aqi: 41, pm2_5: 8.1, pm10: 14.2, nitrogen_dioxide: 19, ozone: 52 } }) };
   if (url.includes('/reverse')) return { statusCode: 200, body: JSON.stringify({ lat: '52.52', lon: '13.40', display_name: 'Example Café, 274, Beispielstraße' }) };
   if (url.includes('bounded=1')) return { statusCode: 200, body: '[]' };
+  if (url.includes('XYZ%20airport')) return { statusCode: 200, body: JSON.stringify([{ name: 'Heron Field Airport', lat: '35.55', lon: '139.78', category: 'aeroway', type: 'aerodrome', address: { city: 'Heronton', state: 'Kestrel Prefecture' } }]) };
+  if (url.includes('QQQ%20airport')) return { statusCode: 200, body: JSON.stringify([{ name: 'Qqq Street Bakery', lat: '1', lon: '2', category: 'shop', type: 'bakery', address: { city: 'Elsewhere' } }]) };
   return { statusCode: 200, body: JSON.stringify([{ name: 'Example Matcha Bar', display_name: 'Example Matcha Bar, 87 Musterweg', lat: '52.521', lon: '13.402', category: 'amenity', type: 'cafe', extratags: { opening_hours: 'Mo-Su 08:00-22:00' } }]) };
 } } };
 const maps = require('../lib/maps-fallback');
@@ -62,4 +64,10 @@ test('every maps tool is offered without a key, since each has a free way', () =
   delete process.env.GOOGLE_MAPS_API_KEY;
   for (const name of ['maps_directions', 'maps_search_places', 'maps_geocode', 'air_quality']) assert.equal(usable(INTERNAL_TOOLS.find(t => t.name === name)), true, name);
   if (saved !== undefined) process.env.GOOGLE_MAPS_API_KEY = saved;
+});
+
+test('an airport code gives the airport, the town it is in and where it is, and nothing that is not an airport', async () => {
+  assert.deepEqual(await maps.airport('xyz'), { name: 'Heron Field Airport', town: 'Heronton', latitude: 35.55, longitude: 139.78 });
+  assert.equal(await maps.airport('QQQ'), null);
+  assert.equal(await maps.airport('not a code'), null);
 });

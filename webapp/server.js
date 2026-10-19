@@ -31,6 +31,7 @@ const { supabase } = require("./db");
 const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./security-scan");
 const mcpClient = require("./mcp-client");
 const apiKeys = require("./api-keys");
+const phoneZone = require("./phone-zone");
 const bridgeToken = require("./bridge-token");
 
 const app = express();
@@ -3867,6 +3868,9 @@ app.get("/api/here", async (req, res) => {
     const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
     const loc = data?.settings?.location;
     if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return res.json({ location: null });
+    // The phone's clock moved on since the place was saved: its weather would
+    // be somewhere they have left, so the page offers to update it instead.
+    if (phoneZone.movedZone(loc)) return res.json({ location: null });
     const lat = Math.round(loc.latitude * 100) / 100, lon = Math.round(loc.longitude * 100) / 100;
     // A stand-in an older version saved as the name goes, so the assistant
     // stops being told the person is in "where you are".
@@ -3903,7 +3907,7 @@ app.get("/api/today", async (req, res) => {
   try {
     const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
     const loc = prof?.settings?.location || {};
-    const tz = _validTz(loc.timezone) ? loc.timezone : "UTC";
+    const tz = phoneZone.zoneOf(loc) || "UTC";
     const now = Date.now(), until = new Date(now + 2 * 86400000).toISOString(), from = new Date(now - 3600000).toISOString();
     const [events, bookings, flights] = await Promise.all([
       supabase.from("data_cache").select("summary:data->>summary, all_day:data->>all_day, received_at").eq("user_id", userId).eq("type", "event").gte("received_at", from).lte("received_at", until).limit(30),
@@ -3957,6 +3961,23 @@ app.post("/api/here", async (req, res) => {
 
 // Clicking the temperature flips it between Celsius and Fahrenheit, and the
 // choice is kept, for the weather line and for Closedhand's weather answers.
+// The phone's time zone, sent by the web chat when it opens on a phone, kept
+// on the saved location (phone-zone.js). Written only when it changes.
+app.post("/api/here/zone", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const tz = typeof req.body?.timezone === "string" ? req.body.timezone.slice(0, 64) : "";
+  if (!_validTz(tz)) return res.status(400).json({ error: "That time zone isn't readable." });
+  try {
+    const { data } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
+    const noted = phoneZone.noteZone(data?.settings?.location, tz);
+    if (noted) await patchSettings(supabase, userId, { set: { location: noted } });
+    res.json({ moved: !!phoneZone.movedZone(noted || data?.settings?.location) });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save that." });
+  }
+});
+
 app.post("/api/here/unit", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -5611,7 +5632,7 @@ app.get("/api/automations/stats", async (req, res) => {
     // "Today" is the person's day, not the server's: the server runs on UTC,
     // seven hours behind someone in Vietnam.
     const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
-    const todayStart = startOfTodayIn(prof?.settings?.location?.timezone || prof?.settings?.timezone);
+    const todayStart = startOfTodayIn(phoneZone.zoneOf(prof?.settings?.location) || prof?.settings?.timezone);
 
     // Running means running, not enabled. The old count was of saved agents
     // with status active, which is whether a trigger is armed.
@@ -7208,7 +7229,7 @@ async function goalOwner(req, res) {
 }
 async function goalProfile(userId) {
   const { data } = await supabase.from("profiles").select("timezone, settings").eq("id", userId).single();
-  return { tz: data?.settings?.location?.timezone || data?.timezone || goalsTime.DEFAULT_TZ, botName: data?.settings?.bot_name || "Closedhand" };
+  return { tz: phoneZone.zoneOf(data?.settings?.location) || data?.timezone || goalsTime.DEFAULT_TZ, botName: data?.settings?.bot_name || "Closedhand" };
 }
 async function goalTimezone(userId) {
   return (await goalProfile(userId)).tz;

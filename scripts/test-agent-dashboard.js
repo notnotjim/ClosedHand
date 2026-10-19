@@ -73,7 +73,7 @@ function route(url, records, fail = '') {
   const end = server.indexOf('\napp.', start + 1);
   const helperStart = server.indexOf('function startOfTodayIn');
   const helper = server.slice(helperStart, server.indexOf('\n}\n', helperStart) + 2);
-  vm.runInNewContext(helper + '\n' + server.slice(start, end), { app: { get(name, fn) { handler = fn; } }, supabase: db, getUserIdFromRequest: () => 'owner', Date, Intl, Number, Object, console: { error() {} } });
+  vm.runInNewContext(helper + '\n' + server.slice(start, end), { app: { get(name, fn) { handler = fn; } }, supabase: db, getUserIdFromRequest: () => 'owner', phoneZone: require('../webapp/phone-zone'), Date, Intl, Number, Object, console: { error() {} } });
   const res = { code: 200, status(code) { this.code = code; return this; }, json(value) { this.body = value; } };
   return handler({}, res).then(() => res);
 }
