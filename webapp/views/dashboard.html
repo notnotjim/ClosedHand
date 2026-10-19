@@ -368,7 +368,8 @@
       transform: rotate(-135deg);
     }
 
-    .int-card .int-chevron {
+    /* The arrow that opens a card: connections, and chat apps once connected. */
+    .int-card .int-chevron, .plat-card .int-chevron {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -379,13 +380,13 @@
       flex-shrink: 0;
       transition: background 0.12s;
     }
-    .int-card:hover .int-chevron {
+    .int-card:hover .int-chevron, .plat-card:hover .int-chevron {
       background: rgba(239,230,214,0.16);
     }
-    .int-card:hover .int-chevron .chevron-down {
+    .int-card:hover .int-chevron .chevron-down, .plat-card:hover .int-chevron .chevron-down {
       border-color: rgba(239,230,214,0.64);
     }
-    .int-card.expanded .int-chevron .chevron-down {
+    .int-card.expanded .int-chevron .chevron-down, .plat-card.expanded .int-chevron .chevron-down {
       transform: rotate(-135deg);
       border-color: #B6AFA4;
     }
@@ -3083,19 +3084,26 @@
       for (const [key, platform] of Object.entries(data.platforms)) {
         const logo = platformLogo(key);
 
-        if (platform.connected && platform.linkedDevice) {
-          // Your own number, as a linked device: unlinking lives on the setup page.
+        if (platform.connected) {
+          // A connected chat app opens like any other connection: what is
+          // linked, and turning it off, right here.
+          const linked = !!platform.linkedDevice;
+          const what = linked
+            ? (platform.number ? '+' + platform.number + ', your own number, linked as a device' : 'Your own number, linked as a device')
+            : (platform.botName ? 'Your bot, ' + platform.botName : 'Your bot');
           platformsGrid.innerHTML += `
-            <div class="plat-card connected" style="cursor:default;">
-              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-              <span class="badge badge-connected" style="background:none;border:none;color:#8DBD79;font-weight:600;padding:0;">Linked &#10003;</span>
-              <a href="/setup#step-chat=${key}" target="_top" style="font-size:12px;color:#B6AFA4;margin-left:auto;">Manage</a>
-            </div>`;
-        } else if (platform.connected) {
-          platformsGrid.innerHTML += `
-            <div class="plat-card connected" onclick="platformDisconnectClick(this, '${key}', '${platform.name}')">
-              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-              <span class="badge badge-connected" style="background:none;border:none;color:#8DBD79;font-weight:600;padding:0;">Connected &#10003;</span>
+            <div class="int-wrap">
+              <div class="plat-card connected" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatform(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlatform(this);}">
+                <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
+                <span class="badge badge-connected" style="background:none;border:none;color:#8DBD79;font-weight:600;padding:0;">${linked ? 'Linked' : 'Connected'} &#10003;</span>
+                <span class="int-chevron" aria-hidden="true"><span class="chevron-down"></span></span>
+              </div>
+              <div class="int-unfurl"><div class="int-unfurl-inner">
+                <div class="conn-row"><span class="conn-row-label">${linked ? 'Linked' : 'Connected'}</span><span class="conn-row-value">${escHtml(what)}</span></div>
+                <div class="conn-drawer-actions plat-actions" data-key="${key}" data-name="${escHtml(platform.name)}" data-linked="${linked ? '1' : ''}">
+                  <button type="button" class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();platformAskOff(this)">${linked ? 'Unlink' : 'Disconnect'}</button>
+                </div>
+              </div></div>
             </div>`;
         } else if (data.selfHost && key === 'telegram' && platform.configured) {
           // The bot exists; the person has not said hello to it yet.
@@ -4483,59 +4491,55 @@
       }
     }
 
-    let confirmingPlatform = null;
-    let confirmTimer = null;
-
-    function platformDisconnectClick(card, key, name) {
-      if (confirmingPlatform === key) {
-        // Second click — disconnect
-        clearTimeout(confirmTimer);
-        confirmingPlatform = null;
-        disconnectPlatform(key, name);
-        return;
-      }
-
-      // First click — enter confirming state
-      resetPlatformConfirm();
-      confirmingPlatform = key;
-      card.classList.add("confirming");
-      card.querySelector(".badge").textContent = "Tap again to disconnect";
-      card.querySelector(".badge").className = "badge badge-pending";
-
-      confirmTimer = setTimeout(() => resetPlatformConfirm(), 3000);
+    // A chat app's card opens like any connection's.
+    function togglePlatform(card) {
+      toggleMcpUnfurl(card);
+      card.setAttribute('aria-expanded', card.classList.contains('expanded') ? 'true' : 'false');
     }
 
-    function resetPlatformConfirm() {
-      confirmingPlatform = null;
-      clearTimeout(confirmTimer);
-      document.querySelectorAll(".plat-card.confirming").forEach(c => {
-        c.classList.remove("confirming");
-        const badge = c.querySelector(".badge");
-        badge.innerHTML = "Connected &#10003;";
-        badge.className = "badge badge-connected";
-        badge.style.cssText = "background:none;border:none;color:#D0563F;font-weight:600;padding:0;";
-      });
+    // Turning a chat app off says what that means first, in place. Your own
+    // WhatsApp number is unlinked here and on your phone; a Telegram bot stays
+    // set up, so saying hello to it links it again.
+    function platformAskOff(btn) {
+      var row = btn.closest('.plat-actions');
+      var name = row.getAttribute('data-name');
+      var linked = !!row.getAttribute('data-linked');
+      row.replaceChildren();
+      row.style.flexWrap = 'wrap';
+      var said = document.createElement('p');
+      said.className = 'plat-ask';
+      said.style.cssText = 'flex-basis:100%;margin:0 0 4px;font-size:13px;line-height:1.5;color:#B6AFA4;';
+      said.textContent = linked
+        ? 'Unlink ' + name + '? Closedhand stops reading and replying there, and signs itself out of ' + name + '. If it is still listed on your phone, remove it there too: ' + name + ', Settings, Linked devices.'
+        : 'Disconnect ' + name + '? Closedhand stops replying and sending you messages there. Your bot stays set up, so saying hello to it links it again.';
+      var yes = document.createElement('button');
+      yes.type = 'button'; yes.className = 'conn-btn conn-btn-manage';
+      yes.textContent = linked ? 'Unlink' : 'Disconnect';
+      yes.onclick = function(e) { e.stopPropagation(); platformOff(row, yes); };
+      var no = document.createElement('button');
+      no.type = 'button'; no.className = 'conn-btn conn-btn-disconnect';
+      no.textContent = 'Cancel';
+      no.onclick = function(e) { e.stopPropagation(); loadStatus(); };
+      row.append(said, yes, no);
+      yes.focus();
     }
 
-    document.addEventListener("click", (e) => {
-      if (confirmingPlatform && !e.target.closest(".plat-card.confirming")) {
-        resetPlatformConfirm();
-      }
-    });
-
-    async function disconnectPlatform(platform, name) {
-      const res = await fetch("/api/disconnect-platform", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform }),
-      });
-
-      if (res.ok) {
-        showToast(`${name} disconnected.`);
+    async function platformOff(row, btn) {
+      var key = row.getAttribute('data-key'), name = row.getAttribute('data-name'), linked = !!row.getAttribute('data-linked');
+      btn.disabled = true;
+      btn.textContent = linked ? 'Unlinking\u2026' : 'Disconnecting\u2026';
+      try {
+        var res = linked
+          ? await fetch('/api/setup/whatsapp-linked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enable: false }) })
+          : await fetch('/api/disconnect-platform', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: key }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) throw new Error(data.error || 'Could not do that just now.');
+        showToast(linked ? name + ' unlinked.' : name + ' disconnected.');
         loadStatus();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to disconnect");
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = linked ? 'Unlink' : 'Disconnect';
+        showToast(e.message, true);
       }
     }
 

@@ -1616,6 +1616,10 @@ app.post("/api/setup/whatsapp-linked", async (req, res) => {
     } else {
       await mustWrite("could not disable WhatsApp linking", supabase.from("connections").delete()
         .eq("user_id", getAdminUserId()).eq("service", "whatsapp_linked"));
+      // The chat link is what says it is linked; the bot writes it again when
+      // the phone is paired again.
+      await mustWrite("could not disable WhatsApp linking", supabase.from("chat_links").delete()
+        .eq("user_id", getAdminUserId()).eq("platform", "whatsapp_linked"));
     }
     res.json({ success: true, enabled: enable });
   } catch (e) {
@@ -4813,11 +4817,12 @@ app.post("/api/disconnect-platform", async (req, res) => {
   }
 
   try {
-    await supabase
+    const { error } = await supabase
       .from("chat_links")
       .delete()
       .eq("user_id", userId)
       .eq("platform", platform);
+    if (error) throw new Error(error.message);
 
     res.json({ success: true });
   } catch (err) {

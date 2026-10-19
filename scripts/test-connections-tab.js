@@ -140,3 +140,18 @@ test("Connect anything sits centred under the apps", () => {
   assert.match(css, /\.connection-catalogue \.mcp-scan \{display:flex;width:fit-content;align-items:center;gap:6px;margin:12px auto 0;/);
   assert.match(css, /\.connection-catalogue \.mcp-browse \{justify-content:center;\}/);
 });
+
+test("a connected chat app opens like any connection, with what is linked and turning it off right there", () => {
+  const dash = fs.readFileSync(path.join(__dirname, "../webapp/views/dashboard.html"), "utf8");
+  const card = dash.slice(dash.indexOf("        if (platform.connected) {"), dash.indexOf("} else if (data.selfHost && key === 'telegram' && platform.configured)"));
+  assert.match(card, /class="plat-card connected" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatform\(this\)"/);
+  assert.match(card, /'Your bot, ' \+ platform\.botName/);
+  assert.match(card, /your own number, linked as a device/);
+  assert.match(card, /\$\{linked \? 'Unlink' : 'Disconnect'\}/);
+  assert.doesNotMatch(card, /\/setup#step-chat|Manage/, "nothing sends you off to setup to turn it off");
+  assert.doesNotMatch(dash, /platformDisconnectClick|Tap again to disconnect/, "no hidden second tap");
+  assert.match(dash, /'Disconnect ' \+ name \+ '\? Closedhand stops replying and sending you messages there\. Your bot stays set up, so saying hello to it links it again\.'/);
+  const server = fs.readFileSync(path.join(__dirname, "../webapp/server.js"), "utf8");
+  const unlink = server.slice(server.indexOf('app.post("/api/setup/whatsapp-linked"'));
+  assert.ok(unlink.indexOf('from("chat_links").delete()') > 0 && unlink.indexOf('from("chat_links").delete()') < unlink.indexOf("res.json({ success: true, enabled: enable })"), "unlinking clears the link the card reads");
+});

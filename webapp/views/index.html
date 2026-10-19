@@ -1075,9 +1075,12 @@
   .tl-thinking {
     display: flex; align-items: center; gap: 8px; padding: 4px 0; position: relative;
   }
+  /* A fixed box, so a wider or taller symbol never moves the line. */
   .tl-spinner {
-    font-size: 15px; color: var(--accent, #D8624B); width: 16px; text-align: center;
-    text-shadow: 0 0 6px rgba(208,86,63,0.4);
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 16px; height: 18px; overflow: hidden;
+    font-size: 15px; line-height: 1; color: var(--accent, #D8624B);
+    text-shadow: 0 0 6px rgba(208,86,63,0.35);
   }
   @keyframes tlShimmer { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
   .tl-thinking-text { color: var(--text-tertiary, rgba(239,230,214,0.5)); animation: tlShimmer 2s ease-in-out infinite; font-size: 13px; }
@@ -4274,10 +4277,24 @@
     return null;
   }
 
-  // Star spinner character cycle
-  var _spinnerChars = ['\u00B7', '\u2722', '\u2733', '\u2736', '\u273B', '\u273D', '\u273B', '\u2736', '\u2733', '\u2722'];
+  // The star that turns while Closedhand works, after Claude Code's: one
+  // symbol at a time, out and back. Only symbols no phone draws as an emoji:
+  // \u2733 came up as a green emoji on iPhones, taller than the rest, so the
+  // line jumped each time round. Slow enough to read as turning, not
+  // flickering, and still for anyone who asks for less motion.
+  var _spinnerChars = ['\u00B7', '\u2722', '\u2732', '\u2736', '\u273B', '\u273D', '\u273B', '\u2736', '\u2732', '\u2722'];
+  var SPINNER_MS = 130;
   var _spinnerIdx = 0;
   var _spinnerInterval = null;
+  function startSpinner() {
+    if (_spinnerInterval) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    _spinnerInterval = setInterval(function() {
+      _spinnerIdx = (_spinnerIdx + 1) % _spinnerChars.length;
+      var el = document.getElementById('spinnerChar');
+      if (el) el.textContent = _spinnerChars[_spinnerIdx];
+    }, SPINNER_MS);
+  }
 
   var _thinkingElapsedInterval = null;
   function showTyping() {
@@ -4287,15 +4304,12 @@
     typingStartTime = Date.now();
     var area = document.getElementById('statusArea');
     if (area) {
-      area.innerHTML = '<div class="timeline"><div class="tl-thinking"><div class="tl-dot thinking" style="margin-left:0;"></div><span class="tl-spinner" id="spinnerChar">\u00B7</span><span class="tl-thinking-text" id="thinkingText">Thinking</span></div></div>';
+      area.innerHTML = '<div class="timeline"><div class="tl-thinking"><span class="tl-spinner" id="spinnerChar" aria-hidden="true">\u273B</span><span class="tl-thinking-text" id="thinkingText">Thinking</span></div></div>';
     }
     _spinnerIdx = 0;
     clearInterval(_spinnerInterval);
-    _spinnerInterval = setInterval(function() {
-      _spinnerIdx = (_spinnerIdx + 1) % _spinnerChars.length;
-      var el = document.getElementById('spinnerChar');
-      if (el) el.textContent = _spinnerChars[_spinnerIdx];
-    }, 50);
+    _spinnerInterval = null;
+    startSpinner();
     // Evolve thinking text over time if no real status events arrive
     clearInterval(_thinkingElapsedInterval);
     _thinkingElapsedInterval = setInterval(function() {
@@ -4412,17 +4426,10 @@
     // Thinking state
     if (isThinking || (running.length === 0 && completed.length === 0)) {
       html += '<div class="tl-thinking">';
-      html += '<div class="tl-dot thinking" style="margin-left:0;"></div>';
-      html += '<span class="tl-spinner" id="spinnerChar">' + _spinnerChars[_spinnerIdx] + '</span>';
+      html += '<span class="tl-spinner" id="spinnerChar" aria-hidden="true">' + _spinnerChars[_spinnerIdx] + '</span>';
       html += '<span class="tl-thinking-text">' + escapeHtml(lastEvent && lastEvent.type === 'recall' ? (lastEvent.description || 'Looking for anything relevant') : 'Thinking') + '</span>';
       html += '</div>';
-      if (!_spinnerInterval) {
-        _spinnerInterval = setInterval(function() {
-          _spinnerIdx = (_spinnerIdx + 1) % _spinnerChars.length;
-          var el = document.getElementById('spinnerChar');
-          if (el) el.textContent = _spinnerChars[_spinnerIdx];
-        }, 50);
-      }
+      startSpinner();
     } else if (_spinnerInterval && running.length === 0) {
       clearInterval(_spinnerInterval);
       _spinnerInterval = null;
