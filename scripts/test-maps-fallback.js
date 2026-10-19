@@ -5,6 +5,11 @@ const calls = [];
 const httpPath = require.resolve('../lib/http');
 require.cache[httpPath] = { id: httpPath, filename: httpPath, loaded: true, exports: { httpGet: async (url, headers) => {
   calls.push({ url, headers });
+  if (url.includes('routing.openstreetmap.de')) return { statusCode: 200, body: JSON.stringify({ code: 'Ok', routes: [{ distance: 2450, duration: 1830, legs: [{ summary: 'Musterweg, Beispielstraße', steps: [
+    { name: 'Musterweg', distance: 400, duration: 300, maneuver: { type: 'depart' } },
+    { name: 'Beispielstraße', distance: 2050, duration: 1530, maneuver: { type: 'turn', modifier: 'left' } },
+    { name: '', distance: 0, duration: 0, maneuver: { type: 'arrive' } }] }] }] }) };
+  if (url.includes('air-quality-api.open-meteo.com')) return { statusCode: 200, body: JSON.stringify({ current: { european_aqi: 34, us_aqi: 41, pm2_5: 8.1, pm10: 14.2, nitrogen_dioxide: 19, ozone: 52 } }) };
   if (url.includes('/reverse')) return { statusCode: 200, body: JSON.stringify({ lat: '52.52', lon: '13.40', display_name: 'Example Café, 274, Beispielstraße' }) };
   if (url.includes('bounded=1')) return { statusCode: 200, body: '[]' };
   return { statusCode: 200, body: JSON.stringify([{ name: 'Example Matcha Bar', display_name: 'Example Matcha Bar, 87 Musterweg', lat: '52.521', lon: '13.402', category: 'amenity', type: 'cafe', extratags: { opening_hours: 'Mo-Su 08:00-22:00' } }]) };
@@ -30,14 +35,31 @@ test('coordinates reverse to an address and an address forwards to coordinates',
   assert.equal(fwd.latitude, 52.521);
   assert.equal(fwd.source, 'OpenStreetMap');
 });
-test('a tool that needs a key the install lacks is not offered', () => {
-  const directions = INTERNAL_TOOLS.find(t => t.name === 'maps_directions');
-  const search = INTERNAL_TOOLS.find(t => t.name === 'maps_search_places');
+test('directions come by car, on foot or by bike with no key, shaped like Google, and public transport says it needs a maps service', async () => {
+  calls.length = 0;
+  const out = await maps.directions('87 Musterweg', '52.52, 13.40', 'walking');
+  assert.equal(out.distance, '2.5 km');
+  assert.equal(out.duration, '31 min');
+  assert.deepEqual(out.steps.map((s) => s.instruction), ['Start on Musterweg', 'Turn left onto Beispielstraße', 'Arrive']);
+  assert.match(calls.at(-1).url, /routing\.openstreetmap\.de\/routed-foot\/route\/v1\/foot\/13\.402,52\.521;13\.4,52\.52\?/);
+  assert.match(calls.at(-1).headers['User-Agent'], /ClosedHand/);
+  assert.equal(out.source, 'OpenStreetMap');
+  assert.equal((await maps.directions('A', 'B', 'scooter')).mode, 'driving', 'an unknown mode drives');
+  calls.length = 0;
+  const transit = await maps.directions('87 Musterweg', 'Hauptbahnhof', 'transit');
+  assert.match(transit.error, /Public transport routes aren't available/);
+  assert.match(transit.google_maps, /travelmode=transit/);
+  assert.equal(calls.length, 0, 'nothing is asked of a service that has no public transport');
+});
+test('air quality comes from Open-Meteo with no key', async () => {
+  const out = await maps.airQuality(52.52, 13.4, 'Berlin');
+  assert.equal(out.aqi, 34);
+  assert.equal(out.category, 'Fair');
+  assert.equal(out.source, 'Open-Meteo');
+});
+test('every maps tool is offered without a key, since each has a free way', () => {
   const saved = process.env.GOOGLE_MAPS_API_KEY;
   delete process.env.GOOGLE_MAPS_API_KEY;
-  assert.equal(usable(directions), false);
-  assert.equal(usable(search), true, 'search has a keyless fallback and stays');
-  process.env.GOOGLE_MAPS_API_KEY = 'k';
-  assert.equal(usable(directions), true);
-  if (saved === undefined) delete process.env.GOOGLE_MAPS_API_KEY; else process.env.GOOGLE_MAPS_API_KEY = saved;
+  for (const name of ['maps_directions', 'maps_search_places', 'maps_geocode', 'air_quality']) assert.equal(usable(INTERNAL_TOOLS.find(t => t.name === name)), true, name);
+  if (saved !== undefined) process.env.GOOGLE_MAPS_API_KEY = saved;
 });
