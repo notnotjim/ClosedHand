@@ -2271,7 +2271,7 @@
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="Server, skill or GitHub link, command, JSON or API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="A link, a command, JSON or an API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -3085,23 +3085,30 @@
         const logo = platformLogo(key);
 
         if (platform.connected) {
-          // A connected chat app opens like any other connection: what is
-          // linked, and turning it off, right here.
+          // A connected chat app opens like any other connection: label and
+          // value rows, the day it was connected, a way into the chat and
+          // turning it off. WhatsApp runs on the person's own number, so
+          // Closedhand is in their Message Yourself chat; Telegram has a bot.
           const linked = !!platform.linkedDevice;
-          const what = linked
-            ? (platform.number ? '+' + platform.number + ', your own number, linked as a device' : 'Your own number, linked as a device')
-            : (platform.botName ? 'Your bot, ' + platform.botName : 'Your bot');
+          const rows = linked
+            ? row('Chat', 'Message Yourself') + (platform.number ? row('Number', escHtml(spacedNumber(platform.number))) : '')
+            : row('Chat', escHtml(platform.botName || 'Your bot'));
+          const chatHref = linked ? (platform.number ? 'https://wa.me/' + encodeURIComponent(platform.number) : '')
+            : (platform.botUsername ? 'https://t.me/' + encodeURIComponent(platform.botUsername) : '');
+          const since = platform.connectedAt && !isNaN(Date.parse(platform.connectedAt))
+            ? `<div class="conn-date">Connected ${new Date(platform.connectedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</div>` : '';
           platformsGrid.innerHTML += `
             <div class="int-wrap">
               <div class="plat-card connected" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatform(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlatform(this);}">
                 <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-                <span class="badge badge-connected" style="background:none;border:none;color:#8DBD79;font-weight:600;padding:0;">${linked ? 'Linked' : 'Connected'} &#10003;</span>
+                <span class="badge badge-connected" style="background:none;border:none;color:#8DBD79;font-weight:600;padding:0;">Connected &#10003;</span>
                 <span class="int-chevron" aria-hidden="true"><span class="chevron-down"></span></span>
               </div>
               <div class="int-unfurl"><div class="int-unfurl-inner">
-                <div class="conn-row"><span class="conn-row-label">${linked ? 'Linked' : 'Connected'}</span><span class="conn-row-value">${escHtml(what)}</span></div>
+                ${rows}${since}
                 <div class="conn-drawer-actions plat-actions" data-key="${key}" data-name="${escHtml(platform.name)}" data-linked="${linked ? '1' : ''}">
-                  <button type="button" class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();platformAskOff(this)">${linked ? 'Unlink' : 'Disconnect'}</button>
+                  ${chatHref ? `<button type="button" class="conn-btn conn-btn-manage" onclick="event.stopPropagation();window.open('${chatHref}','_blank','noopener')">Open chat</button>` : ''}
+                  <button type="button" class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();platformAskOff(this)">Disconnect</button>
                 </div>
               </div></div>
             </div>`;
@@ -3684,6 +3691,14 @@
       }
 
       return html;
+    }
+
+    // "+44 7737556907": the country calling code apart from the rest, which
+    // holds for every country (codes are one, two or three digits).
+    function spacedNumber(digits) {
+      var d = String(digits).replace(/\D/g, '');
+      var cc = /^[17]/.test(d) ? 1 : /^(2[07]|3[0-469]|4[013-9]|5[1-8]|6[0-6]|8[1246]|9[0-58])/.test(d) ? 2 : 3;
+      return '+' + d.slice(0, cc) + ' ' + d.slice(cc);
     }
 
     function row(label, value) {
@@ -4510,11 +4525,11 @@
       said.className = 'plat-ask';
       said.style.cssText = 'flex-basis:100%;margin:0 0 4px;font-size:13px;line-height:1.5;color:#B6AFA4;';
       said.textContent = linked
-        ? 'Unlink ' + name + '? Closedhand stops reading and replying there, and signs itself out of ' + name + '. If it is still listed on your phone, remove it there too: ' + name + ', Settings, Linked devices.'
-        : 'Disconnect ' + name + '? Closedhand stops replying and sending you messages there. Your bot stays set up, so saying hello to it links it again.';
+        ? 'Disconnect ' + name + '? Closedhand stops reading and replying there, and signs itself out of ' + name + '. If it is still listed on your phone, remove it there too: ' + name + ', Settings, Linked devices.'
+        : 'Disconnect ' + name + '? Closedhand stops replying and sending you messages there. Your bot stays set up, so saying hello to it connects it again.';
       var yes = document.createElement('button');
       yes.type = 'button'; yes.className = 'conn-btn conn-btn-manage';
-      yes.textContent = linked ? 'Unlink' : 'Disconnect';
+      yes.textContent = 'Disconnect';
       yes.onclick = function(e) { e.stopPropagation(); platformOff(row, yes); };
       var no = document.createElement('button');
       no.type = 'button'; no.className = 'conn-btn conn-btn-disconnect';
@@ -4527,18 +4542,18 @@
     async function platformOff(row, btn) {
       var key = row.getAttribute('data-key'), name = row.getAttribute('data-name'), linked = !!row.getAttribute('data-linked');
       btn.disabled = true;
-      btn.textContent = linked ? 'Unlinking\u2026' : 'Disconnecting\u2026';
+      btn.textContent = 'Disconnecting\u2026';
       try {
         var res = linked
           ? await fetch('/api/setup/whatsapp-linked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enable: false }) })
           : await fetch('/api/disconnect-platform', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: key }) });
         var data = await res.json().catch(function() { return {}; });
         if (!res.ok) throw new Error(data.error || 'Could not do that just now.');
-        showToast(linked ? name + ' unlinked.' : name + ' disconnected.');
+        showToast(name + ' disconnected.');
         loadStatus();
       } catch (e) {
         btn.disabled = false;
-        btn.textContent = linked ? 'Unlink' : 'Disconnect';
+        btn.textContent = 'Disconnect';
         showToast(e.message, true);
       }
     }

@@ -753,16 +753,16 @@
         </button>
         <div class="card-body">
           <div class="fb-block chooser" id="wa-linked-block">
-            <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">linked</span></span></h3>
+            <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">connected</span></span></h3>
             <div class="choice-body">
             <p class="note">Closedhand lives in your “Message Yourself” chat and never speaks anywhere else.</p>
-            <button class="cta" type="button" id="wa-enable">Link WhatsApp</button>
+            <button class="cta" type="button" id="wa-enable">Connect WhatsApp</button>
             <div id="wa-qr-wrap" style="display:none;margin-top:10px;">
               <p class="note">Scan this with the WhatsApp camera to link the device.</p>
               <img id="wa-qr" alt="WhatsApp pairing QR" style="width:240px;height:240px;border-radius:10px;background:#EFE6D6;padding:8px;">
             </div>
             <p class="note" id="wa-status"></p>
-            <button class="skip" type="button" id="wa-disable" style="display:none;">Unlink and turn this off</button>
+            <button class="skip" type="button" id="wa-disable" style="display:none;">Disconnect</button>
             </div>
           </div>
         
@@ -1253,13 +1253,13 @@
     qrWrap.style.display = pairing && _waState.hasQr ? "block" : "none";
     if (pairing && _waState.hasQr) qrImg.src = "/api/setup/wa-qr?t=" + Date.now();
     if (status) {
-      status.textContent = _waState.linked ? "Linked. Talk to Closedhand in your Message Yourself chat."
+      status.textContent = _waState.linked ? "Connected. Talk to Closedhand in your Message Yourself chat."
         : pairing ? (_waState.hasQr ? "Waiting for the scan…" : "Getting a QR code ready…")
         : "";
       status.classList.toggle("is-busy", pairing);
     }
-    // Before the phone has scanned there is nothing to unlink, only a pairing to stop.
-    disableBtn.textContent = _waState.linked ? "Unlink and turn this off" : "Cancel";
+    // Before the phone has scanned there is nothing to disconnect, only a pairing to stop.
+    disableBtn.textContent = _waState.linked ? "Disconnect" : "Cancel";
     if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
   }
 
@@ -1658,8 +1658,8 @@
       fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Stopped.");
       return;
     }
-    if (!confirm("Turn off WhatsApp linking? Closedhand stops reading and replying there; unlink the device from your phone too (WhatsApp, Settings, Linked devices).")) return;
-    fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Turned off. Also remove the device in WhatsApp on your phone.");
+    if (!confirm("Disconnect WhatsApp? Closedhand stops reading and replying there. Remove it from your phone too: WhatsApp, Settings, Linked devices.")) return;
+    fbPost("/api/setup/whatsapp-linked", { enable: false }, "wa-status", _waDisableBtn, "Disconnected. Also remove it in WhatsApp on your phone: Settings, Linked devices.");
   });
 
   poll();

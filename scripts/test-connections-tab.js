@@ -89,7 +89,7 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
   assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
-  assert.match(dashboard, /placeholder="Server, skill or GitHub link, command, JSON or API key" aria-label="MCP server, skill or API key"/, "one box takes a server, a skill or a key");
+  assert.match(dashboard, /placeholder="A link, a command, JSON or an API key" aria-label="MCP server, skill or API key"/, "one box takes a server, a skill or a key");
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
   assert.match(dashboard, /var all = _builtinSkills\.map\(function \(skill\) \{ return \{ skill: skill, builtin: true \}; \}\)\n\s*\.concat\(_installedSkills\.map/, "built-in skills are listed, not only added ones");
   assert.match(dashboard, /\(item\.builtin \? '' : '<div class="conn-drawer-actions"><button onclick="event\.stopPropagation\(\);deleteSkill\(/, "only an added skill can be removed");
@@ -141,16 +141,26 @@ test("Connect anything sits centred under the apps", () => {
   assert.match(css, /\.connection-catalogue \.mcp-browse \{justify-content:center;\}/);
 });
 
-test("a connected chat app opens like any connection, with what is linked and turning it off right there", () => {
+test("a connected chat app opens like any connection: rows, the day it connected, the chat and turning it off", () => {
   const dash = fs.readFileSync(path.join(__dirname, "../webapp/views/dashboard.html"), "utf8");
   const card = dash.slice(dash.indexOf("        if (platform.connected) {"), dash.indexOf("} else if (data.selfHost && key === 'telegram' && platform.configured)"));
   assert.match(card, /class="plat-card connected" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatform\(this\)"/);
-  assert.match(card, /'Your bot, ' \+ platform\.botName/);
-  assert.match(card, /your own number, linked as a device/);
-  assert.match(card, /\$\{linked \? 'Unlink' : 'Disconnect'\}/);
+  assert.match(card, />Connected &#10003;<\/span>/, "every chat app says Connected, the same as Telegram");
+  assert.match(card, /row\('Chat', 'Message Yourself'\) \+ \(platform\.number \? row\('Number', escHtml\(spacedNumber\(platform\.number\)\)\)/);
+  assert.match(card, /row\('Chat', escHtml\(platform\.botName \|\| 'Your bot'\)\)/);
+  assert.match(card, /<div class="conn-date">Connected \$\{/, "the day it connected, as other connections show it");
+  assert.match(card, /'https:\/\/wa\.me\/' \+ encodeURIComponent\(platform\.number\)/, "Open chat goes to Message Yourself");
+  assert.match(card, /window\.open\('\$\{chatHref\}','_blank','noopener'\)">Open chat<\/button>/, "a button like every other tile's");
+  assert.match(card, /platformAskOff\(this\)">Disconnect<\/button>/);
+  assert.doesNotMatch(dash, /'Unlink'|linked as a device|' unlinked\.'/, "one word for turning any chat app off");
+  const spacedNumber = new Function(dash.slice(dash.indexOf("    function spacedNumber(digits) {"), dash.indexOf("    function row(label, value) {")) + "return spacedNumber;")();
+  assert.equal(spacedNumber("447700900123"), "+44 7700900123");
+  assert.equal(spacedNumber("15550100123"), "+1 5550100123");
+  assert.equal(spacedNumber("35315550123"), "+353 15550123");
+  assert.equal(spacedNumber("8613800000000"), "+86 13800000000");
   assert.doesNotMatch(card, /\/setup#step-chat|Manage/, "nothing sends you off to setup to turn it off");
   assert.doesNotMatch(dash, /platformDisconnectClick|Tap again to disconnect/, "no hidden second tap");
-  assert.match(dash, /'Disconnect ' \+ name \+ '\? Closedhand stops replying and sending you messages there\. Your bot stays set up, so saying hello to it links it again\.'/);
+  assert.match(dash, /'Disconnect ' \+ name \+ '\? Closedhand stops replying and sending you messages there\. Your bot stays set up, so saying hello to it connects it again\.'/);
   const server = fs.readFileSync(path.join(__dirname, "../webapp/server.js"), "utf8");
   const unlink = server.slice(server.indexOf('app.post("/api/setup/whatsapp-linked"'));
   assert.ok(unlink.indexOf('from("chat_links").delete()') > 0 && unlink.indexOf('from("chat_links").delete()') < unlink.indexOf("res.json({ success: true, enabled: enable })"), "unlinking clears the link the card reads");

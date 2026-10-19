@@ -24,7 +24,7 @@ test('the home page box always starts a new conversation; older ones are picked 
   assert.match(page, /var fromHome = !hasMessages;[\s\S]{0,400}var startFresh = fromHome;/);
   assert.match(page, /if \(startFresh\) \{\s*fetch\('\/api\/threads\/new', \{ method: 'POST' \}\)/);
   assert.doesNotMatch(page, /heroContinuing|_homeContinue|Start fresh|drawEarlierMessages/, 'no "Continuing" line or quiet-hours carry-on');
-  assert.match(page, /or pick up where you left off/);
+  assert.match(page, /<span>Pick up where you left off<\/span>/);
   assert.doesNotMatch(page, /\|\| 'Untitled'/);
   const conv = fs.readFileSync(path.join(root, 'lib', 'conversation.js'), 'utf8');
   assert.match(conv, /if \(!asked\.length && conversation\.filter\(m => m\.role === "user"\)\.length < 3\) return;/);

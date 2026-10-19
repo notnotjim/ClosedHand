@@ -4536,7 +4536,7 @@ app.get("/api/status", async (req, res) => {
 
     const { data: chatLinks } = await supabase
       .from("chat_links")
-      .select("platform, platform_user_id, activation_code, expires_at")
+      .select("platform, platform_user_id, activation_code, expires_at, linked_at")
       .eq("user_id", userId);
 
     const { data: connections } = await supabase
@@ -4567,10 +4567,12 @@ app.get("/api/status", async (req, res) => {
       platforms[key] = {
         ...info,
         connected: !!(link && link.platform_user_id),
+        connectedAt: link?.platform_user_id ? link.linked_at || null : null,
         pendingCode,
       };
       if (key === "whatsapp" && waLinkedRow) {
         platforms[key].connected = true;
+        platforms[key].connectedAt = waLinkedRow.linked_at || null;
         platforms[key].linkedDevice = true;
         platforms[key].number = String(waLinkedRow.platform_user_id).split("@")[0].split(":")[0];
       }

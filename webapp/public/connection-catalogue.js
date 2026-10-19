@@ -26,7 +26,12 @@
     const list=byId('connection-catalogue-list');list.replaceChildren();
     const term=q.trim().toLowerCase();
     const open=services.filter(s=>!s.connected);
-    const visible=open.filter(s=>(s.name+' '+s.description).toLowerCase().includes(term))
+    // Banks are one tile: the service depends on where the bank is, so the
+    // region is asked for after the tap.
+    const banks=open.filter(s=>BANKS[s.mode]);
+    const tiles=open.filter(s=>!BANKS[s.mode]).concat(banks.length?[{key:'banks',name:'Banks',mode:'banks',banks,logoUrl:banks[0].logoUrl,
+      description:'Bank balances and transactions, read-only. '+BANK_WHERE}]:[]);
+    const visible=tiles.filter(s=>(s.name+' '+s.description).toLowerCase().includes(term))
       .sort((a,b)=>a.name.localeCompare(b.name));
     visible.forEach(s=>{
       const tile=el('button','catalogue-tile');tile.type='button';tile.title=s.description||'';
@@ -42,6 +47,7 @@
   // An app with a quick route and an own-app route asks which, in its own
   // view; any other goes straight to its route.
   function choose(s,tile){
+    if(s.mode==='banks'){chooseBank(s);return;}
     if(!(['mcp','microsoft'].includes(s.mode)&&s.manualMode)){select(s,tile);return;}
     const {box,title}=openSetup(s);
     const help=el('p','',s.description||'');
@@ -86,6 +92,20 @@
       link:'https://www.lunchflow.app/',linkText:'Open Lunch Flow',label:'API key',field:'apiKey',url:'/api/bank/lunchflow',
     },
   };
+  const BANK_WHERE='UK and EU banks connect through Lunch Flow, US banks through SimpleFIN.';
+  const BANK_CHOICES={lunchflow:'UK or EU bank',simplefin:'US bank'};
+  // Where the bank is decides the service; with one left, its form at once.
+  function chooseBank(tile){
+    if(tile.banks.length===1){bankForm(tile.banks[0]);return;}
+    const {box,title}=openSetup({name:'your bank'});
+    const actions=el('div','catalogue-choice');
+    for(const mode of Object.keys(BANK_CHOICES)){
+      const bank=tile.banks.find(b=>b.mode===mode);
+      const pick=el('button','catalogue-action',BANK_CHOICES[mode]);pick.type='button';pick.onclick=()=>bankForm(bank);
+      actions.append(pick);
+    }
+    box.append(el('p','','Where is your bank? '+BANK_WHERE),actions);title.focus();
+  }
   const amount=n=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   function bankForm(s){
     const b=BANKS[s.mode];

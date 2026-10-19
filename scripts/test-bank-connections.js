@@ -501,7 +501,7 @@ test("bank tools are read-only, offered only with a bank, and money questions lo
   }
 });
 
-test("the bank tiles open a short form that says who sees the data, then show the accounts", async () => {
+test("one bank tile asks where the bank is, then opens a short form that says who sees the data and shows the accounts", async () => {
   class El {
     constructor(tag) { this.tag = tag; this.children = []; this.hidden = false; this.className = ""; this.attrs = {}; this.listeners = {}; this._text = ""; this.classList = new Set(); this.classList.remove = this.classList.delete; }
     set textContent(t) { this._text = String(t); this.children = []; }
@@ -535,9 +535,16 @@ test("the bank tiles open a short form that says who sees the data, then show th
   ready();
   await new Promise((r) => setImmediate(r));
   const tiles = ids["connection-catalogue-list"].all((e) => e.className === "catalogue-tile");
-  assert.deepEqual(tiles.map((t) => t.textContent.trim()).sort(), ["UK and EU banks via Lunch Flow", "US banks via SimpleFIN"]);
+  assert.deepEqual(tiles.map((t) => t.textContent.trim()), ["Banks"], "one tile for banks, whichever service");
+  const pick = (label) => {
+    tiles[0].click();
+    const choice = ids["catalogue-setup"].all((e) => e.className === "catalogue-action");
+    assert.deepEqual(choice.map((b) => b.textContent), ["UK or EU bank", "US bank"]);
+    assert.match(ids["catalogue-setup"].textContent, /Where is your bank\? UK and EU banks connect through Lunch Flow, US banks through SimpleFIN\./);
+    choice.find((b) => b.textContent === label).click();
+  };
 
-  tiles.find((t) => /Lunch Flow/.test(t.textContent)).click();
+  pick("UK or EU bank");
   let setup = ids["catalogue-setup"];
   assert.match(setup.textContent, /goes from your bank through Lunch Flow to Closedhand on your computer and never to closedhand\.com/);
   assert.match(setup.textContent, /can only read it: it can’t move money/);
@@ -548,7 +555,7 @@ test("the bank tiles open a short form that says who sees the data, then show th
   assert.doesNotMatch(setup.textContent, /free trial|trial/i);
   assert.equal(setup.all((e) => e.className === "catalogue-deep")[0].href, "https://www.lunchflow.app/");
 
-  tiles.find((t) => /SimpleFIN/.test(t.textContent)).click();
+  pick("US bank");
   setup = ids["catalogue-setup"];
   assert.match(setup.textContent, /about \$15 a year paid to SimpleFIN/);
   assert.match(setup.textContent, /never to closedhand\.com/);
@@ -563,6 +570,15 @@ test("the bank tiles open a short form that says who sees the data, then show th
   assert.match(setup.textContent, /Connected\. Closedhand can now read this account:/);
   assert.match(setup.textContent, /Example Bank Everyday: 1,520\.40 USD/);
   assert.equal(typeof window.openBankConnection, "function", "a card whose access stopped opens the same form");
+
+  // With one bank service connected, the tile goes straight to the other's form.
+  services[0].connected = true;
+  window.refreshConnectionCatalogue();
+  await new Promise((r) => setImmediate(r));
+  const left = ids["connection-catalogue-list"].all((e) => e.className === "catalogue-tile");
+  assert.deepEqual(left.map((t) => t.textContent.trim()), ["Banks"]);
+  left[0].click();
+  assert.match(ids["catalogue-setup"].textContent, /goes from your bank through Lunch Flow/);
 });
 
 test("the dashboard card, the chat alert and the server wiring say what stopped and how to mend it", async () => {
