@@ -10,22 +10,29 @@ name: Build self-host images
 # Package settings, Change visibility, Public. Until then anonymous pulls get
 # "not found", which reads exactly like a missing image.
 
+# Every push builds, except one that only changes files no image holds. A
+# list of the paths that do reach an image missed user-store.js,
+# crypto-tokens.js and skills/, so a fix there never reached anyone.
 on:
   push:
     branches: [main]
-    paths:
-      - 'Dockerfile'
-      - 'webapp/Dockerfile'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'webapp/package.json'
-      - 'webapp/package-lock.json'
-      - 'index.js'
-      - 'lib/**'
-      - 'scripts/prepare-voice.js'
-      - 'webapp/**'
-      - 'migrations/**'
-      - '.github/workflows/build-selfhost-images.yml'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'closedhand-com/**'
+      - 'desktop/**'
+      - 'bridge-app/**'
+      - 'sandbox-image/**'
+      - 'scripts/test-*.js'
+      - 'install.sh'
+      - 'docker-compose*.yml'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.github/workflows/checks.yml'
+      - '.github/workflows/build-desktop.yml'
+      - '.github/workflows/build-sandbox.yml'
   workflow_dispatch:
 
 jobs:
