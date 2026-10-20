@@ -210,10 +210,6 @@ def build_brush(film=False):
     full.save(out("webapp/public/logo-full.png"), optimize=True)
     # The Mac download window, drawn again from its page with the new ink fist.
     _dmg_background(out("desktop/dmg/fist-dark.png"), out("desktop/dmg/background.png"), out("desktop/dmg/background@2x.png"))
-    # Not a file in place: the picture for a chat app's bot, set by hand
-    # (Telegram's @BotFather /setuserpic). The app icon's look, square.
-    os.makedirs(os.path.join(dst, "extras"), exist_ok=True)
-    app.resize((640, 640), Image.LANCZOS).convert("RGB").save(os.path.join(dst, "extras/bot-avatar.png"), optimize=True)
     # The traced outline the 3D film extrudes, on the logo's canvas.
     _trace(fit(mask, (3579, 3959), (0, 0, 0)), out("closedhand-com/tools/ring-video/fist.svg"))
     # The installer's pixel fist, from the new fist.png.
