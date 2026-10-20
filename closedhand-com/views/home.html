@@ -298,7 +298,7 @@ body.chat-active .input-box { backdrop-filter: none; }
     
     :root { --hero-title-size: clamp(1.4375rem, 7.6vw, 2.375rem); --hero-copy-size: .875rem; }
     .hero-heading { font-size: var(--hero-title-size); letter-spacing: -0.3px; margin-bottom: 1rem; white-space: nowrap; }
-    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.9s ease 1.2s; }
+    .hero-heading .hero-heading-first, .hero-heading .hero-heading-more { display: block; white-space: nowrap; max-width: none; padding-left: 0; transition: opacity 0.8s ease 0.7s; }
     .hero-footer span { white-space: normal; line-height: 1.45; }
     .hero-footer .footer-sentence { display: block; }
     .hero-recent-tab { padding: .3125rem .75rem .375rem; font-size: .6875rem; }
@@ -894,6 +894,25 @@ body.chat-active .mon-area { display:none; }
     <div class="hero-space-top" style="flex:0.55"></div>
     <div class="hero-heading"><span class="hero-heading-first">Control your world,</span><span class="hero-heading-more" id="heroMore">and your personal data.</span></div>
     <div class="hero-heading-sub">Personal AI without signing your life away</div>
+    <script>
+      // The second sentence of the heading is measured at its natural width
+      // once the fonts are in, so it can unfold to exactly that; then the hero
+      // is live. Defined here, beside the heading, so nothing further down the
+      // page can hold it back. A computer calls it when the smoke behind starts.
+      window.heroLive = function() {
+        var more = document.getElementById('heroMore');
+        var go = function() {
+          if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
+          document.getElementById('heroSection').classList.add('is-live');
+        };
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
+      };
+      // Phones and tablets have a still background, so there is nothing to wait
+      // for: the line fades in as the first one lands, from the first frame.
+      if (document.documentElement.classList.contains('handheld')) {
+        requestAnimationFrame(function() { requestAnimationFrame(function() { document.getElementById('heroSection').classList.add('is-live'); }); });
+      }
+    </script>
 
     <!-- Phones and tablets: the Closedhand someone already uses, one tap
          away, with the smoke ring drifting round the fist. On a phone that
@@ -1224,16 +1243,6 @@ body.chat-active .mon-area { display:none; }
     '}'
   ].join('\n');
 
-  // The second sentence of the heading is measured at its natural width once
-  // the fonts are in, so it can unfold to exactly that; then the hero is live.
-  window.heroLive = function() {
-    var more = document.getElementById('heroMore');
-    var go = function() {
-      if (more) more.style.setProperty('--more-w', more.scrollWidth + 'px');
-      document.getElementById('heroSection').classList.add('is-live');
-    };
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
-  };
   // Phones and tablets get the still version of the ground: the full-screen
   // smoke costs battery. Their hero is the fist instead, with its own light
   // smoke ring (the orb, below).
