@@ -5908,7 +5908,7 @@ async function ragBrowse(origin, path, folderName, account) {
         f.mimeType === 'application/vnd.google-apps.presentation'
       )) return true;
       // The kinds File Search indexes (RAG_FILE_TYPES in webapp/rag-processor.js).
-      return /\.(pdf|doc|docx|odt|rtf|pages|txt|md|markdown|csv|tsv|log|xls|xlsx|ods|numbers|ppt|pptx|odp|key|html|htm|xhtml|json|xml|yaml|yml|ini|toml|eml|msg|epub|zip|jpg|jpeg|png|webp|gif|tif|tiff|bmp|heic|heif)$/i.test(f.name);
+      return /\.(pdf|doc|docx|odt|rtf|pages|txt|md|markdown|csv|tsv|log|xls|xlsx|ods|numbers|ppt|pptx|odp|key|html|htm|xhtml|json|xml|yaml|yml|ini|toml|eml|msg|epub|zip|jpg|jpeg|png|webp|gif|tif|tiff|bmp|heic|heif|mp3|m4a|wav|aac|flac|ogg|oga|opus|aiff|mp4|m4v|mov|webm)$/i.test(f.name);
     });
 
     _ragSelectedFiles.clear();

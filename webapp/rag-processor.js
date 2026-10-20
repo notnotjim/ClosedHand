@@ -145,12 +145,14 @@ async function fetchWithRefresh(userId, service, url, options = {}) {
 }
 
 // The files File Search picks up in a folder: every kind file-reader.js
-// reads. Sound, video and programs are left alone.
+// reads, and recordings and videos, which the bot hears. Programs are left
+// alone.
 const RAG_FILE_TYPES = Object.fromEntries([
   "pdf", "doc", "docx", "odt", "rtf", "pages", "txt", "md", "markdown", "csv", "tsv", "log",
   "xls", "xlsx", "ods", "numbers", "ppt", "pptx", "odp", "key",
   "html", "htm", "xhtml", "json", "xml", "yaml", "yml", "ini", "toml", "eml", "msg", "epub", "zip",
   "jpg", "jpeg", "png", "webp", "gif", "tif", "tiff", "bmp", "heic", "heif",
+  "mp3", "m4a", "wav", "aac", "flac", "ogg", "oga", "opus", "aiff", "mp4", "m4v", "mov", "webm",
 ].map((t) => ["." + t, t]));
 
 const IMAGE_MIME = {
@@ -250,8 +252,9 @@ async function extractTextFromImage(buffer, mimeType, attempt = 0) {
 // Read whole by file-reader.js, the one reader, scans and photos of
 // documents included. A picture also gets a description from the image
 // model, when one is chosen, so photos can be found by what they show.
-async function extractText(buffer, fileType, fileName) {
+async function extractText(buffer, fileType, fileName, userId) {
   const read = await require("./file-reader").readFile(buffer, fileName || "file." + fileType);
+  if (read.kind === "audio" || read.kind === "video") return hearFile(buffer, fileName || "file." + fileType, read.kind === "video", userId);
   if (read.kind !== "image") {
     if (!read.text && read.error) throw new Error(read.note);
     return read.text;
@@ -264,6 +267,39 @@ async function extractText(buffer, fileType, fileName) {
   }
   if (!read.text && !description && off) throw new Error("Image understanding is off. Choose an image model in Settings to read this file.");
   return [read.text, description].filter((t) => t && t.trim()).join("\n\n");
+}
+
+// What's said in a recording or video, each line with its time, written out
+// by the bot (lib/hear-route.js), which has the speech to text. A video's
+// frames are read like photos and placed at their times, so "the clip with
+// the tree" finds it too.
+const VIDEO_FRAMES = 6;
+// 7:55, or 1:07:55 past the hour, as lib/video.js writes times.
+function clock(seconds) {
+  const t = Math.max(0, Math.round(Number(seconds) || 0)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(t % 60).padStart(2, "0");
+}
+async function hearFile(buffer, fileName, video, userId) {
+  const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
+  const query = new URLSearchParams({ name: fileName, ...(video ? { video: "1", frames: String(VIDEO_FRAMES) } : {}) });
+  const res = await fetch(`${BOT_INTERNAL_URL}/internal/hear?${query}`, {
+    method: "POST", body: buffer, signal: AbortSignal.timeout(45 * 60000),
+    headers: { "Content-Type": "application/octet-stream", "x-closedhand-token": botToken(userId) },
+  });
+  const heard = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(heard.error || "Closedhand couldn't hear this file just now.");
+  const seen = [];
+  for (const f of heard.frames || []) {
+    const jpeg = Buffer.from(f.jpeg, "base64");
+    const words = await require("./file-reader").ocrImage(jpeg).catch(() => null);
+    const vision = selectedModel("vision");
+    const shows = (vision === undefined ? DEEPINFRA_API_KEY : vision) ? await extractTextFromImage(jpeg, "image/jpeg").catch(() => "") : "";
+    const text = [shows, words && words.trim() && !String(shows).includes(words.trim()) ? `Words on screen: ${words.trim()}` : ""].filter(Boolean).join("\n");
+    if (text) seen.push(`[${clock(f.time)}] (on screen) ${text}`);
+  }
+  const parts = [heard.text ? `What's said:\n${heard.text}` : "", seen.length ? `What's on screen:\n${seen.join("\n")}` : "", heard.note || ""].filter(Boolean);
+  if (!parts.length) throw new Error(video ? "Nothing is said in this video and nothing could be read from it." : "Nothing is said in this recording.");
+  return parts.join("\n\n");
 }
 
 // --- Chunking ---
@@ -667,7 +703,7 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
 
     // 1. Extract text
     console.log(`[RAG] Extracting text from ${fileName} (${fileType})`);
-    const text = await extractText(fileBuffer, fileType, fileName);
+    const text = await extractText(fileBuffer, fileType, fileName, userId);
     if (!text || text.trim().length < 10) {
       throw new Error("No text content could be extracted from this file");
     }

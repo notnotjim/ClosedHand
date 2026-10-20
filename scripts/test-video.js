@@ -152,7 +152,7 @@ test('YouTube without a link-opening model uses captions and preview frames, nev
   assert.match(read('lib/video.js'), /gather\(userId, href, \{ youtube, videoBytes/);
   const script = read('lib/video-sandbox.py');
   assert.match(script, /"skip_download": True/, 'YouTube is read, not downloaded');
-  assert.match(script, /meta, frames, video = youtube\(ARGS\["url"\]\) if ARGS.get\("youtube"\) else download\(ARGS\["url"\]\)/);
+  assert.match(script, /meta, frames, video = \(local\(ARGS\["path"\]\) if ARGS\.get\("path"\) else youtube\(ARGS\["url"\]\) if ARGS\.get\("youtube"\)\n\s*else download\(ARGS\["url"\]\)\)/);
 });
 
 test('with images off, what is said is read directly, with no extra model call', async () => {

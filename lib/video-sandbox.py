@@ -1,7 +1,8 @@
 # Runs on Closedhand's sandbox computer, sent by lib/video.js with ARGS set
-# above it. Gathers what a model needs to understand one video link and
+# above it. Gathers what a model needs to understand one video link, or one
+# recording or video file the bot has put on the sandbox (ARGS "path"), and
 # leaves the parts in a hidden folder of the workspace for the bot to collect
-# (the bot deletes that folder straight after).
+# (the bot deletes that folder, and the file, straight after).
 #
 # YouTube is never downloaded: its terms don't allow it. Its captions, its
 # details and the preview frames YouTube shows when you scrub the timeline are
@@ -269,6 +270,24 @@ def download(url):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def local(path):
+    """A recording or video file put here by the bot: no download, the same
+    frames and speech as a link."""
+    import av
+    with av.open(path) as c:
+        duration = float(c.duration / av.time_base) if c.duration else 0.0
+    meta = {"title": ARGS.get("title") or os.path.basename(path), "uploader": "", "date": "", "duration": round(duration, 1),
+            "description": "", "chapters": [], "language": "", "captions": None}
+    frames = video_frames(path, duration)
+    meta["frame_source"] = "video" if frames else None
+    video = None
+    if VIDEO_BYTES and os.path.getsize(path) <= VIDEO_BYTES and path.rsplit(".", 1)[-1].lower() in ("mp4", "webm", "mov"):
+        with open(path, "rb") as f:
+            video = write("video." + path.rsplit(".", 1)[-1].lower(), f.read())
+    meta["speech_parts"], meta["speech_seconds"] = speech(path)
+    return meta, frames, video
+
+
 def run_download(yt_dlp, opts, url):
     with yt_dlp.YoutubeDL(opts) as y:
         info = y.extract_info(url, download=True)
@@ -292,7 +311,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     try:
         need_libraries()
-        meta, frames, video = youtube(ARGS["url"]) if ARGS.get("youtube") else download(ARGS["url"])
+        meta, frames, video = (local(ARGS["path"]) if ARGS.get("path") else youtube(ARGS["url"]) if ARGS.get("youtube")
+                               else download(ARGS["url"]))
         blob, index = bytearray(), []
         for t, data in frames:
             index.append({"time": t, "offset": len(blob), "size": len(data)})

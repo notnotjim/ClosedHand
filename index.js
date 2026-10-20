@@ -170,6 +170,8 @@ require("./lib/mail-file").register(ctx.expressApp);
 require("./lib/sign-in-code").register(ctx.expressApp);
 // The web chat's mic, written out by the built-in speech to text (lib/dictation.js).
 require("./lib/dictation").register(ctx.expressApp);
+// Recordings and videos File Search finds, written out the same way (lib/hear-route.js).
+require("./lib/hear-route").register(ctx.expressApp);
 
 // Keepalive: prevent Railway container sleep, warm DB connection
 setInterval(async () => {

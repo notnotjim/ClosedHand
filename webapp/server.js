@@ -1652,7 +1652,7 @@ app.get("/api/setup/wa-qr", async (req, res) => {
 // holds the handlers, so the two webhook paths are relayed to it byte for
 // byte (LINE signs the raw body). Providers carry no session, so this sits
 // in front of the gate.
-const BOT_INTERNAL_URL = (process.env.BOT_INTERNAL_URL || "http://bot:3000").replace(/\/$/, "");
+const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
 // Slack is not relayed: its handler accepts only signed requests, and the
 // self-host setup has no place for a Slack signing secret.
 for (const hook of ["line"]) {
@@ -6562,12 +6562,6 @@ const mailFiles = (data) => (data?.attachments || []).filter((a) => !a.inline &&
 const mailQuery = (source, id) => `source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`;
 
 // A short-lived token the bot accepts as this person (lib/web-chat-ws.js).
-function botToken(userId) {
-  const exp = Date.now() + 60000;
-  const payload = `${userId}.${exp}`;
-  const sig = crypto.createHmac("sha256", process.env.WS_AUTH_SECRET).update(payload).digest("hex");
-  return `${payload}.${sig}`;
-}
 async function askBot(userId, path) {
   return fetch(`${BOT_INTERNAL_URL}${path}`, { headers: { "x-closedhand-token": botToken(userId) }, signal: AbortSignal.timeout(60000) });
 }

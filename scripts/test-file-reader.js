@@ -236,7 +236,7 @@ test('File Search offers the same kinds of file it indexes', () => {
   const rag = fs.readFileSync(path.join(root, 'webapp/rag-processor.js'), 'utf8');
   const indexed = JSON.parse('[' + /const RAG_FILE_TYPES = Object\.fromEntries\(\[([\s\S]*?)\]\.map/.exec(rag)[1].replace(/,\s*$/, '') + ']');
   const page = fs.readFileSync(path.join(root, 'webapp/views/index.html'), 'utf8');
-  const offered = /return \/\\\.\(([a-z|]+)\)\$\/i\.test\(f\.name\);/.exec(page)[1].split('|');
+  const offered = /return \/\\\.\(([a-z0-9|]+)\)\$\/i\.test\(f\.name\);/.exec(page)[1].split('|');
   assert.deepEqual([...offered].sort(), [...indexed].sort());
-  for (const kind of ['pdf', 'doc', 'pages', 'msg', 'epub', 'heic', 'zip']) assert.ok(indexed.includes(kind), kind);
+  for (const kind of ['pdf', 'doc', 'pages', 'msg', 'epub', 'heic', 'zip', 'mp3', 'm4a', 'mp4', 'mov']) assert.ok(indexed.includes(kind), kind);
 });
