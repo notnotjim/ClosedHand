@@ -101,7 +101,7 @@ Setup gives Closedhand a personal URL, straight after you choose your dashboard 
 
 If you run Closedhand with Docker on your own domain instead, set `WEBAPP_URL` in `.env` to your permanent HTTPS address that forwards to the webapp, then recreate the bot and webapp with `docker compose up -d`. Setting this value does not create a tunnel or host the dashboard. Leave `BASE_URL` as configured for your account connections. A permanent address takes precedence over the temporary address.
 
-RAM needs depend on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), Closedhand fetches a compact local embedding model (~300 MB, once, with progress shown) so recall works anyway; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
+RAM needs depend on your provider. With a full-service key (DeepInfra, OpenAI, Gemini), 2 GB of RAM runs everything and no local models are ever downloaded. With a chat-only provider (xAI, Anthropic, Groq), Closedhand fetches a compact local embedding model (about 330 MB, once, with progress shown) so recall works anyway, and up to 500 MB more the first time File Search reads a picture or a recording; plan for 4 GB in that case. On a tight box you can drop the sandbox service and stay closer to 2 GB.
 
 ## Where it lives
 

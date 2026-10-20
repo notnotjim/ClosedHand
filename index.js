@@ -172,6 +172,8 @@ require("./lib/sign-in-code").register(ctx.expressApp);
 require("./lib/dictation").register(ctx.expressApp);
 // Recordings and videos File Search finds, written out the same way (lib/hear-route.js).
 require("./lib/hear-route").register(ctx.expressApp);
+// File Search embeds with the local model through the bot (lib/embed-route.js).
+require("./lib/embed-route").register(ctx.expressApp);
 
 // Keepalive: prevent Railway container sleep, warm DB connection
 setInterval(async () => {
@@ -222,6 +224,8 @@ async function main() {
   require("./lib/services/wa-digest").startWhatsAppDigest();
   require("./lib/sandbox").startSandboxJanitor();
   require("./lib/local-models").preloadIfConfigured();
+  // Gives any row of the index without a vector its vector.
+  require("./lib/embed-backfill").start();
 
   // Subscribe app to WABA for receiving real WhatsApp messages
   await whatsappHandler.subscribeWhatsAppWebhook();

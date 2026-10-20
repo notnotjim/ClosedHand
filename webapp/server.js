@@ -6828,7 +6828,7 @@ require("./model-config").install(app, {
     if (!mcpClient.isSelfHost()) return;
     const embed = process.env.EMBED_MODEL || await getRuntimeConf("EMBED_MODEL");
     const key = process.env.EMBED_API_KEY || await getRuntimeConf("EMBED_API_KEY") || process.env.DEEPINFRA_API_KEY || await getRuntimeConf("DEEPINFRA_API_KEY");
-    if (!embed && !key) await setRuntimeConf({ EMBED_MODEL: "local:embeddinggemma-300m", RERANK_MODEL: "local:jina-reranker-v1-turbo" });
+    if (!embed && !key) await setRuntimeConf({ EMBED_MODEL: "local:embeddinggemma-2", RERANK_MODEL: "local:jina-reranker-v1-turbo" });
   },
   memorySummary: async () => {
     const embed = process.env.EMBED_MODEL || await getRuntimeConf("EMBED_MODEL");

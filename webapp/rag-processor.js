@@ -252,9 +252,10 @@ async function extractTextFromImage(buffer, mimeType, attempt = 0) {
 // Read whole by file-reader.js, the one reader, scans and photos of
 // documents included. A picture also gets a description from the image
 // model, when one is chosen, so photos can be found by what they show.
-async function extractText(buffer, fileType, fileName, userId) {
+async function extractText(buffer, fileType, fileName, userId, media = null) {
   const read = await require("./file-reader").readFile(buffer, fileName || "file." + fileType);
-  if (read.kind === "audio" || read.kind === "video") return hearFile(buffer, fileName || "file." + fileType, read.kind === "video", userId);
+  if (read.kind === "audio" || read.kind === "video") return hearFile(buffer, fileName || "file." + fileType, read.kind === "video", userId, media);
+  if (read.kind === "image" && media) media.push({ modality: "image", buffer, label: "(picture)" });
   if (read.kind !== "image") {
     if (!read.text && read.error) throw new Error(read.note);
     return read.text;
@@ -265,8 +266,12 @@ async function extractText(buffer, fileType, fileName, userId) {
   if (!off && (vision || DEEPINFRA_API_KEY)) {
     try { description = await extractTextFromImage(buffer, IMAGE_MIME[fileType] || "image/jpeg"); } catch (e) { if (!read.text) throw e; }
   }
-  if (!read.text && !description && off) throw new Error("Image understanding is off. Choose an image model in Settings to read this file.");
-  return [read.text, description].filter((t) => t && t.trim()).join("\n\n");
+  const said = [read.text, description].filter((t) => t && t.trim()).join("\n\n");
+  if (media && media.length) media[media.length - 1].label = `(picture) ${said.replace(/\s+/g, " ").slice(0, 300)}`.trim();
+  // A picture with neither words nor a description is still found by what it
+  // shows, when the model can see it (media above).
+  if (!said && !(media && media.length) && off) throw new Error("Image understanding is off. Choose an image model in Settings to read this file.");
+  return said;
 }
 
 // What's said in a recording or video, each line with its time, written out
@@ -279,11 +284,11 @@ function clock(seconds) {
   const t = Math.max(0, Math.round(Number(seconds) || 0)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(t % 60).padStart(2, "0");
 }
-async function hearFile(buffer, fileName, video, userId) {
+async function hearFile(buffer, fileName, video, userId, media = null) {
   const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
-  const query = new URLSearchParams({ name: fileName, ...(video ? { video: "1", frames: String(VIDEO_FRAMES) } : {}) });
+  const query = new URLSearchParams({ name: fileName, ...(video ? { video: "1", frames: String(VIDEO_FRAMES) } : {}), ...(media ? { vectors: "1" } : {}) });
   const res = await fetch(`${BOT_INTERNAL_URL}/internal/hear?${query}`, {
-    method: "POST", body: buffer, signal: AbortSignal.timeout(45 * 60000),
+    method: "POST", body: buffer, signal: AbortSignal.timeout(90 * 60000),
     headers: { "Content-Type": "application/octet-stream", "x-closedhand-token": botToken(userId) },
   });
   const heard = await res.json().catch(() => ({}));
@@ -296,10 +301,53 @@ async function hearFile(buffer, fileName, video, userId) {
     const shows = (vision === undefined ? DEEPINFRA_API_KEY : vision) ? await extractTextFromImage(jpeg, "image/jpeg").catch(() => "") : "";
     const text = [shows, words && words.trim() && !String(shows).includes(words.trim()) ? `Words on screen: ${words.trim()}` : ""].filter(Boolean).join("\n");
     if (text) seen.push(`[${clock(f.time)}] (on screen) ${text}`);
+    if (media && f.vector) media.push({ modality: "frame", time: f.time, vector: f.vector, label: `[${clock(f.time)}] (on screen)${text ? " " + text.replace(/\s+/g, " ").slice(0, 300) : ""}` });
+  }
+  // Each stretch of sound, with the words said in it.
+  if (media && Array.isArray(heard.sound)) {
+    const lines = String(heard.text || "").split("\n").map((l) => { const m = /^\[(?:(\d+):)?(\d+):(\d+)\] (.*)$/.exec(l); return m ? { at: (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]), text: m[4] } : null; }).filter(Boolean);
+    for (const w of heard.sound) {
+      const words = lines.filter((l) => l.at >= w.start && l.at < w.end).map((l) => l.text).join(" ");
+      media.push({ modality: "sound", start: w.start, end: w.end, vector: w.vector, label: `[${clock(w.start)}–${clock(w.end)}] (sound)${words ? " " + words.slice(0, 400) : ""}` });
+    }
   }
   const parts = [heard.text ? `What's said:\n${heard.text}` : "", seen.length ? `What's on screen:\n${seen.join("\n")}` : "", heard.note || ""].filter(Boolean);
-  if (!parts.length) throw new Error(video ? "Nothing is said in this video and nothing could be read from it." : "Nothing is said in this recording.");
+  if (!parts.length && !(media && media.length)) throw new Error(video ? "Nothing is said in this video and nothing could be read from it." : "Nothing is said in this recording.");
   return parts.join("\n\n");
+}
+
+// The chunks for pictures, sound and frames: their words where there are any
+// (so they read in results and match a typed word), and the vector of the
+// thing itself. A picture is embedded here through the bot; sound and frames
+// came with their vectors from hearing.
+async function mediaRows(media, { documentId, userId, fileName, residency, after, sourceContext }) {
+  if (!media || !media.length) return [];
+  const rows = [];
+  for (const m of media) {
+    let vector = m.vector || null;
+    if (m.modality === "image" && !vector) {
+      let image = m.buffer;
+      if (/ftyp(heic|heix|hevc|mif1|msf1|avif)/.test(image.toString("latin1", 4, 12))) image = (await require("./file-reader").toJpeg(image)) || image;
+      try {
+        const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
+        const res = await fetch(`${BOT_INTERNAL_URL}/internal/embed`, {
+          method: "POST", signal: AbortSignal.timeout(300000),
+          headers: { "Content-Type": "application/json", "x-closedhand-token": botToken("file-search") },
+          body: JSON.stringify({ images: [image.toString("base64")] }),
+        });
+        const out = await res.json().catch(() => ({}));
+        vector = res.ok && Array.isArray(out.vectors) ? out.vectors[0] : null;
+      } catch (e) { console.log(`[RAG] ${fileName}: picture not embedded (${e.message})`); }
+    }
+    if (!vector) continue;
+    rows.push({
+      document_id: documentId, user_id: userId, chunk_index: after + rows.length,
+      content: residency === "zero" ? "[Zero residency - text not stored]" : `${fileName} ${m.label || ""}`.trim(),
+      embedding: JSON.stringify(vector),
+      metadata: { source_file: fileName, modality: m.modality, ...(m.start != null ? { start: m.start, end: m.end } : {}), ...(m.time != null ? { time: m.time } : {}), ...(sourceContext || {}) },
+    });
+  }
+  return rows;
 }
 
 // --- Chunking ---
@@ -431,9 +479,34 @@ async function enrichOneChunk(chunk, fileName) {
 
 // --- Embedding ---
 
-/** Embed a batch of texts via Qwen3-Embedding (DeepInfra). Returns array of vectors. */
-async function embedBatch(texts) {
-  if (!DEEPINFRA_API_KEY || texts.length === 0) return [];
+// Is this Closedhand's embedder the local one? Then the bot embeds, since
+// the model runs there (lib/embed-route.js).
+async function localEmbedder() {
+  const model = process.env.EMBED_MODEL || (await require("./config").getConf("EMBED_MODEL").catch(() => null));
+  return String(model || "").startsWith("local:");
+}
+
+/** Embed a batch of texts: with the local model through the bot, or Qwen3-Embedding on DeepInfra. */
+async function embedBatch(texts, opts = {}) {
+  if (texts.length === 0) return [];
+  if (await localEmbedder()) {
+    // An answer that is not there is not a failure: a chunk saved without a
+    // vector is given one by the bot's backfill (lib/embed-backfill.js).
+    try {
+      const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
+      const res = await fetch(`${BOT_INTERNAL_URL}/internal/embed`, {
+        method: "POST", signal: AbortSignal.timeout(opts.query ? 15000 : 10 * 60000),
+        headers: { "Content-Type": "application/json", "x-closedhand-token": botToken("file-search") },
+        body: JSON.stringify({ texts: texts.map((t) => String(t || "").substring(0, 8000)), query: !!opts.query }),
+      });
+      const out = await res.json().catch(() => ({}));
+      return res.ok && Array.isArray(out.vectors) ? out.vectors : [];
+    } catch (e) {
+      console.log(`[RAG] Local embed through the bot failed: ${e.message}`);
+      return [];
+    }
+  }
+  if (!DEEPINFRA_API_KEY) return [];
   try {
     const resp = await fetch(EMBED_URL, {
       method: "POST",
@@ -458,10 +531,10 @@ async function embedBatch(texts) {
   }
 }
 
-/** Embed a single text. Returns vector array or null. */
+/** Embed a search: one text, as a query. Returns vector array or null. */
 async function embedSingle(text) {
-  if (!text || !DEEPINFRA_API_KEY) return null;
-  const results = await embedBatch([text]);
+  if (!text) return null;
+  const results = await embedBatch([text], { query: true });
   return results[0] || null;
 }
 
@@ -703,22 +776,25 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
 
     // 1. Extract text
     console.log(`[RAG] Extracting text from ${fileName} (${fileType})`);
-    const text = await extractText(fileBuffer, fileType, fileName, userId);
-    if (!text || text.trim().length < 10) {
+    // Pictures, stretches of sound and video frames, embedded by what they
+    // are (EmbeddingGemma 2, in the bot), go in beside the text's chunks.
+    const media = (await localEmbedder()) ? [] : null;
+    const text = await extractText(fileBuffer, fileType, fileName, userId, media);
+    if ((!text || text.trim().length < 10) && !(media && media.length)) {
       throw new Error("No text content could be extracted from this file");
     }
 
     // 2. Chunk. Per-document ceiling so one enormous file cannot consume the
     // whole indexing budget: enrichment cost is per chunk, so a 500-page PDF
     // would otherwise cost as much as several hundred ordinary documents.
-    let chunks = chunkText(text);
+    let chunks = text && text.trim().length >= 10 ? chunkText(text) : [];
     const MAX_CHUNKS_PER_DOC = parseInt(process.env.RAG_MAX_CHUNKS_PER_DOC || "80", 10);
     if (chunks.length > MAX_CHUNKS_PER_DOC) {
       console.log(`[RAG] ${fileName}: ${chunks.length} chunks, indexing the first ${MAX_CHUNKS_PER_DOC}`);
       chunks = chunks.slice(0, MAX_CHUNKS_PER_DOC);
     }
     console.log(`[RAG] ${fileName}: ${text.length} chars -> ${chunks.length} chunks`);
-    if (chunks.length === 0) throw new Error("No chunks produced from text");
+    if (chunks.length === 0 && !(media && media.length)) throw new Error("No chunks produced from text");
 
     // 3. Enrich chunks with semantic summaries (Qwen, free)
     // This makes search match on meaning/topics, not just keywords
@@ -730,7 +806,8 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
       const batch = enrichedChunks.slice(i, i + EMBED_BATCH_SIZE);
       console.log(`[RAG] Embedding batch ${Math.floor(i / EMBED_BATCH_SIZE) + 1}/${Math.ceil(enrichedChunks.length / EMBED_BATCH_SIZE)}`);
       const embeddings = await embedBatch(batch);
-      allEmbeddings.push(...embeddings);
+      // Kept in step with the chunks even when a batch has no vectors.
+      allEmbeddings.push(...(embeddings.length === batch.length ? embeddings : batch.map(() => undefined)));
     }
 
     // Check user's data residency setting
@@ -747,6 +824,8 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
       metadata: { source_file: fileName, chunk_of: chunks.length, ...(sourceContext || {}) },
     }));
 
+    rows.push(...(await mediaRows(media, { documentId, userId, fileName, residency, after: chunks.length, sourceContext })));
+
     // Insert in batches of 50 to avoid payload limits
     for (let i = 0; i < rows.length; i += 50) {
       const batch = rows.slice(i, i + 50);
@@ -757,7 +836,7 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
     // 5. Update document status
     await supabase.from("rag_documents").update({
       status: "ready",
-      chunk_count: chunks.length,
+      chunk_count: rows.length,
       metadata: { word_count: text.split(/\s+/).length, char_count: text.length },
       updated_at: new Date().toISOString(),
     }).eq("id", documentId);

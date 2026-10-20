@@ -27,6 +27,7 @@
     "node-ical": "^0.27.1",
     "node-telegram-bot-api": "^0.66.0",
     "nodemailer": "^10.0.16",
+    "onnxruntime-node": "1.30.0",
     "opusscript": "0.1.1",
     "pdfjs-dist": "5.4.296",
     "pg": "^8.22.0",
