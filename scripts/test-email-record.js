@@ -29,8 +29,11 @@ test('Gmail, Outlook and IMAP records have exactly the same fields', () => {
 
 test('all three syncs build their records through the one shape', () => {
   const sync = read('lib/services/data-sync.js');
-  assert.match(sync, /items\.push\(emailRecord\(\{\n\s*id: detail\.id,/, 'Gmail');
+  assert.match(sync, /function gmailItem\(detail, accountEmail, draftIdByMessage = \{\}\) \{[\s\S]{0,300}return emailRecord\(\{\n\s*id: detail\.id,/, 'Gmail');
+  assert.match(sync, /items\.push\(gmailItem\(result\.value, accountEmail, draftIdByMessage\)\);/, 'Gmail sync');
   assert.match(sync, /return emailRecord\(\{\n\s*id: msg\.id,\n\s*threadId: msg\.conversationId,/, 'Outlook');
+  assert.match(sync, /\.map\(\(\{ msg, label \}\) => outlookItem\(msg, label, accountEmail\)\)/, 'Outlook sync');
+  assert.match(read('lib/services/mail-history.js'), /gmailItem\(d, account\)[\s\S]*outlookItem\(m, label\(m\), account\)/, 'older mail too');
   assert.match(read('lib/services/imap-mail.js'), /return require\("\.\/email-record"\)\.emailRecord\(\{/, 'IMAP');
 });
 

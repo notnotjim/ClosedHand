@@ -14,15 +14,23 @@ function fakeDb(rows) {
   return { from: () => { const q = { filters: [], select: () => q, eq: () => q, not: () => q, order: () => q, in: (k, ids) => { q.ids = ids; return q; },
     limit: async () => ({ data: rows }), then: (r) => r({ data: rows.filter((x) => !q.ids || q.ids.includes(x.external_id)) }) }; return q; } };
 }
+// Tables by name, for cacheCovers.
+function tables(t) { return { from: (name) => ({ select: () => ({ eq: async () => ({ data: t[name] || [] }) }) }) }; }
 
-test("the copy covers a period when its oldest email is no newer than the start", async () => {
-  const box = { supabase: fakeDb([{ received_at: "2026-08-01T00:00:00Z" }]), Date };
-  vm.runInNewContext(fn(read("lib/services/data-sync.js"), "cacheCovers") + "\nthis.f = cacheCovers;", box);
-  assert.equal(await box.f("u", "2026-09-27T00:00:00Z"), true, "the last week is inside the copy");
-  assert.equal(await box.f("u", "2025-01-01T00:00:00Z"), false, "last year reaches past it");
-  const empty = { supabase: fakeDb([]), Date };
-  vm.runInNewContext(fn(read("lib/services/data-sync.js"), "cacheCovers") + "\nthis.f = cacheCovers;", empty);
-  assert.equal(await empty.f("u", "2026-09-27T00:00:00Z"), false, "a mailbox on its first sync covers nothing yet");
+test("the copy covers a period when every mailbox holds all of it, within the year kept", async () => {
+  const now = Date.parse("2026-10-20T00:00:00Z");
+  const horizon = () => new Date(now - 365 * 86400000).toISOString();
+  const covers = (t) => { const box = { supabase: tables(t), Date, require: () => ({ horizon }) }; vm.runInNewContext(fn(read("lib/services/data-sync.js"), "cacheCovers") + "\nthis.f = cacheCovers;", box); return box.f; };
+  const two = { connections: [{ service: "google" }, { service: "google_extra_work" }, { service: "whatsapp_linked" }] };
+  let f = covers({ ...two, mail_coverage: [{ source: "gmail", complete_since: "2026-08-01T00:00:00Z" }, { source: "gmail_work", complete_since: "2026-09-01T00:00:00Z" }] });
+  assert.equal(await f("u", "2026-09-27T00:00:00Z"), true, "the last weeks are inside both");
+  assert.equal(await f("u", "2026-08-15T00:00:00Z"), false, "one mailbox doesn't reach back that far");
+  assert.equal(await f("u", "2025-01-01T00:00:00Z"), false, "past the year kept");
+  f = covers({ ...two, mail_coverage: [{ source: "gmail", complete_since: "2026-08-01T00:00:00Z" }] });
+  assert.equal(await f("u", "2026-09-27T00:00:00Z"), false, "a mailbox not yet read back covers nothing");
+  // The old rule: the oldest cached email. One sent in 2020 made three weeks
+  // of mail "cover" six years, and search said no match for mail that existed.
+  assert.doesNotMatch(read("lib/services/data-sync.js"), /\.order\("received_at", \{ ascending: true \}\)\s*\.limit\(1\);\s*if \(error \|\| !data\?\.length\) return false;/);
 });
 
 test("a live search reads synced messages from the copy and fetches only the rest", async () => {
@@ -41,6 +49,8 @@ test("no match inside the copy's period is the answer, not a reason to go live",
   assert.match(sync, /return \{ results: \[\], cacheAgeMin, fresh: cacheAgeMin < 1440, covers: await cacheCovers\(userId, since\), source: "data_cache_hybrid" \};/);
   assert.doesNotMatch(sync, /report a miss so the caller falls to\n\s*\/\/ live search/);
   const access = read("lib/services/data-access.js");
-  assert.match(access, /if \(cached && cached\.fresh && \(cached\.results\.length > 0 \|\| cached\.covers\)\) \{/);
+  assert.match(access, /if \(cached && cached\.fresh && !cached\.covers && cached\.results\.length > 0\) fromCopy = cached\.results;\n\s*else if \(cached && cached\.fresh && \(cached\.results\.length > 0 \|\| cached\.covers\)\) \{/);
+  assert.match(access, /if \(fromCopy\.length\) \{\n\s*allResults\.unshift\(\.\.\.fromCopy\);/, "matches from a copy that doesn't hold the period join the mailbox's");
+  assert.match(sync, /return \{ results: ordered, cacheAgeMin, fresh: cacheAgeMin < 1440, covers: await cacheCovers\(userId, since\), source: "data_cache_hybrid" \};/);
   assert.match(access, /so this is the answer, not a gap/);
 });
