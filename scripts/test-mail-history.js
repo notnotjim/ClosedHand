@@ -144,6 +144,27 @@ test('an email that fails to come stops the walk there, to be read again', async
   } finally { s.restore(); }
 });
 
+test('a read Gmail turns away is tried again, and an email deleted meanwhile is skipped', async () => {
+  const mail = mailbox();
+  const s = setup(mail);
+  try {
+    const google = require.cache[require.resolve('../lib/services/google')].exports;
+    const real = google.googleApiRequest;
+    const tries = {};
+    google.googleApiRequest = async (method, url) => {
+      const id = (/\/messages\/([^/?]+)\?/.exec(url) || [])[1];
+      if (id === 'm40' && (tries.m40 = (tries.m40 || 0) + 1) === 1) throw new Error('Google API 429: rateLimitExceeded');
+      if (id === 'm41') throw new Error('Google API 404: Requested entity was not found.');
+      return real(method, url);
+    };
+    const done = await s.mod.runAccount({ reader: 'gmail', userId: 'u1', store: null, serviceKey: 'google', source: 'gmail', deadline: Date.now() + 60000 });
+    assert.equal(done, true, 'neither stops the walk');
+    assert.equal(tries.m40, 2);
+    assert.ok(s.stored.some((i) => i.external_id === 'm40'));
+    assert.ok(!s.stored.some((i) => i.external_id === 'm41'));
+  } finally { s.restore(); }
+});
+
 test('mail archived before the regular sync saw it is caught by the next sweep', async () => {
   const mail = mailbox();
   const s = setup(mail);
