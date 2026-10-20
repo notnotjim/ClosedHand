@@ -182,6 +182,14 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/mcp-test" --ignore-scripts --no-audit --no-fund @modelcontextprotocol/sdk@1.32.1
           NODE_PATH="$RUNNER_TEMP/mcp-test/node_modules" node --test scripts/test-connection-media.js scripts/test-mcp-setup.js scripts/test-mcp-discovery.js
 
+      # Every kind of file reads through the one reader, scans and iPhone
+      # photos included, on Tesseract as in Docker.
+      - name: File reader
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples
+          npm install --prefix "$RUNNER_TEMP/reader-test" --ignore-scripts --no-audit --no-fund tesseract.js@7.0.0 @tesseract.js-data/eng@1.0.0 pdfjs-dist@5.4.296 mammoth@1.13.0 adm-zip@0.6.1 cheerio@1.2.0 mailparser@3.9.37 pdfkit@0.19.1 https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+          NODE_PATH="$RUNNER_TEMP/reader-test/node_modules" node --test scripts/test-file-reader.js
+
       - name: Vendored copies have not drifted
         run: node scripts/check-vendored-identical.js
 

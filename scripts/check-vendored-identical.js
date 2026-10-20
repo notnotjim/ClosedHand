@@ -88,6 +88,10 @@ const PAIRS = [
     name: "upload-types",
     copies: ["lib/upload-types.js", "webapp/upload-types.js"],
   },
+  {
+    name: "file-reader",
+    copies: ["lib/file-reader.js", "webapp/file-reader.js"],
+  },
 ];
 
 function normalise(src, name) {

@@ -2429,7 +2429,7 @@
         </div>
       </div>
     </div>
-    <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.json,.md,.html,.xml,.js,.py,.ts,.css,.sql,.sh,.yaml,.yml,.log,.doc,.docx,.xls,.xlsx,.pptx,.ogg,.mp3,.wav,.mp4,.mov,.avi,.webm,.m4a,.aac,.flac,.rtf">
+    <input type="file" id="fileInput" multiple>
 
     <!-- Past conversations, only when there are any. On a desk: a tab on the
          underside of the box that opens a drawer of rows. On a phone: a card
@@ -5907,7 +5907,8 @@ async function ragBrowse(origin, path, folderName, account) {
         f.mimeType === 'application/vnd.google-apps.spreadsheet' ||
         f.mimeType === 'application/vnd.google-apps.presentation'
       )) return true;
-      return /\.(pdf|docx|txt|md|csv|xlsx|xls|pptx|html|htm|json|xml|rtf|eml|zip|jpg|jpeg|png|webp|gif|tiff|bmp)$/i.test(f.name);
+      // The kinds File Search indexes (RAG_FILE_TYPES in webapp/rag-processor.js).
+      return /\.(pdf|doc|docx|odt|rtf|pages|txt|md|markdown|csv|tsv|log|xls|xlsx|ods|numbers|ppt|pptx|odp|key|html|htm|xhtml|json|xml|yaml|yml|ini|toml|eml|msg|epub|zip|jpg|jpeg|png|webp|gif|tif|tiff|bmp|heic|heif)$/i.test(f.name);
     });
 
     _ragSelectedFiles.clear();

@@ -39,6 +39,9 @@ test('each kind Closedhand opens is told by its contents and keeps its name', ()
     [MP4, 'clip.mp4', 'video/mp4'], [MP4, 'memo.m4a', 'video/mp4'], [WEBM, 'clip.webm', 'video/webm'], [OGG, 'voice.oga', 'audio/ogg'],
     [MP3, 'song.mp3', 'audio/mpeg'], [WAV, 'take.wav', 'audio/wav'],
     [TEXT, 'totals.csv', 'text/plain'], [TEXT, 'notes.md', 'text/plain'], [TEXT, 'script.py', 'text/plain'], [Buffer.alloc(0), 'empty.txt', 'text/plain'],
+    [ZIP, 'archive.zip', 'application/zip'], [ZIP, 'minutes.odt', 'application/zip'], [ZIP, 'lease.pages', 'application/zip'], [ZIP, 'guide.epub', 'application/zip'],
+    [HEIC, 'photo.heic', 'image/heic'], [OLE, 'slides.ppt', 'application/x-cfb'], [OLE, 'lease.msg', 'application/x-cfb'],
+    [TEXT, 'message.eml', 'text/plain'], [TEXT, 'paper.tex', 'text/plain'],
   ];
   for (const [buf, name, type] of cases) {
     const found = checkFile(buf, name);
@@ -47,6 +50,7 @@ test('each kind Closedhand opens is told by its contents and keeps its name', ()
     assert.equal(found.ext, name.split('.').pop().toLowerCase(), name);
   }
   assert.deepEqual(checkFile(PNG, 'clipboard'), { ok: true, type: 'image/png', ext: 'png' }, 'no extension: the contents decide');
+  assert.deepEqual(checkFile(TEXT, 'Makefile'), { ok: true, type: 'text/plain', ext: 'txt' }, 'text under any name');
   assert.equal(checkFile(PNG, 'mislabelled.jpg').type, 'image/png', 'one image kind named as another is still an image');
 });
 
@@ -54,7 +58,7 @@ test('a file that is not a kind Closedhand opens, or is named as another kind, i
   const refused = [
     [EXE, 'setup.exe'], [EXE, 'invoice.pdf'], [EXE, 'notes.txt'], [EXE, 'photo'], [ELF, 'run'],
     [PNG, 'notes.txt'], [PDF, 'photo.png'], [JPEG, 'report.pdf'], [TEXT, 'photo.jpg'], [TEXT, 'tool.exe'], [TEXT, 'drawing.svg'],
-    [ZIP, 'archive.zip'], [ZIP, 'letter.docx'], [DOCX, 'budget.xlsx'], [HEIC, 'photo.heic'], [HEIC, 'clip.mp4'],
+    [ZIP, 'letter.docx'], [ZIP, 'plugin.jar'], [DOCX, 'budget.xlsx'], [HEIC, 'clip.mp4'], [TEXT, 'run.bat'], [TEXT, 'drawing.svg'], [TEXT, 'invoice.pdf'],
     [bytes('plain words', Buffer.alloc(1), 'more'), 'notes.txt'], [bytes('\x01\x02\x03\x04\x05\x06', 'abc'), 'data.csv'],
   ];
   for (const [buf, name] of refused) assert.deepEqual(checkFile(buf, name), { ok: false }, name);
@@ -85,8 +89,9 @@ test('every way a file comes in is checked before it is kept', () => {
   for (const f of ['lib/web-chat-ws.js', 'lib/platforms/telegram.js', 'lib/platforms/whatsapp.js', 'lib/platforms/whatsapp-linked.js', 'lib/platforms/discord.js']) {
     assert.doesNotMatch(read(f), /saveAttachment\(/, `${f} keeps no file before queuedAsk`);
   }
-  const telegram = read('lib/platforms/telegram.js');
-  assert.match(telegram, /if \(!supportedTypes\.includes\(fileData\.ext\)\) \{[\s\S]{0,200}?sendMessage\(chatId, require\("\.\.\/upload-types"\)\.REFUSED\);\s*return;/);
+  for (const f of ['lib/platforms/telegram.js', 'lib/platforms/whatsapp.js', 'lib/platforms/whatsapp-linked.js']) {
+    assert.doesNotMatch(read(f), /supportedTypes|TEXT_EXTENSIONS|OFFICE_EXTENSIONS|can't read \./, `${f} keeps no list of its own; queuedAsk decides`);
+  }
   const email = read('lib/assistant-email.js');
   const remember = email.slice(email.indexOf('async function remember('), email.indexOf('async function processMessage('));
   assert.ok(remember.indexOf('uploads.checkFile(buffer, file.filename)') < remember.indexOf('uploadFile('), 'email: checked before it is stored');
@@ -94,10 +99,8 @@ test('every way a file comes in is checked before it is kept', () => {
   assert.match(remember, /uploadFile\(account\.user_id, id, buffer, kind\.type\)/);
 });
 
-test('the web chat offers only kinds Closedhand opens', () => {
-  const accept = read('webapp/views/index.html').match(/id="fileInput" multiple accept="([^"]+)"/)[1].split(',');
-  const opens = /^\.(jpg|jpeg|png|gif|webp|pdf|docx|xlsx|pptx|doc|xls|mp4|m4v|mov|m4a|webm|ogg|oga|opus|mp3|wav|avi|flac|aac|txt|md|csv|json|html|htm|xml|js|py|ts|css|sql|sh|yaml|yml|log|rtf)$/;
-  for (const kind of accept) assert.ok(opens.test(kind) || ['image/*', 'video/*', 'audio/*'].includes(kind), kind);
+test('the web chat lets any file be chosen; what it holds decides', () => {
+  assert.match(read('webapp/views/index.html'), /<input type="file" id="fileInput" multiple>/, 'no list of its own: text is read under any name, and programs are refused on arrival');
 });
 
 // The sandbox computer, reached from its panel and through the Mac Bridge,

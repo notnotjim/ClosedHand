@@ -144,15 +144,14 @@ async function fetchWithRefresh(userId, service, url, options = {}) {
   return resp;
 }
 
-const RAG_FILE_TYPES = {
-  ".pdf": "pdf", ".docx": "docx", ".txt": "txt", ".md": "md", ".csv": "csv",
-  ".xlsx": "xlsx", ".xls": "xls", ".pptx": "pptx",
-  ".html": "html", ".htm": "htm",
-  ".json": "json", ".xml": "xml", ".rtf": "rtf", ".eml": "eml",
-  ".zip": "zip",
-  ".jpg": "jpg", ".jpeg": "jpeg", ".png": "png", ".webp": "webp",
-  ".gif": "gif", ".tiff": "tiff", ".bmp": "bmp",
-};
+// The files File Search picks up in a folder: every kind file-reader.js
+// reads. Sound, video and programs are left alone.
+const RAG_FILE_TYPES = Object.fromEntries([
+  "pdf", "doc", "docx", "odt", "rtf", "pages", "txt", "md", "markdown", "csv", "tsv", "log",
+  "xls", "xlsx", "ods", "numbers", "ppt", "pptx", "odp", "key",
+  "html", "htm", "xhtml", "json", "xml", "yaml", "yml", "ini", "toml", "eml", "msg", "epub", "zip",
+  "jpg", "jpeg", "png", "webp", "gif", "tif", "tiff", "bmp", "heic", "heif",
+].map((t) => ["." + t, t]));
 
 const IMAGE_MIME = {
   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
@@ -248,111 +247,23 @@ async function extractTextFromImage(buffer, mimeType, attempt = 0) {
 
 // --- Text extraction ---
 
-async function extractText(buffer, fileType) {
-  if (fileType === "txt" || fileType === "md") {
-    return buffer.toString("utf-8");
+// Read whole by file-reader.js, the one reader, scans and photos of
+// documents included. A picture also gets a description from the image
+// model, when one is chosen, so photos can be found by what they show.
+async function extractText(buffer, fileType, fileName) {
+  const read = await require("./file-reader").readFile(buffer, fileName || "file." + fileType);
+  if (read.kind !== "image") {
+    if (!read.text && read.error) throw new Error(read.note);
+    return read.text;
   }
-  if (fileType === "csv") {
-    return buffer.toString("utf-8");
+  const vision = selectedModel("vision");
+  const off = vision !== undefined && !vision;
+  let description = "";
+  if (!off && (vision || DEEPINFRA_API_KEY)) {
+    try { description = await extractTextFromImage(buffer, IMAGE_MIME[fileType] || "image/jpeg"); } catch (e) { if (!read.text) throw e; }
   }
-  if (fileType === "pdf") {
-    const pdfParse = require("pdf-parse");
-    const data = await pdfParse(buffer);
-    return data.text;
-  }
-  if (fileType === "docx") {
-    const mammoth = require("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
-  }
-  if (fileType === "xlsx" || fileType === "xls") {
-    const XLSX = require("xlsx");
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-    const texts = [];
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const csv = XLSX.utils.sheet_to_csv(sheet);
-      texts.push(`Sheet: ${sheetName}\n${csv}`);
-    }
-    return texts.join("\n\n");
-  }
-  if (fileType === "pptx") {
-    const AdmZip = require("adm-zip");
-    const zip = new AdmZip(buffer);
-    const texts = [];
-    const entries = zip.getEntries();
-    for (const entry of entries) {
-      if (entry.entryName.match(/^ppt\/slides\/slide\d+\.xml$/)) {
-        const xml = entry.getData().toString("utf-8");
-        const matches = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
-        const slideText = matches.map(m => m.replace(/<\/?a:t>/g, "")).join(" ");
-        if (slideText.trim()) texts.push(slideText.trim());
-      }
-    }
-    return texts.join("\n\n") || "No text found in presentation";
-  }
-  if (fileType === "html" || fileType === "htm") {
-    const cheerio = require("cheerio");
-    const $ = cheerio.load(buffer.toString("utf-8"));
-    $("script, style, noscript").remove();
-    return $("body").text().replace(/\s+/g, " ").trim();
-  }
-  if (fileType === "json") {
-    try {
-      const obj = JSON.parse(buffer.toString("utf-8"));
-      return JSON.stringify(obj, null, 2);
-    } catch (e) {
-      return buffer.toString("utf-8");
-    }
-  }
-  if (fileType === "xml") {
-    const text = buffer.toString("utf-8");
-    return text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  }
-  if (fileType === "rtf") {
-    const text = buffer.toString("utf-8");
-    return text
-      .replace(/\{\\[^{}]*\}/g, "")
-      .replace(/\\[a-z]+\d* ?/gi, "")
-      .replace(/[{}]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-  if (fileType === "eml") {
-    const text = buffer.toString("utf-8");
-    const parts = text.split(/\r?\n\r?\n/);
-    const headers = parts[0] || "";
-    const body = parts.slice(1).join("\n\n");
-    const from = (headers.match(/^From:\s*(.+)$/mi) || [])[1] || "";
-    const to = (headers.match(/^To:\s*(.+)$/mi) || [])[1] || "";
-    const subject = (headers.match(/^Subject:\s*(.+)$/mi) || [])[1] || "";
-    const date = (headers.match(/^Date:\s*(.+)$/mi) || [])[1] || "";
-    return `From: ${from}\nTo: ${to}\nDate: ${date}\nSubject: ${subject}\n\n${body}`;
-  }
-  if (fileType === "zip") {
-    const AdmZip = require("adm-zip");
-    const zip = new AdmZip(buffer);
-    const texts = [];
-    for (const entry of zip.getEntries()) {
-      if (entry.isDirectory) continue;
-      const ext = "." + entry.entryName.split(".").pop().toLowerCase();
-      const innerType = RAG_FILE_TYPES[ext];
-      if (innerType && innerType !== "zip") {
-        try {
-          const innerBuffer = entry.getData();
-          const innerText = await extractText(innerBuffer, innerType);
-          if (innerText && innerText.trim()) {
-            texts.push(`--- ${entry.entryName} ---\n${innerText}`);
-          }
-        } catch (e) { /* skip files that fail */ }
-      }
-    }
-    return texts.join("\n\n") || "No supported files found in archive";
-  }
-  if (IMAGE_MIME[fileType]) {
-    return await extractTextFromImage(buffer, IMAGE_MIME[fileType]);
-  }
-  throw new Error(`Unsupported file type: ${fileType}`);
+  if (!read.text && !description && off) throw new Error("Image understanding is off. Choose an image model in Settings to read this file.");
+  return [read.text, description].filter((t) => t && t.trim()).join("\n\n");
 }
 
 // --- Chunking ---
@@ -756,7 +667,7 @@ async function processDocumentWithModels(documentId, userId, fileBuffer, fileNam
 
     // 1. Extract text
     console.log(`[RAG] Extracting text from ${fileName} (${fileType})`);
-    const text = await extractText(fileBuffer, fileType);
+    const text = await extractText(fileBuffer, fileType, fileName);
     if (!text || text.trim().length < 10) {
       throw new Error("No text content could be extracted from this file");
     }

@@ -7,9 +7,12 @@
 // kinds, or is named as a different kind, is refused with REFUSED and goes no
 // further: it is not stored, read or passed on.
 //
-// The kinds are what Closedhand reads or keeps: images the models see, PDFs,
-// text and Office documents it reads, and the audio and video the web chat
-// offers to attach.
+// The kinds are what Closedhand reads or keeps: images the models see, and
+// every kind of document lib/file-reader.js reads (PDFs and scans, Office
+// and OpenDocument files, Pages, Numbers and Keynote, emails, ebooks, zips,
+// iPhone photos, text under any name), and the audio and video the web chat
+// offers to attach. Programs are refused, and SVG pictures, which can carry
+// code, whatever they are called.
 //
 // Files put on the sandbox computer, from its panel or copied from a Mac
 // through the Mac Bridge, pass checkWorkspaceFile in webapp/server.js before
@@ -22,8 +25,15 @@
 const REFUSED = "Closedhand can't open that kind of file.";
 
 const IMAGE = ["jpg", "jpeg", "png", "gif", "webp"];
+const PHOTO = ["heic", "heif", "avif"];
 const MEDIA = ["mp4", "m4v", "mov", "m4a", "webm", "ogg", "oga", "opus", "mp3", "wav", "avi", "flac", "aac"];
 const TEXT = ["txt", "md", "csv", "json", "html", "htm", "xml", "js", "py", "ts", "css", "sql", "sh", "yaml", "yml", "log", "rtf"];
+// Old Office files and Outlook emails share one container.
+const CFB = ["doc", "xls", "ppt", "msg", "dot", "xlt", "pot"];
+// OpenDocument, Apple and e-book files are zips inside.
+const ZIPPED = ["zip", "odt", "ods", "odp", "odg", "epub", "pages", "numbers", "key"];
+// Names that say "program" are refused even when the file inside is text.
+const PROGRAM = ["exe", "dll", "msi", "com", "scr", "bat", "cmd", "ps1", "vbs", "jar", "app", "dmg", "pkg", "deb", "rpm", "apk", "ipa", "bin", "so", "dylib", "iso", "img", "svg", "svgz"];
 
 const at = (b, offset, s) => b.length >= offset + s.length && b.toString("latin1", offset, offset + s.length) === s;
 // Word, Excel and PowerPoint files are zip archives with a fixed layout.
@@ -47,7 +57,11 @@ const KINDS = [
   { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ext: "docx", names: ["docx"], test: (b) => ooxml(b, "word/") },
   { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ext: "xlsx", names: ["xlsx"], test: (b) => ooxml(b, "xl/") },
   { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation", ext: "pptx", names: ["pptx"], test: (b) => ooxml(b, "ppt/") },
-  { type: "application/x-cfb", ext: "doc", names: ["doc", "xls"], test: (b) => at(b, 0, "\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") },
+  { type: "application/x-cfb", ext: "doc", names: CFB, test: (b) => at(b, 0, "\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") },
+  { type: "image/heic", ext: "heic", names: PHOTO, test: (b) => at(b, 4, "ftyp") && /^(heic|heix|hevc|mif1|msf1|avif)/.test(b.toString("latin1", 8, 12)) },
+  { type: "image/tiff", ext: "tiff", names: ["tif", "tiff"], test: (b) => at(b, 0, "II*\x00") || at(b, 0, "MM\x00*") },
+  { type: "image/bmp", ext: "bmp", names: ["bmp"], test: (b) => at(b, 0, "BM") && b.length >= 26 },
+  { type: "application/zip", ext: "zip", names: ZIPPED, test: (b) => at(b, 0, "PK\x03\x04") || at(b, 0, "PK\x05\x06") },
   // MP4, QuickTime and M4A share one layout; an HEIC photo uses it too and is not media.
   { type: "video/mp4", ext: "mp4", names: MEDIA, test: (b) => at(b, 4, "ftyp") && !/^(heic|heix|hevc|mif1|msf1|avif)/.test(b.toString("latin1", 8, 12)) },
   { type: "video/webm", ext: "webm", names: MEDIA, test: (b) => at(b, 0, "\x1a\x45\xdf\xa3") },
@@ -59,6 +73,7 @@ const KINDS = [
   { type: "audio/aac", ext: "aac", names: MEDIA, test: (b) => b[0] === 0xff && (b[1] & 0xf6) === 0xf0 },
   { type: "text/plain", ext: "txt", names: TEXT, test: looksLikeText },
 ];
+const KIND_NAMES = new Set(KINDS.flatMap((k) => k.names));
 
 // { ok: true, type, ext } for a file Closedhand opens, where type is what the
 // contents are and ext the name's own extension (or the kind's, without
@@ -67,9 +82,12 @@ function checkFile(buffer, name) {
   if (!Buffer.isBuffer(buffer)) return { ok: false };
   const named = /\.([a-z0-9]+)$/i.exec(String(name || ""));
   const ext = named ? named[1].toLowerCase() : "";
+  if (PROGRAM.includes(ext)) return { ok: false };
   const kind = KINDS.find((k) => k.test(buffer));
-  if (!kind || (ext && !kind.names.includes(ext))) return { ok: false };
-  return { ok: true, type: kind.type, ext: ext || kind.ext };
+  if (kind && (!ext || kind.names.includes(ext))) return { ok: true, type: kind.type, ext: ext || kind.ext };
+  // Text is read under any name (a .eml, a .tex, code) that is not a binary kind's.
+  if (kind && kind.type === "text/plain" && !KIND_NAMES.has(ext)) return { ok: true, type: kind.type, ext };
+  return { ok: false };
 }
 
 // A file as the web chat and chat apps hand it to the engine: one file, or a
@@ -93,13 +111,8 @@ function acceptChatFile(fileData) {
 // The sandbox computer's wider list, checked before the chat kinds' text
 // catch-all. A zip is told apart only from the Office layouts above it, so
 // "zip" covers OpenDocument, Apple and e-book files, which are zips inside.
-const ZIPPED = ["zip", "odt", "ods", "odp", "odg", "epub", "pages", "numbers", "key"];
 const WORKSPACE_KINDS = [
   ...KINDS.slice(0, -1),
-  { type: "image/heic", ext: "heic", names: ["heic", "heif", "avif"], test: (b) => at(b, 4, "ftyp") && /^(heic|heix|hevc|mif1|msf1|avif)/.test(b.toString("latin1", 8, 12)) },
-  { type: "image/tiff", ext: "tiff", names: ["tif", "tiff"], test: (b) => at(b, 0, "II*\x00") || at(b, 0, "MM\x00*") },
-  { type: "image/bmp", ext: "bmp", names: ["bmp"], test: (b) => at(b, 0, "BM") && b.length >= 26 },
-  { type: "application/zip", ext: "zip", names: ZIPPED, test: (b) => at(b, 0, "PK\x03\x04") || at(b, 0, "PK\x05\x06") },
   { type: "application/gzip", ext: "gz", names: ["gz", "tgz"], test: (b) => b[0] === 0x1f && b[1] === 0x8b },
   { type: "application/x-tar", ext: "tar", names: ["tar"], test: (b) => at(b, 257, "ustar") },
   { type: "application/x-bzip2", ext: "bz2", names: ["bz2", "tbz2"], test: (b) => at(b, 0, "BZh") },

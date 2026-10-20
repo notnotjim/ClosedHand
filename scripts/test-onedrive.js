@@ -21,10 +21,11 @@ test('OneDrive has the same four chat tools as Google Drive, offered only with M
  assert.match(read('lib/agents.js'),/case "onedrive_send_file": return input\.file_id \? "odrv:"/);
 });
 
-test('the tool handlers load the Word and Excel readers they call',()=>{
+test('the OneDrive tools read files with the one reader',()=>{
  const src=read('lib/tools/handlers.js');
- assert.match(src,/^const mammoth = require\("mammoth"\);$/m);
- assert.match(src,/^const XLSX = require\("xlsx"\);$/m);
+ const readTool=src.slice(src.indexOf('case "onedrive_read": {'),src.indexOf('case "onedrive_send_file": {'));
+ assert.match(readTool,/require\("\.\.\/file-reader"\)\.readFile\(await download\(\), meta\.name\)/);
+ assert.match(readTool,/content = partOfFile\(content, toolInput\.part\);/, 'a long file comes in parts');
  for(const n of ['onedrive_search','onedrive_list_recent','onedrive_read','onedrive_send_file'])assert.match(src,new RegExp('case "'+n+'": \\{'));
  // A quote in a search must not end Microsoft's search expression early.
  assert.match(src,/replace\(\/'\/g, "''"\)/);

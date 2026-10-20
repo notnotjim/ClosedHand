@@ -7,6 +7,12 @@ WORKDIR /app
 # Install production deps first for better layer caching.
 COPY package.json package-lock.json ./
 ARG TARGETARCH
+# The file reader (lib/file-reader.js) needs one build of each engine:
+# PDF.js's legacy build and Tesseract's plain builds with English; the rest of
+# those packages (other builds, source maps, a viewer, the Alpine Linux build
+# of the drawing library) is 75MB nothing loads. npm's download cache goes too:
+# it held 54MB of copies in every image.
+#
 # The local-models worker pulls in a machine-learning runtime that ships native
 # binaries for macOS, Windows and Linux, on two architectures each. A Linux
 # container needs exactly one of them, and the rest are roughly 200MB that
@@ -26,7 +32,10 @@ RUN npm ci --omit=dev \
         arm64) find "$ONNX" -mindepth 3 -maxdepth 3 -type d ! -name arm64 -prune -exec rm -rf {} + ;; \
         amd64) find "$ONNX" -mindepth 3 -maxdepth 3 -type d ! -name x64   -prune -exec rm -rf {} + ;; \
       esac; \
-    fi
+    fi \
+ && rm -rf node_modules/pdfjs-dist/build node_modules/pdfjs-dist/web node_modules/pdfjs-dist/image_decoders node_modules/@tesseract.js-data/eng/4.0.0 node_modules/@napi-rs/canvas-*-musl /root/.npm \
+ && { find node_modules/pdfjs-dist node_modules/tesseract.js-core -name "*.map" -type f -delete 2>/dev/null; \
+      find node_modules/tesseract.js-core -maxdepth 1 -type f \( -name "tesseract-core*-lstm*" -o -name "tesseract-core*.wasm.js" \) -delete 2>/dev/null; true; }
 
 # MCP servers the user connects by command run inside this container. npx is
 # already here with node; uv brings uvx for the Python ones (it fetches its own
@@ -38,7 +47,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # none for anything else the bot runs: the bundled Google Workspace CLI failed
 # every call with "invalid peer certificate: UnknownIssuer" and Gmail search
 # fell back to plain HTTP each time, and command-style MCP servers need it too.
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+# heif-convert turns iPhone photos (HEIC) into JPEGs for the file reader.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libheif-examples \
  && rm -rf /var/lib/apt/lists/*
 ENV npm_config_cache=/data/storage/cache/npm \
     UV_CACHE_DIR=/data/storage/cache/uv \
