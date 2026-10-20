@@ -1861,20 +1861,6 @@
       font-size: 14px;
       color: #D8624B;
     }
-    /* Onboarding */
-    @keyframes obSpin { to { transform: rotate(360deg); } }
-    @keyframes obFadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-    .ob-step { animation: obFadeIn 0.4s ease; }
-    .ob-plat {
-      display: flex; align-items: center; gap: 14px; padding: 16px 18px;
-      background: rgba(239,230,214,0.03); border: 1px solid rgba(239,230,214,0.06);
-      border-radius: 12px; cursor: pointer; transition: all 0.15s;
-      text-align: left; font-family: inherit; color: inherit; width: 100%;
-    }
-    .ob-plat:hover { background: rgba(239,230,214,0.07); border-color: rgba(239,230,214,0.12); transform: translateY(-1px); }
-    .ob-plat:active { transform: translateY(0); }
-    .ob-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(239,230,214,0.15); transition: all 0.3s; }
-    .ob-dot.active { background: rgba(239,230,214,0.6); width: 20px; border-radius: 4px; }
 
     /* Sandbox Computer CSS moved to index.html */
     .mon-info {
@@ -2001,79 +1987,6 @@
   }
 </script>
   <div id="ambient-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:-1;"></div>
-
-  <!-- Onboarding flow (shown for new users with no chat app connected) -->
-  <div id="onboarding-flow" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;padding:24px;">
-    <div style="width:100%;max-width:440px;">
-
-      <!-- Step 1: Welcome + Pick platform -->
-      <div class="ob-step" id="ob-step-1">
-        <img src="/logocircle.png" style="width:56px;height:56px;margin-bottom:20px;">
-        <h1 style="font-size:26px;font-weight:600;color:#EFE6D6;margin-bottom:6px;">Welcome, <span id="ob-user-name"></span></h1>
-        <p style="font-size:16px;color:rgba(239,230,214,0.5);margin-bottom:32px;">Pick where you want to talk to Closedhand</p>
-
-        <div style="display:flex;flex-direction:column;gap:10px;" id="ob-platforms">
-          <button class="ob-plat" data-platform="whatsapp" onclick="obSelectPlatform('whatsapp')">
-            <img src="/logos/whatsapp.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
-            <div><div style="font-size:17px;font-weight:500;color:#EFE6D6;">WhatsApp</div><div style="font-size: 14px;color:rgba(239,230,214,0.5);">Most popular</div></div>
-          </button>
-          <button class="ob-plat" data-platform="telegram" onclick="obSelectPlatform('telegram')">
-            <img src="/logos/telegram.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
-            <div><div style="font-size:17px;font-weight:500;color:#EFE6D6;">Telegram</div><div style="font-size: 14px;color:rgba(239,230,214,0.5);">Fast and feature-rich</div></div>
-          </button>
-          <button class="ob-plat" data-platform="discord" onclick="obSelectPlatform('discord')">
-            <img src="/logos/discord.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
-            <div><div style="font-size:17px;font-weight:500;color:#EFE6D6;">Discord</div><div style="font-size: 14px;color:rgba(239,230,214,0.5);">Communities and teams</div></div>
-          </button>
-          <button class="ob-plat" data-platform="slack" onclick="obSelectPlatform('slack')">
-            <img src="/logos/slack.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
-            <div><div style="font-size:17px;font-weight:500;color:#EFE6D6;">Slack</div><div style="font-size: 14px;color:rgba(239,230,214,0.5);">Workspaces</div></div>
-          </button>
-          <button class="ob-plat" data-platform="line" onclick="obSelectPlatform('line')">
-            <img src="/logos/line.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
-            <div><div style="font-size:17px;font-weight:500;color:#EFE6D6;">LINE</div><div style="font-size: 14px;color:rgba(239,230,214,0.5);">Asia-Pacific</div></div>
-          </button>
-        </div>
-
-        <p style="text-align:center;margin-top:24px;"><a href="#" onclick="obSkip();return false;" style="font-size:13px;color:rgba(239,230,214,0.5);text-decoration:none;">I'll do this later</a></p>
-      </div>
-
-      <!-- Step 2: Activation code -->
-      <div class="ob-step" id="ob-step-2" style="display:none;">
-        <a href="#" onclick="obBack();return false;" style="font-size:14px;color:rgba(239,230,214,0.5);text-decoration:none;display:inline-block;margin-bottom:20px;">&larr; Back</a>
-        <div style="text-align:center;margin-bottom:20px;">
-          <img id="ob-plat-icon" src="" style="width:48px;height:48px;border-radius:12px;margin-bottom:8px;">
-          <h2 id="ob-plat-name" style="font-size:20px;font-weight:600;color:#EFE6D6;margin:0;"></h2>
-        </div>
-        <p style="font-size:14px;color:rgba(239,230,214,0.5);text-align:center;margin-bottom:4px;">Send this code to start chatting:</p>
-        <div id="ob-code" onclick="obCopyCode()" style="font-family:'SF Mono','Fira Code',monospace;font-size:36px;font-weight:700;letter-spacing:6px;color:#EFE6D6;background:rgba(239,230,214,0.05);border:2px solid rgba(239,230,214,0.1);border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:6px;" onmouseover="this.style.borderColor='rgba(239,230,214,0.2)'" onmouseout="this.style.borderColor='rgba(239,230,214,0.1)'">------</div>
-        <p id="ob-copy-hint" style="font-size: 14px;color:rgba(239,230,214,0.5);text-align:center;margin-bottom:20px;">Tap to copy</p>
-        <div id="ob-deep-link" style="margin-bottom:16px;"></div>
-        <p id="ob-instructions" style="font-size:13px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.5;margin-bottom:20px;"></p>
-        <!-- Waiting spinner -->
-        <div style="display:flex;align-items:center;gap:10px;justify-content:center;color:rgba(239,230,214,0.5);font-size:13px;padding:12px 0;">
-          <span style="width:14px;height:14px;border:2px solid rgba(239,230,214,0.1);border-top-color:rgba(239,230,214,0.4);border-radius:50%;animation:obSpin 0.8s linear infinite;display:inline-block;"></span>
-          Waiting for your message...
-        </div>
-      </div>
-
-      <!-- Step 3: Success -->
-      <div class="ob-step" id="ob-step-3" style="display:none;text-align:center;">
-        <div style="width:64px;height:64px;border-radius:50%;background:rgba(239,230,214,0.16);color:#8DBD79;font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">&#10003;</div>
-        <h1 style="font-size:26px;font-weight:600;color:#EFE6D6;margin-bottom:8px;">You're in!</h1>
-        <p style="font-size:15px;color:rgba(239,230,214,0.5);margin-bottom:28px;">Send me a message. I'm ready.</p>
-        <button id="ob-open-chat-btn" onclick="obOpenChat()" style="width:100%;padding:16px;background:#EFE6D6;color:#100E0D;font-size:16px;font-weight:600;border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-bottom:10px;">Open <span id="ob-chat-name"></span></button>
-        <button onclick="obFinish()" style="width:100%;padding:14px;background:transparent;color:rgba(239,230,214,0.5);font-size:14px;border:1px solid rgba(239,230,214,0.08);border-radius:12px;cursor:pointer;font-family:inherit;">Go to dashboard</button>
-      </div>
-
-      <!-- Step dots -->
-      <div style="display:flex;justify-content:center;gap:6px;margin-top:24px;" id="ob-dots">
-        <span class="ob-dot active"></span>
-        <span class="ob-dot"></span>
-        <span class="ob-dot"></span>
-      </div>
-    </div>
-  </div>
 
   <div class="container dashboard-container" id="main-dashboard">
     <div class="card">
@@ -2999,7 +2912,7 @@
       if (restoreFocus) document.querySelector('.tab.active').focus({ preventScroll: true });
     }
     function initDashboardWelcome(data) {
-      if (welcomeInitialized || !data.selfHost) return;
+      if (welcomeInitialized) return;
       welcomeInitialized = true;
       document.getElementById('dashboard-help').hidden = false;
       document.getElementById('dashboard-welcome-replay').addEventListener('click', function () { welcomeStep = 0; showWelcomeStep(true); });
@@ -3042,15 +2955,6 @@
 
       document.getElementById("user-name").textContent = (data.name || "").split(" ")[0];
 
-      // New user detection: show onboarding if no chat platform connected
-      var hasChatPlatform = Object.values(data.platforms).some(function(p) { return p.connected; });
-      // Self-host: chat apps are set up on the setup page, which the person
-      // has just come from. The welcome overlay is the hosted product's.
-      if (!hasChatPlatform && !window._obSkipped && !data.selfHost) {
-        showOnboarding(data);
-        return;
-      }
-      hideOnboarding();
       initDashboardWelcome(data);
 
       const connectedServices = data.services || [];
@@ -3097,7 +3001,7 @@
                 </div>
               </div></div>
             </div>`;
-        } else if (data.selfHost && key === 'telegram' && platform.configured) {
+        } else if (key === 'telegram' && platform.configured) {
           // The bot exists; the person has not said hello to it yet.
           const tgHref = platform.botUsername ? `https://t.me/${platform.botUsername}?start=hello` : '/setup#step-chat=telegram';
           platformsGrid.innerHTML += `
@@ -3105,30 +3009,24 @@
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <a class="plat-connect-btn" href="${tgHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Say hello to your bot</a>
             </div>`;
-        } else if (data.selfHost && (key === 'telegram' || key === 'whatsapp')) {
+        } else if (key === 'telegram' || key === 'whatsapp') {
           platformsGrid.innerHTML += `
             <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <a class="plat-connect-btn" target="_top" href="/setup#step-chat=${key}" onclick="event.stopPropagation()">Set up</a>
             </div>`;
-        } else if (data.selfHost && !platform.available && COMING_SOON_CHAT.includes(key)) {
+        } else if (!platform.available && COMING_SOON_CHAT.includes(key)) {
           platformsGrid.innerHTML += `
             <div class="plat-card unavailable">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <span class="badge badge-soon">Coming soon</span>
             </div>`;
-        } else if (data.selfHost && !platform.available) {
+        } else if (!platform.available) {
           // The app exists once its keys are pasted in; the card opens that.
           platformsGrid.innerHTML += `
             <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
               <button class="plat-connect-btn" onclick="event.stopPropagation();openChatAppSetup('${key}')">Set up</button>
-            </div>`;
-        } else if (!platform.available) {
-          platformsGrid.innerHTML += `
-            <div class="plat-card unavailable">
-              <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
-              <span class="badge badge-soon">Coming soon</span>
             </div>`;
         } else if (platform.pendingCode) {
           platformsGrid.innerHTML += `
@@ -3141,18 +3039,14 @@
               <p style="font-size:13px;color:#B6AFA4;margin-bottom:8px;">Send this code to <strong>${platform.botName}</strong>:</p>
               <div class="activation-code" style="cursor:pointer;user-select:all;" onclick="copyCode('${platform.pendingCode}')" title="Click to copy">${platform.pendingCode} <span class="copy-icon" style="font-size:0.6em;opacity:0.7;"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span></div>
               <div class="steps">
-                ${key === 'whatsapp' ? `
-                <div class="step"><span class="step-num">1</span><span>Open <a href="https://wa.me/15551799854?text=${platform.pendingCode}" target="_blank" style="color:#25D366;font-weight:600;">this WhatsApp chat</a> (or message +1 555 179 9854)</span></div>
-                ` : `
                 <div class="step"><span class="step-num">1</span><span>Open ${platform.name} and find <strong>${platform.botName}</strong></span></div>
-                `}
                 <div class="step"><span class="step-num">2</span><span>Send the code above as your first message</span></div>
                 <div class="step"><span class="step-num">3</span><span>That's it - start chatting!</span></div>
               </div>
               <button class="btn btn-small" onclick="generateCode('${key}')">Generate new code</button>
             </div>`;
         } else {
-          const keysLink = (data.selfHost && platform.keysConfigured) ? `<a href="#" class="plat-keys-link" onclick="event.preventDefault();event.stopPropagation();openChatAppSetup('${key}')">Change keys</a>` : '';
+          const keysLink = platform.keysConfigured ? `<a href="#" class="plat-keys-link" onclick="event.preventDefault();event.stopPropagation();openChatAppSetup('${key}')">Change keys</a>` : '';
           platformsGrid.innerHTML += `
             <div class="plat-card">
               <div class="plat-top">${logo}<span class="plat-name">${platform.name}</span></div>
@@ -3213,7 +3107,6 @@
 
       // Cache platforms for tab-switch re-render
       window._platformsCache = data.platforms;
-      window._selfHost = !!data.selfHost;
       renderPlatformPills(data.platforms);
 
       // Toast on connect/error
@@ -4659,7 +4552,7 @@
       // After the linked apps sits one dashed "Link another app" pill, in the
       // Connect more card's manner. A click unfolds the apps not yet linked
       // as quiet pills; each takes the same route the Connections tab would.
-      const addable = Object.entries(platforms).filter(([key, info]) => !info.connected && (info.available || (window._selfHost && !COMING_SOON_CHAT.includes(key))));
+      const addable = Object.entries(platforms).filter(([key, info]) => !info.connected && (info.available || !COMING_SOON_CHAT.includes(key)));
       const adds = !addable.length ? "" : container.dataset.showAdds
         ? addable.map(([key, info]) =>
             `<button class="pill pill-add" data-add-platform="${escAttribute(key)}" title="Link ${escAttribute(info.name || key)}">${pillLogo(key)}${escHtml(info.name || key)}<span class="pill-add-plus" aria-hidden="true">+</span></button>`
@@ -4698,12 +4591,12 @@
     function startPlatformLink(key) {
       const platform = (window._platformsCache || {})[key];
       if (!platform) return;
-      if (window._selfHost && key === 'telegram' && platform.configured && platform.botUsername) {
+      if (key === 'telegram' && platform.configured && platform.botUsername) {
         window.open('https://t.me/' + platform.botUsername + '?start=hello', '_blank', 'noopener');
         return;
       }
-      if (window._selfHost && (key === 'telegram' || key === 'whatsapp')) { window.top.location.href = '/setup#step-chat=' + key; return; }
-      if (window._selfHost && !platform.available) { openChatAppSetup(key); return; }
+      if (key === 'telegram' || key === 'whatsapp') { window.top.location.href = '/setup#step-chat=' + key; return; }
+      if (!platform.available) { openChatAppSetup(key); return; }
       switchTab('connections');
       if (!platform.pendingCode) generateCode(key);
     }
@@ -8629,163 +8522,6 @@
 
     // (Sandbox Computer code moved to index.html workspace)
 
-    // === Onboarding Flow ===
-    var _obPollTimer = null;
-    var _obPlatform = null;
-    var _obPlatformInfo = {
-      whatsapp: { name: 'WhatsApp', icon: '/logos/whatsapp.svg', color: '#25D366',
-        deepLink: function(code) { return 'https://wa.me/15551799854?text=' + code; },
-        deepLinkLabel: 'Open WhatsApp',
-        instructions: 'Tap the button to open a chat with Closedhand. The code is already filled in. Just hit send.' },
-      telegram: { name: 'Telegram', icon: '/logos/telegram.svg', color: '#D8624B',
-        deepLink: function(code) { return 'https://t.me/ClosedHand_Bot?start=' + code; },
-        deepLinkLabel: 'Open Telegram',
-        instructions: 'Tap the button to open Closedhand in Telegram. Send the code as your first message.' },
-      discord: { name: 'Discord', icon: '/logos/discord.svg', color: '#5865F2',
-        deepLink: function() { return 'https://discord.com/users/Closedhand'; },
-        deepLinkLabel: 'Open Discord',
-        instructions: 'Search for "Closedhand" in Discord, send it a direct message with the code above.' },
-      slack: { name: 'Slack', icon: '/logos/slack.svg', color: '#4A154B',
-        deepLink: null,
-        deepLinkLabel: null,
-        instructions: 'In your Slack workspace, search for "Closedhand" in apps, install it, then send it the code above in a direct message.' },
-      line: { name: 'LINE', icon: '/logos/line.svg', color: '#00B900',
-        deepLink: function() { return 'https://line.me/R/ti/p/@closedhand'; },
-        deepLinkLabel: 'Open LINE',
-        instructions: 'Tap the button to find Closedhand on LINE. Add it as a friend, then send the code above.' },
-    };
-
-    function showOnboarding(data) {
-      var name = (data.name || '').split(' ')[0] || 'there';
-      document.getElementById('ob-user-name').textContent = name;
-      document.getElementById('onboarding-flow').style.display = 'flex';
-      document.getElementById('main-dashboard').style.display = 'none';
-
-      // Hide unavailable platforms
-      document.querySelectorAll('.ob-plat').forEach(function(btn) {
-        var key = btn.dataset.platform;
-        var plat = data.platforms[key];
-        if (!plat || !plat.available) btn.style.display = 'none';
-      });
-
-      // If user already has a pending code, jump to step 2
-      var pending = Object.entries(data.platforms).find(function(e) { return e[1].pendingCode; });
-      if (pending) {
-        _obPlatform = pending[0];
-        showObStep2(pending[1].pendingCode);
-      }
-    }
-
-    function hideOnboarding() {
-      document.getElementById('onboarding-flow').style.display = 'none';
-      document.getElementById('main-dashboard').style.display = '';
-      stopObPolling();
-    }
-
-    async function obSelectPlatform(platform) {
-      _obPlatform = platform;
-      try {
-        var res = await fetch('/api/generate-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ platform: platform }),
-        });
-        if (!res.ok) { var err = await res.json().catch(function(){return {};}); showToast(err.error || 'Something went wrong', true); return; }
-        var data = await res.json();
-        showObStep2(data.code);
-      } catch (e) { showToast('Something went wrong. Try again.', true); }
-    }
-
-    function showObStep2(code) {
-      var info = _obPlatformInfo[_obPlatform];
-      document.getElementById('ob-plat-icon').src = info.icon;
-      document.getElementById('ob-plat-name').textContent = info.name;
-      document.getElementById('ob-code').textContent = code;
-      document.getElementById('ob-instructions').textContent = info.instructions;
-      document.getElementById('ob-chat-name').textContent = info.name;
-
-      var linkDiv = document.getElementById('ob-deep-link');
-      if (info.deepLink) {
-        var linkUrl = info.deepLink(code);
-        var label = info.deepLinkLabel || ('Open ' + info.name);
-        linkDiv.innerHTML = '<a href="' + linkUrl + '" target="_blank" style="display:block;text-align:center;padding:14px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;color:#EFE6D6;background:' + info.color + ';">' + label + '</a>';
-      } else {
-        linkDiv.innerHTML = '';
-      }
-
-      document.getElementById('ob-step-1').style.display = 'none';
-      document.getElementById('ob-step-2').style.display = 'block';
-      updateObDots(2);
-      startObPolling();
-    }
-
-    function obBack() {
-      stopObPolling();
-      document.getElementById('ob-step-2').style.display = 'none';
-      document.getElementById('ob-step-1').style.display = 'block';
-      updateObDots(1);
-    }
-
-    function obShowSuccess() {
-      stopObPolling();
-      document.getElementById('ob-step-2').style.display = 'none';
-      document.getElementById('ob-step-3').style.display = 'block';
-      updateObDots(3);
-    }
-
-    function updateObDots(step) {
-      document.querySelectorAll('.ob-dot').forEach(function(dot, i) {
-        dot.classList.toggle('active', i === step - 1);
-      });
-    }
-
-    async function obCopyCode() {
-      var code = document.getElementById('ob-code').textContent;
-      try {
-        await navigator.clipboard.writeText(code);
-        document.getElementById('ob-copy-hint').textContent = 'Copied!';
-        setTimeout(function() { document.getElementById('ob-copy-hint').textContent = 'Tap to copy'; }, 2000);
-      } catch (e) {
-        var input = document.createElement('input'); input.value = code;
-        document.body.appendChild(input); input.select(); document.execCommand('copy'); document.body.removeChild(input);
-      }
-    }
-
-    function startObPolling() {
-      stopObPolling();
-      _obPollTimer = setInterval(async function() {
-        try {
-          var res = await fetch('/api/status');
-          if (!res.ok) return;
-          var data = await res.json();
-          if (Object.values(data.platforms).some(function(p) { return p.connected; })) {
-            obShowSuccess();
-          }
-        } catch (e) {}
-      }, 3000);
-    }
-
-    function stopObPolling() {
-      if (_obPollTimer) { clearInterval(_obPollTimer); _obPollTimer = null; }
-    }
-
-    function obOpenChat() {
-      var info = _obPlatformInfo[_obPlatform];
-      var urls = { whatsapp: 'https://wa.me/15551799854', telegram: 'https://t.me/ClosedHand_Bot' };
-      if (urls[_obPlatform]) window.open(urls[_obPlatform], '_blank');
-      obFinish();
-    }
-
-    function obFinish() {
-      hideOnboarding();
-      loadStatus();
-    }
-
-    function obSkip() {
-      window._obSkipped = true;
-      hideOnboarding();
-      loadStatus();
-    }
   </script>
   <!-- Worker Creation Modal -->
   <div class="modal-overlay" id="auto-create-modal" onclick="if(event.target===this)closeCreateAutomationModal()">

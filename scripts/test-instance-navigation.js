@@ -14,7 +14,7 @@ test('a plain dashboard bookmark opens the dashboard and specific section links 
 test('incomplete setup retains the requested app destination; completion opens only a local app route', async () => {
   const server = read('server.js'); let handler, destination, ready = false, served, claimed = false, available = true;
   const start = server.indexOf('async function setupComplete');
-  vm.runInNewContext(server.slice(start, server.indexOf('// WhatsApp magic link', start)), {
+  vm.runInNewContext(server.slice(start, server.indexOf('// Canvas JSON API', start)), {
     app: { get: (_, fn) => { handler = fn; } }, URLSearchParams,
     require: name => name === './phone-registration' ? { status: () => ({}), serviceAvailable: async () => available } : { getSetupState: async () => ({ ready }) },
     getRuntimeConf: async key => key === 'PHONE_ADDRESS_NAME' && claimed ? 'amber-fox-42' : null,

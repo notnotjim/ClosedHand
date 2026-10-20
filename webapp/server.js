@@ -477,8 +477,10 @@ function getAvailableServices() {
 
 // Supported chat platforms
 const SUPPORTED_PLATFORMS = {
-  telegram: { name: "Telegram", botName: "@ClosedHand_Bot", available: true },
-  whatsapp: { name: "WhatsApp", botName: "Closedhand", available: true },
+  // Telegram's bot is the person's own (its name comes from TELEGRAM_BOT_USERNAME);
+  // WhatsApp is their own number as a linked device.
+  telegram: { name: "Telegram", available: true },
+  whatsapp: { name: "WhatsApp", available: true },
   discord: { name: "Discord", botName: "Closedhand", available: true },
   slack: { name: "Slack", botName: "Closedhand", available: true },
   line: { name: "LINE", botName: "Closedhand", available: true },
@@ -2010,82 +2012,6 @@ app.get("/", async (req, res) => {
   assets.sendPage(res, "index.html");
 });
 
-// WhatsApp magic link — dedicated onboarding page
-app.get("/link/whatsapp/:token", async (req, res) => {
-  const token = req.params.token;
-
-  // Validate token
-  const { data: pending } = await supabase
-    .from("wa_pending_links")
-    .select("phone, expires_at")
-    .eq("token", token)
-    .single();
-
-  if (!pending || new Date(pending.expires_at) < new Date()) {
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-    .card{max-width:400px;text-align:center;padding:40px}.title{font-size:24px;margin-bottom:16px}.desc{color:#888;line-height:1.6}</style></head>
-    <body><div class="card"><div class="title">Link expired</div><p class="desc">Send another message on WhatsApp to get a fresh link.</p></div></body></html>`);
-  }
-
-  // If already logged in, auto-link immediately
-  const userId = getUserIdFromRequest(req);
-  if (userId) {
-    const { data: existing } = await supabase
-      .from("chat_links")
-      .select("id")
-      .eq("platform", "whatsapp")
-      .eq("platform_user_id", pending.phone)
-      .single();
-
-    if (!existing) {
-      await supabase.from("chat_links").insert({
-        user_id: userId,
-        platform: "whatsapp",
-        platform_user_id: pending.phone,
-      });
-    }
-    await autoEnableNotificationPlatform(userId, "whatsapp");
-    await supabase.from("wa_pending_links").delete().eq("token", token);
-
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-    .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
-    .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
-    <body><div class="card"><div class="check">✅</div><div class="title">WhatsApp linked</div><p class="desc">You're all set. Tap below to say hello — I'll take it from there.</p>
-    <a href="https://wa.me/15551799854?text=hey" class="btn">Open WhatsApp</a></div></body></html>`);
-  }
-
-  // Not logged in — store token in cookie, show focused sign-in page
-  res.setHeader("Set-Cookie", `ch_wa_link=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=1800`);
-
-  res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand — Connect WhatsApp</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-    .card{max-width:400px;text-align:center;padding:40px}
-    .logo{font-size:32px;font-weight:700;margin-bottom:8px}
-    .subtitle{color:#888;font-size:15px;margin-bottom:40px;line-height:1.5}
-    .btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:16px;border-radius:12px;font-size:16px;font-weight:600;text-decoration:none;margin-bottom:12px;transition:transform 0.1s}
-    .btn:active{transform:scale(0.98)}
-    .btn-google{background:#fff;color:#333}
-    .btn-microsoft{background:#2f2f2f;color:#fff;border:1px solid #444}
-    .btn img{width:20px;height:20px}
-    .footer{color:#555;font-size:12px;margin-top:32px;line-height:1.5}
-    .footer a{color:#888;text-decoration:none}
-  </style></head>
-  <body><div class="card">
-    <div class="logo">Closedhand</div>
-    <p class="subtitle">Sign in to connect your WhatsApp.<br>One tap and you're in.</p>
-    <a href="/auth/google" class="btn btn-google">
-      <img src="/logos/google.svg" alt="">Sign in with Google
-    </a>
-    <a href="/auth/microsoft" class="btn btn-microsoft">
-      <img src="/logos/microsoft.svg" alt="">Sign in with Microsoft
-    </a>
-    <p class="footer">Your data stays yours. <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
-  </div></body></html>`);
-});
 // Canvas JSON API: fetch canvas content for in-panel rendering
 app.get("/api/canvas/:id", async (req, res) => {
   try {
@@ -2257,7 +2183,7 @@ app.post("/logout", async (req, res) => {
   signInRecord("signed out", req);
   res.set("Clear-Site-Data", '"cache", "storage"');
   res.append("Set-Cookie", sessionCookie(req, "", 0));
-  for (const c of ["ch_user=; Path=/", "ch_wa_link=; Path=/", "ch_connect_queue=; Path=/", "ch_wallet_ok=; Path=/api"]) {
+  for (const c of ["ch_user=; Path=/", "ch_connect_queue=; Path=/", "ch_wallet_ok=; Path=/api"]) {
     res.append("Set-Cookie", `${c}; HttpOnly; SameSite=Lax; Max-Age=0${browserAccess.publicHttps(req) ? "; Secure" : ""}`);
   }
   res.redirect(303, "/");
@@ -2413,7 +2339,6 @@ app.get("/auth/:service", async (req, res) => {
     lineId: lineUser?.userId || null,
     lineName: lineUser?.displayName || null,
     storeDomain: store_domain || null,
-    waLink: null,
     // Explicit "connect an additional Google account" flow (mail/calendar for
     // a second Gmail). Only meaningful for google + a logged-in user.
     extraAccount: (serviceKey === "google" || serviceKey === "microsoft") && req.query.extra === "1" && !!getUserIdFromRequest(req),
@@ -2421,11 +2346,6 @@ app.get("/auth/:service", async (req, res) => {
     // on setup afterwards rather than on the home page.
     returnTo: req.query.return === "setup" ? "/setup" : null,
   };
-
-  // Check for WhatsApp magic link cookie
-  const cookieStr = req.headers.cookie || "";
-  const waLinkMatch = cookieStr.match(/ch_wa_link=([^;]+)/);
-  if (waLinkMatch) stateData.waLink = waLinkMatch[1];
 
   // PKCE support (e.g. Salesforce)
   let pkce = null;
@@ -3192,48 +3112,6 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
   } catch (connErr) {
     console.error(`[Auth] saveConnection error (non-fatal): ${connErr.message}`);
     // Cookie is already set, user is logged in. Connection save failed but that's recoverable.
-  }
-
-  // Auto-link WhatsApp if magic link token is present
-  if (stateData.waLink) {
-    try {
-      const { data: pending } = await supabase
-        .from("wa_pending_links")
-        .select("phone, expires_at")
-        .eq("token", stateData.waLink)
-        .single();
-
-      if (pending && new Date(pending.expires_at) > new Date()) {
-        const { data: existing } = await supabase
-          .from("chat_links")
-          .select("id")
-          .eq("platform", "whatsapp")
-          .eq("platform_user_id", pending.phone)
-          .single();
-
-        if (!existing) {
-          await supabase.from("chat_links").insert({
-            user_id: user.id,
-            platform: "whatsapp",
-            platform_user_id: pending.phone,
-          });
-          console.log(`WhatsApp auto-linked: ${pending.phone} → ${user.id}`);
-        }
-        await autoEnableNotificationPlatform(user.id, "whatsapp");
-
-        await supabase.from("wa_pending_links").delete().eq("token", stateData.waLink);
-      }
-    } catch (e) {
-      console.error("WhatsApp auto-link error:", e.message);
-    }
-    // Clear cookie and show success page
-    res.setHeader("Set-Cookie", "ch_wa_link=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
-    return res.send(`<!DOCTYPE html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Closedhand</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-    .card{max-width:400px;text-align:center;padding:40px}.title{font-size:28px;margin-bottom:16px}.check{font-size:64px;margin-bottom:20px}.desc{color:#888;line-height:1.6;margin-bottom:24px}
-    .btn{display:inline-block;background:#25D366;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600}</style></head>
-    <body><div class="card"><div class="check">✅</div><div class="title">You're in</div><p class="desc">WhatsApp is connected. Tap below to say hello — I'll take it from there.</p>
-    <a href="https://wa.me/15551799854?text=hey" class="btn">Open WhatsApp</a></div></body></html>`);
   }
 
   // Two-step redirect: first to /dashboard (sets cookie via server-side auth check),
@@ -4591,7 +4469,6 @@ app.get("/api/status", async (req, res) => {
     }
 
     res.json({
-      selfHost: true,
       name: profile?.settings?.preferred_name || profile?.display_name || "User",
       email: profile?.email || "",
       settings: require("./model-policy").publicSettings(profile?.settings),
@@ -9227,7 +9104,7 @@ app.delete("/api/account", async (req, res) => {
       "agent_tasks", "automations", "canvases",
       "data_vectors", "data_cache", "index_progress",
       "user_skills", "user_mcps", "user_bridges", "sandboxes",
-      "wa_pending_links", "chat_links", "connections",
+      "chat_links", "connections",
       "bridge_requests", "bug_reports", "token_usage",
     ];
     for (const table of WIPE_TABLES) {

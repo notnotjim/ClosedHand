@@ -236,7 +236,7 @@ test('logging out is a POST that clears what the browser kept, and a link elsewh
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
   const post = server.slice(server.indexOf('app.post("/logout"'), server.indexOf('app.get("/logout"'));
   assert.match(post, /res\.set\("Clear-Site-Data", '"cache", "storage"'\);/);
-  for (const c of ['ch_user', 'ch_wa_link', 'ch_connect_queue', 'ch_wallet_ok']) assert.ok(post.includes(c + '=;'), c + ' is cleared');
+  for (const c of ['ch_user', 'ch_connect_queue', 'ch_wallet_ok']) assert.ok(post.includes(c + '=;'), c + ' is cleared');
   const get = server.slice(server.indexOf('app.get("/logout"'), server.indexOf('app.get("/logout"') + 900);
   assert.doesNotMatch(get, /dashboardSessions\.end/, 'opening /logout only shows the button');
   assert.match(get, /<form method="post" action="\/logout"/);

@@ -148,7 +148,7 @@ test("Connect anything sits centred under the apps", () => {
 
 test("a connected chat app opens like any connection: rows, the day it connected, the chat and turning it off", () => {
   const dash = fs.readFileSync(path.join(__dirname, "../webapp/views/dashboard.html"), "utf8");
-  const card = dash.slice(dash.indexOf("        if (platform.connected) {"), dash.indexOf("} else if (data.selfHost && key === 'telegram' && platform.configured)"));
+  const card = dash.slice(dash.indexOf("        if (platform.connected) {"), dash.indexOf("} else if (key === 'telegram' && platform.configured)"));
   assert.match(card, /class="plat-card connected" role="button" tabindex="0" aria-expanded="false" onclick="togglePlatform\(this\)"/);
   assert.match(card, />Connected &#10003;<\/span>/, "every chat app says Connected, the same as Telegram");
   assert.match(card, /row\('Chat', 'Message Yourself'\) \+ \(platform\.number \? row\('Number', escHtml\(spacedNumber\(platform\.number\)\)\)/);
