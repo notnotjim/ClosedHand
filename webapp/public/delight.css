@@ -177,16 +177,6 @@
   100% { background-position: -200% 0; }
 }
 
-/* --- Destructive Action Drama --- */
-.account-action-btn:hover {
-  animation: pulse-red 1.2s ease infinite;
-}
-
-@keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(216,98,75,0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(216,98,75,0); }
-}
-
 /* --- Logo Spin Easter Egg --- */
 @keyframes logo-spin {
   from { transform: rotate(0deg); }

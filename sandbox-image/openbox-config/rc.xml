@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc">
+  <!-- The screen is 1280x1280 (entrypoint.sh) and the laptop-shaped part
+       shown is its top 1280x800: windows are placed and maximized only
+       there. The agent's /desktop/shape writes other margins for a phone. -->
+  <margins><top>0</top><bottom>480</bottom><left>0</left><right>0</right></margins>
   <applications>
     <!-- Auto-maximize all windows, no title bar decorations -->
     <application class="*">

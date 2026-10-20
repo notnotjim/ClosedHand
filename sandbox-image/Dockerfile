@@ -46,6 +46,12 @@ COPY agent/browser_helper.py /usr/local/lib/python3.12/browser_helper.py
 # Openbox config (auto-maximize, no decorations)
 COPY openbox-config/rc.xml /etc/xdg/openbox/rc.xml
 
+# Google is the starting search engine, and so the new tab page, in either
+# browser: Debian's Chromium (arm64) otherwise starts on DuckDuckGo.
+# Recommended, not enforced, so a person can still choose another.
+COPY chrome-policies.json /etc/opt/chrome/policies/recommended/closedhand.json
+COPY chrome-policies.json /etc/chromium/policies/recommended/closedhand.json
+
 # Chromium launcher
 COPY chromium-launcher.sh /usr/local/bin/chromium-launcher
 RUN chmod +x /usr/local/bin/chromium-launcher

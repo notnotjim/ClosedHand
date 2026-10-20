@@ -89,7 +89,9 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
   assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
-  assert.match(dashboard, /placeholder="Paste anything: an MCP server address, a GitHub link, a README, an npm package, a PyPI package, an npx command, a uvx command, a Docker command, a Claude Desktop config, a Cursor config, a VS Code config, a claude mcp add line, a skill or an API key" aria-label="MCP server, skill or API key"/, "one box, and one list of everything it takes");
+  assert.match(dashboard, /placeholder="Paste an MCP server, GitHub link, install command, config, skill, API key or anything else that connects" aria-label="MCP server, skill or API key"/, "one box, and one short list of what it takes");
+  assert.match(dashboard, /<a href="https:\/\/registry\.modelcontextprotocol\.io\/" target="_blank" rel="noopener noreferrer"[^>]*>Browse MCP servers &rarr;<\/a>/, "the official MCP Registry");
+  assert.match(dashboard, /<a href="https:\/\/github\.com\/anthropics\/skills" target="_blank" rel="noopener noreferrer"[^>]*>Browse skills &rarr;<\/a>/, "Anthropic's own skills");
   assert.doesNotMatch(dashboard, /class="mcp-description"/, "the list isn't said twice");
   // Each thing the list names is one the box reads: scripts/test-mcp-setup.js.
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
@@ -152,7 +154,7 @@ test("a connected chat app opens like any connection: rows, the day it connected
   assert.match(card, /row\('Chat', escHtml\(platform\.botName \|\| 'Your bot'\)\)/);
   assert.match(card, /<div class="conn-date">Connected \$\{/, "the day it connected, as other connections show it");
   assert.match(card, /'https:\/\/wa\.me\/' \+ encodeURIComponent\(platform\.number\)/, "Open chat goes to Message Yourself");
-  assert.match(card, /window\.open\('\$\{chatHref\}','_blank','noopener'\)">Open chat<\/button>/, "a button like every other tile's");
+  assert.match(card, /window\.open\('\$\{chatHref\}','_blank','noopener'\)">Open in \$\{platform\.name\}<\/button>/, "a button like every other tile's, naming the app");
   assert.match(card, /platformAskOff\(this\)">Disconnect<\/button>/);
   assert.doesNotMatch(dash, /'Unlink'|linked as a device|' unlinked\.'/, "one word for turning any chat app off");
   const spacedNumber = new Function(dash.slice(dash.indexOf("    function spacedNumber(digits) {"), dash.indexOf("    function row(label, value) {")) + "return spacedNumber;")();

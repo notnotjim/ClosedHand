@@ -57,6 +57,11 @@ async function resolveInput(input, fetcher=fetch) {
   }else if(parts[2]==='blob'||parts[2]==='tree'){
     const ref=parts[3];if(!ref)throw new Error('This GitHub link is incomplete.');
     const file=parts.slice(4);
+    // A skill's folder, as skill collections link them: its SKILL.md.
+    if(parts[2]==='tree'&&file.length){
+      const skill=file.concat('SKILL.md').map(encodeURIComponent).join('/');
+      try{await readPublic(api+'/contents/'+skill+'?ref='+encodeURIComponent(ref),fetcher);return{skill:'https://github.com/'+owner+'/'+repo+'/blob/'+ref+'/'+skill};}catch{}
+    }
     if(parts[2]==='tree')file.push('README.md');
     api+='/contents/'+file.map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(ref);
   }else if(parts.length===2)api+='/readme';

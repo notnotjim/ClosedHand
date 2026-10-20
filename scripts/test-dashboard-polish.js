@@ -52,7 +52,12 @@ test('goals, file search, progress lines, today and the Google card', () => {
   assert.match(goals, /No goals yet\. One might be/);
   assert.match(goals, /if \(empty\) empty\.hidden = show;/);
   assert.match(page, /It recalls by meaning, not just keywords/);
-  assert.match(page, /<button class="rag-upload-btn" id="ragQuickDrive" type="button" hidden>Search your Google Drive<\/button>/);
+  // One way to add any source, the same for every one: no Google-only shortcut.
+  assert.doesNotMatch(page, /ragQuickDrive|Search your Google Drive/);
+  const menu = page.slice(page.indexOf('async function ragAddSource() {'), page.indexOf('// Closedhand section', page.indexOf('async function ragAddSource() {')));
+  assert.match(menu, /html \+= ready \+ offer;/, 'connected storage sorts above what can still be connected');
+  assert.doesNotMatch(menu, /\bhtml \+= '<div class="rag-browse-item"/, 'every storage row goes to one of the two lists');
+  assert.match(page, /\+ 'Local computer<\/div>';/, 'named as on the Computers tab');
   const defs = require('../lib/tools/definitions');
   const tool = (n) => defs.INTERNAL_TOOLS.find((t) => t.name === n);
   assert.equal(tool('web_fetch').activityDescription({ url: 'https://nominatim.openstreetmap.org/search' }), 'Looking at the map');

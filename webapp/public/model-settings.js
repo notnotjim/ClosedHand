@@ -253,7 +253,7 @@
       var retry = root.querySelector('[data-action="' + (kind === "primary" ? "load" : "load-" + kind) + '"]');
       retry.hidden = true;
       if (!ready(kind)) { if (!quiet) show("Choose a provider and complete its connection details first.", true); return; }
-      if (!quiet) show(vision ? "Loading image models..." : support ? "Loading support models..." : "Loading available models...");
+      if (!quiet) show(vision ? "Loading image models…" : support ? "Loading support models…" : "Loading available models…");
       try {
         var body = input(); body.connection = kind;
         var data = await call("/models", body);
@@ -394,7 +394,7 @@
         rows.append(dt, dd);
       }
       title.textContent = kind === "checking" ? "Checking " + chatName + "..." : kind === "passed" ? "Checked and working"
-        : kind === "failed" ? "The check did not pass" : kind === "saved" ? "These models are in use" : complete() ? "Preparing model check..." : stillNeeded();
+        : kind === "failed" ? "The check did not pass" : kind === "saved" ? "These models are in use" : complete() ? "Preparing model check…" : stillNeeded();
       row("Primary model", chatName + (provName ? " via " + provName : ""));
       var settled = kind === "passed" || kind === "saved" || (kind === "failed" && check.visionNeeded);
       if (kind === "failed" && !check.visionNeeded) row("Problem", check.error, "fail");
@@ -528,7 +528,7 @@
     root.querySelector('[data-action="load-background"]').onclick = function () { loadModels("background"); };
     root.querySelector('[data-action="recheck"]').onclick = function () { runCheck(); };
     root.querySelector('[data-action="save"]').onclick = function () { if (!ticket) return; perform(async function () {
-      show("Saving models..."); await call("/save", { ticket: ticket });
+      show("Saving models…"); await call("/save", { ticket: ticket });
       field("apiKey").value = ""; field("visionKey").value = ""; field("backgroundKey").value = "";
       field("backgroundKey").placeholder = "Saved key, leave blank to keep it";
       field("visionKey").placeholder = "Saved key, leave blank to keep it"; invalidate(); clearTimeout(checkTimer); checks++;

@@ -11,6 +11,15 @@ test('every kind of paste the box lists is one it reads',()=>{
   ['{"mcp":{"servers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}}', "json"], ["claude mcp add kestrel -- npx -y @kestrel/mcp-server", "command"],
   ["https://github.com/kestrel/skills/blob/main/notes/SKILL.md", "skill"]]) assert.equal(mcp.parseServerInput(paste).kind, kind, paste);
 });
+test('a link to a skill\'s folder installs its SKILL.md, and any other folder reads its README',async()=>{
+ const {resolveInput}=require('../webapp/mcp-input-resolver');
+ const seen=[];
+ const fetcher=async(url)=>{seen.push(url);const ok=/\/skills\/notes\/SKILL\.md\?ref=main$/.test(url);
+  return {ok,status:ok?200:404,headers:{get:()=>null},body:(async function*(){yield new TextEncoder().encode(ok?'# Notes skill':'');})()};};
+ assert.deepEqual(await resolveInput('https://github.com/kestrel/tools/tree/main/skills/notes',fetcher),{skill:'https://github.com/kestrel/tools/blob/main/skills/notes/SKILL.md'});
+ await assert.rejects(resolveInput('https://github.com/kestrel/tools/tree/main/servers/notes',fetcher));
+ assert.match(seen.at(-1),/\/contents\/servers\/notes\/README\.md\?ref=main$/,'not a skill: its README, as before');
+});
 test('a README pasted as text offers the connections it describes',async()=>{
  const {resolveInput}=require('../webapp/mcp-input-resolver');
  const readme='# Kestrel\n\nInstall:\n\n```bash\nnpx -y @kestrel/kestrel-mcp\n```\n\nOr in your config:\n\n```json\n{"mcpServers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}\n```\n';

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-  <title>Closedhand - Dashboard</title>
+  <title>Dashboard | Closedhand</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -924,14 +924,16 @@
       white-space: nowrap;
     }
 
+    /* What Closedhand may do reads plainly; what was refused is struck out. */
     .conn-perm.granted {
-      color: #D8624B;
-      background: rgba(208,86,63,0.08);
+      color: #B6AFA4;
+      background: rgba(239,230,214,0.06);
     }
 
     .conn-perm.declined {
-      color: #D8624B;
-      background: rgba(216,98,75,0.08);
+      color: rgba(239,230,214,0.4);
+      background: transparent;
+      text-decoration: line-through;
     }
 
     /* Drawer action row */
@@ -954,22 +956,24 @@
       transition: background 0.12s;
     }
 
+    /* Two roles: an everyday action is neutral, one that removes or turns
+       something off is red. */
     .conn-btn-manage {
-      color: #D0563F;
-      border-color: #D0563F;
+      color: #EFE6D6;
+      border-color: rgba(239,230,214,0.24);
     }
 
     .conn-btn-manage:hover {
-      background: rgba(239,230,214,0.1);
+      background: rgba(239,230,214,0.08);
     }
 
     .conn-btn-disconnect {
       color: #D0563F;
-      border-color: rgba(239,230,214,0.1);
+      border-color: rgba(208,86,63,0.4);
     }
 
     .conn-btn-disconnect:hover {
-      background: #1A1817;
+      background: rgba(208,86,63,0.1);
     }
 
     .conn-date {
@@ -1491,7 +1495,7 @@
     /* Automation saved card */
     .auto-card {
       background: #1A1817;
-      border: 1px solid #1A1817;
+      border: 1px solid rgba(239,230,214,0.1);
       border-radius: 10px;
       margin-bottom: 8px;
       overflow: hidden;
@@ -1557,8 +1561,6 @@
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
       flex-shrink: 0;
     }
     .auto-status-pill.active { background: rgba(141,189,121,0.12); color: #8DBD79; }
@@ -2024,7 +2026,7 @@
       <div class="ob-step" id="ob-step-1">
         <img src="/logocircle.png" style="width:56px;height:56px;margin-bottom:20px;">
         <h1 style="font-size:26px;font-weight:600;color:#EFE6D6;margin-bottom:6px;">Welcome, <span id="ob-user-name"></span></h1>
-        <p style="font-size:16px;color:rgba(239,230,214,0.5);margin-bottom:32px;">Pick where you want to chat with me</p>
+        <p style="font-size:16px;color:rgba(239,230,214,0.5);margin-bottom:32px;">Pick where you want to talk to Closedhand</p>
 
         <div style="display:flex;flex-direction:column;gap:10px;" id="ob-platforms">
           <button class="ob-plat" data-platform="whatsapp" onclick="obSelectPlatform('whatsapp')">
@@ -2097,7 +2099,7 @@
           <a class="ch-brand" href="/" target="_top"><img id="dashboard-logo" src="/fist.png" alt=""><span>Closedhand</span></a>
           <h1 style="margin-bottom:0;">Welcome, <span id="user-name">...</span></h1>
         </div>
-        <a href="/logout" class="logout-link">Log out</a>
+        <a href="/logout" class="logout-link">Sign out</a>
       </div>
 
       <aside class="tour-panel" id="dashboard-welcome" popover="manual" role="dialog" aria-label="Quick tour" aria-describedby="welcome-description">
@@ -2151,7 +2153,7 @@
         <div id="scope-warnings"></div>
         <!-- Search -->
         <div style="padding:8px 0 4px;">
-          <input type="text" id="connections-search" placeholder="Search connections..." aria-label="Search connections" oninput="filterConnections(this.value)" style="width:100%;padding:9px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:15px;box-sizing:border-box;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
+          <input type="text" id="connections-search" placeholder="Search connections…" aria-label="Search connections" oninput="filterConnections(this.value)" style="width:100%;padding:9px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:15px;box-sizing:border-box;outline:none;font-family:inherit;" onfocus="this.style.borderColor='rgba(239,230,214,0.28)'" onblur="this.style.borderColor='rgba(239,230,214,0.16)'">
         </div>
 
         <!-- Chat Platforms -->
@@ -2270,7 +2272,7 @@
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="Paste anything: an MCP server address, a GitHub link, a README, an npm package, a PyPI package, an npx command, a uvx command, a Docker command, a Claude Desktop config, a Cursor config, a VS Code config, a claude mcp add line, a skill or an API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="Paste an MCP server, GitHub link, install command, config, skill, API key or anything else that connects" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -2279,8 +2281,8 @@
             <p class="mcp-scan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Servers and skills are scanned for security risks</p>
 
             <div class="mcp-browse">
-              <a href="https://smithery.ai/" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
-              <a href="https://github.com/travisvn/awesome-claude-skills" target="_blank" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse skills &rarr;</a>
+              <a href="https://registry.modelcontextprotocol.io/" target="_blank" rel="noopener noreferrer" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse MCP servers &rarr;</a>
+              <a href="https://github.com/anthropics/skills" target="_blank" rel="noopener noreferrer" style="font-size: 13px;color:rgba(239,230,214,0.6);text-decoration:none;">Browse skills &rarr;</a>
             </div>
 
             <!-- Status messages -->
@@ -2321,32 +2323,32 @@
           <!-- Stats cards -->
           <div class="mc-metrics">
             <div class="mc-metric green">
-              <div class="mc-metric-value" id="auto-active">—</div>
+              <div class="mc-metric-value" id="auto-active">0</div>
               <div class="mc-metric-label">Agents at work</div>
             </div>
             <div class="mc-metric blue">
-              <div class="mc-metric-value" id="auto-runs-today">—</div>
-              <div class="mc-metric-label">Runs Today</div>
+              <div class="mc-metric-value" id="auto-runs-today">0</div>
+              <div class="mc-metric-label">Runs today</div>
             </div>
             <div class="mc-metric purple">
-              <div class="mc-metric-value" id="auto-agents">—</div>
+              <div class="mc-metric-value" id="auto-agents">0</div>
               <div class="mc-metric-label">Routines</div>
             </div>
             <div class="mc-metric gray">
-              <div class="mc-metric-value" id="auto-last-activity">—</div>
-              <div class="mc-metric-label">Last Run</div>
+              <div class="mc-metric-value" id="auto-last-activity">Never</div>
+              <div class="mc-metric-label">Last run</div>
             </div>
           </div>
 
           <!-- Active Runs -->
-          <div class="mc-section-label" id="auto-active-label" style="display:none;">Running Now</div>
+          <div class="mc-section-label" id="auto-active-label" style="display:none;">Running now</div>
           <div id="auto-active-list"></div>
           <p id="auto-active-error" class="auto-card-meta" role="status" hidden>Could not refresh your tasks. Please try again shortly.</p>
 
           <!-- Workers header with + New Worker button -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
             <div class="mc-section-label" style="margin:0;">Routines</div>
-            <button onclick="openCreateAutomationModal()" style="padding:6px 14px;background:#1A1817;border:1px solid #D0563F;border-radius:8px;color:#D0563F;font-size: 14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,230,214,0.1)';this.style.boxShadow='0 0 8px rgba(208,86,63,0.15)'" onmouseout="this.style.background='#1A1817';this.style.boxShadow='none'">+ New routine</button>
+            <button type="button" class="goals-new" onclick="openCreateAutomationModal()">+ New routine</button>
           </div>
           <p class="routines-blurb">Agents you set up once that run on a timetable, when something happens or when you press Run.</p>
           <div id="auto-saved-list"></div>
@@ -2439,7 +2441,7 @@
           </div>
 
           <!-- Recent Runs -->
-          <div class="mc-section-label" id="auto-history-label" style="display:none;">Recent Runs</div>
+          <div class="mc-section-label" id="auto-history-label" style="display:none;">Recent runs</div>
           <div id="auto-history-list"></div>
 
           <!-- Upcoming: reminders + tracked flights + bookings picked out of mail -->
@@ -2525,7 +2527,7 @@
             <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Tables Closedhand keeps up to date as it works, so it remembers what it has already done.</p>
             <div id="datasets-list"></div>
             <div id="datasets-empty" style="display:none;padding:16px;text-align:center;color:rgba(239,230,214,0.6);font-size:13px;">
-              Nothing yet. Ask Closedhand to keep track of something, like a content calendar, and it keeps a table here.
+              No tables yet. Ask Closedhand to keep track of something, like a content calendar, and it keeps a table here.
             </div>
             </div>
           </div>
@@ -2559,7 +2561,7 @@
                anywhere: its personal URL in a browser and its email address.
                Each is claimed once through closedhand.com. -->
           <section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">
-            <h2 id="addresses-heading">Closedhand Addresses</h2>
+            <h2 id="addresses-heading">Closedhand addresses</h2>
             <div class="address-parts">
           <div class="address-card" id="phone-block" style="display:none;">
             <div class="address-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><h3 class="address-title" id="phone-heading">Personal URL</h3></div>
@@ -2737,7 +2739,7 @@
                 <button type="button" id="preferred-name-save" onclick="savePreferredName()">Save</button>
               </div>
               <div id="rules-list" style="display:flex;flex-direction:column;gap:6px;">
-                <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading...</div>
+                <div style="font-size:13px;color:rgba(239,230,214,0.6);">Loading…</div>
               </div>
               <div style="display:flex;gap:8px;margin-top:12px;">
                 <input type="text" id="new-rule-input" aria-label="New preference" placeholder="Write a preference" onkeydown="if(event.key==='Enter')addRule()" style="flex:1;padding:10px 12px;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.1);border-radius:8px;color:#EFE6D6;font-family:inherit;outline:none;">
@@ -2849,12 +2851,12 @@
       <div class="tab-content" id="tab-brain">
         <div style="padding-top:12px;">
           <div class="brain-toolbar">
-            <input type="text" id="brain-search" placeholder="Search Context Brain..." oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;">
+            <input type="text" id="brain-search" placeholder="Search Context Brain…" oninput="searchUnifiedMemory(this.value)" style="flex:1;min-width:180px;padding:8px 12px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;outline:none;font-family:inherit;">
             <div style="display:flex;gap:2px;">
               <button onclick="switchBrainView('list')" class="brain-view-btn active" data-view="list" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:rgba(239,230,214,0.16);color:#EFE6D6;border-radius:6px 0 0 6px;cursor:pointer;font-size:12px;font-family:inherit;">List</button>
               <button onclick="switchBrainView('graph')" class="brain-view-btn" data-view="graph" style="padding:6px 14px;border:1px solid rgba(239,230,214,0.16);background:transparent;color:#B6AFA4;border-radius:0 6px 6px 0;cursor:pointer;font-size:12px;font-family:inherit;">Graph</button>
             </div>
-            <button onclick="openAddPinnedNote()" style="padding:6px 14px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">+ Pin a fact</button>
+            <button type="button" class="goals-new" onclick="openAddPinnedNote()">+ Pin a fact</button>
           </div>
           <div id="memory-filters">
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
@@ -2883,7 +2885,7 @@
           </div>
           <div id="brain-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(239,230,214,0.6);">
             <div style="font-size:32px;margin-bottom:12px;">&#129504;</div>
-            <p style="margin:0;font-size:14px;">Context Brain is empty. Talk to Closedhand and it will start pinning facts and writing Context Notes.</p>
+            <p style="margin:0;font-size:14px;">No Pinned facts or Context Notes yet. Talk to Closedhand and it will start pinning facts and writing Context Notes.</p>
           </div>
           <!-- Files the user sent in chat. They live with the memory because that is
                what they are: things Closedhand keeps so it can re-read them later. -->
@@ -3106,7 +3108,7 @@
               <div class="int-unfurl"><div class="int-unfurl-inner">
                 ${rows}${since}
                 <div class="conn-drawer-actions plat-actions" data-key="${key}" data-name="${escHtml(platform.name)}" data-linked="${linked ? '1' : ''}">
-                  ${chatHref ? `<button type="button" class="conn-btn conn-btn-manage" onclick="event.stopPropagation();window.open('${chatHref}','_blank','noopener')">Open chat</button>` : ''}
+                  ${chatHref ? `<button type="button" class="conn-btn conn-btn-manage" onclick="event.stopPropagation();window.open('${chatHref}','_blank','noopener')">Open in ${platform.name}</button>` : ''}
                   <button type="button" class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();platformAskOff(this)">Disconnect</button>
                 </div>
               </div></div>
@@ -3239,7 +3241,7 @@
         window.history.replaceState({}, "", "/dashboard");
       }
       if (params.get("error")) {
-        showToast("Connection failed. Please try again.", true);
+        showToast("Could not connect. Try again.", true);
         window.history.replaceState({}, "", "/dashboard");
       }
       if (params.get("mcp_connected")) {
@@ -3333,7 +3335,7 @@
           }
         } else {
           const data = await res.json().catch(() => ({}));
-          showToast(data.error || "Failed to start connection", true);
+          showToast(data.error || "Could not start connection", true);
         }
       } catch (e) {
         showToast("Network error", true);
@@ -3413,14 +3415,14 @@
         const clientSecret = document.getElementById("shopify-client-secret").value.trim();
         if (!accessToken && (!clientId || !clientSecret)) throw new Error("Enter your app's Client ID and Client secret or use an existing access token below.");
         btn.disabled = true;
-        btn.textContent = "Connecting...";
+        btn.textContent = "Connecting…";
         const res = await fetch("/api/connect-shopify-token", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ storeDomain, ...(accessToken ? { accessToken } : { clientId, clientSecret }) }),
           signal: AbortSignal.timeout(35000),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Connection failed. Please try again.");
+        if (!res.ok) throw new Error(data.error || "Could not connect. Try again.");
         closeShopifyModal();
         showToast(`Connected to ${data.shopName || storeDomain}`);
         loadStatus();
@@ -3497,11 +3499,11 @@
       });
 
       if (res.ok) {
-        showToast("Disconnected.");
+        showToast("Disconnected");
         loadStatus();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to disconnect");
+        alert(data.error || "Could not disconnect");
       }
     }
 
@@ -3533,7 +3535,7 @@
     // An added account: Remove, and when its provider stopped accepting the
     // sign-in, a way back in first. Signing in as the same account renews it.
     function extraAccountActions(ex, exEmail, signInUrl) {
-      const remove = `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Remove</button>`;
+      const remove = `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Disconnect</button>`;
       if (!ex.metadata?.reconnect_required) return remove;
       // On a line of their own under the email, so the email shows in full
       // and the person can tell which account stopped.
@@ -3933,7 +3935,7 @@
           if (m.status === 'error' || m.status === 'needs_auth') {
             detailHtml += '<button onclick="event.stopPropagation();fixMcp(\'' + m.id + '\',this)" class="conn-btn conn-btn-manage" style="background:rgba(208,166,82,0.1);border-color:rgba(208,166,82,0.3);color:#D0A652;">Fix</button>';
           }
-          detailHtml += '<button onclick="event.stopPropagation();deleteMcp(\'' + m.id + '\')" class="conn-btn conn-btn-disconnect">Remove</button>';
+          detailHtml += '<button onclick="event.stopPropagation();deleteMcp(\'' + m.id + '\')" class="conn-btn conn-btn-disconnect">Disconnect</button>';
           detailHtml += '</div>';
           detailHtml += '<div id="mcp-debug-' + m.id + '" style="display:none;margin-top:8px;"></div>';
 
@@ -4084,7 +4086,7 @@
       document.getElementById('mcp-credentials').style.display = 'none';
       _mcpPending = { input: input };
       var looksLikeCommand = /^(npx|uvx|uv|node|python|deno|bunx?)\b/i.test(input) || /"command"\s*:/.test(input);
-      mcpStatus(looksLikeCommand ? 'Starting the server. The first time downloads it, which can take a minute...' : 'Checking the server...');
+      mcpStatus(looksLikeCommand ? 'Starting the server. The first time downloads it, which can take a minute…' : 'Checking the server…');
       await connectMcp({});
     }
 
@@ -4113,7 +4115,7 @@
 
         if (data.auth_required && data.redirect_url) {
           var host = ''; try { host = new URL(data.server_url).hostname.replace(/^(www|mcp|api)\./, ''); } catch (e) {}
-          mcpStatus('Sending you to ' + (host || 'the service') + ' to approve...');
+          mcpStatus('Sending you to ' + (host || 'the service') + ' to approve…');
           // The dashboard often sits in a frame; the sign-in page and the
           // return trip belong to the whole window.
           (window.top || window).location.href = data.redirect_url;
@@ -4235,7 +4237,7 @@
         var took = data.caps ? mcpNews(found.service, data.caps, data.voice_new, data.jobs_new) : '';
         mcpStatus(took ? took
           : data.checked ? '' : 'Closedhand couldn\u2019t check the key with ' + found.service + ' yet. It will find out the first time it uses it.');
-        showToast('Added ' + found.service + '.');
+        showToast('Added ' + found.service);
         miniCelebration();
         await loadMcps();
       } catch (e) { mcpStatus('Couldn\u2019t connect it: ' + e.message); }
@@ -4326,7 +4328,7 @@
     }
 
     async function proceedMcpDespiteWarning() {
-      mcpStatus('Connecting...');
+      mcpStatus('Connecting…');
       await connectMcp({ accept_warnings: true });
     }
 
@@ -4341,7 +4343,7 @@
       if (key) { extra.auth_token = key; extra.header_name = header || 'Authorization'; }
       if (clientId) { extra.client_id = clientId; if (clientSecret) extra.client_secret = clientSecret; }
       document.getElementById('mcp-credentials').style.display = 'none';
-      mcpStatus('Connecting...');
+      mcpStatus('Connecting…');
       await connectMcp(extra);
     }
 
@@ -4402,7 +4404,7 @@
 
     async function fixMcp(id, btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(208,166,82,0.3);border-top-color:#D0A652;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:4px;"></span>Fixing...';
+      btnEl.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(208,166,82,0.3);border-top-color:#D0A652;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:4px;"></span>Fixing…';
       try {
         var res = await fetch('/api/mcps/' + id + '/fix', { method: 'POST' });
         var data = await res.json();
@@ -4411,7 +4413,7 @@
           miniCelebration();
           loadMcps();
         } else if (data.needs_reauth && data.redirect_url) {
-          showToast('Sending you to sign in again...');
+          showToast('Sending you to sign in again…');
           (window.top || window).location.href = data.redirect_url;
           return;
         } else if (data.needs_reauth) {
@@ -4428,10 +4430,10 @@
     }
 
     async function deleteMcp(id) {
-      if (!confirm('Remove this MCP connection?')) return;
+      if (!confirm('Disconnect this connection?')) return;
       var res = await fetch('/api/mcps/' + id, { method: 'DELETE' });
       if (res.ok) { showToast('Removed'); loadMcps(); }
-      else showToast('Failed to remove', true);
+      else showToast('Could not remove', true);
     }
 
 
@@ -4508,11 +4510,11 @@
           (window.top || window).location.href = "/";
           return;
         }
-        showToast("Disconnected.");
+        showToast("Disconnected");
         loadStatus();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to disconnect");
+        alert(data.error || "Could not disconnect");
       }
     }
 
@@ -4538,11 +4540,11 @@
         ? 'Disconnect ' + name + '? Closedhand stops reading and replying there, and signs itself out of ' + name + '. If it is still listed on your phone, remove it there too: ' + name + ', Settings, Linked devices.'
         : 'Disconnect ' + name + '? Closedhand stops replying and sending you messages there. Your bot stays set up, so saying hello to it connects it again.';
       var yes = document.createElement('button');
-      yes.type = 'button'; yes.className = 'conn-btn conn-btn-manage';
+      yes.type = 'button'; yes.className = 'conn-btn conn-btn-disconnect';
       yes.textContent = 'Disconnect';
       yes.onclick = function(e) { e.stopPropagation(); platformOff(row, yes); };
       var no = document.createElement('button');
-      no.type = 'button'; no.className = 'conn-btn conn-btn-disconnect';
+      no.type = 'button'; no.className = 'conn-btn conn-btn-manage';
       no.textContent = 'Cancel';
       no.onclick = function(e) { e.stopPropagation(); loadStatus(); };
       row.append(said, yes, no);
@@ -4559,7 +4561,7 @@
           : await fetch('/api/disconnect-platform', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: key }) });
         var data = await res.json().catch(function() { return {}; });
         if (!res.ok) throw new Error(data.error || 'Could not do that just now.');
-        showToast(name + ' disconnected.');
+        showToast(name + ' disconnected');
         loadStatus();
       } catch (e) {
         btn.disabled = false;
@@ -4594,7 +4596,7 @@
     function selectLLM() {
       document.getElementById("byok-panel").style.display = "";
       document.getElementById("llm-desc").textContent = "Choose your primary model, support model and image model.";
-      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated."); loadProviderSearch(); });
+      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated"); loadProviderSearch(); });
     }
     selectLLM();
 
@@ -4672,7 +4674,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled: !!enabled }),
         });
-        showToast(enabled ? "I'll ask before sending email." : "I'll send email without asking first.");
+        showToast(enabled ? "Closedhand will ask before sending email." : "Closedhand will send email without asking first.");
       } catch (e) {
         showToast("Could not save that setting. Try again.");
       }
@@ -4838,11 +4840,11 @@
         } else {
           const body = await res.json().catch(() => ({}));
           console.error("Pulse save error:", res.status, body);
-          showToast(body.error || "Failed to save", true);
+          showToast(body.error || "Could not save", true);
         }
       } catch (e) {
         console.error("Pulse save network error:", e);
-        showToast("Failed to save", true);
+        showToast("Could not save", true);
       } finally {
         _pulseSaving = false;
       }
@@ -4963,7 +4965,7 @@
       const goBtn = document.getElementById("go-" + action) ||
         document.querySelector("#confirm-" + action + " .confirm-go");
       const origText = goBtn ? goBtn.textContent : "";
-      if (goBtn) { goBtn.textContent = "Working..."; goBtn.classList.remove("enabled"); goBtn.disabled = true; }
+      if (goBtn) { goBtn.textContent = "Working…"; goBtn.classList.remove("enabled"); goBtn.disabled = true; }
 
       try {
         const res = await fetch(ep.url + (anyway ? "?anyway=1" : ""), { method: ep.method });
@@ -5145,7 +5147,7 @@
           var st = { completed: '#8DBD79', auto: '#8DBD79', approved: '#8DBD79', asked: 'rgba(239,230,214,0.64)', declined: '#D0A652', refused: '#D8624B', failed: '#D8624B' }[r.status] || 'rgba(239,230,214,0.64)';
           var label = { completed: 'paid', auto: 'paid without asking', approved: 'approved', asked: 'asked, no answer', declined: 'you said no', refused: 'blocked by your rules', failed: 'failed' }[r.status] || r.status;
           return '<div style="display:flex;gap:10px;align-items:baseline;"><span style="color:#B6AFA4;min-width:88px;">' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</span><span style="color:#EFE6D6;">' + escHtml(r.amount_text || (r.amount != null ? money(r.amount, r.currency) : '?')) + '</span><span>' + escHtml(r.merchant || r.host || '') + '</span><span style="color:' + st + ';">' + label + '</span>' + (r.source === 'agent' ? '<span class="muted">agent</span>' : '') + '</div>';
-        }).join('') : '<div style="color:#B6AFA4;">Nothing yet.</div>';
+        }).join('') : '<div style="color:#B6AFA4;">No payments yet.</div>';
       } catch (e) { console.error('wallet load', e); }
     }
     async function saveSpendLimits() {
@@ -5167,7 +5169,7 @@
         always_ask: document.getElementById('sl-always-ask').checked,
         auto_under: document.getElementById('sl-always-ask').checked ? '' : document.getElementById('sl-auto-under').value,
       };
-      var st = document.getElementById('sl-status'); st.textContent = 'Saving...';
+      var st = document.getElementById('sl-status'); st.textContent = 'Saving…';
       var res = await walletFetch('/api/settings/spend-limits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       var data = await res.json().catch(function() { return {}; });
       st.textContent = res.ok ? 'Saved.' : (data.error || 'Could not save');
@@ -5209,7 +5211,7 @@
       if (el.style.display === 'block') document.getElementById('wc-number').focus();
     }
     async function addWalletCard() {
-      var st = document.getElementById('wc-status'); st.textContent = 'Saving...';
+      var st = document.getElementById('wc-status'); st.textContent = 'Saving…';
       var body = {
         number: document.getElementById('wc-number').value,
         exp_month: document.getElementById('wc-exp-month').value,
@@ -5488,7 +5490,7 @@
       if (!r.ok) { showToast(d.error || 'Could not save the price', true); return; }
       usagePrices = d.prices || {};
       renderUsage(usageRows);
-      showToast('Price saved.');
+      showToast('Price saved');
     }
     window.saveUsagePrice = saveUsagePrice;
 
@@ -5840,7 +5842,7 @@
             (showProvider ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(b.provider) + '</div>' : '') + '</div>' +
           '<div style="flex:1;min-width:200px;font-size:13px;color:#EFE6D6;">' + route + (when ? '<div style="font-size:11px;color:#B6AFA4;">' + escHtml(when) + (sameDay && until ? ' to ' + escHtml(until) : '') + moved + '</div>' : '') + '</div>' +
           '<span class="flight-status-badge ' + (cancelled ? 'cancelled' : 'scheduled') + '">' + (cancelled ? 'Cancelled' : 'Booked') + '</span>' +
-          '<button class="conn-btn conn-btn-manage" title="Not a booking? Remove it" onclick="removeBooking(\'' + b.id + '\')" style="padding:2px 8px;font-size:11px;">&times;</button>' +
+          '<button class="conn-btn conn-btn-disconnect" title="Not a booking? Remove it" onclick="removeBooking(\'' + b.id + '\')" style="padding:2px 8px;font-size:11px;">&times;</button>' +
         '</div>' +
         (details.length ? '<div class="flight-details" style="padding:0 14px 10px;">' + details.join('') + '</div>' : '') +
         sourceDocsHtml(b.source_mail) +
@@ -5892,8 +5894,8 @@
     function renderFlightCard(f) {
       const status = getFlightStatusInfo(f);
       const live = f.liveStatus || {};
-      const depCode = (f.departure?.airport || '\u2014').substring(0, 3).toUpperCase();
-      const arrCode = (f.arrival?.airport || '\u2014').substring(0, 3).toUpperCase();
+      const depCode = (f.departure?.airport || '?').substring(0, 3).toUpperCase();
+      const arrCode = (f.arrival?.airport || '?').substring(0, 3).toUpperCase();
       const depTime = fmtFlightTime(live.departureTime || f.departure?.dateTime, f.departure);
       const arrTime = fmtFlightTime(live.arrivalTime || f.arrival?.dateTime, f.arrival);
       // Said only when the badge alone would mislead. "Scheduled" already
@@ -6620,7 +6622,7 @@
     }
 
     async function stopAgentRun(id, btn) {
-      if (btn) { btn.disabled = true; btn.textContent = 'Stopping...'; }
+      if (btn) { btn.disabled = true; btn.textContent = 'Stopping…'; }
       try {
         var res = await fetch('/api/agents/' + id + '/stop', { method: 'POST' });
         if (res.ok) {
@@ -6644,7 +6646,7 @@
       wrap.className = 'agent-del-confirm';
       wrap.innerHTML = '<span>' + (hasReport ? 'Delete this run for good? Its page stays under Pages.' : 'Delete this run for good?') + '</span>'
         + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
-        + '<button class="agent-del" type="button">Keep</button>';
+        + '<button class="agent-del" type="button">Cancel</button>';
       wrap.addEventListener('click', function (e) { e.stopPropagation(); });
       var buttons = wrap.querySelectorAll('button');
       buttons[0].addEventListener('click', function () { deleteAgentRun(id); });
@@ -6701,7 +6703,7 @@
       wrap.className = 'agent-del-confirm';
       wrap.innerHTML = '<span>Delete this page for good? The answer stays in the chat you asked in.</span>'
         + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
-        + '<button class="agent-del" type="button">Keep</button>';
+        + '<button class="agent-del" type="button">Cancel</button>';
       var buttons = wrap.querySelectorAll('button');
       buttons[0].addEventListener('click', async function () {
         try {
@@ -6779,6 +6781,7 @@
     // How a finished run ended, as the chat told the person. The pill gives
     // the word (runWord); the line under the title gives the first line of
     // the answer it sent, or why it could not finish.
+    function sentenceCase(word) { word = String(word || ''); return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(); }
     function runWord(a) {
       if (a.status === 'running') return 'Running';
       if (a.status === 'pending') return 'Queued';
@@ -6929,7 +6932,7 @@
       return '<div class="auto-card agent-card' + (_openAgents[a.id] ? ' open' : '') + '" onclick="toggleAgentCard(this, \'' + a.id + '\')" title="Click for detail">' +
         '<div class="auto-card-header">' +
           '<div class="auto-card-name">' + escapeHtml(goal) + '</div>' +
-          '<div class="auto-status-pill ' + statusClass + '">' + runWord(a).toUpperCase() + '</div>' +
+          '<div class="auto-status-pill ' + statusClass + '">' + sentenceCase(runWord(a)) + '</div>' +
           pdfHtml +
           binHtml +
         '</div>' +
@@ -6962,7 +6965,7 @@
       return '<div class="auto-card" id="auto-' + a.id + '" onclick="toggleAutoCard(this)">' +
         '<div class="auto-card-header">' +
           '<div class="auto-card-name">' + esc(a.name) + '</div>' +
-          '<span class="auto-status-pill ' + statusClass + '">' + displayStatus.toUpperCase() + '</span>' +
+          '<span class="auto-status-pill ' + statusClass + '">' + sentenceCase(displayStatus) + '</span>' +
           actionsHtml +
           '<span class="auto-chevron"><span class="chevron-down"></span></span>' +
         '</div>' +
@@ -7045,26 +7048,26 @@
         if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
         showToast('Routine started');
         loadAutomations(); loadAutomationStats();
-      } catch (e) { showToast('Failed to start', true); }
+      } catch (e) { showToast('Could not start', true); }
     }
 
     async function pauseAutomation(id) {
       var res = await fetch('/api/automations/' + id + '/pause', { method: 'POST' });
       if (res.ok) { showToast('Paused'); loadAutomations(); }
-      else showToast('Failed to pause', true);
+      else showToast('Could not pause', true);
     }
 
     async function resumeAutomation(id) {
       var res = await fetch('/api/automations/' + id + '/resume', { method: 'POST' });
       if (res.ok) { showToast('Resumed'); loadAutomations(); }
-      else showToast('Failed to resume', true);
+      else showToast('Could not resume', true);
     }
 
     async function deleteAutomation(id) {
       if (!confirm('Delete this routine? This cannot be undone.')) return;
       var res = await fetch('/api/automations/' + id, { method: 'DELETE' });
       if (res.ok) { showToast('Routine deleted'); loadAutomations(); loadAutomationStats(); }
-      else showToast('Failed to delete', true);
+      else showToast('Could not delete', true);
     }
 
     async function loadAutoRuns(automationId) {
@@ -7270,7 +7273,7 @@
         eventOnce = document.getElementById('auto-event-once').checked;
       }
 
-      btn.disabled = true; btn.textContent = 'Saving...';
+      btn.disabled = true; btn.textContent = 'Saving…';
 
       // Build task_tools with skill: prefix
       var taskTools = _selectedSkills.map(function(s) { return 'skill:' + s; });
@@ -7301,7 +7304,7 @@
           })
         });
         var data = await res.json();
-        if (!res.ok) { errEl.textContent = data.error || 'Failed to save'; errEl.style.display = 'block'; return; }
+        if (!res.ok) { errEl.textContent = data.error || 'Could not save'; errEl.style.display = 'block'; return; }
         closeCreateAutomationModal();
         showToast('Routine saved');
         loadAutomations();
@@ -7352,7 +7355,7 @@
           document.getElementById('auto-runs-today').textContent = s.runsToday || 0;
         }
         document.getElementById('auto-agents').textContent = total;
-        document.getElementById('auto-last-activity').textContent = s.lastActivity ? timeAgo(s.lastActivity) : '—';
+        document.getElementById('auto-last-activity').textContent = s.lastActivity ? timeAgo(s.lastActivity) : 'Never';
       } catch (e) {
         ['auto-active', 'auto-runs-today', 'auto-agents', 'auto-last-activity'].forEach(function(id) {
           document.getElementById(id).textContent = '?';
@@ -7575,7 +7578,7 @@
         html += '</tbody></table>';
         document.getElementById('dataset-table-wrap').innerHTML = html;
       } catch (e) {
-        document.getElementById('dataset-table-wrap').innerHTML = '<div style="padding:20px;color:#D8624B;font-size:13px;">Failed to load rows.</div>';
+        document.getElementById('dataset-table-wrap').innerHTML = '<div style="padding:20px;color:#D8624B;font-size:13px;">Could not load the rows.</div>';
       }
     }
 
@@ -7711,7 +7714,7 @@
       var code = document.getElementById('bridge-code-input').value.trim().toUpperCase();
       if (code.length !== 6) { showToast('Enter the 6-character code from the Bridge app', true); return; }
       var btn = document.getElementById('bridge-pair-btn');
-      btn.disabled = true; btn.textContent = 'Pairing...';
+      btn.disabled = true; btn.textContent = 'Pairing…';
       try {
         var res = await fetch('/api/bridge/pair', {
           method: 'POST',
@@ -8562,7 +8565,7 @@
 
       var btn = document.getElementById('note-save-btn');
       btn.disabled = true;
-      btn.textContent = 'Saving...';
+      btn.textContent = 'Saving…';
 
       try {
         var res = await fetch('/api/knowledge/' + encodeURIComponent(title), {
@@ -8572,7 +8575,7 @@
         });
         if (!res.ok) {
           var data = await res.json().catch(function() { return {}; });
-          errEl.textContent = data.error || 'Failed to save.';
+          errEl.textContent = data.error || 'Could not save.';
           errEl.style.display = 'block';
           return;
         }
@@ -8603,11 +8606,11 @@
       if (!confirm('Delete "' + _currentNoteTitle + '"? This cannot be undone.')) return;
       try {
         var res = await fetch('/api/knowledge/' + encodeURIComponent(_currentNoteTitle), { method: 'DELETE' });
-        if (!res.ok) { showToast('Failed to delete', true); return; }
+        if (!res.ok) { showToast('Could not delete', true); return; }
         closeBrainPanel();
         showToast('Context Note deleted');
         loadBrainGraph();
-      } catch (e) { showToast('Failed to delete', true); }
+      } catch (e) { showToast('Could not delete', true); }
     }
 
     // Bring the add box into view and make it answer: border spins up, the
@@ -8901,7 +8904,7 @@
       </div>
 
       <label for="auto-prompt-input">What should it do?</label>
-      <textarea id="auto-prompt-input" rows="2" style="width:100%;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:10px;color:#EFE6D6;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;" placeholder="Describe what the agent should do..."></textarea>
+      <textarea id="auto-prompt-input" rows="2" style="width:100%;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;padding:10px;color:#EFE6D6;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;" placeholder="Describe what the agent should do…"></textarea>
 
       <label>When should it run?</label>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;" id="auto-trigger-options">
@@ -8922,7 +8925,7 @@
           <option value="0 17 * * 5">Every Friday at 5pm</option>
           <option value="0 9 * * 1-5">Every weekday at 9am</option>
           <option value="0 * * * *">Every hour</option>
-          <option value="custom">Custom schedule...</option>
+          <option value="custom">Custom schedule…</option>
         </select>
         <input type="text" id="auto-cron-input" placeholder="Cron expression (e.g. 0 8 * * *)" style="display:none;margin-top:6px;width:100%;padding:8px 10px;background:#1A1817;border:1px solid rgba(239,230,214,0.16);border-radius:8px;color:#EFE6D6;font-size:13px;box-sizing:border-box;">
       </div>
@@ -8949,7 +8952,7 @@
       <div id="auto-skills-section" style="margin-bottom:10px;">
         <label>Preferred skills <span style="color:rgba(239,230,214,0.6);font-weight:400;font-size:13px;">(optional; add one on Connections)</span></label>
         <div id="auto-skills-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:28px;">
-          <span style="font-size: 13px;color:rgba(239,230,214,0.6);">Loading skills...</span>
+          <span style="font-size: 13px;color:rgba(239,230,214,0.6);">Loading skills…</span>
         </div>
       </div>
 

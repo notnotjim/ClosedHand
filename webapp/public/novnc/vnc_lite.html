@@ -49,6 +49,8 @@
     <script type="module" crossorigin="anonymous">
         // RFB holds the API to connect and communicate with a VNC server
         import RFB from './core/rfb.js';
+        import KeyTable from './core/input/keysym.js';
+        import keysyms from './core/input/keysymdef.js';
 
         let rfb;
         let desktopName;
@@ -178,6 +180,17 @@
         }
 
         connect();
+
+        // Typing from a phone: the page around this one has the phone's
+        // keyboard and sends what is typed here, from this same origin only.
+        const SPECIAL = { Backspace: [KeyTable.XK_BackSpace, 'Backspace'], Enter: [KeyTable.XK_Return, 'Enter'],
+                          Tab: [KeyTable.XK_Tab, 'Tab'], Escape: [KeyTable.XK_Escape, 'Escape'] };
+        window.addEventListener('message', function(e) {
+            if (e.origin !== window.location.origin || !e.data || e.data.type !== 'closedhand-keys' || !rfb) return;
+            const key = SPECIAL[e.data.key];
+            if (key) { rfb.sendKey(key[0], key[1]); return; }
+            for (const ch of String(e.data.text || '').slice(0, 2000)) rfb.sendKey(keysyms.lookup(ch.codePointAt(0)), null);
+        });
 
         document.addEventListener('visibilitychange', function() {
           try { rfb.focusOnClick = !document.hidden; } catch (e) {}

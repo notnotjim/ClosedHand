@@ -56,7 +56,7 @@ app.use("/api", (req, res, next) => {
   next();
 });
 // A failure inside this computer reaches the browser as a plain sentence,
-// never as the system's own text ("getaddrinfo ENOTFOUND sandbox..."), which
+// never as the system's own text ("getaddrinfo ENOTFOUND sandbox…"), which
 // names internal hosts. The full text goes to the log. The status is 503:
 // Cloudflare replaces a 502 or 504 with its own page, dropping these headers.
 const SYSTEM_ERROR = /\b(getaddrinfo|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|EHOSTUNREACH|socket hang up|fetch failed)\b/;
@@ -2226,7 +2226,7 @@ app.get("/line-setup-complete", (req, res) => {
 <div class="card">
   <div class="icon">&#x2705;</div>
   <h1>You're all set${name ? ", " + name : ""}</h1>
-  <p>Your account is connected. Opening <span class="highlight">LINE</span> in <span id="timer">3</span>s...</p>
+  <p>Your account is connected. Opening <span class="highlight">LINE</span> in <span id="timer">3</span>s…</p>
 </div>
 <script>
   var t = 3;
@@ -2688,6 +2688,7 @@ async function connectMcpHandler(req, res) {
     let resolved;
     try { resolved = await require('./mcp-input-resolver').resolveInput(input); }
     catch (e) { return res.status(400).json({error:e.message}); }
+    if (resolved?.skill) return res.json({ skill: true, url: resolved.skill });
     if (resolved) return res.json({ setup_choices: resolved.choices, source: resolved.source });
     const parsed = mcpClient.parseServerInput(input);
     if (parsed.kind === "skill") return res.json({ skill: true, url: parsed.url });
@@ -9450,7 +9451,7 @@ app.post("/api/bridge/request", async (req, res) => {
     // Try to find a live WebSocket, with retry for reconnection gaps
     let ws = bridgeConnections.get("user:" + userId);
     if (!ws || ws.readyState !== 1) {
-      console.log(`[Bridge] No live WebSocket for user ${userId} (ws=${ws ? "exists,state=" + ws.readyState : "missing"}). Waiting 5s for reconnect...`);
+      console.log(`[Bridge] No live WebSocket for user ${userId} (ws=${ws ? "exists,state=" + ws.readyState : "missing"}). Waiting 5s for reconnect…`);
       // Wait for the bridge app to reconnect (it retries every 5s)
       await new Promise(r => setTimeout(r, 5000));
       ws = bridgeConnections.get("user:" + userId);
@@ -9486,11 +9487,11 @@ app.post("/api/bridge/request", async (req, res) => {
       result = await sendBridgeRequest(ws);
     } catch (firstError) {
       if (firstError.message.includes("disconnect") || firstError.message.includes("timed out")) {
-        console.log(`[Bridge] First attempt failed (${firstError.message}), waiting 5s for reconnect...`);
+        console.log(`[Bridge] First attempt failed (${firstError.message}), waiting 5s for reconnect…`);
         await new Promise(r => setTimeout(r, 5000));
         const retryWs = bridgeConnections.get("user:" + userId);
         if (retryWs && retryWs.readyState === 1) {
-          console.log(`[Bridge] Retrying after reconnect...`);
+          console.log(`[Bridge] Retrying after reconnect…`);
           result = await sendBridgeRequest(retryWs);
         } else {
           throw firstError;
@@ -9626,6 +9627,32 @@ app.post("/api/sandbox/sign-in", async (req, res) => {
   } catch (e) {
     res.status(503).json({ error: `Couldn't open ${site.name}'s sign-in page on the sandbox computer. Open the browser there and go to it yourself.` });
   }
+});
+
+// While the sandbox computer's browser is open full screen on a phone, its
+// screen is phone-shaped, and laptop-shaped again after (agent
+// /desktop/shape). The phone asks again every half minute while it looks.
+app.post("/api/sandbox/screen", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const info = await getSandboxInfo(userId).catch(() => null);
+  if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
+  const { width, height } = req.body || {};
+  const phone = Number.isInteger(width) && Number.isInteger(height);
+  try { res.json(await sandboxFetch(info, "POST", "/desktop/shape", phone ? { width, height } : {}, 15000)); }
+  catch (e) { res.status(503).json({ error: "The sandbox computer couldn't change its screen just now." }); }
+});
+
+// The phone's own browser bar, standing in for Chrome's while the screen is
+// phone-shaped (agent /desktop/phone-browser).
+app.post("/api/sandbox/phone-browser", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  const info = await getSandboxInfo(userId).catch(() => null);
+  if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
+  const { action, address, id } = req.body || {};
+  try { res.json(await sandboxFetch(info, "POST", "/desktop/phone-browser", { action: String(action || "state"), address: typeof address === "string" ? address.slice(0, 2000) : undefined, id: typeof id === "string" ? id : undefined }, 15000)); }
+  catch (e) { res.status(503).json({ error: "The sandbox computer's browser didn't answer just now." }); }
 });
 
 app.get("/api/sandbox/vnc-token", async (req, res) => {

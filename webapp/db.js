@@ -73,7 +73,7 @@ const NOT_CONFIGURED = {
 const notConfiguredResult = () => Promise.resolve({ data: null, error: NOT_CONFIGURED });
 
 // Stand-in for the PostgREST query builder: every chained method returns the same
-// proxy (so `.select().eq().order().single()...` all chain), and awaiting it yields
+// proxy (so `.select().eq().order().single()…` all chain), and awaiting it yields
 // `{ data: null, error }`. Covers `.range()`, `.maybeSingle()`, count-head, etc.
 function guardBuilder() {
   const settled = notConfiguredResult();

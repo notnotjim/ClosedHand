@@ -113,7 +113,7 @@
       background: var(--action); color: #100E0D; font-weight: 600; font-size: 14px;
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(141,189,121,0.25); }
+    .ready .go:hover, .finish .go:hover, .done-screen .go:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(208,86,63,0.25); }
     .g-tabs { margin: -2px 0 12px; }
     /* In each Google step, what to do reads plainly; why stays quiet (p.note). */
     .g-step p.g-do { font-size: 14.5px; line-height: 1.6; color: var(--text-primary); margin: 0 0 12px; }
@@ -522,7 +522,7 @@
           <p>Connect the account with your mail and calendar. You can add more later.</p>
           <p class="note hint">This access goes to Closedhand on your computer, not to closedhand.com.</p>
           <div class="fb-block chooser" id="g-block">
-          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">connected</span><span class="fb-again" id="g-again-badge" style="display:none;">sign in again</span></span></h3>
+          <h3 class="choose" data-choose="google"><span>Google <span class="fb-done" id="g-done" style="display:none;">Connected</span><span class="fb-again" id="g-again-badge" style="display:none;">Sign in again</span></span></h3>
           <div class="choice-body">
           <p class="note warn" id="g-again" hidden>Google stopped accepting Closedhand's sign-in for <span id="g-again-who">this account</span>. Sign in again to carry on.</p>
           <div id="g-quick" hidden>
@@ -537,7 +537,7 @@
 
           <div id="g-connected" style="display:none;">
             <p><span id="g-account">Connected.</span> Closedhand reads this account's mail, calendar and Drive, and changes nothing unless you ask.</p>
-            <p class="quiet-links"><a href="/auth/google?return=setup" target="_blank" rel="noopener">Connect a different account</a></p>
+            <p class="quiet-links"><a href="/auth/google?return=setup" target="_blank" rel="noopener">Connect another Google account</a></p>
           </div>
 
           <div id="g-flow" style="display:none;">
@@ -643,7 +643,7 @@
           </div>
 
           <div class="fb-block chooser" id="m-block">
-          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">connected</span><span class="fb-again" id="m-again-badge" style="display:none;">sign in again</span></span></h3>
+          <h3 class="choose" data-choose="microsoft"><span>Microsoft <span class="fb-done" id="m-done" style="display:none;">Connected</span><span class="fb-again" id="m-again-badge" style="display:none;">Sign in again</span></span></h3>
           <div class="choice-body">
             <p class="note warn" id="m-again" hidden>Microsoft stopped accepting Closedhand's sign-in for <span id="m-again-who">this account</span>. Sign in again to carry on.</p>
             <div id="m-connected" style="display:none;">
@@ -753,7 +753,7 @@
         </button>
         <div class="card-body">
           <div class="fb-block chooser" id="wa-linked-block">
-            <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">connected</span></span></h3>
+            <h3 class="choose" data-choose="wa"><span>WhatsApp on your own number <span class="fb-done" id="wa-done" style="display:none;">Connected</span></span></h3>
             <div class="choice-body">
             <p class="note">Closedhand lives in your “Message Yourself” chat and never speaks anywhere else.</p>
             <button class="cta" type="button" id="wa-enable">Connect WhatsApp</button>
@@ -767,7 +767,7 @@
           </div>
         
           <div class="fb-block chooser" id="tg-block">
-            <h3 class="choose" data-choose="tg"><span>Telegram <span class="fb-done" id="tg-done" style="display:none;">connected</span></span></h3>
+            <h3 class="choose" data-choose="tg"><span>Telegram <span class="fb-done" id="tg-done" style="display:none;">Connected</span></span></h3>
             <div class="choice-body">
             <p class="note">Closedhand gets a bot of its own instead of your number. About a minute.</p>
 
@@ -827,8 +827,8 @@
     <div class="done-content">
       <div class="ch-welcome">
         <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>Closedhand</span></a>
-        <h2 id="done-title" tabindex="-1" autofocus>All set.</h2>
-        <div class="ch-welcome-message" id="done-words">Getting your welcome ready...</div>
+        <h2 id="done-title" tabindex="-1" autofocus>All set</h2>
+        <div class="ch-welcome-message" id="done-words">Getting your welcome ready…</div>
         <p class="ch-welcome-status" id="done-status" role="status"></p>
         <p class="done-signins">Closedhand's sandbox computer has its own browser. Sign in there to anything you want Closedhand to have persistent access to.</p>
         <div class="ch-welcome-actions">
@@ -1289,7 +1289,7 @@
         $("#done-status").classList.remove("is-error");
         $("#done-status").textContent = linked && h.whatsapp.sent
           ? "Sent to your WhatsApp. Look in Message Yourself."
-          : pending ? "Sending to WhatsApp..." : "You can connect a chat app any time from the dashboard.";
+          : pending ? "Sending to WhatsApp…" : "You can connect a chat app any time from the dashboard.";
         if (pending && ++attempts < 20) _welcomeTimer = setTimeout(readWelcome, 3000);
         else if (pending) $("#done-status").textContent = "Your message is taking a little longer. I'll keep trying, you can carry on.";
       } catch (e) {

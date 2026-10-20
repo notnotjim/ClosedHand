@@ -161,7 +161,7 @@ test('My Closedhand: signed in without a personal URL means Setup is not finishe
   }
   // The page offers Closedhand on this computer wherever it can't see it, on computers only.
   const html = fs.readFileSync(path.join(__dirname, '..', 'closedhand-com', 'views', 'open.html'), 'utf8');
-  assert.match(html, /id="not-set-up"[\s\S]*Finish Setup on the computer you installed Closedhand on\./);
+  assert.match(html, /id="not-set-up"[\s\S]*Finish setup on the computer running Closedhand</);
   assert.doesNotMatch(html, /id="not-here"/, 'the old branch is gone');
   assert.match(html, /class="aside computer-only" id="local-link"[^>]*><a id="local-open" href="http:\/\/localhost:3000\/">Open Closedhand on this computer<\/a>/);
   const js = fs.readFileSync(path.join(__dirname, '..', 'closedhand-com', 'public', 'open.js'), 'utf8');

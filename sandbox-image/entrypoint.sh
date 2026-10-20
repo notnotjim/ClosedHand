@@ -15,16 +15,18 @@ XDG_DOCUMENTS_DIR="/workspace"
 XDGEOF
 chown -R sandbox:sandbox /home/sandbox/.config
 
-# 3. Start Xvfb (1280x800), supervised. Chrome already had a supervisor; the
+# 3. Start Xvfb (1280x1280, showing 1280x800), supervised. Chrome already had a supervisor; the
 # display it depends on did not, so an OOM-killed Xvfb left Chrome
 # crash-looping on "Missing X server" for ever with nothing to heal it.
 # The size is what a person watching over the internet pays for: every
 # redraw crosses the tunnel, and at 1920x1080 a full one was about 290 KB,
 # close to a second on a phone. 1280x800 is a normal laptop screen for the
-# sites and about 45% less to send.
+# sites and about 45% less to send. The screen is taller than that so a phone
+# can get a tall phone-shaped part instead (agent /desktop/shape); only the
+# part shown is sent (x11vnc -clip), and openbox keeps windows inside it.
 xvfb_supervisor() {
     while true; do
-        gosu sandbox Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset || true
+        gosu sandbox Xvfb :99 -screen 0 1280x1280x24 -ac +extension GLX +render -noreset || true
         echo "[entrypoint] Xvfb exited, restarting" >&2
         sleep 1
     done
@@ -35,6 +37,8 @@ sleep 0.5
 export DISPLAY=:99
 
 # 4. Openbox, same treatment: without it windows lose management quietly.
+# A restart starts in the laptop shape, whatever shape it stopped in.
+rm -f /home/sandbox/.config/openbox/rc.xml
 openbox_supervisor() {
     while true; do
         gosu sandbox env DISPLAY=:99 openbox || true
@@ -47,7 +51,8 @@ sleep 0.3
 
 # 5. Launch Chrome in near-fullscreen (persistent profile on volume).
 # Fresh profile: open Google sign-in so the first thing a user does is log in.
-START_URL="about:blank"
+# Otherwise its new tab page, which is Google's (chrome-policies.json).
+START_URL=""
 if [ ! -d /workspace/.chromium-profile/Default ]; then
     START_URL="https://accounts.google.com"
 fi
@@ -95,7 +100,7 @@ sleep 1
 # the X server it is attached to going away.
 x11vnc_supervisor() {
     while true; do
-        gosu sandbox x11vnc -display :99 -nopw -shared -forever -rfbport 5900 -xkb -q || true
+        gosu sandbox x11vnc -display :99 -nopw -shared -forever -rfbport 5900 -xkb -q -clip 1280x800+0+0 || true
         echo "[entrypoint] x11vnc exited, restarting" >&2
         sleep 2
     done

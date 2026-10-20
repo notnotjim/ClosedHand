@@ -266,7 +266,7 @@ test("Delete account stops when closedhand.com can't be reached, and deletes any
 });
 
 test("Closedhand's two addresses are two matching cards side by side: its personal URL and its email address", () => {
-  assert.match(html, /<section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">\n\s*<h2 id="addresses-heading">Closedhand Addresses<\/h2>\n\s*<div class="address-parts">\n\s*<div class="address-card" id="phone-block" style="display:none;">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="phone-heading">Personal URL<\/h3><\/div>/);
+  assert.match(html, /<section class="dashboard-link-section" id="addresses" aria-labelledby="addresses-heading">\n\s*<h2 id="addresses-heading">Closedhand addresses<\/h2>\n\s*<div class="address-parts">\n\s*<div class="address-card" id="phone-block" style="display:none;">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="phone-heading">Personal URL<\/h3><\/div>/);
   assert.match(html, /<div class="address-card">\n\s*<div class="address-head"><svg[^\n]*<h3 class="address-title" id="assistant-email-heading">Email address<\/h3><\/div>\n\s*<div id="assistant-email"><\/div>/);
   assert.match(html, /<div class="address-foot">\n\s*<p id="phone-change-line" hidden>[\s\S]*?<details id="phone-options" hidden>/, "Change URL and Link options share the card's footer");
   assert.match(html, /getElementById\('phone-block'\)\.style\.display = '';/, "shown as a card, not forced to block");

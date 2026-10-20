@@ -1388,7 +1388,7 @@
   .rag-doc-meta { font-size:11px; color:rgba(239,230,214,0.5); margin-top:2px; }
   .rag-doc-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
   .rag-status { font-size:10px; padding:2px 8px; border-radius:4px; font-weight:500; }
-  .rag-status.ready { color:var(--accent); background:rgba(208,86,63,0.1); }
+  .rag-status.ready { color:#8DBD79; background:rgba(141,189,121,0.12); }
   .rag-status.processing { color:#D0A652; background:rgba(208,166,82,0.1); }
   .rag-status.error { color:#D0563F; background:rgba(216,98,75,0.1); }
   .rag-status.pending { color:rgba(239,230,214,0.5); background:rgba(239,230,214,0.05); }
@@ -1977,7 +1977,7 @@
   .mon-signin { position:relative; display:inline-flex; align-items:center; padding:5px; border:0; border-radius:6px; background:transparent; color:#B6AFA4; font:500 12px/1.3 inherit; font-family:inherit; cursor:pointer; white-space:nowrap; opacity:0.8; }
   .mon-signin:hover { opacity:1; color:#EFE6D6; }
   .mon-signin:focus-visible { opacity:1; color:#EFE6D6; outline:1px solid rgba(239,230,214,0.4); outline-offset:1px; }
-  .mon-signin img { width:16px; height:16px; display:block; }
+  .mon-signin svg { width:16px; height:16px; display:block; }
   .mon-signin.is-done { opacity:1; }
   .mon-signin.is-done::after { content:"\2713"; position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; background:#8DBD79; color:#1A1817; font-size:8px; line-height:10px; text-align:center; font-weight:700; }
   @media (max-width: 899px) { .mon-signins { flex-wrap:wrap; } .mon-signins-text { flex-basis:100%; white-space:normal; } .mon-signins-sites { overflow-x:auto; max-width:100%; } .mon-signins-status { flex-basis:100%; white-space:normal; } .mon-signins-status:empty { display:none; } .mon-signins-short { margin-left:0; } }
@@ -2093,9 +2093,6 @@
   .bridge-cta.is-cloud .bridge-cta-node svg { stroke:rgba(216,98,75,0.85); color:rgba(216,98,75,0.85); filter:drop-shadow(0 0 12px rgba(216,98,75,0.25)); }
 
   /* Context menu */
-  .mon-ctx { position:fixed; background:rgba(26,24,23,0.95); backdrop-filter:blur(20px); border:1px solid rgba(239,230,214,0.1); border-radius:8px; padding:4px 0; z-index:999; min-width:130px; box-shadow:0 8px 24px rgba(16,14,13,0.5); }
-  .mon-ctx-item { padding:7px 14px; font-size:13px; color:#B6AFA4; cursor:pointer; } .mon-ctx-item:hover { background:rgba(239,230,214,0.06); }
-  .mon-ctx-item.danger { color:#D8624B; }
 
   /* Maximize/restore buttons */
   .mon-max-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:1px solid rgba(239,230,214,0.08); border-radius:5px; color:rgba(239,230,214,0.5); cursor:pointer; transition:all 0.12s; flex-shrink:0; }
@@ -2107,7 +2104,6 @@
   .mon-wrap.mon-hidden .mon-screen { display:none; }
   .mon-wrap.mon-hidden .mon-crumb { display:none; }
   .mon-wrap.mon-hidden .mon-bar-right { display:none; }
-  .mon-wrap.mon-hidden .mon-stand { display:none; }
   .mon-wrap.mon-hidden .mon { height:auto; min-height:0; }
 
   /* Terminal panel */
@@ -2166,47 +2162,97 @@
   /* old drag hint tooltip removed - now using the one below monitors */
   .mon-divider-arrow { display:none; }
 
-  /* Touch drag */
-  .mon-ghost { position:fixed; z-index:100; pointer-events:none; opacity:0.7; transform:scale(0.8); }
-  .mon-drag-target { outline:2px solid rgba(216,98,75,0.5) !important; outline-offset:-2px; }
+  /* Phones: one computer at a time, picked with the switch above them
+     (monShow). Pieces only a phone shows are hidden here. */
+  .mon-switch, .mon-storage-phone, .mon-info-phone, .mon-open-full, .mon-full-bar { display:none; }
 
-  /* Mobile full-screen toggle */
-  .mon-expand-btn { display:none; }
+  /* Full screen without the Fullscreen API, which an iPhone has only for
+     video: the browser covers the window, with its own Keyboard and Close
+     (monFullOpen). The animation's transform, the pane's container and its
+     layer would otherwise hold a fixed element inside the pane, and a scroll
+     lock on the body makes iPhone Safari clip it to the page's height. */
+  body.mon-full .mon-area { animation:none; opacity:1; transform:none; z-index:auto; }
+  body.mon-full .mon-wrap { will-change:auto; }
+  body.mon-full .mon { container-type:normal; overflow:visible; }
+  body.mon-full #monDesktop { position:fixed !important; left:0; right:0; top:0; height:100dvh; z-index:2000; display:flex !important; flex-direction:column; width:auto !important; aspect-ratio:auto !important; background:#100E0D; }
+  body.mon-full #monVncFrame { flex:1; height:auto !important; min-height:0; }
+  body.mon-full .mon-open-full { display:none !important; }
+  /* The phone's own browser bar, at the bottom as on a phone. Its address,
+     back, forward and tabs show only while Chrome's own bars are out of
+     sight (.mon-own-bar, set by monPhoneShape). */
+  body.mon-full .mon-full-bar { display:flex; order:2; position:relative; flex-direction:column; gap:6px; padding:8px 10px; padding-bottom:max(8px, env(safe-area-inset-bottom)); background:#1A1817; border-top:1px solid rgba(239,230,214,0.1); }
+  .mon-own-only { display:none !important; }
+  .mon-own-bar .mon-own-only { display:flex !important; }
+  .mon-address { align-items:center; gap:8px; height:42px; margin:0; padding:0 2px 0 12px; border-radius:12px; background:rgba(239,230,214,0.08); color:rgba(239,230,214,0.5); }
+  .mon-address input { flex:1; min-width:0; height:100%; padding:0; border:0; background:transparent; color:#EFE6D6; font-family:inherit; font-size:16px; outline:none; }
+  .mon-address input::placeholder { color:rgba(239,230,214,0.45); }
+  .mon-full-tools { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+  .mon-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:44px; height:40px; padding:0; border:0; border-radius:10px; background:transparent; color:#EFE6D6; cursor:pointer; }
+  .mon-icon-btn[aria-pressed="true"], .mon-icon-btn[aria-expanded="true"] { background:rgba(239,230,214,0.12); }
+  .mon-tab-count { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 4px; border:1.5px solid currentColor; border-radius:6px; font-size:12px; font-weight:600; }
+  .mon-full-btn { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 12px; border-radius:8px; border:1px solid rgba(239,230,214,0.18); background:rgba(239,230,214,0.06); color:#EFE6D6; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; }
+  .mon-full-hint { margin:0; font-size:12px; line-height:1.35; color:rgba(239,230,214,0.55); }
+  .mon-full-hint:empty { display:none; }
+  .mon-tabs { position:absolute; left:8px; right:8px; bottom:calc(100% + 8px); max-height:60vh; overflow-y:auto; padding:6px; border-radius:14px; border:1px solid rgba(239,230,214,0.12); background:#1A1817; box-shadow:0 12px 40px rgba(0,0,0,0.5); }
+  .mon-tabs[hidden] { display:none; }
+  .mon-tabs-head { display:flex; align-items:center; justify-content:space-between; padding:4px 6px 8px 10px; font-size:13px; color:#B6AFA4; }
+  .mon-tab-row { display:flex; align-items:center; gap:4px; border-radius:10px; }
+  .mon-tab-row.front { background:rgba(239,230,214,0.08); }
+  .mon-tab-row .mon-tab-go { flex:1; min-width:0; padding:9px 10px; border:0; background:transparent; color:#EFE6D6; font-family:inherit; font-size:14px; text-align:left; cursor:pointer; }
+  .mon-tab-row .mon-tab-go span, .mon-tab-row .mon-tab-go small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mon-tab-row .mon-tab-go small { font-size:12px; color:#8C857B; }
+  .mon-keys { position:absolute; left:50%; top:0; width:1px; height:1px; padding:0; border:0; opacity:0; font-size:16px; }
 
-  /* === MOBILE === */
+  /* === PHONES === */
   @media (max-width:768px) {
-    .mon-area { width:100%; flex-direction:column; gap:0; padding:0; }
-    .mon-wrap { min-width:0 !important; flex:none !important; width:100%; }
-    .mon-wrap:first-child { height:50%; }
-    .mon-wrap:last-child { height:50%; }
-    .mon { height:100%; min-height:0; border-radius:0; border-left:none; border-right:none; }
-    .mon-wrap:first-child .mon { border-top:none; border-bottom:none; }
-    .mon-wrap:last-child .mon { border-top:none; border-bottom:none; }
-    .mon-stand { display:none; }
-    .mon-bar { padding:8px 10px; min-height:28px; flex-wrap:wrap; gap:8px; }
-    .mon-dots { display:none; }
+    /* Tabs inside the Computers tab, drawn like the dashboard's own tabs
+       (interface.css .tab): words, with the chosen one underlined; centred,
+       as everything on this page is. */
+    .mon-switch { display:flex; justify-content:center; position:relative; z-index:1; gap:12px; margin:0 16px 12px; border-bottom:1px solid var(--ui-border); }
+    .mon-switch button { min-height:44px; padding:12px 8px; border:0; border-bottom:2px solid transparent; margin-bottom:-1px; background:transparent; color:var(--ui-muted); font-family:inherit; font-size:var(--ui-label); font-weight:500; line-height:1.4; cursor:pointer; }
+    .mon-switch button:hover { color:#EFE6D6; }
+    .mon-switch button:focus-visible { outline:2px solid #D8624B; outline-offset:-2px; }
+    .mon-switch button[aria-selected="true"] { color:var(--ui-text); border-bottom-color:#8DBD79; }
+    .mon-area { width:auto; margin:0 16px; flex-direction:column; }
+    #monArea:not([data-show="local"]) #monLocalWrap, #monArea[data-show="local"] #monCloudWrap { display:none; }
+    .mon-divider { display:none !important; }
+    .mon-wrap { min-width:0 !important; flex:none !important; width:100%; height:auto !important; }
+    .mon { height:auto; min-height:0; border-width:1px; border-radius:14px; }
+    /* The switch names the computer, so its bar holds the status and the view. */
+    .mon-bar { display:flex; align-items:center; gap:10px; padding:10px 12px; min-height:52px; }
+    .mon-dots, .mon-title-line, .mon-max-btn, #monLocalViewToggle, #monFileControls .mon-view-toggle, .mon-term-bar, .mon-term, #monSyncTip { display:none !important; }
+    .mon-bar-title { flex:1; min-width:0; align-items:flex-start; text-align:left; }
+    .mon-subtitle { font-size:13px; color:#EFE6D6; }
+    .mon-storage-phone { display:inline; color:#B6AFA4; white-space:nowrap; }
+    .mon-info-phone { display:inline-flex; width:20px; height:20px; font-size:12px; margin-left:2px; }
     .mon-bar-right { margin-left:auto; }
-    .mon-dots span { width:6px; height:6px; }
-    .mon-bar-title { font-size:11px; }
-    .mon-grid { gap:4px; padding:8px; }
-    .mon-tile { width:76px; }
-    .mon-tile-icon svg { width:36px; height:36px; }
-    .mon-tile-icon { height:40px; }
-    .mon-tile-name { font-size:11px; }
-    /* Horizontal divider on mobile */
-    .mon-divider { width:100%; height:24px; cursor:ns-resize; flex-direction:row; }
-    .mon-divider::before { top:50%; bottom:auto; left:0; right:0; width:100%; height:1px; }
-    .mon-divider-grip { width:48px; height:24px; flex-direction:row; gap:4px; }
-    .mon-divider-grip span { width:1.5px; height:10px; }
-    .mon-divider-arrows { display:none; }
-    .mon-divider-label { display:none; }
+    #monViewToggle .mon-view-btn { min-height:34px; padding:0 12px !important; font-size:13px !important; }
+    /* Browser: a preview the shape of its screen; a tap opens it full screen. */
+    #monDesktop { flex:none !important; width:100%; aspect-ratio:16 / 10; }
+    .mon-open-full { display:flex; position:absolute; inset:0; z-index:2; align-items:flex-end; justify-content:center; padding:12px; border:0; background:linear-gradient(transparent 55%, rgba(16,14,13,0.7)); color:#EFE6D6; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; }
+    .mon-signins { flex-wrap:wrap; gap:10px; padding:12px; }
+    .mon-signins-text, .mon-signins-status { flex-basis:100%; white-space:normal; font-size:13px; }
+    .mon-signins-status:empty { display:none; }
+    .mon-signins-short { flex-basis:100%; margin-left:0; }
+    .mon-signins-sites { flex-wrap:wrap; gap:8px; }
+    .mon-signin { width:44px; height:44px; justify-content:center; border:1px solid rgba(239,230,214,0.1); border-radius:10px; background:rgba(239,230,214,0.04); opacity:1; }
+    .mon-signin svg { width:22px; height:22px; }
+    /* Files: a list; a tap opens a folder, or a file's actions (monPhoneTap). */
+    .mon-crumb-row { flex-wrap:wrap; gap:8px; padding:8px 12px; }
+    .mon-search-wrap { flex-basis:100%; order:3; }
+    .mon-search, .mon-search:focus { width:100%; height:38px; }
+    .mon-screen { min-height:320px; overflow:visible; }
+    .mon-row { min-height:48px; padding:6px 12px; }
+    .mon-row-disc, .mon-row-upload, .mon-row-meta + .mon-row-meta { display:none !important; }
+    .mon-context-menu { left:8px !important; right:8px; top:auto !important; bottom:calc(8px + env(safe-area-inset-bottom)); min-width:0; border-radius:14px; padding:6px; }
+    .mon-context-menu button { min-height:48px; font-size:15px; }
     /* Chat at bottom */
     .float-chat { position:fixed; bottom:8px; left:8px; right:8px; width:auto; max-width:none; margin:0; z-index:10; }
     .float-chat .suggestions { display:none; }
     .float-chat:focus-within .suggestions { display:block; }
-    /* Expand button */
-    .mon-expand-btn { display:flex; width:20px; height:20px; align-items:center; justify-content:center; background:rgba(239,230,214,0.06); border:none; border-radius:4px; color:rgba(239,230,214,0.5); cursor:pointer; flex-shrink:0; }
   }
+  /* The ⓘ opens on a tap where there is no hover. */
+  @media (hover:none) { .mon-info { cursor:pointer; } }
 
 
 
@@ -2355,7 +2401,7 @@
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
         <div class="input-textarea-wrap">
-          <textarea id="chatInput" placeholder="Ask anything or drop any type of file..." rows="1"></textarea>
+          <textarea id="chatInput" placeholder="Ask anything or drop any type of file…" rows="1"></textarea>
           <div class="dictation-note" id="dictationNote" role="status" aria-live="polite" hidden></div>
         </div>
         <div class="input-toolbar">
@@ -2433,10 +2479,10 @@
       <button onclick="startNewThread()" style="padding:4px 12px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;">+ New</button>
     </div>
     <div style="padding:0 18px 8px;">
-      <input type="text" id="threadSearchInput" placeholder="Search conversations..." style="width:100%;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.06);border-radius:6px;padding:6px 10px;color:#B6AFA4;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="searchThreads(this.value)">
+      <input type="text" id="threadSearchInput" placeholder="Search conversations…" style="width:100%;background:rgba(239,230,214,0.04);border:1px solid rgba(239,230,214,0.06);border-radius:6px;padding:6px 10px;color:#B6AFA4;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="searchThreads(this.value)">
     </div>
     <div class="activity-sidebar-list" id="activityList">
-      <div style="font-size:12px;color:rgba(239,230,214,0.6);padding:12px;">Loading...</div>
+      <div style="font-size:12px;color:rgba(239,230,214,0.6);padding:12px;">Loading…</div>
     </div>
   </div>
   <!-- Phones: the chat dims behind the open list, and a tap on it closes the list. -->
@@ -2491,7 +2537,12 @@
 </div><!-- end viewChat -->
 
   <div class="page-view computers-view" id="viewComputers">
-            <!-- Two monitors side by side -->
+    <!-- Phones show one computer at a time, picked here (monShow). -->
+    <div class="mon-switch" id="monSwitch" role="tablist" aria-label="Computers">
+      <button type="button" role="tab" id="monSwitchCloud" aria-selected="true" aria-controls="monCloudWrap" onclick="monShow('cloud')">Sandbox computer</button>
+      <button type="button" role="tab" id="monSwitchLocal" aria-selected="false" aria-controls="monLocalWrap" onclick="monShow('local')">Local computer</button>
+    </div>
+    <!-- Two monitors side by side -->
     <div class="mon-area" id="monArea">
       <!-- Workspace Monitor -->
       <div class="mon-wrap" id="monCloudWrap">
@@ -2508,6 +2559,7 @@
               <span class="mon-subtitle">
               <span class="mon-status off" id="monWorkspaceStatus" aria-hidden="true" title="Checking status"></span>
               <span id="monWorkspaceStatusText">Checking status</span>
+              <span class="mon-storage-phone" id="monStoragePhone"></span>
               </span>
             </div>
             <div class="mon-bar-right">
@@ -2520,7 +2572,7 @@
               <button class="mon-max-btn" id="monCloudMax" onclick="monMaximize('cloud')" title="Maximize"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
             </div>
           </div>
-          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files..." oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of the sandbox computer</button></div></div></div>
+          <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files…" oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of the sandbox computer</button></div></div></div>
           <div class="mon-screen" id="monCloudScreen"
             ondragover="event.preventDefault();if(!window._monDragOrigin)document.getElementById('monCloudDrop').classList.add('active')"
             ondragleave="if(!this.contains(event.relatedTarget))document.getElementById('monCloudDrop').classList.remove('active')"
@@ -2536,9 +2588,34 @@
           <div class="mon-signins" id="monSignins" hidden><div class="mon-signins-text"></div><div class="mon-signins-status" role="status"></div><div class="mon-signins-short"><span class="mon-signins-label">Shortcuts</span><div class="mon-signins-sites"></div></div></div>
           <div id="monDesktop" style="display:none;flex:1;position:relative;background:#100E0D;">
             <iframe id="monVncFrame" style="width:100%;height:100%;border:none;" allow="clipboard-read; clipboard-write"></iframe>
-            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;line-height:1.5;color:rgba(239,230,214,0.7);font-size:14px;">Starting browser...</div>
+            <button type="button" class="mon-open-full" id="monOpenFull" onclick="monFullOpen()">Tap to open full screen</button>
+            <!-- Full screen: the phone's own browser bar at the bottom, as a
+                 phone browser has it. While the screen is phone-shaped,
+                 Chrome's bars are out of sight and this stands in for them
+                 (monBrowser); Keyboard types into the page, Close leaves. -->
+            <div class="mon-full-bar" id="monFullBar">
+              <p class="mon-full-hint" id="monFullHint" role="status"></p>
+              <div class="mon-tabs" id="monTabs" hidden>
+                <div class="mon-tabs-head"><span>Tabs</span><button type="button" class="mon-full-btn" onclick="monBrowser('new');monToggleTabs(false)">New tab</button></div>
+                <div id="monTabList"></div>
+              </div>
+              <form class="mon-address mon-own-only" onsubmit="event.preventDefault();monBrowserGo()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" id="monAddress" placeholder="Search or type an address" aria-label="Address" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+                <button type="button" class="mon-icon-btn" onclick="monBrowser('reload')" aria-label="Reload"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+              </form>
+              <div class="mon-full-tools">
+                <button type="button" class="mon-icon-btn mon-own-only" onclick="monBrowser('back')" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+                <button type="button" class="mon-icon-btn mon-own-only" onclick="monBrowser('forward')" aria-label="Forward"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+                <button type="button" class="mon-icon-btn" id="monKeysBtn" aria-pressed="false" aria-label="Keyboard" onclick="monKeyboard()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></button>
+                <button type="button" class="mon-icon-btn mon-own-only" id="monTabsBtn" aria-label="Tabs" aria-expanded="false" onclick="monToggleTabs()"><span class="mon-tab-count" id="monTabCount">1</span></button>
+                <button type="button" class="mon-full-btn mon-full-close" onclick="monFullClose()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>Close</button>
+              </div>
+              <input type="text" class="mon-keys" id="monKeys" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="enter" aria-label="Type into the sandbox computer's browser">
+            </div>
+            <div id="monDesktopLoading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;line-height:1.5;color:rgba(239,230,214,0.7);font-size:14px;">Starting browser…</div>
             <div id="monSyncTip" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);border-radius:10px;padding:8px 14px;font-size:12px;color:#B6AFA4;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(16,14,13,0.4);z-index:5;">
-              <span>Tip: bring your bookmarks and passwords here. In Chrome, click the profile icon (top right) then "Turn on sync".</span>
+              <span>Bring your bookmarks and passwords here: in Chrome, click the profile icon at the top right, then "Turn on sync".</span>
               <button onclick="this.parentElement.style.display='none';try{localStorage.setItem('ch_sync_tip_seen','1')}catch(e){}" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:14px;padding:0 2px;">&#10005;</button>
             </div>
           </div>
@@ -2553,7 +2630,7 @@
             <div class="mon-term-log" id="monTermLog"></div>
             <div class="mon-term-input">
               <span class="mon-term-prompt">sandbox $&nbsp;</span>
-              <input class="mon-term-cmd" id="monTermCmd" type="text" placeholder="type a command..." onkeydown="if(event.key==='Enter')monExecCmd()">
+              <input class="mon-term-cmd" id="monTermCmd" type="text" placeholder="type a command…" onkeydown="if(event.key==='Enter')monExecCmd()">
             </div>
           </div>
         </div>
@@ -2571,7 +2648,7 @@
             <div class="mon-bar-title">
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
-              Local Computer
+              Local computer
                 <span class="mon-info" data-tip="The Mac whose files and apps Closedhand can use with your permission. Access is built into the Closedhand Mac app; if you run Closedhand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the sandbox computer to hand Closedhand its own copy to work on, and drag the result back when it is done.">i</span>
               </span>
               <span class="mon-subtitle">
@@ -2587,7 +2664,7 @@
               <button class="mon-max-btn" id="monLocalMax" onclick="monMaximize('local')" title="Maximize"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
             </div>
           </div>
-          <div class="mon-crumb-row"><div class="mon-crumb" id="monLocalCrumb"></div><div class="mon-search-wrap"><input class="mon-search" id="monLocalSearch" placeholder="Search files..." oninput="monFilterFiles('local',this.value)" onfocus="monShowScope('local')" onblur="monHideScopeSoon('local')"><div class="mon-search-scope" id="monLocalScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('local','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('local','all')">All of Local Computer</button></div></div></div>
+          <div class="mon-crumb-row"><div class="mon-crumb" id="monLocalCrumb"></div><div class="mon-search-wrap"><input class="mon-search" id="monLocalSearch" placeholder="Search files…" oninput="monFilterFiles('local',this.value)" onfocus="monShowScope('local')" onblur="monHideScopeSoon('local')"><div class="mon-search-scope" id="monLocalScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('local','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('local','all')">All of the local computer</button></div></div></div>
           <div class="mon-screen" id="monLocalScreen"
             ondragover="event.preventDefault()"
             ondrop="monDropLocal(event)">
@@ -2633,7 +2710,6 @@
         </ul>
         <p class="rag-empty-note">It recalls by meaning, not just keywords, and your files stay where they are.</p>
         <div class="rag-empty-actions">
-          <button class="rag-upload-btn" id="ragQuickDrive" type="button" hidden>Search your Google Drive</button>
           <button class="rag-upload-btn" onclick="ragAddSource()">+ Add source</button>
         </div>
       </div>
@@ -2677,7 +2753,7 @@
     <div style="background:#1A1817;border:1px solid rgba(239,230,214,0.1);border-radius:14px;width:400px;max-height:500px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="padding:16px 18px;border-bottom:1px solid rgba(239,230,214,0.06);display:flex;justify-content:space-between;align-items:center;">
         <span id="ragModalTitle" style="font-size:14px;color:#B6AFA4;font-weight:500;">Add source</span>
-        <button onclick="ragCloseModal()" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:18px;">&times;</button>
+        <button onclick="ragCloseModal()" aria-label="Close" style="background:none;border:none;color:rgba(239,230,214,0.5);cursor:pointer;font-size:18px;">&times;</button>
       </div>
       <div id="ragModalBody" style="padding:16px 18px;overflow-y:auto;flex:1;"></div>
     </div>
@@ -3399,7 +3475,7 @@
 
   input.addEventListener('focus', function() {
     userFocused = true;
-    input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file...');
+    input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file…');
   });
   input.addEventListener('blur', function() {
     if (!input.value.trim() && !window._chatModeActive) userFocused = false;
@@ -3407,7 +3483,7 @@
 
   function step() {
     if (window._chatModeActive || userFocused || input.value.trim() || document.getElementById('file-preview-area') || (window.talkFirst && window.talkFirst())) {
-      input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file...');
+      input.setAttribute('placeholder', window.composerPlaceholder ? window.composerPlaceholder() : 'Ask anything or drop any type of file…');
       setTimeout(step, 200);
       return;
     }
@@ -3656,7 +3732,7 @@
     return pendingFiles.length > 1 ? 'Ask about these files or just send'
       : pendingFiles.length === 1 ? 'Ask about this file or just send'
       : window.talkFirst && window.talkFirst() ? (document.body.classList.contains('chat-active') ? 'Type a message' : 'Or type here')
-      : 'Ask anything or drop any type of file...';
+      : 'Ask anything or drop any type of file…';
   }
   window.composerPlaceholder = composerPlaceholder;
 
@@ -4340,7 +4416,7 @@
       if (!el) return;
       var elapsed = Math.round((Date.now() - typingStartTime) / 1000);
       if (elapsed >= 8) el.textContent = 'Generating response... ' + elapsed + 's';
-      else if (elapsed >= 3) el.textContent = 'Generating response...';
+      else if (elapsed >= 3) el.textContent = 'Generating response…';
     }, 1000);
     if (window._setBlobScale) window._setBlobScale(1.8);
   }
@@ -5368,20 +5444,29 @@ setTimeout(function() {
       return;
     }
     var info = e.target.closest('[data-tip]');
-    if (info) {
-      var ri = info.getBoundingClientRect();
-      tip.classList.add('wide');
-      tip.textContent = info.dataset.tip;
-      // Below the icon, since this sits in a title bar at the top of the page
-      // and there is nothing above it to open into.
-      tip.style.left = Math.min(ri.left + ri.width / 2, window.innerWidth - 170) + 'px';
-      tip.style.top = (ri.bottom + 8) + 'px';
-      tip.style.transform = 'translateX(-50%)';
-      tip.style.opacity = '1';
-    }
+    if (info) showTip(info);
   });
+  // Below the icon, since this sits in a title bar at the top of the page
+  // and there is nothing above it to open into; kept inside the window.
+  function showTip(info) {
+    var ri = info.getBoundingClientRect();
+    tip.classList.add('wide');
+    tip.textContent = info.dataset.tip;
+    tip.style.transform = 'none';
+    var w = tip.offsetWidth;
+    tip.style.left = Math.max(8, Math.min(ri.left + ri.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+    tip.style.top = (ri.bottom + 8) + 'px';
+    tip.style.opacity = '1';
+  }
   document.addEventListener('mouseout', function(e) {
     if (e.target.closest('.via-icon') || e.target.closest('[data-tip]')) tip.style.opacity = '0';
+  });
+  // An ⓘ opens on a tap too, where there is no hover; the next tap closes it.
+  var tapped = null;
+  document.addEventListener('click', function(e) {
+    var info = e.target.closest('.mon-info');
+    if (info && info !== tapped) { tapped = info; showTip(info); return; }
+    if (tapped) { tapped = null; tip.style.opacity = '0'; }
   });
 })();
 </script>
@@ -5691,7 +5776,7 @@ async function ragAddSource() {
   var modal = document.getElementById('ragModal');
   modal.style.display = 'flex';
   document.getElementById('ragModalTitle').textContent = 'Add source';
-  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading...</div>';
+  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading…</div>';
 
   try {
     var resp = await fetch('/api/rag/available-sources');
@@ -5701,6 +5786,8 @@ async function ragAddSource() {
   }
 
   var html = '<p style="color:rgba(239,230,214,0.5);font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">Cloud storage</p>';
+  // Connected storage sorts to the top; the rest offer to connect below it.
+  var ready = '', offer = '';
 
   // Google Drive: one row per connected account, so a user with several
   // Google logins can index each one's Drive, matching mail search.
@@ -5708,11 +5795,11 @@ async function ragAddSource() {
     var gAccts = (sources.gdriveAccounts && sources.gdriveAccounts.length) ? sources.gdriveAccounts : [{ account: 'google', email: '', primary: true }];
     gAccts.forEach(function(a) {
       var label = 'Google Drive' + (a.email ? ' \u00b7 ' + a.email : '') + (a.primary && gAccts.length > 1 ? ' (primary)' : '');
-      html += '<div class="rag-browse-item" onclick="ragBrowse(\'gdrive\',\'root\',undefined,\'' + a.account + '\')">'
+      ready += '<div class="rag-browse-item" onclick="ragBrowse(\'gdrive\',\'root\',undefined,\'' + a.account + '\')">'
         + '<img src="/logos/google.svg" width="16" height="16" style="flex-shrink:0;"> ' + label.replace(/</g,'&lt;') + '</div>';
     });
   } else {
-    html += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
+    offer += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
       + '<span style="display:flex;align-items:center;gap:8px;"><img src="/logos/google.svg" width="16" height="16"> Google Drive</span>'
       + '<span style="font-size:10px;color:var(--accent);">Connect</span></div>';
   }
@@ -5722,28 +5809,29 @@ async function ragAddSource() {
     var msAccts = (sources.onedriveAccounts && sources.onedriveAccounts.length) ? sources.onedriveAccounts : [{ account: 'microsoft', email: '', primary: true }];
     msAccts.forEach(function(a) {
       var label = 'OneDrive / SharePoint' + (a.email ? ' \u00b7 ' + a.email : '') + (a.primary && msAccts.length > 1 ? ' (primary)' : '');
-      html += '<div class="rag-browse-item" onclick="ragBrowse(\'onedrive\',\'/\',undefined,\'' + a.account + '\')">'
+      ready += '<div class="rag-browse-item" onclick="ragBrowse(\'onedrive\',\'/\',undefined,\'' + a.account + '\')">'
         + '<img src="/logos/microsoft.svg" width="16" height="16" style="flex-shrink:0;"> ' + label.replace(/</g,'&lt;') + '</div>';
     });
   } else {
-    html += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
+    offer += '<div class="rag-browse-item" onclick="openDashSlide(\'#connections\')" style="justify-content:space-between;">'
       + '<span style="display:flex;align-items:center;gap:8px;"><img src="/logos/microsoft.svg" width="16" height="16"> OneDrive / SharePoint</span>'
       + '<span style="font-size:10px;color:var(--accent);">Connect</span></div>';
   }
 
   // Dropbox
   if (sources.dropbox) {
-    html += '<div class="rag-browse-item" onclick="ragBrowse(\'dropbox\',\'\')">'
+    ready += '<div class="rag-browse-item" onclick="ragBrowse(\'dropbox\',\'\')">'
       + '<img src="/logos/dropbox.svg" width="16" height="16" style="flex-shrink:0;"> Dropbox</div>';
   } else {
-    html += '<div class="rag-browse-item" onclick="window.location.href=\'/auth/dropbox\'" style="justify-content:space-between;">'
+    offer += '<div class="rag-browse-item" onclick="window.location.href=\'/auth/dropbox\'" style="justify-content:space-between;">'
       + '<span style="display:flex;align-items:center;gap:8px;"><img src="/logos/dropbox.svg" width="16" height="16"> Dropbox</span>'
       + '<span style="font-size:10px;color:var(--accent);">Connect</span></div>';
   }
 
   // Notion - coming soon
-  html += '<div class="rag-browse-item" style="opacity:0.35;cursor:default;">'
+  offer += '<div class="rag-browse-item" style="opacity:0.35;cursor:default;">'
     + '<img src="/logos/notion.svg" width="16" height="16" style="flex-shrink:0;"> Notion <span style="font-size:10px;color:#B6AFA4;margin-left:auto;">Coming soon</span></div>';
+  html += ready + offer;
 
   // Closedhand section
   html += '<div style="border-top:1px solid rgba(239,230,214,0.06);margin:14px 0 8px;"></div>';
@@ -5755,12 +5843,12 @@ async function ragAddSource() {
 
   html += '<div class="rag-browse-item" onclick="ragBrowse(\'bridge\',\'~\')">'
     + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D0A652" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
-    + 'Mac files</div>';
+    + 'Local computer</div>';
 
   document.getElementById('ragModalBody').innerHTML = html;
 }
 
-var _originLabels = { cloud: 'Sandbox computer', bridge: 'Local', gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox' };
+var _originLabels = { cloud: 'Sandbox computer', bridge: 'Local computer', gdrive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox' };
 var _originRoots = { cloud: '/workspace', bridge: '~', gdrive: 'root', onedrive: '/', dropbox: '' };
 var _ragBreadcrumbs = []; // stack of {path, name} for back navigation (especially gdrive IDs)
 
@@ -5796,7 +5884,7 @@ async function ragBrowse(origin, path, folderName, account) {
     }
   }
   document.getElementById('ragModalTitle').innerHTML = crumbHtml || label;
-  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading...</div>';
+  document.getElementById('ragModalBody').innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;">Loading…</div>';
 
   // Local browsing needs a live Bridge. Check status up front: the browse
   // endpoint can return an empty success when the Bridge is offline, which
@@ -5813,7 +5901,7 @@ async function ragBrowse(origin, path, folderName, account) {
 
   try {
     var resp = await fetch('/api/rag/browse?origin=' + origin + '&path=' + encodeURIComponent(path) + (_ragBrowseAccount ? '&account=' + encodeURIComponent(_ragBrowseAccount) : ''));
-    if (!resp.ok) { var errBody = await resp.json().catch(function(){return {};}); throw new Error(errBody.error || 'Failed to browse'); }
+    if (!resp.ok) { var errBody = await resp.json().catch(function(){return {};}); throw new Error(errBody.error || 'Could not open this folder'); }
     var data = await resp.json();
     var files = data.files || [];
     var folders = files.filter(function(f) { return f.type === 'directory'; });
@@ -5900,7 +5988,7 @@ async function ragBrowse(origin, path, folderName, account) {
 
     document.getElementById('ragModalBody').innerHTML = html;
   } catch (e) {
-    var errMsg = e.message || 'Failed to browse';
+    var errMsg = e.message || 'Could not open this folder';
     if (origin === 'bridge') {
       document.getElementById('ragModalBody').innerHTML = macAccessNotice(await readMacAccessStatus());
     } else {
@@ -5922,22 +6010,6 @@ function ragCloseModal() {
   document.getElementById('ragModal').style.display = 'none';
 }
 
-// Google Drive already connected: offer it straight from the empty screen,
-// rather than behind "+ Add source" as if nothing were connected yet.
-async function ragOfferDrive() {
-  var btn = document.getElementById('ragQuickDrive');
-  if (!btn) return;
-  try {
-    var r = await fetch('/api/rag/available-sources');
-    var av = r.ok ? await r.json() : {};
-    if (!av.gdrive) return;
-    var accts = (av.gdriveAccounts && av.gdriveAccounts.length) ? av.gdriveAccounts : [{ account: 'google' }];
-    var first = accts.filter(function (a) { return a.primary; })[0] || accts[0];
-    btn.onclick = function () { document.getElementById('ragModal').style.display = 'flex'; ragBrowse('gdrive', 'root', undefined, first.account); };
-    btn.hidden = false;
-  } catch (e) {}
-}
-
 async function ragLoadSources() {
   try {
     var resp = await fetch('/api/rag/sources');
@@ -5951,7 +6023,6 @@ async function ragLoadSources() {
     if (!sources || sources.length === 0) {
       emptyEl.style.display = '';
       sourcesEl.style.display = 'none';
-      ragOfferDrive();
       return;
     }
     emptyEl.style.display = 'none';
@@ -6337,7 +6408,7 @@ async function ragSearch() {
   if (!q) return;
   var resultsEl = document.getElementById('ragSearchResults');
   resultsEl.style.display = '';
-  resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:12px;">Searching...</div>';
+  resultsEl.innerHTML = '<div style="color:rgba(239,230,214,0.5);font-size:13px;padding:12px;">Searching…</div>';
   try {
     var resp = await fetch('/api/rag/search?q=' + encodeURIComponent(q));
     var data = await resp.json();
@@ -6548,7 +6619,7 @@ function jsq(s) {
       e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><div class="mon-empty-text">Closedhand’s sandbox computer</div><div style="font-size:12px;color:rgba(239,230,214,0.5);max-width:220px;line-height:1.5;margin:8px 0 12px;">Drop files here or drag them in from your device.</div><div class="mon-empty-sub">Browse files</div>';el.appendChild(e);return;
     }
     var sorted=monSort(visible);
-    if(_monCloudView==='grid')monRenderGrid(sorted,el,'cloud');
+    if(_monCloudView==='grid'&&!monPhone())monRenderGrid(sorted,el,'cloud');
     else monRenderList(sorted,el,'cloud');
   }
 
@@ -6568,7 +6639,7 @@ function jsq(s) {
       }
       html+=' oncontextmenu="monCtx(event,\''+jsq(fp)+'\',\''+side+'\','+(isDir?'true':'false')+')"';
       var badgeHtml='';
-      if(_syncingPaths.has(fp))badgeHtml='<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
+      if(_syncingPaths.has(fp))badgeHtml='<span class="mon-sync-badge" title="Syncing…"><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if(isSynced)badgeHtml='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       html+='><div class="mon-tile-icon">'+icon+badgeHtml+'</div><div class="mon-tile-name" title="'+escapeHtml(f.name)+'">'+escapeHtml(f.name);
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
@@ -6596,7 +6667,7 @@ function jsq(s) {
       if(isDir)html+='<span class="mon-row-disc" onclick="event.stopPropagation();monUnfurl(this,\''+side+'\',\''+esc+'\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l10 7-10 7z"/></svg></span>';
       else html+='<span style="width:14px;flex-shrink:0"></span>';
       html+=monIcon(f.name,isDir,20)+'<span class="mon-row-name">'+escapeHtml(f.name);
-      if(side==='local'&&_syncingPaths.has(fp))html+='<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
+      if(side==='local'&&_syncingPaths.has(fp))html+='<span class="mon-sync-badge" title="Syncing…"><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if(side==='local'&&_syncedPaths.has(fp))html+='<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if(side==='cloud'&&fp.indexOf('/workspace/synced/')===0)html+='<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html+='</span>';
@@ -6612,7 +6683,7 @@ function jsq(s) {
     var el=document.getElementById('monLocalFiles');if(!el)return;
     if(!files||!files.length){el.innerHTML='<div class="mon-offline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg><div style="font-size:13px;">No files</div></div>';return;}
     var sorted=monSort(files);
-    if(_monLocalView==='grid')monRenderGrid(sorted,el,'local');
+    if(_monLocalView==='grid'&&!monPhone())monRenderGrid(sorted,el,'local');
     else monRenderList(sorted,el,'local');
   }
 
@@ -6970,7 +7041,7 @@ function jsq(s) {
     if(side==='local'){
       var isSynced=_syncedPaths.has(path);
       if(isSynced){
-        html+='<button onclick="monToggleSync(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Go Offline</button>';
+        html+='<button onclick="monToggleSync(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Go offline</button>';
       } else {
         html+='<button onclick="monCopyToCloud(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>Copy to the sandbox computer</button>';
       }
@@ -6998,8 +7069,9 @@ function jsq(s) {
   if (cloudScreen) cloudScreen.addEventListener('contextmenu', function(ev) {
     if (ev.target.closest('.mon-tile') || ev.target.closest('.mon-row')) return; // let file ctx handle it
     ev.preventDefault(); monCloseCtx();
-    var m = document.createElement('div'); m.className = 'mon-ctx'; m.style.left = ev.clientX + 'px'; m.style.top = ev.clientY + 'px';
-    m.innerHTML = '<div class="mon-ctx-item" onclick="monNewFolder()">New Folder</div><div class="mon-ctx-item" onclick="monUpload()">Upload Files</div>';
+    var m = document.createElement('div'); m.className = 'mon-context-menu'; m.style.left = ev.clientX + 'px'; m.style.top = ev.clientY + 'px';
+    m.innerHTML = '<button onclick="monNewFolder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>New folder</button>'
+      + '<button onclick="monUpload()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload files</button>';
     document.body.appendChild(m); _monCtx = m; setTimeout(function(){ document.addEventListener('click', monCloseCtx, {once:true}); }, 0);
   });
   function monCloseCtx(){if(_monCtx){_monCtx.remove();_monCtx=null;}}
@@ -7143,62 +7215,205 @@ function jsq(s) {
     applySplit(_monSplit);
   })();
 
-  // Mobile divider drag (vertical)
-  (function(){
-    var div=document.getElementById('monDivider');if(!div)return;
-    if(window.innerWidth>768)return; // desktop uses the horizontal handler
-    div.addEventListener('touchstart',function(e){
-      e.preventDefault();var startY=e.touches[0].clientY;
-      var cw=document.getElementById('monCloudWrap'),lw=document.getElementById('monLocalWrap');
-      var area=document.getElementById('monArea'),totalH=area.offsetHeight;
-      var startCH=cw.offsetHeight;
-      function onMove(e2){var dy=e2.touches[0].clientY-startY;var newCH=Math.max(totalH*0.25,Math.min(totalH*0.75,startCH+dy));
-        cw.style.height=newCH+'px';lw.style.height=(totalH-newCH-8)+'px';}
-      function onEnd(){document.removeEventListener('touchmove',onMove);document.removeEventListener('touchend',onEnd);}
-      document.addEventListener('touchmove',onMove,{passive:false});
-      document.addEventListener('touchend',onEnd);
-    },{passive:false});
-  })();
-
-  // Mobile expand/collapse
-  function monExpand(which){
-    var cw=document.getElementById('monCloudWrap'),lw=document.getElementById('monLocalWrap');
-    if(which==='cloud'){cw.style.height='calc(100% - 36px)';lw.style.height='28px';}
-    else{lw.style.height='calc(100% - 36px)';cw.style.height='28px';}
+  // Phones: one computer at a time (the switch above them), files that open
+  // on a tap, and the browser full screen with a keyboard.
+  var monPhoneQuery = window.matchMedia('(max-width:768px)');
+  function monPhone() { return monPhoneQuery.matches; }
+  function monShow(which) {
+    which = which === 'local' ? 'local' : 'cloud';
+    document.getElementById('monArea').dataset.show = which;
+    document.getElementById('monSwitchCloud').setAttribute('aria-selected', String(which === 'cloud'));
+    document.getElementById('monSwitchLocal').setAttribute('aria-selected', String(which === 'local'));
+    try { localStorage.setItem('mon-show', which); } catch (e) {}
   }
-
-  // Touch drag between monitors (long press)
-  (function(){
-    var longPressTimer=null,ghost=null,dragData=null;
-    document.addEventListener('touchstart',function(e){
-      var tile=e.target.closest('.mon-tile,.mon-row');if(!tile)return;
-      longPressTimer=setTimeout(function(){
-        var side=tile.closest('#monCloudScreen')?'cloud':'local';
-        var name=tile.querySelector('.mon-tile-name,.mon-row-name');
-        dragData={side:side,el:tile};
-        ghost=tile.cloneNode(true);ghost.className='mon-ghost';ghost.style.width=tile.offsetWidth+'px';
-        document.body.appendChild(ghost);
-        var t=e.touches[0];ghost.style.left=(t.clientX-40)+'px';ghost.style.top=(t.clientY-40)+'px';
-      },500);
-    },{passive:true});
-    document.addEventListener('touchmove',function(e){
-      if(!ghost)return;e.preventDefault();
-      var t=e.touches[0];ghost.style.left=(t.clientX-40)+'px';ghost.style.top=(t.clientY-40)+'px';
-      // Highlight target
-      var target=document.elementFromPoint(t.clientX,t.clientY);
-      document.querySelectorAll('.mon-drag-target').forEach(function(el){el.classList.remove('mon-drag-target');});
-      var screen=target?target.closest('.mon-screen'):null;
-      if(screen)screen.classList.add('mon-drag-target');
-    },{passive:false});
-    document.addEventListener('touchend',function(e){
-      clearTimeout(longPressTimer);
-      if(ghost){ghost.remove();ghost=null;
-        document.querySelectorAll('.mon-drag-target').forEach(function(el){el.classList.remove('mon-drag-target');});
-      }
-      dragData=null;
+  (function () { var shown = null; try { shown = localStorage.getItem('mon-show'); } catch (e) {} monShow(shown); })();
+  // A phone lists files rather than drawing a grid: redrawn when the
+  // screen crosses that width, as a tablet turning does.
+  if (monPhoneQuery.addEventListener) monPhoneQuery.addEventListener('change', function () { monLoadCloud(); monLoadLocal(); });
+  // Each ⓘ also sits beside the status, where a phone hides the title.
+  document.querySelectorAll('#monArea .mon').forEach(function (m) {
+    var info = m.querySelector('.mon-title-line .mon-info'), line = m.querySelector('.mon-subtitle');
+    if (!info || !line) return;
+    var copy = info.cloneNode(true);
+    copy.classList.add('mon-info-phone');
+    line.appendChild(copy);
+  });
+  // A tap does what a double-click and a right-click do with a mouse: a
+  // folder opens, and a file shows what can be done with it.
+  ['monCloudScreen', 'monLocalScreen'].forEach(function (id) {
+    var screen = document.getElementById(id);
+    if (!screen) return;
+    screen.addEventListener('click', function (e) {
+      if (!monPhone() || e.target.closest('a, button, input')) return;
+      var item = e.target.closest('.mon-row, .mon-tile');
+      if (!item) return;
+      if (item.ondblclick) item.ondblclick(e);
+      else if (item.oncontextmenu) item.oncontextmenu(e);
     });
-    document.addEventListener('touchcancel',function(){clearTimeout(longPressTimer);if(ghost){ghost.remove();ghost=null;}dragData=null;});
+  });
+
+  // The browser full screen without the Fullscreen API, which an iPhone
+  // only has for video. With the phone's keyboard up, it fits above it.
+  function monFullOpen() {
+    if (!window._monDesktopActive) return;
+    document.body.classList.add('mon-full');
+    monFullFit();
+    monPhoneShape();
+  }
+  function monFullClose() {
+    var keys = document.getElementById('monKeys'), desk = document.getElementById('monDesktop');
+    if (keys) keys.blur();
+    document.body.classList.remove('mon-full');
+    desk.style.top = ''; desk.style.height = '';
+    monLaptopShape();
+  }
+  // Full screen on a phone, the sandbox computer's screen takes the phone's
+  // shape, so sites send their phone layouts and taps land where they look
+  // (agent /desktop/shape). Asked again every half minute: when asking
+  // stops, the sandbox goes back to the laptop shape by itself.
+  var monShapeTimer = null, monShaped = false, monShapeWidth = 0;
+  function monPhoneShape() {
+    clearTimeout(monShapeTimer);
+    if (!document.body.classList.contains('mon-full') || !monPhone() || document.hidden) return;
+    // The whole bar shows before the size is taken, so the size is the
+    // page area the phone really has left.
+    document.getElementById('monFullBar').classList.add('mon-own-bar');
+    var frame = document.getElementById('monVncFrame');
+    monShaped = true; monShapeWidth = window.innerWidth;
+    fetch('/api/sandbox/screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ width: frame.clientWidth, height: frame.clientHeight }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var own = !!(d && !d.busy && d.width < 1280);
+        document.getElementById('monFullHint').textContent = d && d.busy ? 'Closedhand is using this browser, so it stays laptop-sized until it\'s done.' : '';
+        monOwnBar(own);
+      })
+      .catch(function () {});
+    monShapeTimer = setTimeout(monPhoneShape, 30000);
+  }
+  // The phone's own browser bar (agent /desktop/phone-browser): on while
+  // Chrome's bars are out of sight, kept up to date while it shows.
+  var monBrowserTimer = null;
+  function monOwnBar(on) {
+    document.getElementById('monFullBar').classList.toggle('mon-own-bar', on);
+    clearInterval(monBrowserTimer); monBrowserTimer = null;
+    if (!on) { monToggleTabs(false); return; }
+    monBrowser('state');
+    monBrowserTimer = setInterval(function () { if (!document.hidden) monBrowser('state'); }, 4000);
+  }
+  function monShortAddress(url) {
+    if (!url || !/^https?:/.test(url)) return '';
+    try { var u = new URL(url); return u.host.replace(/^www\./, '') + (u.pathname === '/' ? '' : u.pathname); } catch (e) { return url; }
+  }
+  function monBrowserShow(state) {
+    if (!state || !state.tabs) return;
+    var input = document.getElementById('monAddress');
+    input.dataset.url = /^https?:/.test(state.url || '') ? state.url : '';
+    if (document.activeElement !== input) input.value = monShortAddress(state.url);
+    document.getElementById('monTabCount').textContent = String(state.tabs.length || 1);
+    var list = document.getElementById('monTabList');
+    list.replaceChildren.apply(list, state.tabs.map(function (tab) {
+      var row = document.createElement('div');
+      row.className = 'mon-tab-row' + (tab.front ? ' front' : '');
+      var go = document.createElement('button');
+      go.type = 'button'; go.className = 'mon-tab-go';
+      var title = document.createElement('span'); title.textContent = tab.title || 'New tab';
+      var where = document.createElement('small'); where.textContent = monShortAddress(tab.url) || 'New tab';
+      go.append(title, where);
+      go.onclick = function () { monToggleTabs(false); monBrowser('switch', { id: tab.id }); };
+      var close = document.createElement('button');
+      close.type = 'button'; close.className = 'mon-icon-btn'; close.setAttribute('aria-label', 'Close ' + (tab.title || 'tab'));
+      close.textContent = '\u00d7';
+      close.onclick = function () { monBrowser('close', { id: tab.id }); };
+      row.append(go, close);
+      return row;
+    }));
+  }
+  function monBrowser(action, extra) {
+    return fetch('/api/sandbox/phone-browser', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ action: action }, extra || {})) })
+      .then(function (r) { return r.json(); }).then(function (d) { monBrowserShow(d); return d; }).catch(function () {});
+  }
+  function monBrowserGo() {
+    var input = document.getElementById('monAddress'), typed = input.value.trim();
+    input.blur();
+    if (typed) monBrowser('go', { address: typed });
+  }
+  function monToggleTabs(open) {
+    var sheet = document.getElementById('monTabs'), btn = document.getElementById('monTabsBtn');
+    open = open === undefined ? sheet.hidden : !!open;
+    sheet.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) monBrowser('state');
+  }
+  // Tapped, the address shows in full and is chosen, ready to type over.
+  (function () {
+    var input = document.getElementById('monAddress');
+    if (!input) return;
+    input.addEventListener('focus', function () { if (input.dataset.url) input.value = input.dataset.url; setTimeout(function () { input.select(); }, 0); });
+    input.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement !== input) input.value = monShortAddress(input.dataset.url); }, 150); });
   })();
+  function monLaptopShape(leaving) {
+    clearTimeout(monShapeTimer);
+    monOwnBar(false);
+    if (!monShaped) return;
+    monShaped = false;
+    var body = JSON.stringify({});
+    if (leaving && navigator.sendBeacon) navigator.sendBeacon('/api/sandbox/screen', new Blob([body], { type: 'application/json' }));
+    else fetch('/api/sandbox/screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+  }
+  // A phone turned sideways gets that shape; the keyboard coming up doesn't
+  // change it, as it changes only the height.
+  window.addEventListener('resize', function () { if (monShaped && window.innerWidth !== monShapeWidth) monPhoneShape(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) monLaptopShape(true); else monPhoneShape();
+  });
+  window.addEventListener('pagehide', function () { monLaptopShape(true); });
+  function monFullFit() {
+    var desk = document.getElementById('monDesktop'), view = window.visualViewport;
+    if (!view || !document.body.classList.contains('mon-full')) return;
+    desk.style.top = view.offsetTop + 'px';
+    desk.style.height = view.height + 'px';
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', monFullFit);
+    window.visualViewport.addEventListener('scroll', monFullFit);
+  }
+  // The remote browser has no keyboard of its own on a phone: a hidden box
+  // brings the phone's up, and what is typed goes to the browser
+  // (/novnc/vnc_lite.html reads it).
+  function monKeyboard() {
+    var keys = document.getElementById('monKeys');
+    if (document.activeElement === keys) { keys.blur(); return; }
+    keys.value = ' ';
+    keys.focus();
+    keys.setSelectionRange(1, 1);
+  }
+  (function () {
+    var keys = document.getElementById('monKeys'), btn = document.getElementById('monKeysBtn');
+    if (!keys) return;
+    function send(msg) {
+      var frame = document.getElementById('monVncFrame');
+      if (frame && frame.contentWindow) frame.contentWindow.postMessage(Object.assign({ type: 'closedhand-keys' }, msg), location.origin);
+    }
+    // The box keeps one space, so a backspace always has something to
+    // delete and is seen, whichever phone.
+    function reset() { keys.value = ' '; keys.setSelectionRange(1, 1); }
+    keys.addEventListener('input', function (e) {
+      if (e.isComposing) return;
+      if (e.inputType === 'deleteContentBackward') send({ key: 'Backspace' });
+      else if (e.inputType === 'insertLineBreak') send({ key: 'Enter' });
+      else if (keys.value.slice(1)) send({ text: keys.value.slice(1) });
+      reset();
+    });
+    keys.addEventListener('compositionend', function () { if (keys.value.slice(1)) send({ text: keys.value.slice(1) }); reset(); });
+    keys.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') { e.preventDefault(); send({ key: e.key }); }
+    });
+    keys.addEventListener('focus', function () { btn.setAttribute('aria-pressed', 'true'); });
+    keys.addEventListener('blur', function () { btn.setAttribute('aria-pressed', 'false'); });
+  })();
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && e.target.id !== 'monKeys' && document.body.classList.contains('mon-full')) monFullClose();
+  });
 
   // Cross-pane drag glow hints
   (function(){
@@ -7225,15 +7440,17 @@ function jsq(s) {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
-        desktop.requestFullscreen().catch(function(){});
-        // Show exit hint
-        var hint = document.createElement('div');
-        hint.id = 'monFullscreenHint';
-        hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(16,14,13,0.7);color:#B6AFA4;padding:8px 16px;border-radius:8px;font-size:12px;z-index:99999;pointer-events:none;transition:opacity 1s;';
-        hint.textContent = 'Press Esc to exit full screen';
-        document.body.appendChild(hint);
-        setTimeout(function(){ hint.style.opacity='0'; }, 3000);
-        setTimeout(function(){ hint.remove(); }, 4000);
+        if (!desktop.requestFullscreen) { monFullOpen(); return; }
+        desktop.requestFullscreen().then(function () {
+          // Show exit hint
+          var hint = document.createElement('div');
+          hint.id = 'monFullscreenHint';
+          hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(16,14,13,0.7);color:#B6AFA4;padding:8px 16px;border-radius:8px;font-size:12px;z-index:99999;pointer-events:none;transition:opacity 1s;';
+          hint.textContent = 'Press Esc to exit full screen';
+          document.body.appendChild(hint);
+          setTimeout(function(){ hint.style.opacity='0'; }, 3000);
+          setTimeout(function(){ hint.remove(); }, 4000);
+        }).catch(function () { monFullOpen(); });
       }
       return;
     }
@@ -7285,6 +7502,8 @@ function jsq(s) {
     }
     var headerText = document.getElementById('monWorkspaceStatusText');
     if (headerText) headerText.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    var storage = document.getElementById('monStoragePhone');
+    if (storage) storage.textContent = online === null ? '' : ' \u00b7 ' + (data.storage || '0') + ' of ' + ((data.volume_size_mb || 5120) / 1024).toFixed(0) + 'GB';
     var status = document.getElementById('monTermStatus');
     if (status) {
       status.textContent = label + (online === null ? '' : ' | ' + (data.storage || '0') + '/' + ((data.volume_size_mb || 5120) / 1024).toFixed(0) + 'GB');
@@ -7310,7 +7529,7 @@ function jsq(s) {
         var r = data.runs[i];
         var age = timeAgo(new Date(r.created_at));
         var trigger = r.triggered_by || 'manual';
-        if (r.status === 'running') entries.push({ time: new Date(r.created_at), html: monLogEntry(age, 'running ' + trigger + ' task...', 'running') });
+        if (r.status === 'running') entries.push({ time: new Date(r.created_at), html: monLogEntry(age, 'running ' + trigger + ' task…', 'running') });
         else if (r.status === 'completed') entries.push({ time: new Date(r.created_at), html: monLogEntry(age, trigger + ' task completed', 'completed') });
         else if (r.status === 'failed') entries.push({ time: new Date(r.created_at), html: monLogEntry(age, trigger + ' task failed', 'failed') });
       }
@@ -7431,7 +7650,7 @@ function jsq(s) {
     var cur = side === 'cloud' ? _monCloudPath : _monLocalPath;
     return cur || _monRootPath(side);
   }
-  function _monPanelName(side) { return side === 'cloud' ? 'Sandbox computer' : 'Local Computer'; }
+  function _monPanelName(side) { return side === 'cloud' ? 'Sandbox computer' : 'Local computer'; }
   function _monPathLabel(side, p) {
     var root = _monRootPath(side);
     if (!p || p === root || p === root + '/') return _monPanelName(side);
@@ -7529,7 +7748,7 @@ function jsq(s) {
       return;
     }
     var view = side === 'cloud' ? _monCloudView : _monLocalView;
-    if (view === 'grid') monRenderSearchGrid(side, files, container);
+    if (view === 'grid' && !monPhone()) monRenderSearchGrid(side, files, container);
     else monRenderSearchList(side, files, container);
   }
   function _monSearchJsAttr(s){ return jsq(s); }
@@ -7555,7 +7774,7 @@ function jsq(s) {
       html += ' oncontextmenu="monCtx(event,\''+fpAttr+'\',\''+side+'\','+(isDir?'true':'false')+')"';
       html += ' title="'+escapeHtml(String((parent+'/'+f.name)))+'">';
       var badgeHtml = '';
-      if (isSyncing) badgeHtml = '<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
+      if (isSyncing) badgeHtml = '<span class="mon-sync-badge" title="Syncing…"><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if (isSynced) badgeHtml = '<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       html += '<div class="mon-tile-icon">'+icon+badgeHtml+'</div>';
       html += '<div class="mon-tile-name">'+escapeHtml(f.name);
@@ -7591,7 +7810,7 @@ function jsq(s) {
       html += '<span style="width:14px;flex-shrink:0"></span>';
       html += monIcon(f.name, isDir, 20);
       html += '<span class="mon-row-name">'+escapeHtml(f.name);
-      if (isSyncing) html += '<span class="mon-sync-badge" title="Syncing..."><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
+      if (isSyncing) html += '<span class="mon-sync-badge" title="Syncing…"><span class="mon-spin" style="width:12px;height:12px;border-width:1.5px;"></span></span>';
       else if (isSynced) html += '<span class="mon-sync-badge" title="Online"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(141,189,121,0.7)" stroke="none"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></span>';
       if (side==='cloud' && fp.indexOf('/workspace/synced/') === 0) html += '<span class="mon-synced-from" title="Synced from local">&#8597; synced</span>';
       html += '<span style="color:rgba(239,230,214,0.5);font-size:11px;margin-left:8px;">'+escapeHtml(parent)+'</span>';
@@ -7792,6 +8011,7 @@ function jsq(s) {
     var filesTabBtn = document.getElementById('monFilesTabBtn');
 
     if (window._monDesktopActive) {
+      monFullClose();
       var oldFrame = document.getElementById('monVncFrame');
       if(oldFrame)oldFrame.src='about:blank';
       // Switch back to file view
@@ -7920,7 +8140,13 @@ function jsq(s) {
   window.monHandleUpload = monHandleUpload;
   window.monNewFolder = monNewFolder;
   window.monDropFeedback = monDropFeedback;
-  window.monExpand = typeof monExpand !== 'undefined' ? monExpand : function(){};
+  window.monShow = monShow;
+  window.monFullOpen = monFullOpen;
+  window.monFullClose = monFullClose;
+  window.monKeyboard = monKeyboard;
+  window.monBrowser = monBrowser;
+  window.monBrowserGo = monBrowserGo;
+  window.monToggleTabs = monToggleTabs;
   window.monNav = monNav;
   window.monNavLocal = monNavLocal;
   window.monCtx = monCtx;
@@ -7946,9 +8172,17 @@ function jsq(s) {
   // has gone wrong, and a site not yet signed in to is an invitation, which
   // the strip itself makes.
   var _monSignins = null, _monSigninPoll = null;
-  var MON_SIGNIN_INTRO = 'Sign in here to anything you want Closedhand to have persistent access to.';
-  // Each example shows as its mark; a site without one shows its name.
-  var MON_SIGNIN_LOGOS = { google: 1, instagram: 1, tiktok: 1, x: 1, facebook: 1 };
+  var MON_SIGNIN_INTRO = 'Watch Closedhand work or sign in to any website you want it to have persistent access to.';
+  // Each example shows as its mark, drawn into the page rather than fetched:
+  // content blockers stop files named after social networks, and a stopped
+  // file left an empty box. A site without a mark shows its name.
+  var MON_SIGNIN_LOGOS = {
+    google: '<svg aria-hidden="true" focusable="false" fill="#4285F4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>',
+    instagram: '<svg aria-hidden="true" focusable="false" fill="#E4405F" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>',
+    tiktok: '<svg aria-hidden="true" focusable="false" fill="#FFFFFF" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>',
+    x: '<svg aria-hidden="true" focusable="false" fill="#FFFFFF" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>',
+    facebook: '<svg aria-hidden="true" focusable="false" fill="#0866FF" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg>'
+  };
   async function monLoadSignins(fresh) {
     try {
       var r = await fetch('/api/sandbox/sign-ins' + (fresh ? '?fresh=1' : ''));
@@ -7970,11 +8204,8 @@ function jsq(s) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'mon-signin' + (site.signedIn ? ' is-done' : '');
-      if (MON_SIGNIN_LOGOS[site.id]) {
-        var logo = document.createElement('img');
-        logo.src = '/logos/' + site.id + '.svg'; logo.alt = '';
-        b.appendChild(logo);
-      } else b.textContent = site.name;
+      if (MON_SIGNIN_LOGOS[site.id]) b.innerHTML = MON_SIGNIN_LOGOS[site.id];
+      else b.textContent = site.name;
       b.title = site.name + (site.signedIn ? ', signed in' : '');
       b.setAttribute('aria-label', (site.signedIn ? site.name + ', signed in. ' : 'Sign in to ' + site.name + '. ') + site.unlocks + '.');
       b.onclick = function () { monOpenSignin(site); };
@@ -7989,6 +8220,7 @@ function jsq(s) {
       var r = await fetch('/api/sandbox/sign-in', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site: site.id }) });
       var d = await r.json().catch(function () { return {}; });
       text.textContent = r.ok ? 'Sign in to ' + site.name + ' in the browser below. It stays signed in for later.' : (d.error || 'That didn\'t open. Try again.');
+      if (r.ok && monPhone()) monFullOpen();
     } catch (e) { text.textContent = 'That didn\'t open. Try again.'; }
     bar._said = setTimeout(function () { text.textContent = ''; }, 15000);
   }

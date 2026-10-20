@@ -11,8 +11,8 @@
     const installed = appInstalled || standalone();
     const installable = !installed && canInstall();
     $('install').hidden = !installable;
-    $('install').textContent = mobile ? 'Add to home screen' : 'Save to this computer';
-    $('device-heading').textContent = mobile ? 'Add to your home screen' : 'Keep it on this computer';
+    $('install').textContent = mobile ? 'Add to home screen' : 'Save to this device';
+    $('device-heading').textContent = mobile ? 'Add to your home screen' : 'Keep it on this device';
     $('iphone').hidden = installed || !iphone;
     $('android').hidden = installed || !android || installable;
     $('desktop').hidden = installed || mobile || installable;
