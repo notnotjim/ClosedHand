@@ -175,8 +175,8 @@ test("the database names each service, and the sandbox agent answers nothing wit
   assert.match(agent, /if \(!SANDBOX_TOKEN\) \{\n    if \(process\.env\.SANDBOX_DEV === "1"\) return next\(\);\n    return res\.status\(503\)/);
 });
 
-test("the bug report keys are sealed", () => {
+test("the bug report receipts are sealed", () => {
   const bugs = read("lib/bug-reports.js");
-  assert.match(bugs, /remote_receipt: sealReceipt\(receipt\)/);
-  assert.match(bugs, /const receipt = openReceipt\(report\.remote_receipt\);/);
+  assert.match(bugs, /receipt: entry\.receipt \? encryptString\(entry\.receipt\) : null/);
+  assert.match(bugs, /const receipt = entry\.receipt \? decryptString\(entry\.receipt, "bug report receipt"\) : null;/);
 });

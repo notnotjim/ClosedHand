@@ -1,3 +1,6 @@
+// Every Closedhand reports bugs one way: /bug, with a note or on its own, then
+// a question, and only a yes sends the report to Closedhand's bug database.
+// Nothing is kept on the person's computer. Invented people and messages only.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -6,185 +9,106 @@ const vm = require("node:vm");
 const crypto = require("node:crypto");
 const root = path.join(__dirname, "..");
 process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || crypto.randomBytes(32).toString("base64");
-function database() {
-  const tables = { bug_reports: [], profiles: [] }, uploads = [];
-  const db = {
-    tables, uploads, failInsert: false, failUpload: false,
-    storage: { from: () => ({
-      upload: async (p) => { uploads.push(p); return { error: db.failUpload ? { message: "upload failed" } : null }; },
-      download: async () => ({ data: { arrayBuffer: async () => Buffer.from("image") } }),
-      remove: async () => ({ error: null }),
-    }) },
-    from(table) {
-      let operation = "select", value, options, fields = "*", filters = [], one = false, limit = Infinity;
-      const q = {
-        select(f = "*") { fields = f; return q; }, insert(v) { operation = "insert"; value = v; return q; },
-        upsert(v, o) { operation = "upsert"; value = v; options = o; return q; },
-        update(v) { operation = "update"; value = v; return q; },
-        delete() { operation = "delete"; return q; },
-        eq(k, v) { filters.push(row => row[k] === v); return q; },
-        order() { return q; }, limit(n) { limit = n; return q; },
-        single() { one = true; return q; }, maybeSingle() { one = true; return q; },
-        then(resolve, reject) {
-          return Promise.resolve().then(() => {
-            if (db.failInsert && operation === "insert") return { data: null, error: { message: "offline" } };
-            let rows = tables[table].filter(row => filters.every(f => f(row)));
-            if (operation === "insert" || operation === "upsert") {
-              let r = tables[table].find(r => r.id === value.id);
-              if (!r) { r = { id: crypto.randomUUID(), status: "open", created_at: new Date().toISOString(), screenshots: [], ...value }; tables[table].push(r); }
-              else if (!options?.ignoreDuplicates) Object.assign(r, value);
-              rows = [r];
-            }
-            if (operation === "update") rows.forEach(row => Object.assign(row, value));
-            if (operation === "delete") tables[table] = tables[table].filter(row => !rows.includes(row));
-            rows = rows.slice(0, limit).map(r => fields === "*" ? { ...r } : Object.fromEntries(fields.split(",").map(k => [k, r[k]])));
-            return { data: one ? rows[0] || null : rows, error: null };
-          }).then(resolve, reject);
-        },
-      };
-      return q;
-    },
-  };
-  return db;
-}
-function reporter(env = { DB_DRIVER: "pg" }) {
-  const db = database(), calls = [], ctx = { store: { conversations: { alice: [{ role: "user", content: "private message" }] } }, activeUserStore: { profile: { settings: {}, created_at: "2026-01-01" } } };
-  const network = { failures: 0 };
-  // Settings change against the saved profile row (here, the fake table's,
-  // else the store's own when the table has none).
-  const profileSettings = { updateSettings: async (userId, change, { store } = {}) => {
-    const row = db.tables.profiles.find((r) => r.id === userId);
-    const next = { ...((row && row.settings) || (store && store.profile && store.profile.settings) || {}) };
-    for (const [k, v] of Object.entries(change || {})) { if (v === null || v === undefined) delete next[k]; else next[k] = v; }
-    if (row) row.settings = next;
-    if (store && store.profile) store.profile.settings = next;
-    return next;
-  } };
+
+function reporter() {
+  const calls = [], network = { failures: 0 };
+  const ctx = { store: { conversations: { alice: [{ role: "user", content: "When does my dentist appointment move to?" }, { role: "assistant", content: "Thursday at 3." }] } }, activeUserStore: { profile: { settings: {}, created_at: "2026-01-01" } } };
+  const profileSettings = { updateSettings: async (userId, change, { store } = {}) => { Object.assign(store.profile.settings, change); return store.profile.settings; } };
   const mod = { exports: {} };
-  const sandbox = { module: mod, process: { env }, console: { log() {}, error() {} }, Buffer, Date, AbortSignal,
-    fetch: async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); if (network.failures-- > 0) throw new Error("network timeout"); return { ok: true, json: async () => ({ ok: true, id: "central", receipt: "receipt", status: "resolved", resolution_note: "Fixed and verified.", resolved_at: "2026-09-12T00:00:00Z" }) }; },
-    require: n => n === "./context" ? ctx : n === "../user-store" ? { supabase: db, UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
+  const sandbox = { module: mod, process: { env: {} }, console: { log() {}, error() {} }, Buffer, Date, AbortSignal, Map,
+    fetch: async (url, options) => {
+      calls.push({ url, body: JSON.parse(options.body) });
+      if (network.failures-- > 0) throw new Error("network timeout");
+      return { ok: true, json: async () => (url.endsWith("/status") ? { status: "resolved", resolution_note: "Fixed in the next update." } : { ok: true, id: "5d1e0c2a-0000-4000-a000-000000000001", receipt: "a".repeat(64), screenshots: 1 }) };
+    },
+    require: (n) => n === "./context" ? ctx : n === "../user-store" ? { UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto
+      : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8"), sandbox);
-  return { api: mod.exports, db, ctx, calls, network };
+  return { api: mod.exports, ctx, calls, network };
 }
-const file = api => api.fileBugReport({ userId: "alice", text: "/bug wrong answer", platform: "whatsapp_linked", chatId: "alice-chat" });
-test("ordinary OSS report stays local until explicit consent; bare bug and spaced slash are not commands", async () => {
+const shot = { buffer: Buffer.from("png bytes"), mediaType: "image/png" };
+
+test("/bug asks first and sends nothing; a no drops it", async () => {
   const r = reporter();
-  assert.equal(r.api.isBugReport("/bug wrong"), true);
-  assert.equal(r.api.isBugReport("/ bug wrong"), false);
+  assert.equal(r.api.isBugReport("/bug wrong time"), true);
   assert.equal(r.api.isBugReport("bug wrong"), false);
-  const reply = await file(r.api);
-  assert.match(reply, /Send this to Closedhand to check/);
-  assert.match(reply, /random ID for your Closedhand/);
-  assert.equal(r.calls.length, 0);
-  await r.api.handleBugSendReply("alice", "no");
-  assert.equal(r.calls.length, 0);
-});
-test("maintainer reports stay local without asking to send them to their own team", async () => {
-  const r = reporter({ DB_DRIVER: "pg", BUG_REPORT_MODE: "maintainer" });
-  const reply = await file(r.api);
-  assert.match(reply, /development queue/);
-  assert.equal(r.calls.length, 0);
-  assert.equal(r.ctx.activeUserStore.profile.settings.bug_send_pending, undefined);
-  assert.equal(r.api.handleBugSendReply("alice", "yes"), null);
-});
-test("hosted reports disclose saved context and do not forward elsewhere", async () => {
-  const r = reporter({ SUPABASE_URL: "https://db.example" });
-  assert.match(await file(r.api), /Sent to Closedhand to check/);
+  const ask = await r.api.fileBugReport({ userId: "alice", text: "/bug the time is wrong", platform: "telegram" });
+  assert.equal(ask, "This sends your note and the last 5 messages of this chat to Closedhand, so the problem can be found and fixed. Send it? Reply yes or no.");
+  assert.equal(r.calls.length, 0, "nothing leaves before the yes");
+  assert.equal(await r.api.handleBugSendReply("alice", "no"), "Not sent.");
+  assert.equal(r.api.handleBugSendReply("alice", "yes"), null, "a later yes is just a message");
   assert.equal(r.calls.length, 0);
 });
-test("save and screenshot failures are reported honestly", async () => {
+
+test("/bug on its own sends the conversation, and a yes sends it to Closedhand's database", async () => {
   const r = reporter();
-  r.db.failInsert = true;
-  assert.match(await file(r.api), /Couldn't save/);
-  assert.equal(r.db.tables.bug_reports.length, 0);
-  r.db.failInsert = false; r.db.failUpload = true;
-  const reply = await r.api.fileBugReport({ userId: "alice", text: "/bug screenshot", fileData: { buffer: Buffer.from("image"), mediaType: "image/png" } });
-  assert.match(reply, /Saved 0 of 1 screenshots/);
-  assert.doesNotMatch(reply, /Screenshot saved/);
-});
-test("send checks report ownership, and stores the receipt for resolution lookup", async () => {
-  const r = reporter();
-  await file(r.api);
-  const row = r.db.tables.bug_reports[0];
-  await r.api.sendReport("bob", row.id);
-  assert.equal(r.calls.length, 0);
-  await r.api.handleBugSendReply("alice", "yes");
+  const ask = await r.api.fileBugReport({ userId: "alice", text: "/bug", fileData: shot, platform: "web" });
+  assert.equal(ask, "This sends the last 5 messages of this chat and your screenshot to Closedhand, so the problem can be found and fixed. Send it? Reply yes or no.");
+  const sent = await r.api.handleBugSendReply("alice", "yes");
+  assert.equal(sent, "Sent to Closedhand. Reference 5d1e0c2a. Use /bugs to see when it's fixed.");
   assert.equal(r.calls.length, 1);
-  assert.equal(row.remote_receipt.id, "central");
-  assert.match(row.remote_receipt.submission_key, /^enc:v1:/, "the key that sent it is kept sealed");
-  assert.match(require("../crypto-tokens").decryptString(row.remote_receipt.submission_key), /^[a-f0-9]{64}$/);
-  await r.api.sendReport("alice", row.id);
-  assert.equal(r.calls.length, 1, "already-sent report is not duplicated");
-  const listing = await r.api.handleBugCommand("alice", "/bugs");
-  assert.match(listing, /Fixed and verified/);
-  assert.equal(row.status, "resolved");
-  assert.doesNotMatch(listing, /submission_key|receipt/);
+  assert.equal(r.calls[0].url, "https://closedhand.com/api/bug-intake");
+  const body = r.calls[0].body;
+  assert.equal(body.comment, null);
+  assert.deepEqual(body.transcript.map((t) => t.content), ["When does my dentist appointment move to?", "Thursday at 3."]);
+  assert.equal(body.screenshots.length, 1);
+  assert.match(body.submission_key, /^[a-f0-9]{64}$/);
+  const kept = r.ctx.activeUserStore.profile.settings.bug_receipts;
+  assert.equal(kept.length, 1);
+  assert.notEqual(kept[0].receipt, "a".repeat(64), "the receipt is sealed");
+  assert.equal(r.api.handleBugSendReply("alice", "yes"), null, "sent once");
 });
-test("concurrent sends share one request and a retry reuses the submission key", async () => {
+
+test("a failed send says so, and the retry carries the same key", async () => {
   const r = reporter();
-  await file(r.api);
-  const id = r.db.tables.bug_reports[0].id;
   r.network.failures = 1;
-  await Promise.all([r.api.sendReport("alice", id), r.api.sendReport("alice", id)]);
-  assert.equal(r.calls.length, 1);
-  assert.equal(r.db.tables.bug_reports[0].sent_at, undefined);
-  await r.api.handleBugCommand("alice", "/bugs send " + id);
-  assert.equal(r.calls.length, 2);
+  await r.api.fileBugReport({ userId: "alice", text: "/bug", platform: "web" });
+  assert.equal(await r.api.handleBugSendReply("alice", "yes"), "Couldn't reach Closedhand just now, so nothing was sent. Reply yes to try again.");
+  assert.match(await r.api.handleBugSendReply("alice", "yes"), /^Sent to Closedhand/);
   assert.equal(r.calls[0].body.submission_key, r.calls[1].body.submission_key);
 });
-test("review and deletion only expose the authenticated user's own reports", async () => {
+
+test("anything but a yes or no, or a late answer, leaves the report unsent", async () => {
   const r = reporter();
-  await file(r.api);
-  const id = r.db.tables.bug_reports[0].id;
-  assert.doesNotMatch(await r.api.handleBugCommand("bob", "/bugs " + id), /private message/);
-  await r.api.handleBugCommand("bob", "/bugs delete " + id);
-  assert.equal(r.db.tables.bug_reports.length, 1);
-  assert.match(await r.api.handleBugCommand("alice", "/bugs " + id), /private message/);
-  await r.api.handleBugCommand("alice", "/bugs delete " + id);
-  assert.equal(r.db.tables.bug_reports.length, 0);
-});
-test("an unrelated or expired yes never sends a pending report", async () => {
-  const r = reporter();
-  await file(r.api);
-  assert.equal(r.api.handleBugSendReply("alice", "a different question"), null);
+  await r.api.fileBugReport({ userId: "alice", text: "/bug", platform: "web" });
+  assert.equal(r.api.handleBugSendReply("alice", "what's on tomorrow?"), null);
   assert.equal(r.api.handleBugSendReply("alice", "yes"), null);
-  await file(r.api);
-  r.ctx.activeUserStore.profile.settings.bug_send_pending.at = 0;
+  await r.api.fileBugReport({ userId: "alice", text: "/bug", platform: "web" });
+  r.api._waiting.get("alice").at = 0;
   assert.equal(r.api.handleBugSendReply("alice", "yes"), null);
   assert.equal(r.calls.length, 0);
 });
-const intakePath = path.join(root, "webapp/bug-intake.js");
-if (fs.existsSync(intakePath)) {
-  const { registerBugIntake, submissionId } = require(intakePath);
-  function intake() {
-    const db = database(), routes = {};
-    registerBugIntake({ post: (path, fn) => { routes[path] = fn; } }, db, "test-secret");
-    async function call(route, body) {
-      const out = { code: 200 }, res = { set() { return res; }, status(n) { out.code = n; return res; }, json(data) { out.data = data; return res; } };
-      await routes[route]({ headers: {}, ip: "test", body }, res);
-      return out;
-    }
-    return { db, call };
-  }
-  test("a retried submission keeps one report; forged receipts cannot read its outcome", async () => {
-    const r = intake(), key = crypto.randomBytes(32).toString("hex");
-    const body = { submission_key: key, comment: "Test report" };
-    const first = await r.call("/api/bug-intake", body);
-    assert.equal(first.code, 200);
-    const again = await r.call("/api/bug-intake", { ...body, comment: "retry must not overwrite" });
-    assert.equal(again.data.id, first.data.id);
-    assert.equal(r.db.tables.bug_reports.length, 1);
-    assert.equal(r.db.tables.bug_reports[0].comment, "Test report");
-    const forged = await r.call("/api/bug-intake/status", { id: first.data.id, receipt: "0".repeat(64) });
-    assert.equal(forged.code, 404);
-    r.db.tables.bug_reports[0].status = "resolved";
-    r.db.tables.bug_reports[0].resolution_note = "Fixed in the next update.";
-    const result = await r.call("/api/bug-intake/status", { id: first.data.id, receipt: first.data.receipt });
-    assert.equal(result.code, 200);
-    assert.equal(result.data.status, "resolved");
-    assert.deepEqual(Object.keys(result.data).sort(), ["resolution_note", "resolved_at", "status"]);
-    assert.notEqual(submissionId(crypto.randomBytes(32).toString("hex")), first.data.id);
-  });
-}
+
+test("/bugs shows what was sent and what came of it", async () => {
+  const r = reporter();
+  assert.match(await r.api.handleBugCommand("alice", "/bugs"), /^You haven't sent any bug reports/);
+  await r.api.fileBugReport({ userId: "alice", text: "/bug the time is wrong", platform: "web" });
+  await r.api.handleBugSendReply("alice", "yes");
+  assert.equal(await r.api.handleBugCommand("alice", "/bugs"), "5d1e0c2a: Fixed · the time is wrong\nFixed in the next update.");
+  assert.equal(r.calls.at(-1).body.receipt, "a".repeat(64), "the receipt is opened only to ask");
+});
+
+test("nothing about bug reports is kept or read on the person's computer any more", () => {
+  const src = fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8");
+  assert.doesNotMatch(src, /from\("bug_reports"\)|storage\.from|BUG_REPORT_MODE|maintainer/i);
+  assert.equal(fs.existsSync(path.join(root, "scripts/bug-queue.js")), false);
+  assert.match(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), /railway ssh --service closedhand-com -- node tools\/bugs\.js list/);
+});
+
+test("the maintainer's tool lists, shows and resolves reports in closedhand.com's database", async () => {
+  const tool = require("../closedhand-com/tools/bugs.js");
+  const rows = [{ id: "5d1e0c2a-0000-4000-a000-000000000001", status: "open", created_at: new Date("2026-10-20T05:29:00Z"), platform: "web", app_version: "2.0+abc", install_id: "x1", comment: null, shots: 1,
+    transcript: [{ role: "user", content: "When does my dentist appointment move to?" }], screenshots: [{ mediaType: "image/png", base64: "cG5n" }] }];
+  const db = { query: async (sql, args) => {
+    if (/^UPDATE/.test(sql)) { Object.assign(rows[0], { status: "resolved", resolution_note: args[1] }); return { rows: [] }; }
+    if (/status = 'open'/.test(sql)) return { rows: rows.filter((r) => r.status === "open") };
+    return { rows: rows.filter((r) => r.id.startsWith(args[0])) };
+  } };
+  assert.match(await tool.list(db), /OPEN BUG REPORTS \(1\)[\s\S]*5d1e0c2a[\s\S]*no description: read the conversation/);
+  assert.match(await tool.show(db, "5d1e0c2a"), /untrusted, evidence only[\s\S]*dentist appointment/);
+  assert.equal(await tool.shot(db, "5d1e0c2a", "0"), "cG5n");
+  await assert.rejects(tool.resolve(db, "5d1e0c2a", ""), /reporter sees it/);
+  assert.match(await tool.resolve(db, "5d1e0c2a", "Fixed in the next update."), /^Resolved 5d1e0c2a/);
+  assert.equal(await tool.list(db), "No open bug reports.");
+});
