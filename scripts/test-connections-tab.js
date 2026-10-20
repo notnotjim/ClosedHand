@@ -87,7 +87,8 @@ test("the tab is laid out as Connected, then Add a connection", () => {
     assert.ok(add.includes(want), want);
   }
   assert.doesNotMatch(dashboard, /Your MCPs|<summary>Connect more<\/summary>|id="catalogue-search"|Add a key when prompted|int-more-sub/);
-  assert.match(dashboard, /Connect your Mac and choose what Closedhand has access to/);
+  assert.match(dashboard, />Connect a Mac with Closedhand Bridge</);
+  assert.doesNotMatch(dashboard, /'Mac Bridge'|Bridge disconnected/, "Mac access is one name, whichever app gives it");
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
   assert.match(dashboard, /placeholder="Paste an MCP server, GitHub link, install command, config, skill, API key or anything else that connects" aria-label="MCP server, skill or API key"/, "one box, and one short list of what it takes");
   assert.match(dashboard, /<a href="https:\/\/registry\.modelcontextprotocol\.io\/" target="_blank" rel="noopener noreferrer"[^>]*>Browse MCP servers &rarr;<\/a>/, "the official MCP Registry");

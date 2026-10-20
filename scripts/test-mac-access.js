@@ -39,7 +39,7 @@ test('Mac app uses built-in access for connected, reconnecting and unpaired stat
     const { context, get } = ui({ desktop: true, status });
     await context.loadBridgeStatus();
     const html = get('bridge-standalone-card').innerHTML;
-    assert.match(html, /Included in the Closedhand app/);
+    assert.match(html, /Built into Closedhand for Mac/);
     assert.doesNotMatch(html, /disconnectBridge|>Shared<|Set up &#/);
     if (status !== 'connected') assert.doesNotMatch(html, />Connected</);
     await context.openAppleModal();
@@ -93,7 +93,7 @@ test('file errors show recovery for existing access and setup only for an unpair
     await context.monLoadLocal();
     const html = get('monLocalFiles').innerHTML;
     if (!data.desktop && data.status === 'not_paired') {
-      assert.match(html, /Download Bridge for Mac/);
+      assert.match(html, /Download Closedhand Bridge/);
       assert.match(html, /Enter pairing code/);
     } else {
       assert.match(html, /Try again/);

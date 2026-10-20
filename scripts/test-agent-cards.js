@@ -50,7 +50,7 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached the chat you asked in, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
-  assert.match(dashboard, />Closedhand sends out agents when a job needs more than a quick answer\.</, "agents named where they really are at work");
+  assert.match(dashboard, />Everything on Closedhand's schedule, from what it's working on now to what's coming up\.</, "the tab says what it holds, in its own word");
 });
 
 test("the Schedules tab holds what is about time; what Closedhand made is on Pages", () => {

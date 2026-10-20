@@ -1365,9 +1365,6 @@
   .rag-source-btn.danger:hover { border-color:rgba(216,98,75,0.3); color:#D0563F; }
   .rag-browse-item { padding:10px 14px; border:1px solid rgba(239,230,214,0.06); border-radius:8px; margin-bottom:4px; cursor:pointer; display:flex; align-items:center; gap:8px; color:#B6AFA4; font-size:13px; transition:all 0.15s; }
   .rag-browse-item:hover { background:rgba(208,86,63,0.05); border-color:rgba(208,86,63,0.15); }
-  .rag-upload-btn { background:rgba(208,86,63,0.12); border:1px solid rgba(208,86,63,0.25); color:var(--accent); padding:8px 20px; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; }
-  .rag-upload-btn:hover { background:rgba(208,86,63,0.2); border-color:rgba(208,86,63,0.4); }
-  .rag-upload-btn.small { padding:6px 14px; font-size:12px; }
   .rag-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
   .rag-header-left { display:flex; align-items:center; gap:8px; }
   .rag-header h3 { color:#B6AFA4; font-size:14px; margin:0; font-weight:500; }
@@ -1398,8 +1395,7 @@
   .rag-query-input { flex:1; background:rgba(239,230,214,0.05); border:1px solid rgba(239,230,214,0.1); border-radius:10px; padding:12px 16px; color:#EFE6D6; font-size:14px; font-family:inherit; outline:none; transition:border-color 0.2s; }
   .rag-query-input:focus { border-color:rgba(208,86,63,0.4); }
   .rag-query-input::placeholder { color:rgba(239,230,214,0.5); }
-  .rag-query-btn { background:rgba(208,86,63,0.15); border:1px solid rgba(208,86,63,0.3); color:var(--accent); padding:12px 24px; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap; }
-  .rag-query-btn:hover { background:rgba(208,86,63,0.25); border-color:rgba(208,86,63,0.5); }
+  .rag-query-btn { white-space:nowrap; }
   .rag-results-section { margin-bottom:20px; }
   .rag-results-label { font-size:12px; color:rgba(239,230,214,0.5); margin-bottom:8px; }
   .rag-result { padding:14px 16px; background:rgba(239,230,214,0.03); border:1px solid rgba(239,230,214,0.06); border-radius:12px; margin-bottom:8px; transition:border-color 0.2s; }
@@ -1834,7 +1830,7 @@
   .page-tabs { display:inline-flex; justify-content:center; gap:4px; margin:6px auto 0; position:relative; z-index:2; background:rgba(239,230,214,0.04); border-radius:12px; padding:4px; border:1px solid rgba(239,230,214,0.06); }
   .page-tab { padding:7px 18px; background:none; border:1px solid transparent; color:rgba(239,230,214,0.5); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; border-radius:10px; display:inline-flex; align-items:center; gap:6px; min-height:36px; }
   .page-tab:hover { color:#B6AFA4; }
-  .page-tab.active { color:var(--accent); background:rgba(141,189,121,0.1); border:1px solid rgba(141,189,121,0.2); }
+  .page-tab.active { color:var(--ui-text); background:rgba(141,189,121,0.1); border:1px solid rgba(141,189,121,0.2); }
   .page-tab svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   .page-view { display:none; }
   .page-view.active { display:block; }
@@ -1946,6 +1942,7 @@
   .mon-context-menu button.danger { color:#D0563F; }
   .mon-context-menu button.danger:hover { background:rgba(216,98,75,0.1); }
   .mon-context-menu hr { border:none; border-top:1px solid rgba(239,230,214,0.06); margin:4px 0; }
+  .mon-context-menu .ask { width:auto; max-width:260px; margin:0; padding:6px 14px 10px; }
   .mon-drag-hint-dismiss { background:none; border:1px solid rgba(239,230,214,0.1); border-radius:6px; color:rgba(239,230,214,0.5); font-size:11px; padding:3px 10px; cursor:pointer; margin-left:8px; font-family:inherit; }
   .mon-drag-hint-dismiss:hover { color:#B6AFA4; border-color:rgba(239,230,214,0.2); }
   .mon-drop-target { outline: 2px dashed rgba(208,86,63,0.3); outline-offset: -4px; background: rgba(208,86,63,0.03) !important; transition: all 0.2s; }
@@ -2069,8 +2066,7 @@
   .bridge-cta-node svg { width:64px; height:64px; stroke:rgba(208,166,82,0.85); color:rgba(208,166,82,0.85); fill:none; filter:drop-shadow(0 0 12px rgba(208,166,82,0.2)); }
   .bridge-cta h3 { font-size:17px; font-weight:600; color:#EFE6D6; margin:0; letter-spacing:-0.03em; position:relative; }
   .bridge-cta p { font-size:12.5px; color:rgba(239,230,214,0.5); margin:0; max-width:240px; line-height:1.6; position:relative; }
-  .bridge-cta-dl { display:inline-flex; align-items:center; gap:8px; padding:11px 24px; background:rgba(208,166,82,0.12); border:1px solid rgba(208,166,82,0.25); border-radius:12px; color:#D0A652; font-size:13px; font-weight:600; font-family:inherit; text-decoration:none; cursor:pointer; transition:all 0.3s cubic-bezier(0.16,1,0.3,1); position:relative; letter-spacing:-0.01em; }
-  .bridge-cta-dl:hover { background:rgba(208,166,82,0.2); border-color:rgba(208,166,82,0.4); transform:translateY(-2px); box-shadow:0 8px 24px rgba(208,166,82,0.12); }
+  .bridge-cta-dl { margin-bottom:4px; }
   .bridge-cta-dl svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.5; }
   .bridge-cta-flow { display:flex; align-items:center; gap:0; position:relative; }
   .bridge-cta-step { font-size:11px; color:rgba(239,230,214,0.5); display:flex; align-items:center; gap:5px; }
@@ -2649,7 +2645,7 @@
               <span class="mon-title-line">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
               Local computer
-                <span class="mon-info" data-tip="The Mac whose files and apps Closedhand can use with your permission. Access is built into the Closedhand Mac app; if you run Closedhand with Docker, use the separate Bridge app.&#10;&#10;Drag a file across to the sandbox computer to hand Closedhand its own copy to work on, and drag the result back when it is done.">i</span>
+                <span class="mon-info" data-tip="The Mac whose files and apps Closedhand can use with your permission. It is built into Closedhand for Mac. With Docker, add Closedhand Bridge to the Mac.&#10;&#10;Drag a file across to the sandbox computer to hand Closedhand its own copy to work on, and drag the result back when it is done.">i</span>
               </span>
               <span class="mon-subtitle">
               <span class="mon-status off" id="monLocalStatus"></span>
@@ -2868,6 +2864,7 @@
 <!-- Three.js: Oil-slick blob + starfield -->
 <script src="/speech-playback.js?v=2.0.19"></script>
 <script src="/dictation.js?v=7"></script>
+<script src="/ask.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -3691,7 +3688,7 @@
       document.body.removeChild(dl);
     });
   }
-  if (isWindows && bridgeCtaLabel) bridgeCtaLabel.textContent = 'Bridge is available for Mac only';
+  if (isWindows && bridgeCtaLabel) bridgeCtaLabel.textContent = 'Closedhand Bridge is for Mac only';
   if (isMobile && bridgeCta) {
     // Replace entire bridge pill wrapper with separate mobile layout
     var wrapper = bridgeCta.closest('.bridge-pill-wrap');
@@ -3700,9 +3697,9 @@
         '<div style="margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px;width:80%;max-width:320px;">' +
           '<a href="#" onclick="event.preventDefault();document.getElementById(\'bridgePairModal\').style.display=\'flex\';" id="bridgeConnectPill" style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(239,230,214,0.08);border:1px solid rgba(239,230,214,0.15);border-radius:12px;color:#B6AFA4;text-decoration:none;font-size:13px;width:100%;justify-content:center;">' +
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
-            '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.5);"> Enter your pairing code</span></span>' +
+            '<span class="bridge-cta-text"><strong id="bridgeConnectLabel" style="font-size:14px;">Connect Closedhand Bridge</strong><span id="bridgeConnectSub" style="font-size:12px;color:rgba(239,230,214,0.5);"> Enter your pairing code</span></span>' +
           '</a>' +
-          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open Closedhand on your Mac to download Bridge<br>and choose which Mac features Closedhand can use.</p>' +
+          '<p style="font-size:12px;color:rgba(239,230,214,0.5);text-align:center;line-height:1.4;margin:0;">Open this page on your Mac to download Closedhand Bridge<br>and choose which Mac features Closedhand can use.</p>' +
         '</div>';
     }
   }
@@ -4750,20 +4747,16 @@
     return out;
   }
 
-  window.deleteThread = function(threadId, btn) {
-    var item = btn ? btn.closest('.activity-item') : null;
-    if (!item) return;
-    // Inline confirmation: replace content with confirm/cancel buttons
-    var original = item.innerHTML;
-    // Two different intents share this X. Hide is the tidy-up: the thread
-    // stops being listed but Closedhand keeps everything it learned. Delete
-    // is the promise: gone from the list, gone from memory.
-    item.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;color:#B6AFA4;">' +
-      '<button onclick="event.stopPropagation();archiveThread(\'' + threadId + '\',this)" title="Put away but kept. Closedhand remembers it, and you can restore it from Archived below." style="padding:2px 10px;background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.16);color:#EFE6D6;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Archive</button>' +
-      '<button onclick="event.stopPropagation();confirmDeleteThread(\'' + threadId + '\',this)" title="Erase this conversation and everything Closedhand remembers from it." style="padding:2px 10px;background:#D0563F;color:#EFE6D6;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Delete forever</button>' +
-      '<button onclick="event.stopPropagation();cancelDeleteThread(this)" style="padding:2px 10px;background:transparent;border:1px solid rgba(239,230,214,0.28);color:#B6AFA4;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;">Cancel</button></div>';
-    item._originalHTML = original;
-  }
+  // Two different intents share this X. Archive is the tidy-up: the thread
+  // stops being listed but Closedhand keeps everything it learned. Delete is
+  // the promise: gone from the list, gone from memory.
+  window.deleteThread = async function(threadId, btn) {
+    if (!btn) return;
+    var answer = await askFirst(btn, { text: 'Archive keeps this conversation. Delete forever erases it and everything Closedhand learned from it.', yes: 'Delete forever', other: 'Archive' });
+    if (!answer) return;
+    if (answer.other) archiveThread(threadId, btn);
+    else confirmDeleteThread(threadId, btn);
+  };
 
   // A collapsed "Archived (n)" row under the live threads. Restore is the only
   // action: an archived thread is kept, not gone, and this is where that
@@ -4826,13 +4819,6 @@
     }).catch(function() {
       if (item) { item.style.opacity = '1'; item.style.pointerEvents = ''; }
     });
-  }
-
-  window.cancelDeleteThread = function(btn) {
-    if (!btn || typeof btn.closest !== 'function') { loadActivityFeed(); return; }
-    var item = btn.closest('.activity-item');
-    if (item && item._originalHTML) { item.innerHTML = item._originalHTML; }
-    else { loadActivityFeed(); }
   };
 
   // Sidebar resize drag
@@ -5506,13 +5492,22 @@ setInterval(pollWorkerStatus, 8000);
 
 function winBridgeSoon(e) {
   if (e) e.preventDefault();
-  var t = document.createElement('div');
-  t.textContent = 'Bridge is available for Mac only.';
-  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);color:#EFE6D6;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;';
-  document.body.appendChild(t);
-  setTimeout(function(){ t.remove(); }, 2200);
+  chatNotice('Closedhand Bridge is for Mac only');
 }
 window.winBridgeSoon = winBridgeSoon;
+
+// A short line at the bottom of the page for something that went wrong or a
+// note that needs no answer, instead of a browser pop-up.
+function chatNotice(text, isError) {
+  var t = document.createElement('div');
+  t.setAttribute('role', 'status');
+  t.textContent = text;
+  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(239,230,214,0.1);border:1px solid rgba(239,230,214,0.15);color:#EFE6D6;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;';
+  if (isError) t.style.color = '#D8624B';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3500);
+}
+window.chatNotice = chatNotice;
 
 // Installation identity comes from Closedhand, not the viewing device.
 async function readMacAccessStatus() {
@@ -5525,14 +5520,14 @@ async function readMacAccessStatus() {
   } catch (e) { return { status: 'unavailable', desktop: window._macDesktop === true }; }
 }
 
-// Closedhand already runs on this computer, so "Offline" here read as a
-// fault. Bridge is a separate, optional thing: it opens a Mac's own files and
-// apps to Closedhand, on this Mac or another.
-var BRIDGE_PITCH = 'Closedhand already runs on this computer. Bridge lets it open your Mac\u2019s own files and apps too, on this Mac or another one.';
+// Offline here read as a fault, so the prompt says why Docker needs Bridge:
+// it is a separate, optional app that opens a Mac's own files and apps to
+// Closedhand, on the Mac running it or another.
+var BRIDGE_PITCH = 'Bridge gives Closedhand access to the Mac it runs on, only to the files and apps you allow.';
 function macAccessHelp(data) {
   if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when Closedhand is reachable.' };
   if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'Closedhand’s' : 'Closedhand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };
-  if (data.desktop) return { title: 'Mac access is not connected', text: 'The Closedhand app connects to its Mac automatically. Check “This Mac” in the fist menu on the Mac running Closedhand.' };
+  if (data.desktop) return { title: 'Mac access is not connected', text: 'Closedhand for Mac connects to its Mac by itself. Check “This Mac” in the fist menu on the Mac running Closedhand.' };
   if (data.status !== 'not_paired') return { title: 'Mac is reconnecting', text: 'Keep Closedhand Bridge open on the connected Mac. It will reconnect automatically.' };
   return { title: 'Connect a Mac', text: BRIDGE_PITCH, setup: true };
 }
@@ -5564,16 +5559,16 @@ function checkBridgeStatus() {
         card.dataset.desktop = 'true';
       }
       var req = document.querySelector('.feat-table th[data-row="bridge"]');
-      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Included in the Closedhand app. Choose what to allow from the fist in the menu bar on the Mac running Closedhand.'; }
+      if (req) { req.textContent = 'Mac access'; req.nextElementSibling.textContent = 'Built into Closedhand for Mac. Choose what to allow from the fist in the menu bar on the Mac running Closedhand.'; }
     }
     if (cardAction) {
       var on = data.status === 'connected';
       cardAction.dataset.connected = on ? 'true' : '';
-      if (cardLabel) cardLabel.textContent = on ? (data.desktop ? 'Connected' : 'Bridge is connected') : data.desktop ? 'Check Mac access' : data.status === 'reconnecting' ? 'Reconnecting' : data.status === 'unavailable' ? 'Check Mac access' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download Bridge for Mac');
+      if (cardLabel) cardLabel.textContent = on ? 'Connected' : data.desktop ? 'Check Mac access' : data.status === 'reconnecting' ? 'Reconnecting' : data.status === 'unavailable' ? 'Check Mac access' : (cardAction.dataset.macOnly ? 'Available for Mac only' : 'Download Bridge for Mac');
     }
     if (data.status === 'connected') {
       if (pill) pill.dataset.connected = 'true';
-      if (label) label.textContent = data.desktop ? 'Mac connected' : 'Bridge connected';
+      if (label) label.textContent = 'Mac connected';
       if (label) label.style.color = '#8DBD79';
       var icon = document.getElementById('bridgeConnectIcon');
       if (icon) icon.style.stroke = '#8DBD79';
@@ -5598,7 +5593,7 @@ function submitBridgePair() {
   var code = document.getElementById('bridgePairInput').value.trim().toUpperCase();
   var errEl = document.getElementById('bridgePairError');
   if (code.length < 4) {
-    errEl.textContent = 'Enter the full code from Bridge';
+    errEl.textContent = 'Enter the full code from Closedhand Bridge';
     errEl.style.display = 'block';
     return;
   }
@@ -6086,7 +6081,7 @@ async function ragLoadSources() {
         + '<div class="rag-source-actions">'
         + '<span class="rag-status ' + statusClass + '">' + s.status + '</span>'
         + '<button class="rag-source-btn" onclick="ragReindex(\'' + s.id + '\')">Re-index</button>'
-        + '<button class="rag-source-btn danger" onclick="ragDeleteSource(\'' + s.id + '\')">&times;</button>'
+        + '<button class="rag-source-btn danger" onclick="ragDeleteSource(\'' + s.id + '\', this)" aria-label="Remove this source">&times;</button>'
         + '</div></div>';
     }
     listEl.innerHTML = html;
@@ -6106,7 +6101,8 @@ async function ragReindex(id) {
   try { await fetch('/api/rag/sources/' + id + '/reindex', { method: 'POST' }); ragLoadSources(); ragStartPolling(); } catch (e) {}
 }
 
-async function ragDeleteSource(id) {
+async function ragDeleteSource(id, btn) {
+  if (btn && !(await askFirst(btn, { text: 'Remove this source? File Search forgets what it read there. The files themselves are untouched.', yes: 'Remove' }))) return;
   try { await fetch('/api/rag/sources/' + id, { method: 'DELETE' }); ragLoadSources(); } catch (e) {}
 }
 
@@ -6454,7 +6450,7 @@ async function ragRetrieveDoc(docId, docName) {
     });
     if (!resp.ok) {
       var err = await resp.json().catch(function() { return { error: 'Download failed' }; });
-      alert(err.error || 'Download failed');
+      chatNotice(err.error || 'Could not download it', true);
       return;
     }
     var blob = await resp.blob();
@@ -6466,7 +6462,7 @@ async function ragRetrieveDoc(docId, docName) {
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
   } catch (e) {
-    alert('Download failed: ' + e.message);
+    chatNotice('Could not download it. Try again.', true);
   }
 }
 
@@ -6547,6 +6543,16 @@ function escapeHtml(s) {
 // script, then the whole escaped for the attribute, so no file or folder name
 // can end either one early. Names come from files anyone can make, a
 // downloaded file or an email attachment, so a name is never trusted.
+// One shell word, whatever the name holds: a file name can carry quotes,
+// $( ) or backticks, and inside double quotes those still run.
+function shq(s) {
+  return "'" + String(s == null ? '' : s).replace(/'/g, "'\\''") + "'";
+}
+function macPath(p) {
+  var rest = String(p == null ? '' : p).replace(/^~\/?/, '');
+  if (rest === String(p)) return shq(p);
+  return rest ? '"$HOME"/' + shq(rest) : '"$HOME"';
+}
 function jsq(s) {
   return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -6786,7 +6792,7 @@ function jsq(s) {
       var isMac=/Macintosh|Mac OS X/.test(navigator.userAgent)&&!/iPhone|iPad|iPod/.test(navigator.userAgent);
       var dlUrl=isMac?'/download/ClosedHandBridge.dmg':'#';
       var dlAttrs=isMac?' download':' onclick="winBridgeSoon(event)"';
-      var dlLabel=isMac?'Download Bridge for Mac':'Bridge is available for Mac only';
+      var dlLabel=isMac?'Download Closedhand Bridge':'Closedhand Bridge is for Mac only';
       el.innerHTML='<div class="bridge-cta">'
         // One stroke, one colour: the box Closedhand lives in on the left, this
         // computer on the right, a dashed arc between them for the bridge.
@@ -7001,11 +7007,11 @@ function jsq(s) {
         if (paths[i] === folderPath || paths[i] === dest) continue;
         if (side === 'cloud') {
           await fetch('/api/sandbox/exec', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command: 'mv "' + paths[i].replace(/"/g, '\\"') + '" "' + dest.replace(/"/g, '\\"') + '"' }) });
+            body: JSON.stringify({ command: 'mv ' + shq(paths[i]) + ' ' + shq(dest) }) });
         } else {
           // Local-to-local folder move via Bridge
           await fetch('/api/bridge/request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: window._userId, action: 'shell.run', params: { command: 'mv "' + paths[i].replace(/"/g, '\\"') + '" "' + dest.replace(/"/g, '\\"') + '"' }, secret: '' }) }).catch(function(){});
+            body: JSON.stringify({ userId: window._userId, action: 'shell.run', params: { command: 'mv ' + macPath(paths[i]) + ' ' + macPath(dest) }, secret: '' }) }).catch(function(){});
         }
       }
       if (side === 'cloud') monLoadCloud(); else monLoadLocal();
@@ -7049,11 +7055,11 @@ function jsq(s) {
     } else {
       if(!isDir){
         html+='<button onclick="monDownload(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button>';
-        html+='<button onclick="monCopyLocal(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy to Local</button>';
+        html+='<button onclick="monCopyLocal(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy to the local computer</button>';
         html+='<hr>';
       }
-      html+='<button onclick="monRename(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Rename</button>';
-      html+='<button class="danger" onclick="monDelete(\''+esc+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Delete</button>';
+      html+='<button onclick="monRename(\''+esc+'\',\''+side+'\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Rename</button>';
+      html+='<button class="danger" onclick="event.stopPropagation();monDelete(\''+esc+'\',this,'+(isDir?'true':'false')+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Delete</button>';
     }
     m.innerHTML=html;document.body.appendChild(m);_monCtx=m;
     // Keep menu in viewport
@@ -7075,10 +7081,28 @@ function jsq(s) {
     document.body.appendChild(m); _monCtx = m; setTimeout(function(){ document.addEventListener('click', monCloseCtx, {once:true}); }, 0);
   });
   function monCloseCtx(){if(_monCtx){_monCtx.remove();_monCtx=null;}}
-  function monLocalOpen(p){monCloseCtx();fetch('/api/bridge/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:window._userId,action:'shell.run',params:{command:'open "'+p+'"'},secret:''})}).catch(function(){});}
-  function monCopyLocal(p){monCloseCtx();var name=p.split('/').pop();fetch('/api/sandbox/download?path='+encodeURIComponent(p)).then(function(r){return r.blob();}).then(function(blob){var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);if(typeof Delight!=='undefined')Delight.toast('Downloaded '+name,'success');}).catch(function(){if(typeof Delight!=='undefined')Delight.toast('Download failed','error');});}
+  function monLocalOpen(p){monCloseCtx();fetch('/api/bridge/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:window._userId,action:'shell.run',params:{command:'open '+macPath(p)},secret:''})}).catch(function(){});}
+  async function monCopyLocal(p){
+    monCloseCtx();
+    var name=p.split('/').pop();
+    var state=await readMacAccessStatus();
+    if(state.status!=='connected'){chatNotice('Connect a Mac on the Local computer side first.',true);return;}
+    var folder=_monLocalPath.replace(/\/$/,'')||'~';
+    try{
+      var r=await fetch('/api/sandbox/copy-to-local',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourcePath:p,destPath:folder+'/'+name})});
+      var d=await r.json().catch(function(){return {};});
+      if(!r.ok){
+        // Writing on the Mac is one of the things its owner turns on.
+        if(/Unrestricted Mode/i.test(d.error||''))chatNotice('To let Closedhand save files on your Mac, turn on Computer Control in '+(state.desktop?'Closedhand\u2019s':'Closedhand Bridge\u2019s')+' menu.',true);
+        else chatNotice('Could not copy '+name+'. Try again.',true);
+        return;
+      }
+      chatNotice('Copied '+name+' to '+(folder==='~'?'your home folder':folder.split('/').pop()));
+      monLoadLocal();
+    }catch(e){chatNotice('Could not copy '+name+'. Try again.',true);}
+  }
   function monDownload(p){monCloseCtx();window.open('/api/sandbox/download?path='+encodeURIComponent(p),'_blank');}
-  async function monDelete(p){monCloseCtx();if(!confirm('Delete this file?'))return;try{await fetch('/api/sandbox/files?path='+encodeURIComponent(p),{method:'DELETE'});
+  async function monDelete(p,where,isDir){if(where&&!(await askFirst(where,{text:isDir?'Delete this folder and everything in it for good?':'Delete this file for good?',yes:'Delete'})))return;monCloseCtx();try{await fetch('/api/sandbox/files?path='+encodeURIComponent(p),{method:'DELETE'});
     // Clear any sync records pointing to this cloud path
     var name=p.split('/').pop();
     var toRemove=[];
@@ -7088,7 +7112,9 @@ function jsq(s) {
       fetch('/api/sync/unmark',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({localPath:toRemove[i]})}).catch(function(){});
     }
     monLoadCloud();if(toRemove.length)monLoadLocal();}catch(e){}}
-  async function monRename(p){monCloseCtx();var old=p.split('/').pop();var n=prompt('New name:',old);if(!n||n===old)return;var dir=p.substring(0,p.length-old.length);try{await fetch('/api/sandbox/rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPath:p,newPath:dir+n})});monLoadCloud();}catch(e){}}
+  // Renaming from the menu edits the name where it is, as a slow second
+  // click does.
+  function monRename(p,side){monCloseCtx();var screen=document.getElementById(side==='local'?'monLocalScreen':'monCloudScreen');var tile=null;if(screen)screen.querySelectorAll('[data-path]').forEach(function(el){if(!tile&&el.getAttribute('data-path')===p&&(el.classList.contains('mon-tile')||el.classList.contains('mon-row')))tile=el;});if(tile)monInlineRename(tile,p,side||'cloud');}
 
   // Inline rename (Finder-style slow double-click)
   function monInlineRename(tile, path, side) {
@@ -7127,10 +7153,8 @@ function jsq(s) {
           body: JSON.stringify({ oldPath: path, newPath: newPath }) }).then(function() { monLoadCloud(); });
       } else {
         // Local rename via Bridge shell.run
-        var cleanOld = path.replace(/^~\/?/, '').replace(/'/g, "'\\''" );
-        var cleanNew = newPath.replace(/^~\/?/, '').replace(/'/g, "'\\''");
         fetch('/api/bridge/request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: window._userId, action: 'shell.run', params: { command: 'mv "$HOME/' + cleanOld + '" "$HOME/' + cleanNew + '"' }, secret: '' })
+          body: JSON.stringify({ userId: window._userId, action: 'shell.run', params: { command: 'mv ' + macPath(path) + ' ' + macPath(newPath) }, secret: '' })
         }).then(function() { monLoadLocal(); });
       }
     }
@@ -7575,18 +7599,21 @@ function jsq(s) {
   // Expose to global scope for inline onclick handlers
   // New Folder
   async function monNewFolder() {
-    var name = prompt('Folder name:');
-    if (!name || !name.trim()) return;
-    name = name.trim();
-    var folderPath = _monCloudPath.replace(/\/$/, '') + '/' + name;
-    // Create folder via mkdir and also touch a .keep so it shows in listing
+    monCloseCtx();
+    var dir = _monCloudPath.replace(/\/$/, '');
+    var taken = {};
+    document.querySelectorAll('#monCloudScreen [data-name]').forEach(function(el) { taken[el.getAttribute('data-name')] = true; });
+    var name = 'New folder';
+    for (var i = 2; taken[name]; i++) name = 'New folder ' + i;
+    var folderPath = dir + '/' + name;
     try {
       await fetch('/api/sandbox/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'mkdir -p "' + folderPath.replace(/"/g, '\\"') + '"' })
+        body: JSON.stringify({ command: 'mkdir -p ' + shq(folderPath) })
       });
-      monLoadCloud();
+      await monLoadCloud();
+      monRename(folderPath, 'cloud');
     } catch (e) {}
   }
 
@@ -7972,10 +7999,9 @@ function jsq(s) {
       var cloudSelected = document.querySelectorAll('#monCloudScreen .selected');
       if (cloudSelected.length > 0) {
         e.preventDefault();
-        cloudSelected.forEach(function(el) {
-          var path = el.getAttribute('data-path');
-          if (path) monDelete(path);
-        });
+        var paths = Array.prototype.map.call(cloudSelected, function(el) { return el.getAttribute('data-path'); }).filter(Boolean);
+        askFirst(cloudSelected[0], { text: paths.length === 1 ? 'Delete this file for good?' : 'Delete these ' + paths.length + ' files for good?', yes: 'Delete' })
+          .then(function(ok) { if (ok) paths.forEach(function(path) { monDelete(path); }); });
       }
       // Don't delete local files via keyboard (too dangerous without Bridge file delete)
     }

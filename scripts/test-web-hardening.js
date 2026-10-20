@@ -226,3 +226,30 @@ test("secrets are compared in constant time, and records are read by owner as we
   assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(String\(code\)\)\) return res\.status\(400\)/);
   assert.match(web, /if \(!BRIDGE_PAIR_CODE\.test\(offered\) \|\| bridgeConnections\.has\(offered\) \|\| waiting >= 50\)/);
 });
+
+test('a file name never runs as a command, in the sandbox or on the Mac', () => {
+  const page = read('webapp/views/index.html');
+  const grab = (name) => { const a = page.indexOf('function ' + name + '('); return page.slice(a, page.indexOf('\n}\n', a) + 2); };
+  const { shq, macPath } = new Function(grab('shq') + grab('macPath') + 'return { shq, macPath };')();
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'names-'));
+  const marker = path.join(home, 'ran');
+  for (const name of ["it's here.txt", 'a $(touch ' + marker + ').txt', 'b `touch ' + marker + '`.txt', 'c "quoted" $HOME.txt']) {
+    const out = cp.execFileSync('/bin/sh', ['-c', 'printf %s ' + shq(name)], { encoding: 'utf8' });
+    assert.equal(out, name, 'shq keeps the name as one word: ' + name);
+    const mac = cp.execFileSync('/bin/sh', ['-c', 'printf %s ' + macPath('~/' + name)], { encoding: 'utf8', env: { ...process.env, HOME: home } });
+    assert.equal(mac, home + '/' + name, 'macPath keeps ~ as home and the rest as one word');
+  }
+  assert.equal(fs.existsSync(marker), false, 'nothing in a name ran');
+  assert.equal(cp.execFileSync('/bin/sh', ['-c', 'printf %s ' + macPath('~')], { encoding: 'utf8', env: { ...process.env, HOME: home } }), home);
+  fs.rmSync(home, { recursive: true, force: true });
+
+  // Every place the web chat, the server and File Search build a command from a name.
+  assert.doesNotMatch(page, /'mv "' \+|'open "'\+|"\$HOME\/' \+ clean|mkdir -p "' \+/, 'web chat commands quote names');
+  assert.match(page, /command: 'mv ' \+ shq\(paths\[i\]\) \+ ' ' \+ shq\(dest\)/);
+  assert.match(page, /params: \{ command: 'mv ' \+ macPath\(paths\[i\]\) \+ ' ' \+ macPath\(dest\) \}/);
+  assert.match(page, /params:\{command:'open '\+macPath\(p\)\}/);
+  assert.match(page, /command: 'mkdir -p ' \+ shq\(folderPath\)/);
+  assert.match(server, /code: `mv \$\{shq\(oldPath\)\} \$\{shq\(newPath\)\}`/);
+  assert.doesNotMatch(server, /JSON\.stringify\((old|new)Path\)/);
+  assert.match(read('webapp/rag-processor.js'), /const lsPath = rel \? `"\$HOME\/\$\(printf %s \$\{Buffer\.from\(rel, "utf8"\)\.toString\("base64"\)\} \| base64 --decode\)"` : `"\$HOME"`;/);
+});

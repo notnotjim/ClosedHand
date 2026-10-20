@@ -19,7 +19,7 @@ function page() {
       execCommand: command => { assert.equal(command, "copy"); return fallback; },
     },
     escHtml: text => String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-    clearTimeout() {}, setTimeout: () => { state.polls++; }, confirm: () => true,
+    clearTimeout() {}, setTimeout: () => { state.polls++; }, askFirst: async () => ({ checked: false }),
     polls: 0,
   });
   vm.runInContext("var _phone, _phonePoll;\n" + region(html, "    async function loadPhoneAccess()", "    // === Usage tab"), state);
@@ -92,10 +92,10 @@ test("pausing and resuming preserve the address and managed mode; cancelled paus
     assert.equal(body.mode, "managed");
     return { ok: true, json: async () => ({ ...body, state: body.enabled ? "starting" : "off", permanent: true }) };
   };
-  state.confirm = () => false;
+  state.askFirst = async () => false;
   await state.togglePhoneAccess();
   assert.equal(calls, 0);
-  state.confirm = () => true;
+  state.askFirst = async () => ({ checked: false });
   await state.togglePhoneAccess();
   assert.equal(calls, 1);
   assert.equal(el("phone-btn").textContent, "Resume link");

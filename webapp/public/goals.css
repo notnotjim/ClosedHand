@@ -2,8 +2,6 @@
    progress. Everything else opens below it. */
 .goals-intro { color: rgba(239,230,214,0.6); font-size: 14px; line-height: 1.55; margin: 0 0 16px; max-width: 70ch; }
 .goals-head { display: flex; justify-content: flex-end; margin: 0 0 12px; }
-.goals-new, #goal-new button[type=submit] { padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(208,86,63,0.45); background: rgba(208,86,63,0.08); color: #E59B89; font: inherit; font-size: 14px; cursor: pointer; }
-.goals-new:hover { background: rgba(208,86,63,0.16); }
 #goal-new { display: grid; gap: 12px; padding: 16px; margin: 0 0 16px; border: 1px solid rgba(239,230,214,0.16); border-radius: 12px; background: #1A1817; }
 #goal-new[hidden] { display: none; }
 #goal-new input[type=text] { width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 8px; border: 1px solid rgba(239,230,214,0.25); background: #100E0D; color: #EFE6D6; font: inherit; font-size: 15px; }

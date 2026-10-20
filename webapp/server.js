@@ -8571,7 +8571,7 @@ app.post("/api/sandbox/rename", async (req, res) => {
     const { oldPath, newPath } = req.body;
     if (!oldPath || !newPath) return res.status(400).json({ error: "oldPath and newPath required" });
     // Use exec to rename since there's no dedicated rename endpoint
-    await sandboxFetch(info, "POST", "/exec", { language: "bash", code: "mv " + JSON.stringify(oldPath) + " " + JSON.stringify(newPath) });
+    await sandboxFetch(info, "POST", "/exec", { language: "bash", code: `mv ${shq(oldPath)} ${shq(newPath)}` });
     // If this file is synced, rename the local copy too and update the sync record
     try {
       const { data: syncNotes } = await supabase.from("facts").select("key, value").eq("user_id", userId).like("key", "_sync_%");

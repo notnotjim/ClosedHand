@@ -20,7 +20,7 @@ test('a skill whose service is not connected says what it needs', () => {
 });
 
 test('the Computers tab does not call this computer offline', () => {
-  assert.match(page, /var BRIDGE_PITCH = 'Closedhand already runs on this computer\. Bridge lets it open your Mac\\u2019s own files and apps too, on this Mac or another one\.';/);
+  assert.match(page, /var BRIDGE_PITCH = 'Bridge gives Closedhand access to the Mac it runs on, only to the files and apps you allow\.';/);
   assert.match(page, /<span id="monLocalStatusText">Not connected<\/span>/);
   assert.doesNotMatch(page, /Mac running Docker/);
 });
@@ -65,4 +65,60 @@ test('goals, file search, progress lines, today and the Google card', () => {
   assert.equal(tool('web_fetch').activityDescription({ url: 'https://www.example.org/a' }), 'Reading www.example.org');
   assert.match(server, /const todayStart = startOfTodayIn\(/);
   assert.match(dash, /const listsAccounts = c\.service === "google" \|\| c\.service === "microsoft";/);
+});
+
+test('every page asks the same way before something it cannot undo, never with a browser pop-up', () => {
+  const views = fs.readdirSync(path.join(root, 'webapp/views')).map((f) => 'webapp/views/' + f);
+  const scripts = fs.readdirSync(path.join(root, 'webapp/public')).filter((f) => f.endsWith('.js')).map((f) => 'webapp/public/' + f);
+  for (const file of views.concat(scripts)) {
+    assert.doesNotMatch(read(file).replace(/^\s*\/\/.*$/gm, ''), /(^|[^.\w])(alert|confirm|prompt)\(/m, file + ' uses a browser pop-up');
+  }
+  for (const view of ['dashboard', 'index', 'setup']) assert.match(read('webapp/views/' + view + '.html'), /<script src="\/ask\.js"><\/script>/, view + ' loads the shared question');
+  assert.doesNotMatch(dash, /id="disconnect-modal"|askDisconnect|agent-del-confirm|dataset\.confirm/, 'no second kind of question');
+
+  // The question takes the button's place, says Cancel, and puts the button back.
+  const made = [];
+  const node = (tag) => {
+    const el = { tag, children: [], style: {}, className: '', textContent: '', listeners: {}, parentElement: null,
+      setAttribute() {}, appendChild(c) { this.children.push(c); c.parentElement = this; return c; },
+      append(...cs) { cs.forEach((c) => this.appendChild(typeof c === 'string' ? { textContent: c } : c)); },
+      addEventListener(type, fn) { this.listeners[type] = fn; }, focus() {},
+      replaceWith(other) { const p = this.parentElement; p.children[p.children.indexOf(this)] = other; other.parentElement = p; } };
+    made.push(el); return el;
+  };
+  const row = node('div'), button = node('button');
+  row.appendChild(button);
+  const ctx = { window: {}, document: { createElement: node, createTextNode: (t) => ({ textContent: t }) }, getComputedStyle: () => ({ display: 'flex' }) };
+  vm.runInNewContext(read('webapp/public/ask.js'), ctx);
+  const ask = (opts) => { const p = ctx.window.askFirst(button, opts); return { p, box: row.children[0] }; };
+  return (async () => {
+    let { p, box } = ask({ text: 'Delete this file for good?', yes: 'Delete' });
+    assert.equal(box.className, 'ask');
+    assert.equal(row.style.flexWrap, 'wrap', 'the question takes a line of its own');
+    const buttons = box.children.find((c) => c.className === 'ask-actions').children;
+    assert.deepEqual(buttons.map((b) => b.textContent), ['Delete', 'Cancel']);
+    buttons[1].listeners.click();
+    assert.equal(await p, false);
+    assert.equal(row.children[0], button, 'Cancel puts the button back');
+    ({ p, box } = ask({ text: 'Disconnect?', yes: 'Disconnect', check: 'Also delete what it kept' }));
+    box.children.find((c) => c.className === 'ask-check').children[0].checked = true;
+    box.children.find((c) => c.className === 'ask-actions').children[0].listeners.click();
+    assert.deepEqual({ ...(await p) }, { checked: true });
+    ({ p, box } = ask({ text: 'Archive or delete?', yes: 'Delete forever', other: 'Archive' }));
+    const three = box.children.find((c) => c.className === 'ask-actions').children;
+    assert.deepEqual(three.map((b) => b.textContent), ['Delete forever', 'Archive', 'Cancel']);
+    three[1].listeners.click();
+    assert.deepEqual({ ...(await p) }, { other: true });
+  })();
+});
+
+test('Copy to the local computer puts the file in the folder open on that side, as a drag does', () => {
+  assert.match(page, /<\/svg>Copy to the local computer<\/button>/);
+  assert.doesNotMatch(page, />Copy to Local</);
+  const fn = page.slice(page.indexOf('  async function monCopyLocal(p){'), page.indexOf('\n  }', page.indexOf('  async function monCopyLocal(p){')));
+  assert.match(fn, /fetch\('\/api\/sandbox\/copy-to-local',\{method:'POST',headers:\{'Content-Type':'application\/json'\},body:JSON\.stringify\(\{sourcePath:p,destPath:folder\+'\/'\+name\}\)\}\)/);
+  assert.match(fn, /var folder=_monLocalPath\.replace\(\/\\\/\$\/,''\)\|\|'~';/);
+  assert.match(fn, /if\(state\.status!=='connected'\)\{chatNotice\('Connect a Mac on the Local computer side first\.',true\);return;\}/);
+  assert.match(fn, /turn on Computer Control in /, 'says which switch lets it write on the Mac');
+  assert.doesNotMatch(fn, /createObjectURL|a\.download/, 'Download is its own menu item');
 });

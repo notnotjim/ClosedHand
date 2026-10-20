@@ -617,19 +617,6 @@
       font-family: inherit;
     }
 
-    .btn-modal-primary {
-      background: #EFE6D6;
-      color: #100E0D;
-    }
-
-    .btn-modal-primary:hover {
-      background: #EFE6D6;
-    }
-
-    .btn-modal-primary:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
 
     .btn-modal-secondary {
       background: rgba(239,230,214,0.1);
@@ -1536,9 +1523,6 @@
     .agent-card { cursor: pointer; }
     .agent-del { background: none; border: 1px solid rgba(239,230,214,0.16); color: #B6AFA4; cursor: pointer; font-size: 13px; padding: 3px 10px; border-radius: 6px; margin-left: 8px; transition: all 0.12s; }
     .agent-del:hover { color: #D8624B; border-color: rgba(239,230,214,0.4); }
-    .agent-del-confirm { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 12px; color: #B6AFA4; }
-    .agent-del-confirm .agent-del { margin-left: 0; }
-    .agent-del-confirm .agent-del-yes { color: #D8624B; border-color: rgba(216,98,75,0.45); }
     .agent-card .agent-detail { display: none; margin-top: 10px; border-top: 1px solid #1A1817; padding-top: 8px; }
     .agent-card.open .agent-detail { display: block; }
     @media (max-width: 600px) {
@@ -2318,7 +2302,7 @@
       <!-- Workers Tab Content -->
       <div class="tab-content" id="tab-automations">
         <div style="padding-top:16px;">
-          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Closedhand sends out agents when a job needs more than a quick answer.</p>
+          <p style="color:rgba(239,230,214,0.5);font-size:14px;margin:0 0 16px;line-height:1.5;">Everything on Closedhand's schedule, from what it's working on now to what's coming up.</p>
 
           <!-- Stats cards -->
           <div class="mc-metrics">
@@ -2509,7 +2493,7 @@
               <span id="files-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
               <div class="mc-subsection-label">Files</div>
               <span style="font-size:13px;color:rgba(239,230,214,0.6);" id="files-count-badge"></span>
-              <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles()" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
+              <button id="files-clear-all" onclick="event.stopPropagation();clearAllFiles(this)" title="Delete every file in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="files-body" style="display:none;">
               <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files Closedhand sent you, made by it or found in your email or Drive.</p>
@@ -2543,7 +2527,7 @@
 
               <div style="display:flex;gap:8px;">
                 <a id="dataset-export-link" href="#" style="border:1px solid rgba(239,230,214,0.16);border-radius:6px;padding:4px 10px;color:#D8624B;font-size:12px;text-decoration:none;">Download</a>
-                <button onclick="deleteCurrentDataset()" style="background:none;border:1px solid rgba(239,230,214,0.28);border-radius:6px;padding:4px 10px;color:#D0563F;font-size:12px;cursor:pointer;">Delete table</button>
+                <button onclick="deleteCurrentDataset(this)" style="background:none;border:1px solid rgba(239,230,214,0.28);border-radius:6px;padding:4px 10px;color:#D0563F;font-size:12px;cursor:pointer;">Delete table</button>
               </div>
             </div>
             <div id="dataset-table-wrap" style="overflow-x:auto;border:1px solid rgba(239,230,214,0.1);border-radius:8px;"></div>
@@ -2880,7 +2864,7 @@
             <div id="brain-panel-content" style="font-size:13px;color:#B6AFA4;line-height:1.6;white-space:pre-wrap;word-break:break-word;"></div>
             <div style="margin-top:12px;display:flex;gap:8px;">
               <button id="brain-panel-edit" onclick="editCurrentNote()" style="padding:6px 16px;background:#D0563F;color:#EFE6D6;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">Edit</button>
-              <button id="brain-panel-delete" onclick="deleteCurrentNote()" style="padding:6px 16px;background:transparent;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">Delete</button>
+              <button id="brain-panel-delete" onclick="deleteCurrentNote(this)" style="padding:6px 16px;background:transparent;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">Delete</button>
             </div>
           </div>
           <div id="brain-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(239,230,214,0.6);">
@@ -2894,7 +2878,7 @@
               <span id="uploads-disclosure" style="display:inline-flex;align-items:center;"><span class="chevron-down"></span></span>
               <div class="mc-subsection-label">Files you've sent</div>
               <span style="font-size:13px;color:rgba(239,230,214,0.6);" id="uploads-count-badge"></span>
-              <button id="uploads-clear-all" onclick="event.stopPropagation();clearAllUploads()" title="Delete every stored copy in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
+              <button id="uploads-clear-all" onclick="event.stopPropagation();clearAllUploads(this)" title="Delete every stored copy in this list" style="display:none;margin-left:auto;background:none;border:1px solid rgba(239,230,214,0.16);color:#B6AFA4;cursor:pointer;font-size:12px;padding:2px 10px;border-radius:6px;">&#128465; Clear all</button>
             </div>
             <div id="uploads-body" style="display:none;">
               <p style="font-size:13px;color:rgba(239,230,214,0.6);margin:0 0 8px;">Files you've sent Closedhand. Deleting one removes only Closedhand's copy.</p>
@@ -3237,7 +3221,7 @@
       if (params.get("connected")) {
         const key = params.get("connected");
         const svc = allServices[key];
-        showToast(`${svc?.name || (key === "google_extra" ? "Google account" : "Service")} connected.`);
+        showToast(`${svc?.name || (key === "google_extra" ? "Google account" : "Service")} connected`);
         window.history.replaceState({}, "", "/dashboard");
       }
       if (params.get("error")) {
@@ -3370,7 +3354,7 @@
         loadStatus();
       } else {
         const data = await res.json();
-        alert(data.error || "Something went wrong");
+        showToast(data.error || "Something went wrong", true);
       }
     }
 
@@ -3442,7 +3426,7 @@
         var res = await fetch('/api/bridge/status');
         var data = await res.json();
         if (!res.ok || data.status === 'unavailable') throw new Error('Could not check Mac access. Close this window and try again.');
-        document.getElementById('apple-modal-title').textContent = data.desktop ? 'Mac access' : 'Connect your Mac';
+        document.getElementById('apple-modal-title').textContent = data.desktop ? 'Mac access' : 'Connect a Mac';
         if (data.desktop) {
           document.getElementById('apple-step-desktop').style.display = 'block';
         } else if (data.status === 'connected' || data.status === 'reconnecting') {
@@ -3464,48 +3448,6 @@
     }
 
     // connectApple is now handled by the bridge pairing flow in the Apple modal
-
-    // One question, with the choice that matters on it: whether what was
-    // synced from the account goes too. Resolves { ok, purge }.
-    var _disconnectResolve = null;
-    var _purgeText = null;
-    function askDisconnect(title, body, purgeText) {
-      return new Promise(function(resolve) {
-        _disconnectResolve = resolve;
-        document.getElementById('disconnect-title').textContent = title;
-        document.getElementById('disconnect-body').textContent = body;
-        var purgeLabel = document.getElementById('disconnect-purge-text');
-        if (_purgeText === null) _purgeText = purgeLabel.textContent;
-        purgeLabel.textContent = purgeText || _purgeText;
-        document.getElementById('disconnect-purge').checked = false;
-        document.getElementById('disconnect-modal').classList.add('visible');
-      });
-    }
-    function answerDisconnect(ok) {
-      document.getElementById('disconnect-modal').classList.remove('visible');
-      var purge = document.getElementById('disconnect-purge').checked;
-      var r = _disconnectResolve; _disconnectResolve = null;
-      if (r) r({ ok: ok, purge: purge });
-    }
-
-    async function disconnect(service) {
-      var answer = await askDisconnect('Disconnect ' + service + '?', 'Closedhand will lose access to this service.');
-      if (!answer.ok) return;
-
-      const res = await fetch("/api/disconnect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service, purge: answer.purge }),
-      });
-
-      if (res.ok) {
-        showToast("Disconnected");
-        loadStatus();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Could not disconnect");
-      }
-    }
 
     // Capabilities per service — shown as permission pills in drawer
     const SERVICE_CAPS = {
@@ -3535,7 +3477,7 @@
     // An added account: Remove, and when its provider stopped accepting the
     // sign-in, a way back in first. Signing in as the same account renews it.
     function extraAccountActions(ex, exEmail, signInUrl) {
-      const remove = `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}')">Disconnect</button>`;
+      const remove = `<button class="conn-btn conn-btn-disconnect" style="flex-shrink:0;padding:2px 10px;font-size:11px;" onclick="event.stopPropagation();disconnectFromSettings('${ex.service}', '${exEmail}', false, this)">Disconnect</button>`;
       if (!ex.metadata?.reconnect_required) return remove;
       // On a line of their own under the email, so the email shows in full
       // and the person can tell which account stopped.
@@ -3572,7 +3514,7 @@
         + ["Balances", "Transactions", "Read-only"].map(p => `<span class="conn-perm granted">${p}</span>`).join("") + `</div>`;
       const when = (iso) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       html += `<div class="conn-date">${m.updated_at ? "Updated " + when(m.updated_at) + ". Closedhand checks a few times a day." : "Balances and transactions arrive a few minutes after connecting."}</div>`;
-      html += `<div class="conn-drawer-actions"><button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}')">Disconnect</button></div>`;
+      html += `<div class="conn-drawer-actions"><button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}', false, this)">Disconnect</button></div>`;
       return html;
     }
 
@@ -3683,9 +3625,9 @@
         actions.push(`<button class="conn-btn conn-btn-manage" onclick="event.stopPropagation();(window.top||window).location.href='/auth/${c.service}'">Manage permissions</button>`);
       }
       if (c.isSignup) {
-        actions.push(`<button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}', true)">Disconnect</button>`);
+        actions.push(`<button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}', true, this)">Disconnect</button>`);
       } else {
-        actions.push(`<button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}')">Disconnect</button>`);
+        actions.push(`<button class="conn-btn conn-btn-disconnect" onclick="event.stopPropagation();disconnectFromSettings('${c.service}','${escHtml(c.name)}', false, this)">Disconnect</button>`);
       }
       if (actions.length) {
         html += `<div class="conn-drawer-actions">${actions.join("")}</div>`;
@@ -3935,7 +3877,7 @@
           if (m.status === 'error' || m.status === 'needs_auth') {
             detailHtml += '<button onclick="event.stopPropagation();fixMcp(\'' + m.id + '\',this)" class="conn-btn conn-btn-manage" style="background:rgba(208,166,82,0.1);border-color:rgba(208,166,82,0.3);color:#D0A652;">Fix</button>';
           }
-          detailHtml += '<button onclick="event.stopPropagation();deleteMcp(\'' + m.id + '\')" class="conn-btn conn-btn-disconnect">Disconnect</button>';
+          detailHtml += '<button onclick="event.stopPropagation();deleteMcp(\'' + m.id + '\', this)" class="conn-btn conn-btn-disconnect">Disconnect</button>';
           detailHtml += '</div>';
           detailHtml += '<div id="mcp-debug-' + m.id + '" style="display:none;margin-top:8px;"></div>';
 
@@ -4429,11 +4371,11 @@
       }
     }
 
-    async function deleteMcp(id) {
-      if (!confirm('Disconnect this connection?')) return;
+    async function deleteMcp(id, btn) {
+      if (!(await askFirst(btn, { text: 'Disconnect this connection? Closedhand stops using it and deletes what it kept from it.', yes: 'Disconnect' }))) return;
       var res = await fetch('/api/mcps/' + id, { method: 'DELETE' });
-      if (res.ok) { showToast('Removed'); loadMcps(); }
-      else showToast('Could not remove', true);
+      if (res.ok) { showToast('Disconnected'); loadMcps(); }
+      else showToast('Could not disconnect', true);
     }
 
 
@@ -4493,16 +4435,19 @@
       lunchflow: "Closedhand will stop reading your bank data through Lunch Flow. To end it at Lunch Flow too, delete the REST API destination under Destinations there.",
     };
     const BANK_PURGE = "Also delete the balances and transactions Closedhand kept from it. Leave this off to keep your bank history for when you reconnect.";
-    async function disconnectFromSettings(service, name, isSignin) {
+    // Whether what was synced from the account goes too is the one choice
+    // that matters, so the question carries it.
+    const KEPT_PURGE = "Also delete everything Closedhand kept and learned from it. Leave this off to pick up where you left off if you reconnect.";
+    async function disconnectFromSettings(service, name, isSignin, btn) {
       const msg = isSignin
         ? `This revokes Closedhand's access to your ${name} account (including any extra accounts) and signs you out, since this is how you log in.`
         : BANK_DISCONNECT[service] || `Closedhand will lose access to this service.`;
-      var answer = await askDisconnect('Disconnect ' + name + '?', msg, BANK_DISCONNECT[service] ? BANK_PURGE : null);
-      if (!answer.ok) return;
+      var answer = await askFirst(btn, { text: 'Disconnect ' + name + '? ' + msg, yes: 'Disconnect', check: BANK_DISCONNECT[service] ? BANK_PURGE : KEPT_PURGE });
+      if (!answer) return;
       const res = await fetch("/api/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service, purge: answer.purge }),
+        body: JSON.stringify({ service, purge: answer.checked }),
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -4514,7 +4459,7 @@
         loadStatus();
       } else {
         const data = await res.json();
-        alert(data.error || "Could not disconnect");
+        showToast(data.error || "Could not disconnect", true);
       }
     }
 
@@ -4527,28 +4472,15 @@
     // Turning a chat app off says what that means first, in place. Your own
     // WhatsApp number is unlinked here and on your phone; a Telegram bot stays
     // set up, so saying hello to it links it again.
-    function platformAskOff(btn) {
+    async function platformAskOff(btn) {
       var row = btn.closest('.plat-actions');
       var name = row.getAttribute('data-name');
       var linked = !!row.getAttribute('data-linked');
-      row.replaceChildren();
-      row.style.flexWrap = 'wrap';
-      var said = document.createElement('p');
-      said.className = 'plat-ask';
-      said.style.cssText = 'flex-basis:100%;margin:0 0 4px;font-size:13px;line-height:1.5;color:#B6AFA4;';
-      said.textContent = linked
+      var text = linked
         ? 'Disconnect ' + name + '? Closedhand stops reading and replying there, and signs itself out of ' + name + '. If it is still listed on your phone, remove it there too: ' + name + ', Settings, Linked devices.'
         : 'Disconnect ' + name + '? Closedhand stops replying and sending you messages there. Your bot stays set up, so saying hello to it connects it again.';
-      var yes = document.createElement('button');
-      yes.type = 'button'; yes.className = 'conn-btn conn-btn-disconnect';
-      yes.textContent = 'Disconnect';
-      yes.onclick = function(e) { e.stopPropagation(); platformOff(row, yes); };
-      var no = document.createElement('button');
-      no.type = 'button'; no.className = 'conn-btn conn-btn-manage';
-      no.textContent = 'Cancel';
-      no.onclick = function(e) { e.stopPropagation(); loadStatus(); };
-      row.append(said, yes, no);
-      yes.focus();
+      if (!(await askFirst(row, { text: text, yes: 'Disconnect' }))) return;
+      platformOff(row, btn);
     }
 
     async function platformOff(row, btn) {
@@ -5138,7 +5070,7 @@
             '<span class="muted">' + String(c.exp_month).padStart(2, '0') + '/' + String(c.exp_year).slice(-2) + (c.label ? ' · ' + escHtml(c.label) : '') + (c.is_default ? ' · default' : '') + (lim.length ? ' · ' + lim.join(', ') : '') + '</span>' +
             '<span style="flex:1;"></span>' +
             (c.is_default ? '' : '<button class="conn-btn conn-btn-manage" onclick="setDefaultCard(\'' + c.id + '\')">Make default</button>') +
-            '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletCard(\'' + c.id + '\')">Remove</button>' +
+            '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletCard(\'' + c.id + '\', this)">Remove</button>' +
             '</div>';
         }).join('') : '<div style="font-size:13px;color:#B6AFA4;">No cards yet. Until you add one, Closedhand can only pay on sites that already have a card saved, and still asks you first.</div>';
         var led = w.ledger || [];
@@ -5232,8 +5164,8 @@
       showToast('Card added');
       loadWallet();
     }
-    async function removeWalletCard(id) {
-      if (!confirm('Remove this card from the Wallet?')) return;
+    async function removeWalletCard(id, btn) {
+      if (!(await askFirst(btn, { text: 'Remove this card from the Wallet? Closedhand can no longer pay with it.', yes: 'Remove' }))) return;
       var res = await fetch('/api/wallet/' + id, { method: 'DELETE' });
       if (res.ok) { showToast('Removed'); loadWallet(); } else showToast('Could not remove it', true);
     }
@@ -5402,8 +5334,9 @@
     }
     async function togglePhoneAccess() {
       var on = !!(_phone && _phone.enabled);
-      if (on && !confirm('Pause this personal URL? You will need to open Settings on the computer running Closedhand to resume it.')) return;
-      var btn = document.getElementById('phone-btn'); btn.disabled = true;
+      var btn = document.getElementById('phone-btn');
+      if (on && !(await askFirst(btn, { text: 'Pause this personal URL? To resume it, open Settings on the computer running Closedhand.', yes: 'Pause link' }))) return;
+      btn.disabled = true;
       try {
         var r = await fetch('/api/phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !on, mode: _phone?.mode || 'quick' }) });
         var result = await r.json();
@@ -6469,7 +6402,7 @@
     }
 
     async function deleteSkill(id, btn) {
-      if (btn && btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Remove for good?'; return; }
+      if (!(await askFirst(btn, { text: 'Remove this skill for good?', yes: 'Remove' }))) return;
       try {
         var res = await fetch('/api/skills/' + id, { method: 'DELETE' });
         if (res.ok) { showToast('Skill removed'); loadSkills(); }
@@ -6641,18 +6574,9 @@
 
     // Deleting a run deletes its report page and its PDF, Word and Excel
     // versions with it, for good, so the bin asks first, in place.
-    function confirmAgentDelete(btn, id, hasReport) {
-      var wrap = document.createElement('span');
-      wrap.className = 'agent-del-confirm';
-      wrap.innerHTML = '<span>' + (hasReport ? 'Delete this run for good? Its page stays under Pages.' : 'Delete this run for good?') + '</span>'
-        + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
-        + '<button class="agent-del" type="button">Cancel</button>';
-      wrap.addEventListener('click', function (e) { e.stopPropagation(); });
-      var buttons = wrap.querySelectorAll('button');
-      buttons[0].addEventListener('click', function () { deleteAgentRun(id); });
-      buttons[1].addEventListener('click', function () { wrap.replaceWith(btn); });
-      btn.replaceWith(wrap);
-      buttons[1].focus();
+    async function confirmAgentDelete(btn, id, hasReport) {
+      if (!(await askFirst(btn, { text: hasReport ? 'Delete this run for good? Its page stays under Pages.' : 'Delete this run for good?', yes: 'Delete' }))) return;
+      deleteAgentRun(id);
     }
 
     // Pages: every page Closedhand made, whichever chat or agent made it. A
@@ -6698,24 +6622,14 @@
       }
       loadPages();
     }
-    function confirmPageDelete(btn, id) {
-      var wrap = document.createElement('span');
-      wrap.className = 'agent-del-confirm';
-      wrap.innerHTML = '<span>Delete this page for good? The answer stays in the chat you asked in.</span>'
-        + '<button class="agent-del agent-del-yes" type="button">Delete</button>'
-        + '<button class="agent-del" type="button">Cancel</button>';
-      var buttons = wrap.querySelectorAll('button');
-      buttons[0].addEventListener('click', async function () {
-        try {
-          var res = await fetch('/api/pages/' + id, { method: 'DELETE' });
-          if (!res.ok) throw new Error('Delete failed');
-          if (_archivedPages) _archivedPages = _archivedPages.filter(function (p) { return p.id !== id; });
-          loadPages();
-        } catch (e) { showToast('Could not delete this page. Try again.', true); wrap.replaceWith(btn); }
-      });
-      buttons[1].addEventListener('click', function () { wrap.replaceWith(btn); });
-      btn.replaceWith(wrap);
-      buttons[1].focus();
+    async function confirmPageDelete(btn, id) {
+      if (!(await askFirst(btn, { text: 'Delete this page for good? The answer stays in the chat you asked in.', yes: 'Delete' }))) return;
+      try {
+        var res = await fetch('/api/pages/' + id, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        if (_archivedPages) _archivedPages = _archivedPages.filter(function (p) { return p.id !== id; });
+        loadPages();
+      } catch (e) { showToast('Could not delete this page. Try again.', true); }
     }
 
     async function deleteAgentRun(id) {
@@ -6959,7 +6873,7 @@
       } else if (a.status === 'paused') {
         actionsHtml += '<button onclick="event.stopPropagation();resumeAutomation(\'' + a.id + '\')">&#9654; Resume</button>';
       }
-      actionsHtml += '<button onclick="event.stopPropagation();deleteAutomation(\'' + a.id + '\')">&#128465;</button>';
+      actionsHtml += '<button onclick="event.stopPropagation();deleteAutomation(\'' + a.id + '\', this)" title="Delete this routine" aria-label="Delete this routine">&#128465;</button>';
       actionsHtml += '</div>';
 
       return '<div class="auto-card" id="auto-' + a.id + '" onclick="toggleAutoCard(this)">' +
@@ -7063,8 +6977,8 @@
       else showToast('Could not resume', true);
     }
 
-    async function deleteAutomation(id) {
-      if (!confirm('Delete this routine? This cannot be undone.')) return;
+    async function deleteAutomation(id, btn) {
+      if (!(await askFirst(btn.closest('.auto-card-actions') || btn, { text: 'Delete this routine for good?', yes: 'Delete' }))) return;
       var res = await fetch('/api/automations/' + id, { method: 'DELETE' });
       if (res.ok) { showToast('Routine deleted'); loadAutomations(); loadAutomationStats(); }
       else showToast('Could not delete', true);
@@ -7406,14 +7320,14 @@
               '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + escapeHtml(fileSize(f.size_bytes)) + (when ? ' \u00b7 ' + escapeHtml(when) : '') + (f.description ? ' \u00b7 ' + escapeHtml(f.description) : '') + '</div>' +
             '</div>' +
             '<a href="/api/files/' + encodeURIComponent(f.attachment_id) + '/download" style="font-size:12px;color:#D8624B;text-decoration:none;flex-shrink:0;">Download</a>' +
-            '<button onclick="deleteFile(\'' + f.attachment_id + '\')" title="Delete" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
+            '<button onclick="deleteFile(\'' + f.attachment_id + '\', this)" title="Delete" aria-label="Delete" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
           '</div>';
         }).join('');
       } catch (e) { console.error('Load files error:', e); }
     }
 
-    async function deleteFile(id) {
-      if (!confirm('Delete this file? This removes Closedhand\'s copy, not anything in Drive.')) return;
+    async function deleteFile(id, btn) {
+      if (!(await askFirst(btn, { text: 'Delete this file? This removes Closedhand\u2019s copy, not anything in Drive.', yes: 'Delete' }))) return;
       try {
         var res = await fetch('/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
         if (res.ok) loadFiles();
@@ -7451,24 +7365,24 @@
               '<div style="font-size:11px;color:rgba(239,230,214,0.6);">' + escapeHtml(fileSize(f.size_bytes)) + (when ? ' · ' + escapeHtml(when) : '') + (f.description ? ' · ' + escapeHtml(f.description) : '') + '</div>' +
             '</div>' +
             '<a href="/api/files/' + encodeURIComponent(f.attachment_id) + '/download" style="font-size:12px;color:#D8624B;text-decoration:none;flex-shrink:0;">Download</a>' +
-            '<button onclick="deleteUpload(\'' + f.attachment_id + '\')" title="Delete Closedhand&#39;s copy" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
+            '<button onclick="deleteUpload(\'' + f.attachment_id + '\', this)" title="Delete Closedhand&#39;s copy" aria-label="Delete Closedhand&#39;s copy" style="background:none;border:none;color:#B6AFA4;cursor:pointer;font-size:13px;flex-shrink:0;">&#128465;</button>' +
           '</div>';
         }).join('');
       } catch (e) { console.error('Load uploads error:', e); }
     }
 
-    async function deleteUpload(id) {
-      if (!confirm('Delete Closedhand\'s copy of this file? It can no longer re-read it if you refer back; whatever you sent it from is untouched.')) return;
+    async function deleteUpload(id, btn) {
+      if (!(await askFirst(btn, { text: 'Delete Closedhand\u2019s copy of this file? It can no longer re-read it if you refer back. Whatever you sent it from is untouched.', yes: 'Delete' }))) return;
       try {
         var res = await fetch('/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
         if (res.ok) loadUploads();
       } catch (e) { console.error('Delete upload error:', e); }
     }
 
-    async function clearAllUploads() {
+    async function clearAllUploads(btn) {
       var badge = document.getElementById('uploads-count-badge');
       var n = badge && badge.textContent ? badge.textContent : 'all';
-      if (!confirm('Delete Closedhand\'s stored copies of all ' + n + ' files you\'ve sent? It can no longer re-read them if you refer back; your own copies are untouched.')) return;
+      if (!(await askFirst(btn, { text: 'Delete Closedhand\u2019s copies of all ' + n + ' files you\u2019ve sent? It can no longer re-read them if you refer back. Your own copies are untouched.', yes: 'Delete all' }))) return;
       try {
         var res = await fetch('/api/uploads', { method: 'DELETE' });
         if (res.ok) { loadUploads(); showToast('Stored copies cleared'); }
@@ -7476,10 +7390,10 @@
       } catch (e) { showToast('Could not clear them', true); }
     }
 
-    async function clearAllFiles() {
+    async function clearAllFiles(btn) {
       var badge = document.getElementById('files-count-badge');
       var n = badge && badge.textContent ? badge.textContent : 'all';
-      if (!confirm('Delete all ' + n + ' files in this list? Documents pulled from your email or Drive still exist there and can be fetched again; files Closedhand made are only stored here, so asking for one again later means remaking it.')) return;
+      if (!(await askFirst(btn, { text: 'Delete all ' + n + ' files in this list? Documents from your email or Drive are still there and can be fetched again. Files Closedhand made are only kept here, so asking for one later means making it again.', yes: 'Delete all' }))) return;
       try {
         var res = await fetch('/api/files', { method: 'DELETE' });
         if (res.ok) { loadFiles(); showToast('Files cleared'); }
@@ -7588,9 +7502,9 @@
       _currentDatasetId = null;
     }
 
-    async function deleteCurrentDataset() {
+    async function deleteCurrentDataset(btn) {
       if (!_currentDatasetId) return;
-      if (!confirm('Delete table "' + _currentDatasetName + '" and all its rows?')) return;
+      if (!(await askFirst(btn, { text: 'Delete the table \u201c' + _currentDatasetName + '\u201d and all its rows?', yes: 'Delete' }))) return;
       try {
         await fetch('/api/datasets/' + _currentDatasetId, { method: 'DELETE' });
         closeDatasetDetail();
@@ -7650,8 +7564,8 @@
             appleStandalone2.innerHTML =
               '<div onclick="toggleBridgeUnfurl()" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(239,230,214,0.1);border:1px solid rgba(208,86,63,0.2);border-radius:10px;cursor:pointer;">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
-                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">' + (data.desktop ? 'Included in the Closedhand app running on your Mac.' : 'Closedhand can use the Mac apps and files you allow.') + '</div></div>' +
+                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + 'Mac access' + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
+                '<div style="font-size:13px;color:#B6AFA4;margin-top:2px;">' + (data.desktop ? 'Built into Closedhand for Mac' : 'Through Closedhand Bridge on your Mac') + '</div></div>' +
                 '<span style="font-size:13px;color:#B6AFA4;font-weight:500;">' + (data.status === 'connected' ? 'Connected' : data.status === 'reconnecting' ? 'Reconnecting' : 'Not connected') + '</span>' +
                 '<span class="int-chevron" id="bridge-chevron"><span class="chevron-down"></span></span>' +
               '</div>' +
@@ -7660,7 +7574,7 @@
                   '<p style="font-size:14px;color:#B6AFA4;line-height:1.6;margin:0;">' +
                     (data.desktop ? 'Choose what Closedhand may use from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions. File changes and terminal commands also need Computer Control enabled.' : 'Choose what Closedhand may use from the Closedhand Bridge menu on your Mac. Keep Bridge open while you want access to that Mac.') +
                   '</p>' +
-                  (data.desktop ? '' : '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(239,230,214,0.1);"><button onclick="disconnectBridge()" class="conn-btn conn-btn-disconnect">Disconnect</button></div>') +
+                  (data.desktop ? '' : '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(239,230,214,0.1);"><button onclick="disconnectBridge(this)" class="conn-btn conn-btn-disconnect">Disconnect</button></div>') +
                 '</div>' +
               '</div>';
           }
@@ -7678,8 +7592,8 @@
                 'onmouseover="this.style.borderColor=\'rgba(208,86,63,0.4)\';this.style.boxShadow=\'0 0 16px rgba(208,86,63,0.1), 0 0 32px rgba(208,86,63,0.05)\';this.style.transform=\'translateY(-1px)\'" ' +
                 'onmouseout="this.style.borderColor=\'rgba(208,86,63,0.2)\';this.style.boxShadow=\'0 0 8px rgba(208,86,63,0.04)\';this.style.transform=\'translateY(0)\'">' +
                 '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
-                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + (data.desktop ? 'Mac access' : 'Mac Bridge') + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
-                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect your Mac and choose what Closedhand has access to</div></div>' +
+                '<div style="flex:1;"><div style="font-size:14px;color:#EFE6D6;font-weight:500;">' + 'Mac access' + ' <span style="font-size:9px;color:#D0563F;background:rgba(208,86,63,0.1);padding:2px 8px;border-radius:4px;margin-left:6px;">Local</span></div>' +
+                '<div style="font-size: 13px;color:#B6AFA4;margin-top:2px;">Connect a Mac with Closedhand Bridge</div></div>' +
                 '<span style="font-size: 14px;color:#D8624B;font-weight:500;">Set up &#8250;</span>' +
               '</div>';
           }
@@ -7712,7 +7626,7 @@
 
     async function pairBridge() {
       var code = document.getElementById('bridge-code-input').value.trim().toUpperCase();
-      if (code.length !== 6) { showToast('Enter the 6-character code from the Bridge app', true); return; }
+      if (code.length !== 6) { showToast('Enter the 6-character code from Closedhand Bridge', true); return; }
       var btn = document.getElementById('bridge-pair-btn');
       btn.disabled = true; btn.textContent = 'Pairing…';
       try {
@@ -7745,10 +7659,10 @@
       finally { btn.disabled = false; btn.textContent = 'Pair'; }
     }
 
-    async function disconnectBridge() {
-      if (!confirm('Disconnect the Mac Bridge?')) return;
+    async function disconnectBridge(btn) {
+      if (!(await askFirst(btn, { text: 'Disconnect Closedhand Bridge? Closedhand stops using that Mac until you pair it again.', yes: 'Disconnect' }))) return;
       await fetch('/api/bridge', { method: 'DELETE' });
-      showToast('Bridge disconnected');
+      showToast('Disconnected');
 
       // Close the modal if open
       closeAppleModal();
@@ -8216,7 +8130,7 @@
         // The pinned-fact opener points these at the fact handlers; aim them
         // back at the note handlers or Edit here edits the last-opened fact.
         document.getElementById('brain-panel-edit').onclick = function() { editCurrentNote(); };
-        document.getElementById('brain-panel-delete').onclick = function() { deleteCurrentNote(); };
+        document.getElementById('brain-panel-delete').onclick = function() { deleteCurrentNote(this); };
 
         document.getElementById('brain-panel').style.display = 'block';
       } catch (e) { console.error('Open note error:', e); }
@@ -8362,7 +8276,7 @@
             html += '</div>';
             html += '<div style="flex:1;min-width:0;font-size:13px;color:#EFE6D6;">' + escapeHtml(valPreview) + '</div>';
             html += '<div class="note-actions">';
-            html += '<button class="note-action-btn delete" onclick="event.stopPropagation();deletePinnedNote(\'' + escapeAttr(n.key) + '\')" title="Delete">&#215;</button>';
+            html += '<button class="note-action-btn delete" onclick="event.stopPropagation();deletePinnedNote(\'' + escapeAttr(n.key) + '\', this)" title="Delete" aria-label="Delete">&#215;</button>';
             html += '</div>';
             html += '</div>';
           }
@@ -8472,7 +8386,7 @@
       // first open, threw on every later click, and left the panel half
       // updated with buttons still aimed at the previous fact.
       document.getElementById('brain-panel-edit').onclick = function() { editPinnedNote(key); };
-      document.getElementById('brain-panel-delete').onclick = function() { deletePinnedNote(key); };
+      document.getElementById('brain-panel-delete').onclick = function() { deletePinnedNote(key, this); };
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
@@ -8509,8 +8423,8 @@
       window._savePinnedNoteKey = null;
     }
 
-    function deletePinnedNote(key) {
-      if (!confirm('Delete Pinned fact "' + key + '"?')) return;
+    async function deletePinnedNote(key, btn) {
+      if (!(await askFirst(btn, { text: 'Delete the Pinned fact \u201c' + key + '\u201d?', yes: 'Delete' }))) return;
       fetch('/api/notes/' + encodeURIComponent(key), { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function() {
         closeBrainPanel();
         loadUnifiedMemory();
@@ -8601,9 +8515,9 @@
         });
     }
 
-    async function deleteCurrentNote() {
+    async function deleteCurrentNote(btn) {
       if (!_currentNoteTitle) return;
-      if (!confirm('Delete "' + _currentNoteTitle + '"? This cannot be undone.')) return;
+      if (!(await askFirst(btn, { text: 'Delete the Context Note \u201c' + _currentNoteTitle + '\u201d for good?', yes: 'Delete' }))) return;
       try {
         var res = await fetch('/api/knowledge/' + encodeURIComponent(_currentNoteTitle), { method: 'DELETE' });
         if (!res.ok) { showToast('Could not delete', true); return; }
@@ -8776,10 +8690,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ platform: platform }),
         });
-        if (!res.ok) { var err = await res.json().catch(function(){return {};}); alert(err.error || 'Something went wrong'); return; }
+        if (!res.ok) { var err = await res.json().catch(function(){return {};}); showToast(err.error || 'Something went wrong', true); return; }
         var data = await res.json();
         showObStep2(data.code);
-      } catch (e) { alert('Something went wrong. Try again.'); }
+      } catch (e) { showToast('Something went wrong. Try again.', true); }
     }
 
     function showObStep2(code) {
@@ -9091,20 +9005,6 @@
       if (typeof loadStatus === 'function') loadStatus();
     }
   </script>
-  <div class="modal-overlay" id="disconnect-modal" onclick="if(event.target===this)answerDisconnect(false)">
-    <div class="modal" role="dialog" aria-labelledby="disconnect-title">
-      <h3 id="disconnect-title">Disconnect</h3>
-      <p id="disconnect-body" style="font-size:13px;color:#B6AFA4;line-height:1.55;margin:0 0 14px;"></p>
-      <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#EFE6D6;cursor:pointer;margin-bottom:18px;">
-        <input type="checkbox" id="disconnect-purge" style="width:14px;height:14px;margin:3px 0 0;accent-color:#D0563F;flex:none;">
-        <span id="disconnect-purge-text">Also delete the mail and calendar Closedhand kept from this account, and what it learned from them. Leave it off to carry on where you left off if you reconnect.</span>
-      </label>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="conn-btn conn-btn-manage" onclick="answerDisconnect(false)">Cancel</button>
-        <button class="conn-btn conn-btn-disconnect" id="disconnect-go" onclick="answerDisconnect(true)">Disconnect</button>
-      </div>
-    </div>
-  </div>
   <div class="modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
     <div class="modal" style="max-width:600px;">
       <h3 id="note-modal-heading">New Context Note</h3>
@@ -9127,12 +9027,12 @@
     <div class="modal" style="max-width:420px;">
       <div class="mac-head">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <h3 id="apple-modal-title" style="margin:0;">Connect your Mac</h3>
+        <h3 id="apple-modal-title" style="margin:0;">Connect a Mac</h3>
       </div>
       <p class="mac-intro">Choose which Mac files and apps Closedhand may use. Content needed for a request is processed by your selected AI provider.</p>
 
       <div id="apple-step-desktop" style="display:none;">
-        <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into the Closedhand app and connects automatically. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
+        <p style="font-size:14px;color:#B6AFA4;line-height:1.6;">Mac access is built into Closedhand for Mac and connects by itself. Choose what to allow from the fist in your Mac’s menu bar. Use “Set up Mac access” there for macOS permissions.</p>
       </div>
 
       <!-- Step 1: Not paired yet. One card, a line a step, so the whole box
@@ -9141,7 +9041,7 @@
         <li>
           <span class="mac-step-n">1</span><span class="mac-step-t">Download Closedhand Bridge</span>
           <a id="bridge-download-link" href="/download/ClosedHandBridge.dmg" download class="mac-step-btn">Download</a>
-          <div id="bridge-mobile-notice" class="mac-step-note" style="display:none;">Bridge is available for Mac. Open this dashboard on your Mac to download it and choose which apps and files Closedhand can access.</div>
+          <div id="bridge-mobile-notice" class="mac-step-note" style="display:none;">Closedhand Bridge is for Mac only. Open this dashboard on your Mac to download it and choose which apps and files Closedhand can access.</div>
           <script>(function(){var ua=navigator.userAgent;if(!/Macintosh|Mac OS X/i.test(ua)||/iPhone|iPad|iPod|Android/i.test(ua)){document.getElementById('bridge-download-link').style.display='none';document.getElementById('bridge-mobile-notice').style.display='block';}})()</script>
         </li>
         <li>
@@ -9157,7 +9057,7 @@
       <div id="apple-step-connected" style="display:none;text-align:center;">
         <p id="apple-connected-status" style="font-size:14px;color:#EFE6D6;margin-bottom:4px;">Your Mac is connected</p>
         <p style="font-size: 14px;color:rgba(239,230,214,0.6);margin-bottom:16px;">Keep Closedhand Bridge open on that Mac. Choose what to allow from its menu bar.</p>
-        <button onclick="disconnectBridge();closeAppleModal()" style="background:none;border:1px solid rgba(239,230,214,0.1);color:#D0563F;padding:6px 14px;border-radius:6px;font-size: 14px;cursor:pointer;">Disconnect</button>
+        <button onclick="disconnectBridge(this)" style="background:none;border:1px solid rgba(239,230,214,0.1);color:#D0563F;padding:6px 14px;border-radius:6px;font-size: 14px;cursor:pointer;">Disconnect</button>
       </div>
 
       <div class="modal-error" id="apple-error"></div>
@@ -9243,6 +9143,7 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="/delight.js"></script>
+  <script src="/ask.js"></script>
 
   <!-- When in iframe (slide-over), hide redundant elements -->
   <script>

@@ -283,3 +283,41 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 /* Small capitalised labels over a group, one look across the dashboard's
    tabs: connection-catalogue.css .add-sub's ("Apps", "Connect anything"). */
 .dashboard-container :is(.mc-section-label, .mc-subsection-label, .conn-resources-label, .mc-metric-label, .goal-sub, .memory-section-label) { font-size: 13px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(239,230,214,0.6); }
+/* Asking before something that can't be undone (ask.js), the same on every
+   page: the question in place of the button, then the action in red and Cancel. */
+.ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-basis: 100%; width: 100%; margin: 4px 0; text-align: left; }
+.ask-text { flex-basis: 100%; margin: 0; font-size: var(--ui-small); line-height: 1.5; color: var(--ui-muted); white-space: normal; }
+.ask-check { flex-basis: 100%; display: flex; align-items: flex-start; gap: 8px; font-size: var(--ui-small); line-height: 1.5; color: var(--ui-muted); cursor: pointer; }
+.ask-check input { margin: 3px 0 0; accent-color: #D0563F; }
+.ask-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask .ask-yes, .ask .ask-no { width: auto; min-height: 32px; padding: 5px 12px; border: 1px solid; border-radius: 6px; background: transparent; font: inherit; font-size: var(--ui-small); white-space: nowrap; cursor: pointer; transition: background 0.12s; }
+.ask .ask-yes { color: #D0563F; border-color: rgba(208,86,63,0.4); }
+.ask .ask-yes:hover { background: rgba(208,86,63,0.1); }
+.ask .ask-no { color: var(--ui-text); border-color: rgba(239,230,214,0.24); }
+.ask .ask-no:hover { background: rgba(239,230,214,0.08); }
+.ask-yes:focus-visible, .ask-no:focus-visible, .ask-check input:focus-visible { outline: 2px solid #D8624B; outline-offset: 2px; }
+/* One button system on every page. Filled: the one main action of a screen,
+   step or form. Tinted: starting something new beside it ("+ New routine",
+   "+ Add source") or going somewhere ("Open the form"). Neutral outline
+   (.btn-quiet, .conn-btn-manage, .ask-no): everyday actions and Cancel. Red outline (.conn-btn-disconnect, .ask-yes): removing or turning
+   something off. Pages set only where a button sits, never how it looks. */
+.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit] {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 18px;
+  border: 1px solid #D0563F; border-radius: 8px; background: #D0563F; color: #100E0D;
+  font: 600 var(--ui-label)/1.3 var(--font-ui); text-decoration: none; cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.goals-new, .deep, .rag-upload-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 18px;
+  border: 1px solid rgba(208,86,63,0.45); border-radius: 8px; background: rgba(208,86,63,0.08); color: #E59B89;
+  font: 500 var(--ui-label)/1.3 var(--font-ui); text-decoration: none; cursor: pointer; transition: background 0.12s;
+}
+.ch-welcome-primary:hover, .btn-modal-primary:hover, .save-btn:hover, .go:hover, .g-signin:hover, .cta:hover, .rag-query-btn:hover, .bridge-cta-dl:hover, #goal-new button[type=submit]:hover { background: #D8624B; border-color: #D8624B; color: #100E0D; text-decoration: none; }
+.goals-new:hover, .deep:hover, .rag-upload-btn:hover { background: rgba(208,86,63,0.16); text-decoration: none; }
+.btn-quiet {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 18px;
+  border: 1px solid rgba(239,230,214,0.24); border-radius: 8px; background: transparent; color: var(--ui-text);
+  font: 500 var(--ui-label)/1.3 var(--font-ui); text-decoration: none; cursor: pointer; transition: background 0.12s;
+}
+.btn-quiet:hover { background: rgba(239,230,214,0.08); }
+.ch-welcome-primary:disabled, .btn-modal-primary:disabled, .save-btn:disabled, .cta:disabled, .rag-query-btn:disabled, .goals-new:disabled, .rag-upload-btn:disabled, .btn-quiet:disabled { opacity: 0.5; cursor: default; }
+.ch-welcome-primary:focus-visible, .btn-modal-primary:focus-visible, .save-btn:focus-visible, .go:focus-visible, .g-signin:focus-visible, .cta:focus-visible, .btn-quiet:focus-visible, .rag-query-btn:focus-visible, .bridge-cta-dl:focus-visible, .goals-new:focus-visible, .deep:focus-visible, .rag-upload-btn:focus-visible { outline: 2px solid #D8624B; outline-offset: 2px; }

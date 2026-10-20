@@ -550,9 +550,11 @@ async function scanFolder(userId, origin, folderPath, opts = {}) {
     // Supplement with ls if files.list returned few results
     if (files.length < 5) {
       try {
-        const cleanPath = folderPath.replace(/^~\/?/, "").replace(/'/g, "'\\''");
-        const lsPath = folderPath === "~" || folderPath === "~/" ? "$HOME" : `$HOME/${cleanPath}`;
-        const lsResult = await _bridgeRequest(userId, "shell.run", { command: `ls -1p "${lsPath}" 2>/dev/null` }, 10000);
+        // The folder's name goes as base64, decoded on the Mac, so a $( ) or a
+        // quote in a name is never read as part of the command.
+        const rel = folderPath.replace(/^~\/?/, "");
+        const lsPath = rel ? `"$HOME/$(printf %s ${Buffer.from(rel, "utf8").toString("base64")} | base64 --decode)"` : `"$HOME"`;
+        const lsResult = await _bridgeRequest(userId, "shell.run", { command: `ls -1p ${lsPath} 2>/dev/null` }, 10000);
         const lsOut = (lsResult?.result?.stdout || lsResult?.stdout || "").trim();
         if (lsOut) {
           const existing = new Set(files.map(f => f.name));
