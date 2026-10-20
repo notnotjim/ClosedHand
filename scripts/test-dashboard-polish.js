@@ -20,7 +20,7 @@ test('a skill whose service is not connected says what it needs', () => {
 });
 
 test('the Computers tab does not call this computer offline', () => {
-  assert.match(page, /var BRIDGE_PITCH = 'Bridge gives Closedhand access to the Mac it runs on, only to the files and apps you allow\.';/);
+  assert.match(page, /var BRIDGE_PITCH = 'Closedhand Bridge gives your assistant access to the Mac it runs on, only to the files and apps you allow\.';/);
   assert.match(page, /<span id="monLocalStatusText">Not connected<\/span>/);
   assert.doesNotMatch(page, /Mac running Docker/);
 });

@@ -5523,7 +5523,7 @@ async function readMacAccessStatus() {
 // Offline here read as a fault, so the prompt says why Docker needs Bridge:
 // it is a separate, optional app that opens a Mac's own files and apps to
 // Closedhand, on the Mac running it or another.
-var BRIDGE_PITCH = 'Bridge gives Closedhand access to the Mac it runs on, only to the files and apps you allow.';
+var BRIDGE_PITCH = 'Closedhand Bridge gives your assistant access to the Mac it runs on, only to the files and apps you allow.';
 function macAccessHelp(data) {
   if (data.status === 'unavailable') return { title: 'Could not check Mac access', text: 'Try again when Closedhand is reachable.' };
   if (data.status === 'connected') return { title: 'Could not open this folder', text: 'Check Files in ' + (data.desktop ? 'Closedhand’s' : 'Closedhand Bridge’s') + ' menu on your Mac and the folder’s macOS permissions, then try again.' };

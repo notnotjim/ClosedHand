@@ -24,7 +24,8 @@ Rules for working on this codebase, for anyone doing it, human or agent.
 - Gate `git push` behind checks with `&&`, never `;`, so a failed check stops the push.
 
 ## User-Facing Copy
-- The bot is "Closedhand", not "your assistant".
+- The bot is "Closedhand". "Your assistant" only stands in for it to avoid saying Closedhand twice
+  in a row ("Closedhand Bridge gives your assistant access…"), never as its first mention.
 - The name is written "Closedhand", one capital, wherever people read it (the logo's capitals
   are the logo). Only machinery keeps "ClosedHand": code identifiers, the GitHub repo address,
   the Mac app's executable, Swift package and data folder (Application Support/ClosedHand),
