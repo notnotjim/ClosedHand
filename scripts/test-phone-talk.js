@@ -58,10 +58,10 @@ test("the fist listens on a tap, sends what was said on the next, and loads the 
   const ok = b.api.attach(b.button, b.input, b.note, {
     send: true, onWords: (w) => sent.push(w), onStop: () => primed++, thing: "the fist",
     labels: { idle: "Talk to Closedhand", recording: "Stop and send" },
-    hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" },
+    hints: { idle: "Tap, talk, tap to send", recording: "Listening, tap to send", busy: "Writing it out…" },
   });
   assert.equal(ok, true);
-  assert.equal(b.note.textContent, "Tap the fist to talk", "the hint shows before anything happens");
+  assert.equal(b.note.textContent, "Tap, talk, tap to send", "the hint shows before anything happens");
   assert.equal(b.attrs["aria-label"], "Talk to Closedhand");
 
   b.handlers.click();
@@ -79,7 +79,23 @@ test("the fist listens on a tap, sends what was said on the next, and loads the 
   assert.deepEqual(sent, ["what's on tomorrow"]);
   assert.equal(b.input.value, "what's on tomorrow");
   assert.equal(b.focused(), 0, "no keyboard up over the reply");
-  assert.equal(b.note.textContent, "Tap the fist to talk");
+  assert.equal(b.note.textContent, "Tap, talk, tap to send");
+});
+
+test("the fist shows it hears you: the voice's level while listening, nothing once it stops", async () => {
+  const b = browser("hello");
+  const levels = [], states = [];
+  b.api.attach(b.button, b.input, b.note, { send: true, onWords: () => {}, onLevel: (l) => levels.push(l), onState: (s) => states.push(s) });
+  b.handlers.click();
+  await b.settle();
+  b.speak();
+  assert.ok(levels.at(-1) > 0.5 && levels.at(-1) <= 1, `a voice moves it (${levels.at(-1)})`);
+  b.speak(true);
+  assert.equal(levels.at(-1), 0, "silence leaves it still");
+  b.handlers.click();
+  assert.equal(levels.at(-1), 0, "and it settles when the recording stops");
+  await b.settle();
+  assert.deepEqual(states, ["idle", "recording", "busy", "idle"], "start and send are felt where phones allow it");
 });
 
 test("on a wider screen the mic writes into the box to edit, and loads no voice", async () => {
@@ -101,7 +117,7 @@ test("on a wider screen the mic writes into the box to edit, and loads no voice"
 test("silence from the microphone is not sent to be written out, and says so", async () => {
   const b = browser("you");
   const sent = [];
-  b.api.attach(b.button, b.input, b.note, { send: true, onWords: (w) => sent.push(w), thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
+  b.api.attach(b.button, b.input, b.note, { send: true, onWords: (w) => sent.push(w), thing: "the fist", hints: { idle: "Tap, talk, tap to send", recording: "Listening, tap to send", busy: "Writing it out…" } });
   b.handlers.click();
   await b.settle();
   b.speak(true);
@@ -118,20 +134,20 @@ test("on an iPhone that would ask again, the tip to allow the microphone is give
   const navigator = { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1", permissions: { query: async () => ({ state: "prompt" }) } };
   for (const round of [1, 2]) {
     const b = browser("what's on tomorrow", { navigator, localStorage });
-    b.api.attach(b.button, b.input, b.note, { send: true, onWords: () => {}, thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
+    b.api.attach(b.button, b.input, b.note, { send: true, onWords: () => {}, thing: "the fist", hints: { idle: "Tap, talk, tap to send", recording: "Listening, tap to send", busy: "Writing it out…" } });
     b.handlers.click();
     await b.settle();
     b.speak();
     b.handlers.click();
     await b.settle();
     if (round === 1) assert.match(b.note.textContent, /page menu beside the address, then the three dots, and under Website Settings set Microphone to Allow/);
-    else assert.equal(b.note.textContent, "Tap the fist to talk", "said once on this device");
+    else assert.equal(b.note.textContent, "Tap, talk, tap to send", "said once on this device");
   }
 });
 
 test("too short a recording says which button to tap", async () => {
   const b = browser("");
-  b.api.attach(b.button, b.input, b.note, { send: true, thing: "the fist", hints: { idle: "Tap the fist to talk", recording: "Listening, tap to send", busy: "Writing it out…" } });
+  b.api.attach(b.button, b.input, b.note, { send: true, thing: "the fist", hints: { idle: "Tap, talk, tap to send", recording: "Listening, tap to send", busy: "Writing it out…" } });
   b.handlers.click();
   await b.settle();
   b.handlers.click();
@@ -143,7 +159,10 @@ test("the page: the fist and the chat apps on phones only, the reply read aloud 
   assert.match(page, /<button type="button" class="talk-btn" id="talkBtn" aria-label="Talk to Closedhand"><img src="\/fist\.png" alt=""><\/button>/);
   assert.match(page, /\.talk, \.continue-on \{ display: none; \}\n  @media \(max-width: 600px\) \{\n    body:not\(\.no-talk\) \.talk \{ display: flex;/);
   assert.match(page, /var phone = window\.matchMedia\('\(max-width: 600px\)'\);/);
-  assert.match(page, /hints: \{ idle: 'Tap the fist to talk', recording: 'Listening, tap to send', busy: 'Writing it out…' \}/);
+  assert.match(page, /hints: \{ idle: 'Tap, talk, tap to send', recording: 'Listening, tap to send', busy: 'Writing it out…' \},/);
+  assert.match(page, /btn\.style\.setProperty\('--level', level === 0 \? 0 : shown\.toFixed\(3\)\);/, "the ring follows the voice");
+  assert.match(page, /\.talk-btn\.recording::before \{ opacity: 1; transform: scale\(calc\(1\.05 \+ var\(--level, 0\) \* 0\.24\)\);/);
+  assert.match(page, /@media \(prefers-reduced-motion: reduce\) \{ \.talk-btn, \.talk-btn img, \.talk-btn::after \{ animation: none !important; \}/);
   assert.match(page, /send: function \(\) \{ return phone\.matches; \}, onWords: sendSpoken, onStop: readyToSpeak/, "in a conversation on a phone the mic talks too");
   assert.match(page, /var aloud = live && window\._replyAloud && Date\.now\(\) - window\._replyAloud < 10 \* 60000;/);
   assert.match(page, /if \(aloud && reading\) setTimeout\(function \(\) \{ reading\.click\(\); \}, 0\);/);

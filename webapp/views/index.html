@@ -1308,12 +1308,21 @@
   .talk, .continue-on { display: none; }
   @media (max-width: 600px) {
     body:not(.no-talk) .talk { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 22px 0 30px; opacity: 0; animation: heroIn 0.8s ease forwards 0.7s; }
-    .talk-btn { width: 136px; height: 136px; padding: 0; border-radius: 50%; border: 1.5px solid rgba(216,98,75,0.6); background: #1A1817; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    /* One tap to listen, one to send. At rest it glows faintly; pressed it
+       gives a little; listening, a ring swells and settles with the voice
+       (--level, from dictation.js); sent, the fist clenches and a thin arc
+       circles while the words are written out. */
+    .talk-btn { position: relative; width: 136px; height: 136px; padding: 0; border-radius: 50%; border: 1.5px solid rgba(216,98,75,0.6); background: #1A1817; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s; animation: talkIdle 3.6s ease-in-out infinite; }
+    .talk-btn:active { transform: scale(0.94); transition-duration: 0.08s; }
     .talk-btn img { width: 58px; height: 64px; pointer-events: none; }
     .talk-btn:focus-visible { outline: 2px solid #E59B89; outline-offset: 4px; }
-    .talk-btn.recording { border-color: rgba(216,98,75,0.9); animation: talkRing 1.4s ease-out infinite; }
-    .talk-btn.recording img { animation: talkGrip 1.4s ease-in-out infinite; }
-    .talk-btn.busy { opacity: 0.6; cursor: progress; }
+    .talk-btn::before { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 1.5px solid rgba(229,155,137,0.55); opacity: 0; transform: scale(1); transition: transform 0.09s linear, opacity 0.25s; pointer-events: none; }
+    .talk-btn.recording { border-color: rgba(216,98,75,0.95); animation: none; }
+    .talk-btn.recording::before { opacity: 1; transform: scale(calc(1.05 + var(--level, 0) * 0.24)); box-shadow: 0 0 calc(8px + var(--level, 0) * 30px) rgba(216,98,75,0.32); }
+    .talk-btn.recording img { animation: talkOpen 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), talkGrip 2.4s ease-in-out 0.4s infinite; }
+    .talk-btn.busy { cursor: progress; animation: none; }
+    .talk-btn.busy img { animation: talkClench 0.32s ease-out; }
+    .talk-btn.busy::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid transparent; border-top-color: rgba(229,155,137,0.9); animation: talkSpin 0.9s linear infinite; pointer-events: none; }
     .talk-hint { margin: 0; min-height: 22px; max-width: 300px; font-size: 15px; line-height: 1.45; text-align: center; color: rgba(239,230,214,0.75); }
     body:not(.chat-active):not(.no-talk) #micBtn { display: none; }
     /* The box to type in, one line until there is more. */
@@ -1327,9 +1336,12 @@
     .continue-on .send-via a { width: 44px; height: 44px; border-radius: 22px; background: transparent; border-color: rgba(239,230,214,0.12); }
     .continue-on .send-via img { width: 20px; height: 20px; }
   }
-  @keyframes talkRing { 0% { box-shadow: 0 0 0 0 rgba(216,98,75,0.45); } 100% { box-shadow: 0 0 0 26px rgba(216,98,75,0); } }
-  @keyframes talkGrip { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.9); } }
-  @media (prefers-reduced-motion: reduce) { .talk-btn.recording, .talk-btn.recording img { animation: none; } }
+  @keyframes talkIdle { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,98,75,0); } 50% { box-shadow: 0 0 26px 2px rgba(216,98,75,0.16); } }
+  @keyframes talkOpen { 0% { transform: scale(1); } 45% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  @keyframes talkGrip { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.95); } }
+  @keyframes talkClench { 0% { transform: scale(1); } 40% { transform: scale(0.82); } 100% { transform: scale(1); } }
+  @keyframes talkSpin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .talk-btn, .talk-btn img, .talk-btn::after { animation: none !important; } .talk-btn::before { transition: none; } }
   /* ===== FEATURES SECTION (below fold) ===== */
   .features-page {
     position: relative;
@@ -2868,7 +2880,7 @@
 
 <!-- Three.js: Oil-slick blob + starfield -->
 <script src="/speech-playback.js?v=2.0.19"></script>
-<script src="/dictation.js?v=7"></script>
+<script src="/dictation.js?v=8"></script>
 <script src="/ask.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -3609,7 +3621,14 @@
     var talks = ClosedhandDictation.attach(document.getElementById('talkBtn'), input, document.getElementById('talkHint'), {
       send: true, onWords: sendSpoken, onStop: readyToSpeak, thing: 'the fist',
       labels: { idle: 'Talk to Closedhand', recording: 'Stop and send' },
-      hints: { idle: 'Tap the fist to talk', recording: 'Listening, tap to send', busy: 'Writing it out…' }
+      hints: { idle: 'Tap, talk, tap to send', recording: 'Listening, tap to send', busy: 'Writing it out…' },
+      // The ring follows the voice, eased: quick to rise, slower to settle.
+      onLevel: (function () { var shown = 0, btn = document.getElementById('talkBtn'); return function (level) {
+        shown = level > shown ? shown * 0.4 + level * 0.6 : shown * 0.82 + level * 0.18;
+        btn.style.setProperty('--level', level === 0 ? 0 : shown.toFixed(3));
+      }; })(),
+      // A light tap felt as it starts listening and as it sends, where phones allow it.
+      onState: function (state) { if (state !== 'idle' && navigator.vibrate) { try { navigator.vibrate(state === 'recording' ? 12 : 8); } catch (_) {} } }
     });
     if (!talks) document.body.classList.add('no-talk');
   } else document.body.classList.add('no-talk');

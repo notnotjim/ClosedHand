@@ -103,6 +103,7 @@
       if (message && !stay) noteTimer = setTimeout(function () { say(''); }, 8000);
     }
     function look(state) {
+      if (opts.onState) opts.onState(state);
       button.classList.toggle('recording', state === 'recording');
       button.classList.toggle('busy', state === 'busy');
       button.setAttribute('aria-pressed', state === 'recording' ? 'true' : 'false');
@@ -116,6 +117,7 @@
       take = null;
       clearTimeout(t.timer);
       t.processor.onaudioprocess = null;
+      if (opts.onLevel) opts.onLevel(0);
       t.processor.disconnect();
       t.source.disconnect();
       t.stream.getTracks().forEach(function (track) { track.stop(); });
@@ -179,7 +181,16 @@
         var source = context.createMediaStreamSource(stream);
         var processor = context.createScriptProcessor(4096, 1, 1);
         var parts = [];
-        processor.onaudioprocess = function (e) { parts.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+        processor.onaudioprocess = function (e) {
+          var chunk = new Float32Array(e.inputBuffer.getChannelData(0));
+          parts.push(chunk);
+          // How loud the voice is right now, 0 to 1, for a button that shows it hears you.
+          if (opts.onLevel) {
+            var sum = 0;
+            for (var i = 0; i < chunk.length; i += 4) sum += chunk[i] * chunk[i];
+            opts.onLevel(Math.min(1, Math.sqrt(sum / (chunk.length / 4)) * 8));
+          }
+        };
         source.connect(processor);
         processor.connect(context.destination);
         if (context.state === 'suspended') context.resume();
