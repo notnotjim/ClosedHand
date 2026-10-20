@@ -124,11 +124,8 @@ body.chat-active .page { height: 100dvh; min-height: 0; overflow: hidden; }
     transition: color 0.2s;
   }
 .header-right a:hover { color: var(--muted); }
-/* The way back to your own Closedhand from any device, which is why most
-   people open this site on a phone: a button, not a plain link. Outlined,
-   so the download button stays the one filled thing on the page. */
-.header-right a.nav-cta { white-space: nowrap; flex: none; padding: .4375rem 1rem; border-radius: 62.4375rem; border: 1px solid rgba(var(--fg-rgb),0.32); background: rgba(var(--fg-rgb),0.05); color: var(--fg); font-size: .9375rem; transition: background 0.2s, border-color 0.2s; }
-.header-right a.nav-cta:hover { color: var(--fg); background: rgba(var(--fg-rgb),0.1); border-color: rgba(var(--fg-rgb),0.5); }
+/* The header's link to your own Closedhand is drawn in interface.css (nav-cta). */
+.header-right a.nav-cta { flex: none; }
 .header-right a#dashboardLink {
     padding: .375rem .875rem;
     border: 1px solid rgba(var(--accent-strong-rgb),0.2);
@@ -285,7 +282,7 @@ body.chat-active .input-box { backdrop-filter: none; }
     .feat-3d { display: none !important; }
     .header-right { gap: .75rem; }
     .header-right a { font-size: .8125rem; }
-    .header-right a.nav-cta { font-size: .84375rem; padding: .4375rem .8125rem; }
+    .header-right a.nav-cta { font-size: .84375rem; }
     /* On a phone the first screen is all there is: sit the hero in the
        middle of it and let each part breathe, instead of hugging the top. */
     .hero-space-top { flex: 1 !important; min-height: 1.75rem; }

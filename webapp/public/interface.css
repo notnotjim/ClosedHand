@@ -27,6 +27,14 @@ button, input, textarea, select { font-family: var(--font-ui); }
 .dash-slide-close { width: 36px; height: 36px; color: var(--ui-muted); background: transparent; }
 .dash-slide iframe { background: #1A1817; }
 .header-right a, .page-tab { font-size: var(--ui-label); }
+/* The header's link to the person's own dashboard: its words over a swipe of
+   the fist's brush, redrawn on hover. closedhand.com's "My Closedhand" is
+   drawn the same (its interface.css, nav-cta). */
+.header-right a.nav-cta { position: relative; display: inline-block; padding: 7px 2px 9px; color: #EFE6D6; font-weight: 500; white-space: nowrap; }
+.header-right a.nav-cta::after { content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; background: #D8624B; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
+.header-right a.nav-cta:is(:hover, :focus-visible)::after { animation: brush-draw .5s cubic-bezier(.2, .7, .2, 1); }
+@keyframes brush-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .header-right a.nav-cta::after { animation: none !important; } }
 .claw-swap { margin: 0 0.12em; }
 .header-center .auth-row { font-size: var(--ui-small); color: var(--ui-muted); }
 body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text); }

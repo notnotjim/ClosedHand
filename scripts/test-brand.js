@@ -48,3 +48,16 @@ test("pages carry the brush icons as drawn, and no emoji", () => {
   }
   assert.ok(used >= 9, "the icons were found");
 });
+
+// The header's link to your own Closedhand is underlined with the same brush
+// on closedhand.com and in the web chat: one drawing, copied to both.
+test("the brush underline is the drawn one on both sides, under both header links", () => {
+  const drawn = read("brand/icons/underline.svg");
+  for (const copy of ["closedhand-com/public/brush-underline.svg", "webapp/public/brush-underline.svg"]) assert.ok(read(copy).equals(drawn), `${copy} is brand/icons/underline.svg`);
+  for (const css of ["closedhand-com/public/interface.css", "webapp/public/interface.css"]) {
+    const text = read(css).toString();
+    assert.match(text, /a\.nav-cta::after \{[^}]*mask: url\(\/brush-underline\.svg\)/, `${css} draws the underline`);
+    assert.doesNotMatch(text, /a\.nav-cta \{[^}]*border-radius: (?:62|99)/, `${css} has no pill`);
+  }
+  assert.match(read("webapp/views/index.html").toString(), /id="dashboardLink" class="nav-cta"/);
+});

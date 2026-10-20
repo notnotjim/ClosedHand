@@ -257,10 +257,18 @@ ICONS = {
 }
 
 
-def icon_mask(strokes, scale=10, per=120):
-    """An icon as a white-on-black mask on its 48 grid, each stroke tapering like the fist's line."""
+# The underline under the header's one link to your own Closedhand: a single
+# swipe of the same brush, heavier and with a long flick at its end, on a
+# wide 240 by 16 grid stretched to the words.
+UNDERLINE = ((240, 16), [((6, 10.5), [((62, 7.5), (160, 6), (234, 8))])])
+# Where pages read it from; each is a copy of brand/icons/underline.svg.
+UNDERLINE_COPIES = ["closedhand-com/public/brush-underline.svg", "webapp/public/brush-underline.svg"]
+
+
+def icon_mask(strokes, scale=10, per=120, size=(48, 48), weight=1.0, taper=(0.06, 0.08)):
+    """An icon as a white-on-black mask on its grid, each stroke tapering like the fist's line."""
     from PIL import Image, ImageDraw
-    im = Image.new("L", (48 * scale, 48 * scale), 0)
+    im = Image.new("L", (size[0] * scale, size[1] * scale), 0)
     d = ImageDraw.Draw(im)
     for start, segs in strokes:
         pts, cur = [start], start
@@ -274,25 +282,37 @@ def icon_mask(strokes, scale=10, per=120):
         n = len(pts)
         for i, (x, y) in enumerate(pts):
             t = i / (n - 1)
-            r = (0.95 + 1.25 * math.sin(math.pi * t) ** 0.5) * _taper(t, 0.06, 0.08) * scale
+            r = (0.95 + 1.25 * math.sin(math.pi * t) ** 0.5) * _taper(t, *taper) * weight * scale
             d.ellipse([x * scale - r, y * scale - r, x * scale + r, y * scale + r], fill=255)
     return im
 
 
-def build_icons():
+def _traced(mask):
+    """A mask traced to one path: (the path's transform, its outline)."""
     from PIL import Image
+    tmp = tempfile.mkdtemp()
+    Image.eval(mask, lambda v: 255 - v).convert("1").save(os.path.join(tmp, "m.bmp"))
+    subprocess.run(["potrace", "-s", "-o", os.path.join(tmp, "m.svg"), os.path.join(tmp, "m.bmp")], check=True)
+    traced = open(os.path.join(tmp, "m.svg")).read()
+    g = re.search(r'<g transform="([^"]+)"[^>]*>(.*?)</g>', traced, re.S)
+    return g.group(1), re.sub(r"\s+", " ", " ".join(re.findall(r' d="([^"]+)"', g.group(2)))).strip()
+
+
+def build_icons():
     out = os.path.join(ROOT, "brand", "icons")
     os.makedirs(out, exist_ok=True)
     for name, strokes in ICONS.items():
-        tmp = tempfile.mkdtemp()
-        Image.eval(icon_mask(strokes), lambda v: 255 - v).convert("1").save(os.path.join(tmp, "m.bmp"))
-        subprocess.run(["potrace", "-s", "-o", os.path.join(tmp, "m.svg"), os.path.join(tmp, "m.bmp")], check=True)
-        traced = open(os.path.join(tmp, "m.svg")).read()
-        g = re.search(r'<g transform="([^"]+)"[^>]*>(.*?)</g>', traced, re.S)
-        d = re.sub(r"\s+", " ", " ".join(re.findall(r' d="([^"]+)"', g.group(2)))).strip()
-        svg = f'<svg viewBox="0 0 480 480" aria-hidden="true"><path transform="{g.group(1)}" fill="currentColor" d="{d}"/></svg>'
+        transform, d = _traced(icon_mask(strokes))
+        svg = f'<svg viewBox="0 0 480 480" aria-hidden="true"><path transform="{transform}" fill="currentColor" d="{d}"/></svg>'
         open(os.path.join(out, name + ".svg"), "w").write(svg + "\n")
         print(f"brand/icons/{name}.svg")
+    # The underline is a mask (the page paints it), so it stretches to fit.
+    (w, h), strokes = UNDERLINE
+    transform, d = _traced(icon_mask(strokes, size=(w, h), weight=1.55, taper=(0.05, 0.3)))
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w * 10} {h * 10}" preserveAspectRatio="none"><path transform="{transform}" fill="#000" d="{d}"/></svg>\n'
+    for rel in ["brand/icons/underline.svg"] + UNDERLINE_COPIES:
+        open(os.path.join(ROOT, rel), "w").write(svg)
+        print(rel)
 
 
 def build_og():

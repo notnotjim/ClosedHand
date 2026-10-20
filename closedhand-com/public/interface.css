@@ -281,12 +281,19 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .site-head nav a:hover, .site-head nav a[aria-current="page"] { color: var(--fg); }
 .site-head nav a.gh { display: inline-flex; align-items: center; gap: .375rem; }
 .site-head nav a.gh svg { width: .9375rem; height: .9375rem; fill: currentColor; }
-.site-head nav a.nav-cta { padding: .4375rem 1rem; border-radius: 62.4375rem; border: 1px solid rgba(var(--fg-rgb),0.32); background: rgba(var(--fg-rgb),0.05); color: var(--fg); font-size: .9375rem; transition: background 0.2s, border-color 0.2s; }
-.site-head nav a.nav-cta:hover { background: rgba(var(--fg-rgb),0.1); border-color: rgba(var(--fg-rgb),0.5); }
+/* The way to your own Closedhand, the one link in the header that is yours:
+   its words over a swipe of the fist's brush, redrawn on hover. Not a
+   button, so the download button stays the one filled thing on a page.
+   The web chat's Dashboard link is drawn the same (webapp interface.css). */
+:is(.site-head nav, .header-right) a.nav-cta { position: relative; display: inline-block; padding: .4375rem .125rem .5625rem; border: 0; border-radius: 0; background: none; color: var(--fg); font-size: .9375rem; font-weight: 500; white-space: nowrap; }
+:is(.site-head nav, .header-right) a.nav-cta::after { content: ""; position: absolute; left: -.3125rem; right: -.375rem; bottom: .0625rem; height: .5625rem; background: var(--accent); -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
+:is(.site-head nav, .header-right) a.nav-cta:is(:hover, :focus-visible)::after { animation: brush-draw .5s cubic-bezier(.2, .7, .2, 1); }
+@keyframes brush-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { :is(.site-head nav, .header-right) a.nav-cta::after { animation: none !important; } }
 @media (max-width: 600px) {
   .site-head { padding: .75rem .875rem; }
   .site-head nav { gap: 1rem; }
-  .site-head nav a.nav-cta { font-size: .84375rem; padding: .4375rem .8125rem; }
+  .site-head nav a.nav-cta { font-size: .84375rem; }
   .site-head nav a.gh span, .site-head nav a[href="/privacy"], .site-head nav a[href="/terms"] { display: none; }
 }
 @media (max-width: 360px) { .site-head nav a.gh { display: none; } }

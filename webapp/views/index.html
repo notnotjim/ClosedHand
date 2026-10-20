@@ -161,20 +161,6 @@
     transition: color 0.2s;
   }
   .header-right a:hover { color: #B6AFA4; }
-  .header-right a#dashboardLink {
-    padding: 6px 14px;
-    border: 1px solid rgba(208,86,63,0.2);
-    border-radius: 8px;
-    color: rgba(208,86,63,0.7);
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-  .header-right a#dashboardLink:hover {
-    border-color: rgba(208,86,63,0.4);
-    color: rgba(208,86,63,0.9);
-    box-shadow: 0 0 10px rgba(208,86,63,0.08);
-  }
 
   /* Auth banner */
   .auth-banner {
@@ -2382,7 +2368,7 @@
         <span style="width:6px;height:6px;background:#D0563F;border-radius:50%;display:inline-block;animation:typingBounce 1.4s ease-in-out infinite;"></span>
         <span id="agentCount">0</span> active
       </span>
-      <a href="#" id="dashboardLink" onclick="openDashSlide();return false;">Dashboard</a>
+      <a href="#" id="dashboardLink" class="nav-cta" onclick="openDashSlide();return false;">Dashboard</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
     </div>
@@ -5280,7 +5266,7 @@
         document.getElementById('chatGreeting').textContent = greetingName
           ? 'Hi ' + greetingName + ', how can I help?'
           : 'How can I help?';
-        dashboardLink.style.display = 'inline';
+        dashboardLink.style.display = '';
         dashboardLink.href = '#';
         dashboardLink.onclick = function(e) { e.preventDefault(); openDashSlide(); };
         // The greeting identifies the user; account controls live in Dashboard.
