@@ -9183,11 +9183,18 @@
       return '<div class="row"><span>' + label + '</span><b>' + (total ? (Math.min(done, total) + ' of ' + total + (unit ? ' ' + unit : '')) : '…') + '</b></div>'
         + '<div class="bar"><div class="fill" style="width:' + p + '%"></div></div>';
     }
-    // The first read of a mailbox or calendar is the getting-to-know card, with
-    // bars. Every later sync, which happens whenever mail arrives, is one quiet
-    // line saying what is syncing, and it goes away when the sync does.
+    // Three kinds of reading, each said its own way. The first read of a
+    // mailbox or calendar is the getting-to-know card, with bars. The last year
+    // of mail is read after it in the background for hours, and says how far
+    // back it has got: a row on the card while that is up, then one quiet line.
+    // A sync when new mail arrives is one quiet line saying what is new, and it
+    // goes away when the sync does.
     var FIRST_READ_MS = 48 * 3600 * 1000;
-    function render(st, progress) {
+    function monthOf(iso) {
+      var d = new Date(iso);
+      return d.toLocaleDateString('en-GB', d.getFullYear() === new Date().getFullYear() ? { month: 'long' } : { month: 'long', year: 'numeric' });
+    }
+    function render(st, progress, older) {
       var lines = [], routine = [];
       var emb = (st.localModels || {}).embedder;
       if (st.memoryMode === 'local' && emb && emb.state === 'downloading') {
@@ -9208,7 +9215,9 @@
           routine.push(n ? n + ' new ' + noun + (n === 1 ? '' : 's') : 'new ' + noun + 's');
         }
       });
-      if ((!lines.length && !routine.length) || (lines.length && dismissed)) { if (card) { card.remove(); card = null; } return; }
+      var olderTo = older && older.reading && older.backTo ? monthOf(older.backTo) : '';
+      if (lines.length && olderTo) lines.push('<div class="row"><span>Your older mail</span><b>back to ' + olderTo + '</b></div>');
+      if ((!lines.length && !routine.length && !olderTo) || (lines.length && dismissed)) { if (card) { card.remove(); card = null; } return; }
       if (!card) { card = document.createElement('div'); document.body.appendChild(card); }
       if (lines.length) {
         card.className = 'ready-card';
@@ -9217,14 +9226,17 @@
         card.querySelector('.close').onclick = function () { dismissed = true; card.remove(); card = null; };
       } else {
         card.className = 'ready-card routine';
-        card.innerHTML = '<span class="dot"></span><span>Reading ' + routine.join(' and ') + ', so recall stays up to date</span>';
+        card.innerHTML = '<span class="dot"></span><span>' + (routine.length
+          ? 'Reading ' + routine.join(' and ') + ', so recall stays up to date'
+          : 'Reading your last year of mail, now back to ' + olderTo) + '</span>';
       }
     }
     function tick() {
       Promise.all([
         fetch('/api/setup/status', { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; }),
         fetch('/api/index/progress', { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : []; }),
-      ]).then(function (res) { if (res[0]) render(res[0], res[1]); }).catch(function () {});
+        fetch('/api/index/older-mail', { headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      ]).then(function (res) { if (res[0]) render(res[0], res[1], res[2]); }).catch(function () {});
     }
     tick();
     setInterval(tick, 6000);

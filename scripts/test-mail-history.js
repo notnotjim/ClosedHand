@@ -190,6 +190,43 @@ test('mail archived before the regular sync saw it is caught by the next sweep',
   } finally { s.restore(); }
 });
 
+test('an IMAP mailbox is read back too: inbox, sent and archive, newest first, missing ones only', async () => {
+  const folders = { INBOX: [], Sent: [], Archive: [] };
+  for (let i = 0; i < 260; i++) folders[['INBOX', 'Sent', 'Archive'][i % 3]].push({ uid: 1000 - i, at: now - i * 1.6 * DAY });
+  const tables = { data_cache: [{ user_id: 'u1', source: 'imap', type: 'email', external_id: 'imap-7-1000', received_at: new Date(now).toISOString() }], mail_coverage: [] };
+  const stored = [];
+  const client = {
+    open: null,
+    async list() { return [{ path: 'Sent', specialUse: '\\Sent' }, { path: 'Archive', specialUse: '\\Archive' }, { path: 'All', specialUse: '\\All' }]; },
+    async mailboxOpen(path) { this.open = path; return { exists: folders[path].length, uidValidity: 7 }; },
+    async search({ since, before }) { return folders[this.open].filter((m) => m.at >= since.getTime() && m.at < before.getTime()).map((m) => m.uid); },
+    async *fetch(uids) { for (const uid of uids) yield { uid, source: JSON.stringify(folders[this.open].find((m) => m.uid === uid)) }; },
+  };
+  const imap = {
+    imapSettings: () => ({ email: 'robin@example.org' }),
+    withClient: async (settings, fn) => fn(client),
+    idPrefix: (key, v) => (key === 'inbox' ? `imap-${v}-` : `imap-${key}-${v}-`),
+    parseMessage: async (source) => JSON.parse(source),
+    itemFromParsed: (id, parsed, account, label) => ({ external_id: id, id, account, labels: [label], date: new Date(parsed.at).toISOString() }),
+    HISTORY_FOLDERS: [{ key: 'inbox', label: 'INBOX' }, { key: 'sent', label: 'SENT', specialUse: '\\Sent' }, { key: 'archive', label: 'ARCHIVE', specialUse: '\\Archive' }],
+  };
+  const { mod, restore } = withModules({
+    '../user-store': { supabase: fakeDb(tables) },
+    '../lib/services/imap-mail': imap,
+    '../lib/services/data-sync': { upsertCacheItems: async (userId, source, type, items) => { stored.push(...items); for (const i of items) tables.data_cache.push({ user_id: userId, source, type, external_id: i.external_id, received_at: i.date }); } },
+    '../lib/services/usi': { indexSyncedCacheRows: async () => {} },
+  }, '../lib/services/mail-history');
+  try {
+    const store = { getConnection: (k) => (k === 'imap' ? { metadata: { email: 'robin@example.org' } } : null) };
+    assert.equal(await mod.runAccount({ reader: 'imap', userId: 'u1', store, serviceKey: 'imap', source: 'imap', deadline: Date.now() + 60000 }), true);
+    const want = Object.values(folders).flat().filter((m) => m.at > now - 365 * DAY).length - 1;
+    assert.equal(stored.length, want, 'every message of the year in the three folders, but the one already cached');
+    assert.ok(stored.some((i) => i.external_id.startsWith('imap-sent-7-')) && stored.some((i) => i.external_id.startsWith('imap-archive-7-')));
+    assert.ok(stored.every((i) => i.from_history));
+    assert.equal(tables.mail_coverage[0].done, true);
+  } finally { restore(); }
+});
+
 test('older mail is indexed from its own words and never summarised, and a year of it is kept', () => {
   const usi = read('lib/services/usi.js');
   assert.match(usi, /_raw: !!d\.from_history,/);
@@ -202,4 +239,15 @@ test('older mail is indexed from its own words and never summarised, and a year 
   assert.match(sync, /if \(keepSince\) gone = gone\.lt\("received_at", keepSince\);/);
   assert.match(sync, /require\("\.\/mail-history"\)\.kick\(userId, store\);/);
   assert.match(read('migrations/061_mail_coverage.sql'), /CREATE TABLE IF NOT EXISTS mail_coverage/);
+  assert.match(read('lib/services/mail-history.js'), /\{ quiet: true \}\);/, 'older mail never shows as new mail');
+  assert.match(usi, /const progress = opts\.quiet \? async \(\) => \{\} : upsertProgress;/);
+});
+
+test('the dashboard says which kind of reading is going on', () => {
+  const dash = read('webapp/views/dashboard.html');
+  assert.match(dash, /'<div class="row"><span>Your older mail<\/span><b>back to ' \+ olderTo \+ '<\/b><\/div>'/, 'a row on the first-read card');
+  assert.match(dash, /'Reading your last year of mail, now back to ' \+ olderTo/, 'one quiet line after it');
+  assert.match(dash, /'Reading ' \+ routine\.join\(' and '\) \+ ', so recall stays up to date'/, 'new mail keeps its own line');
+  assert.match(dash, /fetch\('\/api\/index\/older-mail'/);
+  assert.match(read('webapp/server.js'), /app\.get\("\/api\/index\/older-mail"/);
 });

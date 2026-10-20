@@ -7913,6 +7913,20 @@ app.get("/api/index/progress", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/index/older-mail - how far back the last year of mail has been read
+// (lib/services/mail-history.js), for the dashboard's sync card. backTo is
+// the mailbox furthest behind.
+app.get("/api/index/older-mail", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const { data } = await supabase.from("mail_coverage").select("complete_since, done").eq("user_id", userId);
+    const reading = (data || []).filter((r) => !r.done && r.complete_since);
+    const backTo = reading.reduce((late, r) => (!late || r.complete_since > late ? r.complete_since : late), null);
+    res.json({ reading: reading.length > 0, backTo });
+  } catch (e) { res.json({ reading: false, backTo: null }); }
+});
+
 // GET /api/rag/browse - browse folders for source selection
 app.get("/api/rag/browse", async (req, res) => {
   const userId = getUserIdFromRequest(req);
