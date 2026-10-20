@@ -548,7 +548,7 @@ test('deleting a Closedhand account on closedhand.com: signed in, from the site 
   const gone = await json('POST', '/api/account/delete', {}, signedIn(owner.cookie));
   assert.deepEqual(await gone.json(), { deleted: true });
   assert.ok((gone.headers.getSetCookie?.() || []).some(c => /Max-Age=0/i.test(c)), 'signed out');
-  assert.deepEqual(await account(owner.cookie), { signedIn: false, provider: null, email: null, emailVerified: false, url: null, address: null, available: true });
+  assert.deepEqual(await account(owner.cookie), { signedIn: false, provider: null, email: null, emailVerified: false, url: null, address: null, available: true, includedAi: false }, 'no AI offered without a management key');
   assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: copy.auth })).json(), { state: 'unconfirmed' }, 'the computer finds out when it next asks');
   const held = (await db.query('SELECT owner_id FROM held_names WHERE hostname = $1', [new URL(url).hostname])).rows[0];
   assert.deepEqual(held, { owner_id: null });
@@ -710,4 +710,54 @@ test('link previews, the favicon and HTTPS-only are in place', async () => {
   const icon = await fetch(base + '/favicon.ico');
   assert.equal(icon.status, 200);
   assert.match(icon.headers.get('content-type'), /^image\/png/);
+});
+
+// The AI that comes with Closedhand: with a management key set, a claim
+// hands the claiming computer its own OpenRouter key, and deleting the
+// account deletes it. OpenRouter is a stand-in here.
+test('claiming a personal URL hands that computer its own AI key, kept here only as a hash', async () => {
+  const keys = new Map();
+  const openRouter = async (url, opts = {}) => {
+    const method = opts.method || 'GET', path = url.replace('https://openrouter.ai/api/v1', '');
+    const body = opts.body ? JSON.parse(opts.body) : null;
+    if (path.startsWith('/guardrails?')) return new Response(JSON.stringify({ data: [] }));
+    if (path === '/guardrails') return new Response(JSON.stringify({ data: { id: 'rail-1' } }), { status: 201 });
+    if (path === '/guardrails/rail-1/assignments/keys') return new Response(JSON.stringify({ assigned_count: 1 }));
+    if (path === '/keys' && method === 'POST') {
+      const hash = crypto.randomBytes(32).toString('hex'), key = 'sk-or-v1-' + crypto.randomBytes(32).toString('hex');
+      keys.set(hash, body);
+      return new Response(JSON.stringify({ data: { hash, limit: body.limit }, key }), { status: 201 });
+    }
+    if (method === 'DELETE' && path.startsWith('/keys/')) { keys.delete(path.slice(6)); return new Response('{}'); }
+    throw new Error('unexpected ' + method + ' ' + url);
+  };
+  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64) }, request: (url, opts) => url.startsWith('https://openrouter.ai/') ? openRouter(url, opts) : request(url, opts) });
+  const other = await new Promise(r => { const s = app.listen(0, () => r(s)); });
+  const at = 'http://127.0.0.1:' + other.address().port;
+  const call = (method, path, body, headers = {}) => fetch(at + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
+  try {
+    const offer = await (await call('GET', '/api/account')).json();
+    assert.equal(offer.includedAi, true, 'setup is told a claim brings Closedhand Managed LLM');
+    assert.equal(offer.includedAiModel, 'deepseek/deepseek-v4.1-flash', 'and which LLM it is');
+    const copy = newCopy();
+    const ticket = (await (await call('POST', '/api/phone-enrollment/register', { name: 'quinn-ai', port: 3000, confirm: 'code' }, copy.auth)).json()).ticket;
+    const owner = await signIn('google', google('g-quinn', 'quinn@example.com'));
+    const { code } = await (await call('POST', '/api/phone-enrollment/approve', { ticket }, signedIn(owner.cookie))).json();
+    const done = await (await call('POST', '/api/phone-enrollment/claim', { code }, copy.auth)).json();
+    assert.equal(done.url, 'https://quinn-ai.closedhand.ai');
+    assert.match(done.included_ai.key, /^sk-or-v1-[a-f0-9]{64}$/);
+    assert.deepEqual(done.included_ai.models, { chat: 'deepseek/deepseek-v4.1-flash', background: 'deepseek/deepseek-v4.1-flash' });
+    const row = (await db.query("SELECT k.* FROM included_ai_keys k JOIN owners o ON o.id = k.owner_id WHERE o.subject = 'g-quinn'")).rows[0];
+    assert.ok(keys.has(row.key_hash), 'the hash names the key at OpenRouter');
+    assert.equal(Number(row.granted_usd), 10);
+    assert.ok(!JSON.stringify(row).includes(done.included_ai.key), 'the key itself is not kept');
+    assert.equal([...keys.values()][0].name, 'Closedhand ' + row.owner_id, 'named by the account, not its email');
+    // The computer can ask which models are current, and only a known computer.
+    assert.deepEqual(await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json(), { models: done.included_ai.models });
+    assert.equal((await call('GET', '/api/phone-enrollment/included-ai')).status, 401);
+    // Deleting the account from its computer deletes the key too.
+    assert.deepEqual(await (await call('POST', '/api/phone-enrollment/account/delete', {}, copy.auth)).json(), { deleted: true });
+    assert.equal(keys.size, 0);
+    assert.equal((await db.query('SELECT 1 FROM included_ai_keys WHERE key_hash = $1', [row.key_hash])).rowCount, 0);
+  } finally { other.close(); }
 });

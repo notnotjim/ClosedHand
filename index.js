@@ -212,6 +212,8 @@ async function main() {
   // Routines that wait for something to happen look at what the sync
   // brought in, once a minute (lib/watches.js).
   require("./lib/watches").start();
+  // The Closedhand Managed LLM credit, said once when it runs low (lib/included-credit.js).
+  require("./lib/included-credit").start();
   await startPulse();
   // Warm the runtime-config cache before anything reads it synchronously.
   // getConfCached returns undefined on a cold cache, so an unwarmed read of

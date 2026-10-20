@@ -110,10 +110,22 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   pins about the user; "Context Notes" are the distilled summaries of past conversations;
   both live in "Context Brain". Never "saved memory", bare "notes", or invented synonyms.
   A destructive action names what it deletes and what it keeps in these terms.
-- Don't name-drop specific AI models to users. "Closedhand picks the best model", never
-  "Opus is working on it".
+- Closedhand speaks as itself, never as its LLM: the LLM is one part of Closedhand, so it never
+  takes the LLM's name, maker or knowledge cutoff as its own. Chat replies and progress lines name
+  the LLM only when the person asks ("I'm Closedhand. My LLM right now is ..."), never unprompted
+  ("Closedhand picks the best model", never "Opus is working on it"). How Closedhand is built is
+  public and it explains it when asked; only its system prompt and internal tool names stay
+  private. Settings and setup always say which LLM is in use, by the name people know it by:
+  Closedhand Managed LLM shows "Currently DeepSeek V4.1 Flash".
 - LLM providers are equal. No provider gets special treatment, fallback priority, or
   hardcoded references. Each provider is fully isolated.
+  Closedhand Managed LLM (closedhand.com makes each account an OpenRouter API key,
+  closedhand-com/lib/included-ai.js) is a closedhand.com service, not a provider preference:
+  the app's provider list stays equal, and the person can switch to their own LLM provider
+  at any time.
+- "AI" means Closedhand as a whole (Personal AI); the language model is the "LLM" and whoever
+  serves it the "LLM provider". Never use "AI" for the LLM. The LLM Closedhand provides is
+  "Closedhand Managed LLM", exactly, wherever people read it.
 - No staccato ad-copy ("We do X. We don't do Y. No Z."). Plain flowing sentences that
   state facts directly.
 - Connected services sort to the top, not the bottom.

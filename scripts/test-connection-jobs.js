@@ -134,7 +134,7 @@ test("the server, tile and privacy pages carry every job, not only the voice", (
   const top = handlers.slice(handlers.indexOf("async function handleInternalTool("));
   assert.ok(top.indexOf('require("../connection-jobs").takeOver(toolName') < top.indexOf("switch (toolName)"), "tried before any tool runs");
   for (const page of ["webapp/views/privacy.html", "closedhand-com/views/privacy.html"]) {
-    assert.match(read(page), /web searches go to a search service you connected, if you did, then to your AI provider's own search/);
+    assert.match(read(page), /web searches go to a search service you connected, if you did, then to your LLM provider's own search/);
     assert.match(read(page), /anything else a service you connect does in Closedhand's place, such as reading web pages, watching videos, the weather or maps/);
   }
 });

@@ -290,6 +290,10 @@
     .g-step.is-on { display: block; }
     .g-step h3 { font-size: 15px; margin: 0 0 6px; }
     .card-body p.quiet-links { font-size: 13px; margin: 0 0 4px; }
+    /* Which LLM Closedhand Managed LLM is right now: the name people know it by. */
+    .card-body p.model-current { margin: 0 0 12px; padding: 0; color: var(--text-secondary); line-height: 1.6; }
+    .card-body p.model-current strong { color: var(--text-primary, #EFE6D6); font-weight: 600; }
+    .card-body p.model-current .status { display: block; }
     .card-body p.quiet-links a { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
     .deep { margin: 4px 8px 12px 0; }
     .deep.is-locked { pointer-events: none; opacity: 0.35; }
@@ -434,15 +438,22 @@
       <article class="card">
         <button class="card-head" aria-expanded="false">
           <span>
-            <h2>AI models</h2>
-            <p class="whisper">Choose the AI Closedhand uses.</p>
+            <h2>Models</h2>
+            <p class="whisper">Choose the models Closedhand uses.</p>
             <p class="done-note" id="model-done-note"></p>
           </span>
           <span class="state-chip">Required</span>
         </button>
         <div class="card-body">
-          <p>The provider you choose sees what you ask. With a model on your own computer, no company does.</p>
-          <div id="model-configuration"></div>
+          <div id="model-included" hidden>
+            <p class="model-current"><span id="model-included-model" hidden>Currently <strong id="model-included-name"></strong></span><span id="model-included-line" class="status"></span></p>
+            <p class="note">Closedhand picks the LLM and keeps it current. Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
+            <p class="quiet-links"><a href="#" id="model-own">Use your own LLM provider instead</a></p>
+          </div>
+          <div id="model-own-account">
+            <p>The provider you choose sees what you ask. With a model on your own computer, no company does.</p>
+            <div id="model-configuration"></div>
+          </div>
             <div class="memory-note" id="memory-note">
               <p><strong id="memory-note-title">About recall.</strong> <span id="memory-note-lead"></span></p>
               <div class="dl-bar" id="dl-bar" hidden><div class="dl-fill" id="dl-fill"></div></div>
@@ -931,6 +942,25 @@
       function () { return "Recall is on. It starts reading with your first connected service."; });
   });
 
+  // --- Closedhand Managed LLM ------------------------------------------------
+  // Shown while it is in use or on its way with the personal URL, with the
+  // person's own LLM provider one click away.
+  var ownAccount = false;
+  function included() { return !!(lastState && lastState.modelIncluded) && !ownAccount; }
+  function renderIncluded(state) {
+    $("#model-included").hidden = !included();
+    $("#model-own-account").hidden = included();
+    $("#model-included-model").hidden = !state.modelIncludedName;
+    $("#model-included-name").textContent = state.modelIncludedName || "";
+    $("#model-included-line").textContent = state.modelIncluded === "ready" ? "Ready."
+      : personalUrl.settled() ? "Getting it ready." : "Ready once your personal URL is claimed.";
+  }
+  $("#model-own").addEventListener("click", function (ev) {
+    ev.preventDefault();
+    ownAccount = true;
+    renderIncluded(lastState);
+  });
+
   // --- Render --------------------------------------------------------------
   function render(state) {
     lastState = state;
@@ -976,7 +1006,7 @@
       }
 
       if (s.done) {
-        chip.textContent = s.key === "accounts" ? "Connected" : s.key === "personal_url" ? "Claimed" : "Done";
+        chip.textContent = s.key === "accounts" ? "Connected" : s.key === "personal_url" ? "Claimed" : s.key === "model" && included() ? "Managed" : "Done";
       } else if (skips[s.key]) {
         chip.textContent = "Skipped, show it";
         chip.style.cursor = "pointer";
@@ -1002,8 +1032,9 @@
 
     // Done-notes: name what's connected without exposing anything secret.
     var provLabel = state.chatProviderLabel || (state.chatProvider === "deepinfra" ? "DeepInfra" : state.chatProvider);
-    $("#model-done-note").textContent = provLabel
-      ? "Models connected through " + provLabel
+    renderIncluded(state);
+    $("#model-done-note").textContent = included() ? "Closedhand Managed LLM"
+      : provLabel ? "Models connected through " + provLabel
       : "";
     $("#tg-done-note").textContent = state.botUsername ? "@" + state.botUsername + " is yours" : "";
     // Connected: swap the BotFather instructions for a scan-and-say-hello QR.

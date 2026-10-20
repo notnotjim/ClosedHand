@@ -1829,6 +1829,31 @@ app.get("/api/usage/summary", async (req, res) => {
   }
 });
 
+// Closedhand Managed LLM (included-ai.js): whether it is in use or
+// waiting beside the person's own AI account, and what is left on it, read
+// from OpenRouter with its own key. Behind the password gate, like Usage.
+app.get("/api/included-ai", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const { data } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).maybeSingle();
+    const settings = data?.settings || {};
+    if (!settings.included_api_key) return res.json({ state: null });
+    const included = require("./included-ai");
+    res.json({ state: included.inUse(settings) ? "in-use" : "available", credit: await included.credit(settings),
+      model: settings.included_ai?.name || null });
+  } catch (e) {
+    res.status(503).json({ error: "Could not read Closedhand Managed LLM just now." });
+  }
+});
+app.post("/api/included-ai/use", async (req, res) => {
+  try {
+    await require("./included-ai-setup").use();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message || "Could not switch to Closedhand Managed LLM." });
+  }
+});
+
 // A model's price per million tokens, as the provider's price list gives it.
 app.post("/api/usage/prices", async (req, res) => {
   try {
@@ -9665,6 +9690,8 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
+  // Closedhand Managed LLM follows the models Closedhand picks (included-ai-setup.js).
+  require("./included-ai-setup").start();
   // Secrets, provider keys and MCP credentials saved before they were stored
   // encrypted are sealed once; reads already handle both.
   try {

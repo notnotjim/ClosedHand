@@ -401,6 +401,7 @@ async function request(conn, params, options = {}) {
     }
     url = conn.baseUrl + "/chat/completions"; convert = data => convertResponseFromOpenAI(data, id);
   }
+  named(conn, headers);
   const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body),
     signal: options.signal || AbortSignal.timeout(90000), redirect: "error" });
   if (!response.ok) {
@@ -421,6 +422,13 @@ async function request(conn, params, options = {}) {
   }
   return convert(await response.json());
 }
+// OpenRouter credits the traffic to the app that names itself; nothing about
+// the person goes with it.
+function named(conn, headers) {
+  let host = "";
+  try { host = new URL(conn.baseUrl).hostname; } catch (_) {}
+  if (host === "openrouter.ai") Object.assign(headers, { "HTTP-Referer": "https://closedhand.com", "X-Title": "Closedhand" });
+}
 // What a provider's status code means for the person reading it. Bodies are never echoed.
 function providerProblem(status, fallback) {
   return { 401: "The provider rejected the API key.", 402: "The provider says this account needs payment or more credit.",
@@ -432,6 +440,7 @@ async function listModels(conn) {
   if (conn.backend === "anthropic") Object.assign(headers, { "x-api-key": conn.apiKey, "anthropic-version": "2023-06-01" });
   else if (conn.backend === "gemini") headers["x-goog-api-key"] = conn.apiKey;
   else if (conn.apiKey) headers.Authorization = "Bearer " + conn.apiKey;
+  named(conn, headers);
   const response = await fetch(conn.baseUrl + "/models", { headers, signal: AbortSignal.timeout(12000), redirect: "error" });
   if (!response.ok) { const e = new Error("Could not load models (HTTP " + response.status + "). " + providerProblem(response.status, "You can enter the model ID.")); e.status = response.status; throw e; }
   const data = await response.json();

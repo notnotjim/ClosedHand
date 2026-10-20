@@ -1,4 +1,5 @@
 // Personal URL registration with closedhand.com. Only routing credentials leave the install.
+// A claim can bring back the AI that comes with Closedhand (included-ai-setup.js).
 const crypto = require('node:crypto');
 const { getConf, setConf } = require('./config');
 const { encryptString, decryptString } = require('./crypto-tokens');
@@ -79,13 +80,31 @@ async function rename(name) {
 let serviceCheck = { at: 0, available: null };
 async function serviceAvailable() {
   if (Date.now() - serviceCheck.at < 30000 && serviceCheck.available !== null) return serviceCheck.available;
-  let available = false;
+  let available = false, includedAi = false, includedAiModel = null;
   try {
     const response = await fetch(PROVIDER + '/api/account', { redirect: 'error', signal: AbortSignal.timeout(6000) });
-    available = response.ok && (await response.json()).available === true;
+    const answer = response.ok ? await response.json() : {};
+    available = answer.available === true;
+    includedAi = available && answer.includedAi === true;
+    if (includedAi && typeof answer.includedAiModel === 'string') includedAiModel = answer.includedAiModel;
   } catch (_) { available = false; }
-  serviceCheck = { at: Date.now(), available };
+  serviceCheck = { at: Date.now(), available, includedAi, includedAiModel };
   return available;
+}
+// Whether claiming the personal URL now would bring the AI that comes with
+// Closedhand, so setup can say so before it is claimed.
+async function includedAiOffered() {
+  await serviceAvailable();
+  return serviceCheck.includedAi === true;
+}
+// The LLM a claim now would bring, by its model ID, or null.
+async function includedAiModel() {
+  return (await includedAiOffered()) ? serviceCheck.includedAiModel || null : null;
+}
+// The models Closedhand Managed LLM uses now, asked by this computer
+// (included-ai-setup.js refresh), or null when it is not offered.
+async function includedAiModels() {
+  return (await call('included-ai', 'GET')).models || null;
 }
 function validAddress(value) {
   try {
@@ -143,7 +162,7 @@ async function claim(code, state) {
     if (!match) throw new Error('That link didn’t come from this Closedhand. Get your personal URL here instead.');
     await setConf({ PHONE_CLAIM_STATES: JSON.stringify(states.filter(s => s !== match)) });
   }
-  const data = await call('claim', 'POST', { code });
+  const data = withIncludedAi(await call('claim', 'POST', { code }));
   if (['pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state)) registrationState = data.state;
   // The name closedhand.com picked, so setup can say where Closedhand is.
   if (validAddress(data.url)) await setConf({ PHONE_ADDRESS_NAME: new URL(data.url).hostname.split('.')[0] });
@@ -154,11 +173,18 @@ async function claim(code, state) {
 // Microsoft's keys. Null when closedhand.com wants it claimed on its
 // confirmation page instead (an address already used on another computer).
 async function claimWithMicrosoft(idToken) {
-  const data = await call('claim-microsoft', 'POST', { idToken, port: Number(process.env.PORT || 3000) });
+  const data = withIncludedAi(await call('claim-microsoft', 'POST', { idToken, port: Number(process.env.PORT || 3000) }));
   if (data.claimHere || !validAddress(data.url)) return null;
   if (['pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state)) registrationState = data.state;
   await setConf({ PHONE_ENROLLMENT: '2', PHONE_ADDRESS_NAME: new URL(data.url).hostname.split('.')[0] });
   return data;
+}
+// A claim's answer without the included AI's key, which is kept here (sealed)
+// and set up as the models; nothing returned from here carries it.
+function withIncludedAi(data) {
+  const { included_ai: included, ...rest } = data || {};
+  if (included) require('./included-ai-setup').receive(included).catch(e => console.error('[included ai] not kept:', e.message));
+  return rest;
 }
 async function challenge(nonce) {
   if (typeof nonce !== 'string' || !/^[a-f0-9]{64}$/.test(nonce)) throw new Error('Invalid challenge');
@@ -189,4 +215,4 @@ async function forget() {
 function status() {
   return { registrationState, ownershipConfirmed: ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(registrationState) };
 }
-module.exports = { begin, claim, claimWithMicrosoft, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, account, deleteAccount };
+module.exports = { begin, claim, claimWithMicrosoft, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, includedAiOffered, includedAiModel, includedAiModels, account, deleteAccount };

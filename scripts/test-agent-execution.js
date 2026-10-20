@@ -217,7 +217,7 @@ test("a background model call survives a dropped connection; a stopped task is n
 test("a background job that failed with nothing to show says what and why, and how to restart", () => {
   const { failedNote } = require("../lib/task-delivery");
   assert.equal(failedNote({ goal: "can you find me a couple of good coworking spaces in District 1 with day passes, for next week?", error: "fetch failed" }),
-    'I couldn\'t finish "can you find me a couple of good coworking spaces in District 1 with day passes, for next…": the connection to the AI provider kept dropping. Say "try again" and I\'ll start it fresh.');
+    'I couldn\'t finish "can you find me a couple of good coworking spaces in District 1 with day passes, for next…": the connection to the LLM provider kept dropping. Say "try again" and I\'ll start it fresh.');
   assert.match(failedNote({ goal: "x", error: "This task reached its work allowance." }), /work allowance/);
   assert.doesNotMatch(failedNote({ goal: "x" }), /dashboard/);
 });

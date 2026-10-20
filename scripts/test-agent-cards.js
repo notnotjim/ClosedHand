@@ -27,7 +27,7 @@ test("a run that answered says Completed, and its line gives how the answer star
 test("a run that could not finish says why in plain words, never the check's note", () => {
   assert.equal(box.runWord({ status: "partial", error: "No answer was produced." }), "Couldn't finish");
   assert.equal(box.runOutcome({ status: "partial", error: "No answer was produced." }), "Something went wrong partway through.");
-  assert.equal(box.runOutcome({ status: "failed", error: "fetch failed" }), "The connection to the AI provider kept dropping.");
+  assert.equal(box.runOutcome({ status: "failed", error: "fetch failed" }), "The connection to the LLM provider kept dropping.");
   assert.equal(box.runOutcome({ status: "failed", error: "This task reached its work allowance." }), "It reached the work allowance for one task.");
   assert.equal(box.runWord({ status: "cancelled" }), "Stopped");
   assert.equal(box.runOutcome({ status: "cancelled" }), "Stopped before it finished.");

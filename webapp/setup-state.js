@@ -57,6 +57,23 @@ async function getSetupState() {
     (settings.llm_provider === "custom" && settings.custom_base_url && settings.custom_model)
   );
 
+  // The AI that comes with Closedhand: in use ("ready"), or on its way
+  // ("pending") because claiming the personal URL brings it (closedhand.com
+  // says a claim now would) or because a claim brought it and its models are
+  // being checked. Pending counts as done here, so setup carries on to the
+  // claim; if the key never comes, the step asks for an AI account again.
+  const urlClaimed = !!(envOr("PHONE_ADDRESS_NAME") || envOr("PHONE_PERMANENT_URL"));
+  let modelIncluded = null, modelIncludedName = settings.included_ai?.name || null;
+  if (model && settings.model_config?.included) modelIncluded = "ready";
+  else if (!model && settings.included_api_key && !settings.included_ai?.error) modelIncluded = "pending";
+  else if (!model && !urlClaimed && db) {
+    // Which LLM a claim would bring, by name, so setup can say what it is.
+    const registration = require("./phone-registration");
+    const offered = await registration.includedAiModel().catch(() => null);
+    if (offered) { modelIncluded = "pending"; modelIncludedName = await require("./included-ai-setup").modelName(offered); }
+  }
+  const modelDone = model || modelIncluded === "pending";
+
   // Memory = a working embeddings config: a hosted embedder (wizard-derived or
   // DeepInfra defaults) or the local fallback embedder. memoryMode drives the
   // wizard's copy and the dashboard's hosted/local role display.
@@ -107,7 +124,7 @@ async function getSetupState() {
   // Chat apps are one step: any connected chat surface satisfies it.
   const steps = [
     { key: "database", label: "Database", done: db, required: true },
-    { key: "model", label: "Model provider", done: model, required: true },
+    { key: "model", label: "Model provider", done: modelDone, required: true },
     { key: "admin_password", label: "Admin password", done: adminPassword, required: true },
     { key: "accounts", label: "Email and calendar", done: accountSaved, required: true },
     { key: "chat", label: "Chat apps", done: telegram || waLinked.linked, required: false },
@@ -120,7 +137,7 @@ async function getSetupState() {
     // chat window round a model, so one of them is part of the floor, not an
     // extra. Without a password the dashboard is open to anyone on the same
     // network, so it is part of the floor too. Chat apps can follow.
-    ready: db && model && adminPassword && accountSaved,
+    ready: db && modelDone && adminPassword && accountSaved,
     steps,
     connections,
     nextUnlock: nextUnlock ? nextUnlock.key : null,
@@ -145,6 +162,8 @@ async function getSetupState() {
         : { mode: "hosted", model: envOr("ENRICH_MODEL") || (envOr("DEEPINFRA_API_KEY") ? "deepseek-ai/DeepSeek-V4-Flash" : null) },
     },
     localModels: conf.LOCAL_MODELS_STATUS || null,
+    modelIncluded,
+    modelIncludedName,
     chatProvider: settings.model_config?.connections?.primary?.provider || (conf.DEEPINFRA_API_KEY && (!settings.llm_provider || settings.llm_provider === "custom")
       ? "deepinfra"
       : settings.llm_provider || null),

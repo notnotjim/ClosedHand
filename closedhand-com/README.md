@@ -46,6 +46,11 @@ Migrations in `migrations/` apply on start.
 | `PHONE_PROVISIONER_SECRET` | Shared with the provisioner Worker |
 | `BUG_RECEIPT_SECRET` | Signs bug report receipts (defaults to `SESSION_SECRET`) |
 | `ADDRESS_LIMIT` | How many personal URLs may exist (default 100) |
+| `OPENROUTER_PROVISIONING_KEY` | An OpenRouter management key; with it, each account that claims a personal URL gets its own OpenRouter key, the AI that comes with Closedhand (lib/included-ai.js). Without it, no keys are made |
+| `INCLUDED_AI_STARTER_USD` | Credit on each account's first key (default 10) |
+| `INCLUDED_AI_MONTHLY_CAP_USD` | Most new starter credit given in a calendar month (default 300); past it, setup asks for an AI account instead |
+| `INCLUDED_AI_MODELS` | The models those keys may use, comma-separated: the first for chat, the second for support work (default `deepseek/deepseek-v4.1-flash`). Computers pick up a change within a few hours |
+| `INCLUDED_AI_RETIRING_MODELS` | Models just switched away from, still allowed while computers switch; clear it after a day |
 | `TRUSTED_PROXY_HOPS` | Proxies in front that add X-Forwarded-For (default 2: Cloudflare, then Railway) |
 | `ASSISTANT_EMAIL_ENABLED`, `ASSISTANT_EMAIL_RELEASED`, `ASSISTANT_EMAIL_PRODUCTION` | All `1` to offer assistant email; any other value keeps it off |
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | The mail transport's AWS user: send through SES, read the mail queues and bucket, invoke the guard |
