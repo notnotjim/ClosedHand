@@ -874,10 +874,13 @@
   .activity-item:hover .activity-delete { display: block; }
   .activity-delete:hover { color: #D0563F; background: rgba(216,98,75,0.1); }
   .activity-item-icon {
-    font-size: 14px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 2px;
+    color: rgba(239,230,214,0.55);
   }
+  .activity-item-icon svg { display: block; width: 100%; height: 100%; }
   .activity-item-text {
     font-size: 13px;
     color: #B6AFA4;
@@ -3801,12 +3804,9 @@
         img.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;';
         chip.appendChild(img);
       } else {
-        var iconMap = { 'application/pdf': '📄', 'text/csv': '📊', 'video/': '🎬', 'audio/': '🎵', 'application/zip': '📦' };
-        var icon = '📎';
-        for (var k in iconMap) { if (file.type.indexOf(k) !== -1) { icon = iconMap[k]; break; } }
         var iconEl = document.createElement('span');
-        iconEl.textContent = icon;
-        iconEl.style.cssText = 'font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(239,230,214,0.05);border-radius:6px;';
+        iconEl.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>';
+        iconEl.style.cssText = 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(239,230,214,0.05);border-radius:6px;color:rgba(239,230,214,0.7);';
         chip.appendChild(iconEl);
       }
       var nameSpan = document.createElement('span');
@@ -4630,7 +4630,7 @@
 
         return '<div class="activity-item" style="' + activeStyle + 'border-radius:0;padding-left:12px;">' +
           '<div onclick="switchToThread(\'' + t.id + '\')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' +
-            '<span class="activity-item-icon">💬</span>' +
+            '<span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>' +
             '<div style="flex:1;min-width:0;">' +
               '<div class="activity-item-text" style="color:' + titleColor + ';">' + title.replace(/</g, '&lt;') + '</div>' +
               '<div class="activity-item-time">' + ago + (msgCount > 0 ? ' · ' + msgCount + ' msgs' : '') + '</div>' +
@@ -4647,7 +4647,7 @@
         if (!list || !data.activities) return;
         list.innerHTML = data.activities.map(function(a) {
           var ago = timeAgo(a.time);
-          return '<div class="activity-item"><div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon">💬</span><div><div class="activity-item-text">' + (a.text || '').replace(/</g, '&lt;') + '</div><div class="activity-item-time">' + ago + '</div></div></div></div>';
+          return '<div class="activity-item"><div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><div><div class="activity-item-text">' + (a.text || '').replace(/</g, '&lt;') + '</div><div class="activity-item-time">' + ago + '</div></div></div></div>';
         }).join('');
       }).catch(function() {});
     });
@@ -4666,7 +4666,7 @@
       var placeholder = document.createElement('div');
       placeholder.className = 'activity-item';
       placeholder.style.cssText = 'border-left:3px solid #D0563F;background:rgba(216,98,75,0.06);border-radius:0;padding-left:12px;';
-      placeholder.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon">💬</span><div><div class="activity-item-text" style="color:#EFE6D6;">New conversation</div><div class="activity-item-time">just now</div></div></div>';
+      placeholder.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><div><div class="activity-item-text" style="color:#EFE6D6;">New conversation</div><div class="activity-item-time">just now</div></div></div>';
       list.insertBefore(placeholder, list.firstChild);
     }
     // Background: create the thread on the server

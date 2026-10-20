@@ -31,3 +31,20 @@ test("the files in place are the active mark, exactly", () => {
 test("the brand folder stays out of the bot image", () => {
   assert.match(read(".dockerignore").toString(), /^brand$/m);
 });
+
+// The icons beside the fist are drawn with its brush (brand.py build-icons)
+// and carried inline; a page's copy is the drawn one, and no page uses an
+// emoji where an icon goes.
+test("pages carry the brush icons as drawn, and no emoji", () => {
+  const pages = ["closedhand-com/views", "webapp/views"].flatMap((d) => fs.readdirSync(path.join(root, d)).filter((f) => f.endsWith(".html")).map((f) => `${d}/${f}`));
+  let used = 0;
+  for (const page of pages) {
+    const html = read(page).toString();
+    for (const m of html.matchAll(/<svg data-icon="([a-z]+)" ([^]*?<\/svg>)/g)) {
+      used++;
+      assert.equal(`<svg ${m[2]}`, read(`brand/icons/${m[1]}.svg`).toString().trim(), `${page}: the ${m[1]} icon is brand/icons/${m[1]}.svg`);
+    }
+    assert.doesNotMatch(html, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, `${page} has no emoji`);
+  }
+  assert.ok(used >= 9, "the icons were found");
+});

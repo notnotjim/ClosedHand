@@ -14,6 +14,16 @@
 #
 #   python3 scripts/brand.py build-brush [--film]
 #
+# The icons pages show beside the fist, drawn with the same brush (brand/icons,
+# one SVG each in the colour of the text around it; pages carry them inline):
+#
+#   python3 scripts/brand.py build-icons
+#
+# The link preview, drawn from brand/og.html with each set's fist (needs
+# Chrome; run it after changing the home page's heading):
+#
+#   python3 scripts/brand.py build-og
+#
 # Every file is drawn the way the original is: the same canvas, colour and
 # placement, the app icon on the same dark gradient, the circle mark in the
 # same ring, the favicon the same colour-following mask.
@@ -198,11 +208,7 @@ def build_brush(film=False):
             ap[x, y] = edge
     app.alpha_composite(fit(mask, (1024, 1024), CREAM, (234, 214, 554, 612)))
     _icns_write(app, out("desktop/AppIcon.icns"))
-    # The link preview: the fist beside the name, on its flat dark corner.
-    og = Image.open(os.path.join(orig, "closedhand-com/public/og.png")).convert("RGB")
-    _clear(og, (54, 42, 98, 86))
-    og = og.convert("RGBA"); og.alpha_composite(fit(mask, (40, 40), CREAM), (56, 44))
-    og.convert("RGB").save(out("closedhand-com/public/og.png"), optimize=True)
+    # The link preview is drawn from its page: brand.py build-og.
     # The old wordmark with the fist above it, in its grey.
     full = Image.open(os.path.join(orig, "webapp/public/logo-full.png")).convert("RGBA")
     full.paste((0, 0, 0, 0), (1090, 0, 1332, 267))
@@ -226,15 +232,82 @@ def build_brush(film=False):
     print("Built the brush set in brand/marks/brush.")
 
 
-def _clear(img, box):
-    """Paint over a box with the background around it, row by row."""
-    x0, y0, x1, y1 = box
-    px = img.load()
-    for y in range(y0, y1):
-        a, b = px[x0 - 1, y], px[x1, y]
-        for x in range(x0, x1):
-            t = (x - x0) / max(1, x1 - x0)
-            px[x, y] = tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+# The icons, on a 48 grid: each stroke a start point then segments, a segment
+# being a straight line (one point) or a curve (two controls and an end).
+ICONS = {
+    # A brain from the front: two halves, the line between them, a fold in each.
+    "brain": [((23, 39), [((15, 41), (8, 35), (9, 28)), ((5, 23), (7, 15), (14, 14)), ((15, 8), (21, 7), (23, 11))]),
+              ((25, 39), [((33, 41), (40, 35), (39, 28)), ((43, 23), (41, 15), (34, 14)), ((33, 8), (27, 7), (25, 11))]),
+              ((24, 12), [((24, 20),), ((24, 37),)]),
+              ((9.5, 26), [((13, 23.5), (16, 26.5), (19, 24))]),
+              ((38.5, 26), [((35, 23.5), (32, 26.5), (29, 24))])],
+    # A shield, one line round, with a tick inside.
+    "shield": [((24, 7), [((29, 10), (34, 11), (38, 10)), ((39, 25), (33, 35), (24, 41)), ((15, 35), (9, 25), (10, 10)), ((14, 11), (19, 10), (24, 7.6))]),
+               ((17.5, 24.5), [((19.5, 26), (21, 28), (22, 29.5)), ((24.5, 25), (27.5, 21), (31, 18))])],
+    # A pulse along a line.
+    "pulse": [((4, 26), [((10, 26),), ((13, 26), (14, 25), (15.5, 22)), ((17, 18), (17.5, 15), (18.5, 15)), ((20, 15), (21, 32), (23.5, 33)),
+                         ((26, 34), (26.5, 21), (28.5, 21)), ((30.5, 21), (31, 26), (34, 26)), ((44, 26),)])],
+    # Two links of a chain on the diagonal, each a hook round the other's end.
+    "link": [((20, 26), [((24.7, 31), (29.7, 31.3), (35.1, 27.1)), ((41.1, 21.1),), ((50.5, 11.6), (36.4, -2.5), (26.9, 6.9)), ((23.5, 10.4),)]),
+             ((28, 22), [((23.3, 17), (18.3, 16.7), (12.9, 20.9)), ((6.9, 26.9),), ((-2.5, 36.4), (11.6, 50.5), (21.1, 41.1)), ((24.5, 37.6),)])],
+    # A bolt of lightning.
+    "bolt": [((29, 5), [((17, 26),), ((28, 25),), ((19, 43),)])],
+    # A tick.
+    "tick": [((11, 25), [((14, 28), (17, 31), (19.5, 35)), ((25, 25), (31, 17), (38, 11))])],
+}
+
+
+def icon_mask(strokes, scale=10, per=120):
+    """An icon as a white-on-black mask on its 48 grid, each stroke tapering like the fist's line."""
+    from PIL import Image, ImageDraw
+    im = Image.new("L", (48 * scale, 48 * scale), 0)
+    d = ImageDraw.Draw(im)
+    for start, segs in strokes:
+        pts, cur = [start], start
+        for seg in segs:
+            end = seg[-1]
+            if len(seg) == 1:
+                pts += [(cur[0] + (end[0] - cur[0]) * i / per, cur[1] + (end[1] - cur[1]) * i / per) for i in range(1, per + 1)]
+            else:
+                pts += [_cubic(cur, seg[0], seg[1], end, i / per) for i in range(1, per + 1)]
+            cur = end
+        n = len(pts)
+        for i, (x, y) in enumerate(pts):
+            t = i / (n - 1)
+            r = (0.95 + 1.25 * math.sin(math.pi * t) ** 0.5) * _taper(t, 0.06, 0.08) * scale
+            d.ellipse([x * scale - r, y * scale - r, x * scale + r, y * scale + r], fill=255)
+    return im
+
+
+def build_icons():
+    from PIL import Image
+    out = os.path.join(ROOT, "brand", "icons")
+    os.makedirs(out, exist_ok=True)
+    for name, strokes in ICONS.items():
+        tmp = tempfile.mkdtemp()
+        Image.eval(icon_mask(strokes), lambda v: 255 - v).convert("1").save(os.path.join(tmp, "m.bmp"))
+        subprocess.run(["potrace", "-s", "-o", os.path.join(tmp, "m.svg"), os.path.join(tmp, "m.bmp")], check=True)
+        traced = open(os.path.join(tmp, "m.svg")).read()
+        g = re.search(r'<g transform="([^"]+)"[^>]*>(.*?)</g>', traced, re.S)
+        d = re.sub(r"\s+", " ", " ".join(re.findall(r' d="([^"]+)"', g.group(2)))).strip()
+        svg = f'<svg viewBox="0 0 480 480" aria-hidden="true"><path transform="{g.group(1)}" fill="currentColor" d="{d}"/></svg>'
+        open(os.path.join(out, name + ".svg"), "w").write(svg + "\n")
+        print(f"brand/icons/{name}.svg")
+
+
+def build_og():
+    """The link preview for every set, from brand/og.html with that set's fist."""
+    chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    for mark in sorted(os.listdir(MARKS)):
+        tmp = tempfile.mkdtemp()
+        shutil.copyfile(os.path.join(ROOT, "brand/og.html"), os.path.join(tmp, "og.html"))
+        shutil.copyfile(os.path.join(MARKS, mark, "closedhand-com/public/fist.png"), os.path.join(tmp, "fist.png"))
+        dest = os.path.join(MARKS, mark, "closedhand-com/public/og.png")
+        subprocess.run([chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--allow-file-access-from-files",
+                        "--window-size=1200,627", "--virtual-time-budget=8000", f"--screenshot={dest}",
+                        "file://" + os.path.join(tmp, "og.html")], capture_output=True, check=True)
+        print(f"brand/marks/{mark}/closedhand-com/public/og.png")
+    use(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
 
 
 def _dmg_background(fist, one, two):
@@ -301,7 +374,11 @@ if __name__ == "__main__":
         save(cmd[1])
     elif cmd[0] == "build-brush":
         build_brush(film="--film" in cmd)
+    elif cmd[0] == "build-icons":
+        build_icons()
+    elif cmd[0] == "build-og":
+        build_og()
     elif cmd[0] == "which":
         print(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
     else:
-        sys.exit("Usage: brand.py use <mark> | which | build-brush [--film] | save <name>")
+        sys.exit("Usage: brand.py use <mark> | which | build-brush [--film] | build-icons | build-og | save <name>")

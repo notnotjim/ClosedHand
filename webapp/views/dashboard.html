@@ -3139,7 +3139,7 @@
           pendingDetail.innerHTML = `
             <div class="plat-pending-detail" style="margin-top:8px;">
               <p style="font-size:13px;color:#B6AFA4;margin-bottom:8px;">Send this code to <strong>${platform.botName}</strong>:</p>
-              <div class="activation-code" style="cursor:pointer;user-select:all;" onclick="copyCode('${platform.pendingCode}')" title="Click to copy">${platform.pendingCode} <span class="copy-icon" style="font-size:0.6em;opacity:0.7;">📋</span></div>
+              <div class="activation-code" style="cursor:pointer;user-select:all;" onclick="copyCode('${platform.pendingCode}')" title="Click to copy">${platform.pendingCode} <span class="copy-icon" style="font-size:0.6em;opacity:0.7;"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span></div>
               <div class="steps">
                 ${key === 'whatsapp' ? `
                 <div class="step"><span class="step-num">1</span><span>Open <a href="https://wa.me/15551799854?text=${platform.pendingCode}" target="_blank" style="color:#25D366;font-weight:600;">this WhatsApp chat</a> (or message +1 555 179 9854)</span></div>
@@ -3331,7 +3331,7 @@
         await navigator.clipboard.writeText(code);
         const el = document.querySelector('.activation-code');
         const original = el.innerHTML;
-        el.innerHTML = '✅ Copied!';
+        el.textContent = 'Copied';
         setTimeout(() => { el.innerHTML = original; }, 1500);
       } catch (e) {
         const input = document.createElement('input');
