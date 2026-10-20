@@ -107,6 +107,11 @@
     gap: 8px;
   }
   .header-left-group { display: flex; align-items: center; gap: 6px; }
+  /* On a phone the fist alone stands for Closedhand in the chat's header;
+     the name stays for screen readers. */
+  @media (max-width: 600px) {
+    .header .ch-brand > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
   .back-arrow {
     display: flex; align-items: center; justify-content: center;
     width: 36px; height: 36px; border-radius: 10px;
