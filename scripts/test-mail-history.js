@@ -243,6 +243,22 @@ test('older mail is indexed from its own words and never summarised, and a year 
   assert.match(usi, /const progress = opts\.quiet \? async \(\) => \{\} : upsertProgress;/);
 });
 
+test('a vector is deleted as stale only when its email is gone from the cache, and the cache is paged without ties', async () => {
+  const src = read('lib/services/usi.js');
+  const at = src.indexOf('async function staleVectors');
+  const vm = require('node:vm');
+  const tables = {
+    data_vectors: ['seen', 'missed-by-the-pass', 'deleted-mail'].map((external_id, i) => ({ id: i + 1, user_id: 'u1', service: 'email', external_id })),
+    data_cache: [{ user_id: 'u1', type: 'email', external_id: 'seen' }, { user_id: 'u1', type: 'email', external_id: 'missed-by-the-pass' }],
+  };
+  const box = { supabase: fakeDb(tables), Set };
+  vm.runInNewContext(src.slice(at, src.indexOf('\n}\n', at) + 2) + '\nthis.f = staleVectors;', box);
+  const stale = await box.f('u1', 'email', 'email', new Set(['seen']));
+  assert.deepEqual(stale.map((v) => v.external_id), ['deleted-mail']);
+  assert.equal((src.match(/\.order\("synced_at", \{ ascending: false \}\)\n(\s*\/\/[^\n]*\n)*\s*\.order\("id", \{ ascending: true \}\)/g) || []).length, 2, 'both passes page with a unique second key');
+  assert.equal((src.match(/const toDelete = await staleVectors\(/g) || []).length, 2);
+});
+
 test('the dashboard says which kind of reading is going on', () => {
   const dash = read('webapp/views/dashboard.html');
   assert.match(dash, /'<div class="row"><span>Your older mail<\/span><b>back to ' \+ olderTo \+ '<\/b><\/div>'/, 'a row on the first-read card');
