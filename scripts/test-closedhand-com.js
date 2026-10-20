@@ -37,6 +37,39 @@ test('Google and Microsoft identities come from their permanent IDs, never the e
   assert.equal(PROVIDERS.google.scope, 'openid email', 'Google is asked for the email only');
 });
 
+test('the website names its colours, so every page follows the device into light or dark', () => {
+  const site = path.join(__dirname, '..', 'closedhand-com');
+  const files = [
+    ...fs.readdirSync(path.join(site, 'views')).filter(f => f.endsWith('.html')).map(f => path.join('views', f)),
+    ...['interface.css', 'site.css', 'ethos.css', 'insights.css', 'recall-demo.css'].map(f => path.join('public', f)),
+    ...['offline.html', 'moved.html', 'nothing.html'].map(f => path.join('workers', 'edge', f)),
+  ];
+  const palette = /#(?:efe6d6|100e0d|1a1817|181615|b6afa4|8c857b|6f695f|f7f0e3|d8624b|d0563f|e8a493|8dbd79)\b|rgba\(\s*(?:239\s*,\s*230\s*,\s*214|16\s*,\s*14\s*,\s*13|26\s*,\s*24\s*,\s*23|216\s*,\s*98\s*,\s*75|208\s*,\s*86\s*,\s*63)\s*,/i;
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(site, file), 'utf8');
+    // Only the names' own definitions and the browser bar's colour hold values.
+    const used = text.replace(/--[\w-]+:\s*[^;]+;/g, '').replace(/<meta name="theme-color"[^>]*>/g, '');
+    assert.doesNotMatch(used, palette, `${file} uses a colour's name, not its value`);
+  }
+  for (const file of ['public/interface.css', 'workers/edge/offline.html', 'workers/edge/moved.html', 'workers/edge/nothing.html']) {
+    const text = fs.readFileSync(path.join(site, file), 'utf8');
+    assert.match(text, /@media \(prefers-color-scheme: light\) \{\n  :root \{\n    color-scheme: light;\n    --fg: #1A1817;/, `${file} has the light colours`);
+  }
+  for (const file of ['views/ethos.html', 'workers/edge/offline.html']) {
+    assert.match(fs.readFileSync(path.join(site, file), 'utf8'), /<meta name="theme-color" content="#EFE6D6" media="\(prefers-color-scheme: light\)">/);
+  }
+  // The recall demo's own browns have a cream version too.
+  const demo = fs.readFileSync(path.join(site, 'public', 'recall-demo.css'), 'utf8');
+  assert.doesNotMatch(demo.replace(/--[\w-]+:\s*[^;]+;/g, ''), /#[0-9a-f]{6}\b|rgba\(\s*\d/i, 'the demo uses its colour names');
+  assert.match(demo, /@media \(prefers-color-scheme: light\) \{\n  \.recall-demo \{/);
+  // The 3D sky follows the setting too: the smoke ring laid on as ember on
+  // cream, the stars and drifters only at night, also when it changes.
+  const home = fs.readFileSync(path.join(site, 'views', 'home.html'), 'utf8');
+  assert.match(home, /material\.blending = light \? THREE\.NormalBlending : THREE\.AdditiveBlending;/);
+  assert.match(home, /stars\.visible = !light;/);
+  assert.match(home, /lightScheme\.addEventListener\('change', function \(\) \{ requestAnimationFrame\(applyScheme\); \}\);/);
+});
+
 test('a Closedhand account keeps only the email: no name from the sign-in, and no page says otherwise', () => {
   const tid = '11111111-2222-4333-8444-555555555555', oid = '66666666-7777-4888-9999-000000000000';
   const g = PROVIDERS.google.identity({ iss: 'https://accounts.google.com', aud: 'c', sub: '1', email: 'a@b.c', email_verified: true, name: 'Pat Example', picture: 'https://p' }, 'c');

@@ -1,23 +1,58 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex"><meta name="theme-color" content="#100E0D"><title>Nothing here | Closedhand</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet"><style>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex"><meta name="theme-color" content="#100E0D" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#EFE6D6" media="(prefers-color-scheme: light)"><title>Nothing here | Closedhand</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght,SOFT@9..144,500,30&display=swap" rel="stylesheet"><style>
 /* Shown by the edge worker for a closedhand.ai name with no Closedhand:
    never used, or an old name that has been released. Same look as the
    offline page (offline.html). */
 :root { --font-ui: 'IBM Plex Sans', system-ui, sans-serif; --font-brand: 'Fraunces', Georgia, serif; }
+/* The site's colours by name (interface.css keeps the same set). */
+:root {
+  color-scheme: dark;
+  --fg: #EFE6D6; --fg-rgb: 239,230,214;
+  --bg: #100E0D; --bg-rgb: 16,14,13;
+  --raised: #1A1817; --raised-rgb: 26,24,23;
+  --deep: #181615; --deep-rgb: 24,22,21;
+  --hover-bg: #24211E;
+  --muted: #B6AFA4; --dim: #8C857B; --faint: #6F695F;
+  --fg-strong: #F7F0E3; --fg-soft: #E6DCC9; --fg-softer: #D9CDB9;
+  --accent: #D8624B; --accent-rgb: 216,98,75;
+  --accent-strong: #D0563F; --accent-strong-rgb: 208,86,63;
+  --accent-soft: #E8A493; --accent-soft-rgb: 232,164,147;
+  --accent-pale: #E48C79; --accent-warm: #E3B394;
+  --ok: #8DBD79; --ok-rgb: 141,189,121;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --fg: #1A1817; --fg-rgb: 26,24,23;
+    --bg: #EFE6D6; --bg-rgb: 239,230,214;
+    --raised: #F7F1E7; --raised-rgb: 247,241,231;
+    --deep: #F4EDE2; --deep-rgb: 244,237,226;
+    --hover-bg: #E6DCCB;
+    --muted: #5E574F; --dim: #776F65; --faint: #9A9288;
+    --fg-strong: #0F0D0C; --fg-soft: #2E2A26; --fg-softer: #3A3530;
+    --accent: #C4513B; --accent-rgb: 196,81,59;
+    --accent-strong: #B84732; --accent-strong-rgb: 184,71,50;
+    --accent-soft: #A9452F; --accent-soft-rgb: 169,69,47;
+    --accent-pale: #B04A35; --accent-warm: #94562F;
+    --ok: #4E7F3A; --ok-rgb: 78,127,58;
+  }
+  /* The fist is drawn cream; on cream it takes the text colour. */
+  .ch-brand img, .asleep { filter: brightness(0.11); }
+}
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; background: #100E0D radial-gradient(ellipse 60% 45% at 50% 42%, rgba(216,98,75,0.07), transparent 70%); color: #EFE6D6; font: 400 15px/1.6 var(--font-ui); -webkit-font-smoothing: antialiased; }
+body { margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; background: var(--bg) radial-gradient(ellipse 60% 45% at 50% 42%, rgba(var(--accent-rgb),0.07), transparent 70%); color: var(--fg); font: 400 15px/1.6 var(--font-ui); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid #D8624B; outline-offset: 3px; border-radius: 6px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
 header { padding: 22px 28px; }
 .ch-brand { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; }
 .ch-brand img { display: block; width: 28px; height: 28px; }
 .ch-brand span { font: 500 24px/1 var(--font-brand); letter-spacing: -0.02em; font-variation-settings: 'opsz' 48, 'SOFT' 30; }
 main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; max-width: 460px; margin: 0 auto; padding: 24px 24px 12vh; }
 h1 { font: 500 38px/1.15 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.02em; margin: 0 0 12px; }
-.lede { margin: 0 0 30px; color: #B6AFA4; text-wrap: balance; }
-.button { display: inline-flex; text-decoration: none; align-items: center; justify-content: center; min-height: 48px; padding: 12px 30px; border-radius: 12px; border: 1px solid #EFE6D6; background: #EFE6D6; color: #100E0D; font: 500 17px/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; cursor: pointer; transition: background 0.15s, transform 0.15s; }
-.button:hover { background: #F7F0E3; border-color: #F7F0E3; transform: translateY(-1px); }
-.fine { margin: 26px 0 0; font-size: 13px; color: #8C857B; text-wrap: balance; }
+.lede { margin: 0 0 30px; color: var(--muted); text-wrap: balance; }
+.button { display: inline-flex; text-decoration: none; align-items: center; justify-content: center; min-height: 48px; padding: 12px 30px; border-radius: 12px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); font: 500 17px/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+.button:hover { background: var(--fg-strong); border-color: var(--fg-strong); transform: translateY(-1px); }
+.fine { margin: 26px 0 0; font-size: 13px; color: var(--dim); text-wrap: balance; }
 @media (max-width: 600px) { header { padding: 18px 20px; } h1 { font-size: 34px; } }
 @media (prefers-reduced-motion: reduce) { .button { transition: none; } }
 </style></head><body>
