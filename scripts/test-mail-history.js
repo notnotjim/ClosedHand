@@ -134,7 +134,7 @@ test('an email that fails to come stops the walk there, to be read again', async
     const google = require.cache[require.resolve('../lib/services/google')].exports;
     const real = google.googleApiRequest;
     let failing = true;
-    google.googleApiRequest = async (method, url) => { if (failing && /\/messages\/m150\?/.test(url)) throw new Error('rate limited'); return real(method, url); };
+    google.googleApiRequest = async (method, url) => { if (failing && /\/messages\/m150\?/.test(url)) throw new Error('Google API 403: insufficient permission'); return real(method, url); };
     await assert.rejects(s.mod.runAccount({ reader: 'gmail', userId: 'u1', store: null, serviceKey: 'google', source: 'gmail', deadline: Date.now() + 60000 }), /could not be read/);
     assert.equal(s.tables.mail_coverage[0].done, false);
     failing = false;
@@ -163,6 +163,19 @@ test('a read Gmail turns away is tried again, and an email deleted meanwhile is 
     assert.ok(s.stored.some((i) => i.external_id === 'm40'));
     assert.ok(!s.stored.some((i) => i.external_id === 'm41'));
   } finally { s.restore(); }
+});
+
+test("Gmail's per-minute quota is waited out, while a refusal of another kind is not tried again", async () => {
+  const { mod, restore } = setup(mailbox());
+  try {
+    const quota = new Error('Google API 403: {"error":{"code":403,"message":"Quota exceeded for quota metric \'Total Query Cost\' and limit \'Units per minute\'"}}');
+    assert.match(quota.message, mod.TRY_AGAIN);
+    let n = 0;
+    assert.deepEqual(await mod.fetchOnce(async () => { if (n++ < 2) throw quota; return { id: 'x' }; }, [1, 1]), { id: 'x' });
+    const denied = new Error('Google API 403: {"error":{"code":403,"message":"Request had insufficient authentication scopes."}}');
+    assert.doesNotMatch(denied.message, mod.TRY_AGAIN);
+    await assert.rejects(mod.fetchOnce(async () => { throw denied; }, [1, 1]), /insufficient/);
+  } finally { restore(); }
 });
 
 test('mail archived before the regular sync saw it is caught by the next sweep', async () => {
