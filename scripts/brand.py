@@ -233,7 +233,8 @@ def build_brush(film=False):
 
 
 # The icons, on a 48 grid: each stroke a start point then segments, a segment
-# being a straight line (one point) or a curve (two controls and an end).
+# being a straight line (one point) or a curve (two controls and an end), and
+# optionally a weight (1 is the usual brush).
 ICONS = {
     # A brain from the front: two halves, the line between them, a fold in each.
     "brain": [((23, 39), [((15, 41), (8, 35), (9, 28)), ((5, 23), (7, 15), (14, 14)), ((15, 8), (21, 7), (23, 11))]),
@@ -254,6 +255,18 @@ ICONS = {
     "bolt": [((29, 5), [((17, 26),), ((28, 25),), ((19, 43),)])],
     # A tick.
     "tick": [((11, 25), [((14, 28), (17, 31), (19.5, 35)), ((25, 25), (31, 17), (38, 11))])],
+    # The sun: a round stroke and eight fine rays.
+    "sun": [((24, 16.4), [((28.20, 16.4), (31.6, 19.80), (31.6, 24)), ((31.6, 28.20), (28.20, 31.6), (24, 31.6)), ((19.80, 31.6), (16.4, 28.20), (16.4, 24)), ((16.4, 19.80), (19.80, 15.799999999999999), (26.2, 16.099999999999998))]),
+            ((24.00, 10.50), [((24.00, 4.00),)], 0.62),
+            ((33.55, 14.45), [((38.14, 9.86),)], 0.62),
+            ((37.50, 24.00), [((44.00, 24.00),)], 0.62),
+            ((33.55, 33.55), [((38.14, 38.14),)], 0.62),
+            ((24.00, 37.50), [((24.00, 44.00),)], 0.62),
+            ((14.45, 33.55), [((9.86, 38.14),)], 0.62),
+            ((10.50, 24.00), [((4.00, 24.00),)], 0.62),
+            ((14.45, 14.45), [((9.86, 9.86),)], 0.62)],
+    # The moon: a crescent in one stroke, round the outside and back inside.
+    "moon": [((30, 8.5), [((16, 9), (7.5, 21), (11.5, 31)), ((15, 39.5), (27, 43), (36.5, 35.5)), ((26.5, 35), (19.5, 26), (24, 16)), ((25.5, 12.5), (27.5, 10), (30, 8.5))])],
 }
 
 
@@ -270,7 +283,8 @@ def icon_mask(strokes, scale=10, per=120, size=(48, 48), weight=1.0, taper=(0.06
     from PIL import Image, ImageDraw
     im = Image.new("L", (size[0] * scale, size[1] * scale), 0)
     d = ImageDraw.Draw(im)
-    for start, segs in strokes:
+    for start, segs, *rest in strokes:
+        stroke_weight = weight * (rest[0] if rest else 1)
         pts, cur = [start], start
         for seg in segs:
             end = seg[-1]
@@ -282,7 +296,7 @@ def icon_mask(strokes, scale=10, per=120, size=(48, 48), weight=1.0, taper=(0.06
         n = len(pts)
         for i, (x, y) in enumerate(pts):
             t = i / (n - 1)
-            r = (0.95 + 1.25 * math.sin(math.pi * t) ** 0.5) * _taper(t, *taper) * weight * scale
+            r = (0.95 + 1.25 * math.sin(math.pi * t) ** 0.5) * _taper(t, *taper) * stroke_weight * scale
             d.ellipse([x * scale - r, y * scale - r, x * scale + r, y * scale + r], fill=255)
     return im
 

@@ -51,7 +51,20 @@ test('the website names its colours, so every page follows the device into light
     const used = text.replace(/--[\w-]+:\s*[^;]+;/g, '').replace(/<meta name="theme-color"[^>]*>/g, '');
     assert.doesNotMatch(used, palette, `${file} uses a colour's name, not its value`);
   }
-  for (const file of ['public/interface.css', 'workers/edge/offline.html', 'workers/edge/moved.html', 'workers/edge/nothing.html']) {
+  // The site's pages: light when picked with the sun and moon, or the device's
+  // while nothing is picked (theme.js, loaded first in every page's head).
+  assert.match(fs.readFileSync(path.join(site, 'public/interface.css'), 'utf8'), /:root\[data-theme="light"\] \{\n  color-scheme: light;\n  --fg: #1A1817;/);
+  const theme = fs.readFileSync(path.join(site, 'public/theme.js'), 'utf8');
+  assert.match(theme, /return picked\(\) \|\| \(device\.matches \? 'light' : 'dark'\);/, 'the device decides until someone picks');
+  assert.match(theme, /localStorage\.setItem\(KEY, theme\)/, 'a pick is remembered');
+  assert.match(theme, /document\.startViewTransition/);
+  for (const view of fs.readdirSync(path.join(site, 'views')).filter(f => f.endsWith('.html'))) {
+    const html = fs.readFileSync(path.join(site, 'views', view), 'utf8');
+    assert.match(html, /<meta name="viewport"[^>]*>\n  <script src="\/theme\.js"><\/script>/, `${view} sets the theme before it is drawn`);
+    if (view !== 'insights.html') assert.match(html, /<button type="button" class="theme-toggle" aria-label="Light or dark"/, `${view} offers the sun and moon`);
+  }
+  // The edge pages have no header to pick in: they follow the device.
+  for (const file of ['workers/edge/offline.html', 'workers/edge/moved.html', 'workers/edge/nothing.html']) {
     const text = fs.readFileSync(path.join(site, file), 'utf8');
     assert.match(text, /@media \(prefers-color-scheme: light\) \{\n  :root \{\n    color-scheme: light;\n    --fg: #1A1817;/, `${file} has the light colours`);
   }
@@ -61,13 +74,13 @@ test('the website names its colours, so every page follows the device into light
   // The recall demo's own browns have a cream version too.
   const demo = fs.readFileSync(path.join(site, 'public', 'recall-demo.css'), 'utf8');
   assert.doesNotMatch(demo.replace(/--[\w-]+:\s*[^;]+;/g, ''), /#[0-9a-f]{6}\b|rgba\(\s*\d/i, 'the demo uses its colour names');
-  assert.match(demo, /@media \(prefers-color-scheme: light\) \{\n  \.recall-demo \{/);
+  assert.match(demo, /:root\[data-theme="light"\] \.recall-demo \{/);
   // The 3D sky follows the setting too: the smoke ring laid on as ember on
   // cream, the stars and drifters only at night, also when it changes.
   const home = fs.readFileSync(path.join(site, 'views', 'home.html'), 'utf8');
   assert.match(home, /material\.blending = light \? THREE\.NormalBlending : THREE\.AdditiveBlending;/);
   assert.match(home, /stars\.visible = !light;/);
-  assert.match(home, /lightScheme\.addEventListener\('change', function \(\) \{ requestAnimationFrame\(applyScheme\); \}\);/);
+  assert.match(home, /document\.documentElement\.addEventListener\('themechange', function \(\) \{ requestAnimationFrame\(applyScheme\); \}\);/);
 });
 
 test('a Closedhand account keeps only the email: no name from the sign-in, and no page says otherwise', () => {

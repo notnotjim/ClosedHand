@@ -4,8 +4,8 @@
    (1rem = 14px), the density a laptop screen suits. Hairlines stay in px. */
 html { font-size: 100%; }
 @media (hover: hover) and (pointer: fine) { html { font-size: 87.5%; } }
-/* The site's colours by name. These are the dark ones; the light ones
-   follow the device's setting (below). Pages use the names, never the values. */
+/* The site's colours by name. These are the dark ones; the light ones are
+   below. Pages use the names, never the values. */
 :root {
   color-scheme: dark;
   --fg: #EFE6D6; --fg-rgb: 239,230,214;
@@ -22,26 +22,27 @@ html { font-size: 100%; }
   --ok: #8DBD79; --ok-rgb: 141,189,121;
   --lift-strong: rgba(0,0,0,0.5); --lift: rgba(0,0,0,0.45); --lift-soft: rgba(0,0,0,0.4);
 }
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --fg: #1A1817; --fg-rgb: 26,24,23;
-    --bg: #EFE6D6; --bg-rgb: 239,230,214;
-    --raised: #F7F1E7; --raised-rgb: 247,241,231;
-    --deep: #F4EDE2; --deep-rgb: 244,237,226;
-    --hover-bg: #E6DCCB;
-    --muted: #5E574F; --dim: #776F65; --faint: #9A9288;
-    --fg-strong: #0F0D0C; --fg-soft: #2E2A26; --fg-softer: #3A3530;
-    --accent: #C4513B; --accent-rgb: 196,81,59;
-    --accent-strong: #B84732; --accent-strong-rgb: 184,71,50;
-    --accent-soft: #A9452F; --accent-soft-rgb: 169,69,47;
-    --accent-pale: #B04A35; --accent-warm: #94562F;
-    --ok: #4E7F3A; --ok-rgb: 78,127,58;
-    --lift-strong: rgba(80,60,40,0.18); --lift: rgba(80,60,40,0.14); --lift-soft: rgba(80,60,40,0.12);
-  }
-  /* The fist is drawn cream; on cream it takes the text colour. */
-  .ch-brand > img, .ch-brand img { filter: brightness(0.11); }
+/* The light colours: the theme picked with the sun and moon in the header,
+   or the device's while nothing is picked (theme.js sets data-theme before
+   the page is drawn). */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --fg: #1A1817; --fg-rgb: 26,24,23;
+  --bg: #EFE6D6; --bg-rgb: 239,230,214;
+  --raised: #F7F1E7; --raised-rgb: 247,241,231;
+  --deep: #F4EDE2; --deep-rgb: 244,237,226;
+  --hover-bg: #E6DCCB;
+  --muted: #5E574F; --dim: #776F65; --faint: #9A9288;
+  --fg-strong: #0F0D0C; --fg-soft: #2E2A26; --fg-softer: #3A3530;
+  --accent: #C4513B; --accent-rgb: 196,81,59;
+  --accent-strong: #B84732; --accent-strong-rgb: 184,71,50;
+  --accent-soft: #A9452F; --accent-soft-rgb: 169,69,47;
+  --accent-pale: #B04A35; --accent-warm: #94562F;
+  --ok: #4E7F3A; --ok-rgb: 78,127,58;
+  --lift-strong: rgba(80,60,40,0.18); --lift: rgba(80,60,40,0.14); --lift-soft: rgba(80,60,40,0.12);
 }
+/* The fist is drawn cream; on cream it takes the text colour. */
+:root[data-theme="light"] .ch-brand > img, :root[data-theme="light"] .ch-brand img { filter: brightness(0.11); }
 :root {
   --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
   --font-brand: 'Fraunces', Georgia, serif;
@@ -338,3 +339,22 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .get-sheet .get-sheet-note { margin: .625rem auto 0; max-width: none; font-size: .78125rem; color: var(--dim); }
 .get-sheet .get-sheet-note.warn { color: var(--accent-soft); }
 .get-sheet-trap { position: absolute; left: -624.9375rem; width: 1px; height: 1px; opacity: 0; }
+
+/* Light or dark (theme.js): the sun or moon to switch to, drawn with the
+   fist's brush (brand/icons). The one shown turns in as the other turns out. */
+.theme-toggle { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; transition: color .2s; -webkit-tap-highlight-color: transparent; }
+.theme-toggle:hover { color: var(--fg); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle > span { grid-area: 1 / 1; width: 1.125rem; height: 1.125rem; transition: transform .6s cubic-bezier(.2, .7, .2, 1), opacity .35s ease; }
+.theme-toggle svg { display: block; width: 100%; height: 100%; }
+:root[data-theme="light"] .theme-toggle .sun, :root:not([data-theme="light"]) .theme-toggle .moon { opacity: 0; transform: rotate(-120deg) scale(.4); }
+.theme-toggle:active > span { scale: .85; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { animation: theme-spread .7s cubic-bezier(.2, .7, .2, 1); }
+@keyframes theme-spread {
+  from { clip-path: circle(0 at var(--reveal-x, 100%) var(--reveal-y, 0)); }
+  to { clip-path: circle(150vmax at var(--reveal-x, 100%) var(--reveal-y, 0)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle > span { transition: none; }
+}

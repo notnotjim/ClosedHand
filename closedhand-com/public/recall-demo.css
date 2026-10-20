@@ -15,23 +15,21 @@
   /* The search dot's halo: its own colour on dark, a soft warm grey on cream. */
   --rd-fetch-glow-rgb: 239,230,214;
 }
-@media (prefers-color-scheme: light) {
-  .recall-demo {
-    --rd-cream: #1A1817; --rd-ink: #F3EADC; --rd-lane: #F7F1E7; --rd-lane-ready: #F6E7D4;
-    --rd-box: #EFE7DA; --rd-box-line: #CDBFAD; --rd-box-ready: #F0DCC4; --rd-box-ready-line: #C59A6E;
-    --rd-chip: #FBF7F0; --rd-chip-line: #DCD1C1; --rd-chip-text: #3A332C; --rd-chip-ready: #F6E6D3;
-    --rd-chip-ready-line: #D4B08A; --rd-chip-match: #8C5830; --rd-chip-match-text: #FFF3E6; --rd-missed-line: #B89270;
-    --rd-glow: #B0652A; --rd-ai-line: #5E4A38; --rd-ai-busy: #EBCDAE; --rd-answer: #EAE1D3;
-    --rd-answer-line: #D3C6B4; --rd-answer-text: #3A332C; --rd-answer-ready: #8C5830; --rd-answer-ready-line: #B67A4A;
-    --rd-answer-ready-text: #FFF3E6; --rd-mute: #8A7967; --rd-face: #FBF7F0; --rd-ticks: #C9BCAB;
-    --rd-sweep-other: #CFC2B1; --rd-sweep-ready: #E7BC94; --rd-ready-line: #D2B08E; --rd-wire-live: #6B5846;
-    --rd-token: #2A211A; --rd-token-text: #FFF5E5; --rd-cream-rgb: 26,24,23; --rd-glow-rgb: 176,101,42;
-    --rd-token-ring-rgb: 42,33,26; --rd-token-glow-rgb: 176,101,42;
-    --rd-fetch-glow-rgb: 170,150,128;
-  }
-  /* The fist above Closedhand's lane is drawn cream; on cream it takes the text colour. */
-  .recall-brand img { filter: brightness(0.11); }
+:root[data-theme="light"] .recall-demo {
+  --rd-cream: #1A1817; --rd-ink: #F3EADC; --rd-lane: #F7F1E7; --rd-lane-ready: #F6E7D4;
+  --rd-box: #EFE7DA; --rd-box-line: #CDBFAD; --rd-box-ready: #F0DCC4; --rd-box-ready-line: #C59A6E;
+  --rd-chip: #FBF7F0; --rd-chip-line: #DCD1C1; --rd-chip-text: #3A332C; --rd-chip-ready: #F6E6D3;
+  --rd-chip-ready-line: #D4B08A; --rd-chip-match: #8C5830; --rd-chip-match-text: #FFF3E6; --rd-missed-line: #B89270;
+  --rd-glow: #B0652A; --rd-ai-line: #5E4A38; --rd-ai-busy: #EBCDAE; --rd-answer: #EAE1D3;
+  --rd-answer-line: #D3C6B4; --rd-answer-text: #3A332C; --rd-answer-ready: #8C5830; --rd-answer-ready-line: #B67A4A;
+  --rd-answer-ready-text: #FFF3E6; --rd-mute: #8A7967; --rd-face: #FBF7F0; --rd-ticks: #C9BCAB;
+  --rd-sweep-other: #CFC2B1; --rd-sweep-ready: #E7BC94; --rd-ready-line: #D2B08E; --rd-wire-live: #6B5846;
+  --rd-token: #2A211A; --rd-token-text: #FFF5E5; --rd-cream-rgb: 26,24,23; --rd-glow-rgb: 176,101,42;
+  --rd-token-ring-rgb: 42,33,26; --rd-token-glow-rgb: 176,101,42;
+  --rd-fetch-glow-rgb: 170,150,128;
 }
+/* The fist above Closedhand's lane is drawn cream; on cream it takes the text colour. */
+:root[data-theme="light"] .recall-brand img { filter: brightness(0.11); }
 .recall-demo { margin: 2.25rem 0 0; color: var(--rd-cream); }
 .recall-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
 .recall-lane { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.875rem; min-width: 0; padding: 1.625rem 1.375rem 1.5rem; background: var(--rd-lane); border: 1px solid rgba(var(--rd-cream-rgb),.08); border-radius: 1.125rem; }
