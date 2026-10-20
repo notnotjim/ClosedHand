@@ -28,6 +28,7 @@ FILES = [
     "closedhand-com/public/fist.png",
     "closedhand-com/public/logo.png",
     "closedhand-com/public/logocircle.png",
+    "closedhand-com/public/og.png",
     "closedhand-com/public/orb/ring-glass.webm",
     "closedhand-com/public/orb/ring-glass.mov",
     "closedhand-com/public/orb/ring-glass-poster.png",
@@ -35,10 +36,13 @@ FILES = [
     "webapp/public/fist.png",
     "webapp/public/logo.png",
     "webapp/public/logocircle.png",
+    "webapp/public/logo-full.png",
     "webapp/public/favicon.svg",
     "webapp/public/favicon.ico",
     "desktop/AppIcon.icns",
     "desktop/dmg/fist-dark.png",
+    "desktop/dmg/background.png",
+    "desktop/dmg/background@2x.png",
     "desktop/Sources/ClosedHand/Resources/logo.png",
     "bridge-app/Sources/Resources/logo.png",
 ]
@@ -194,6 +198,22 @@ def build_brush(film=False):
             ap[x, y] = edge
     app.alpha_composite(fit(mask, (1024, 1024), CREAM, (234, 214, 554, 612)))
     _icns_write(app, out("desktop/AppIcon.icns"))
+    # The link preview: the fist beside the name, on its flat dark corner.
+    og = Image.open(os.path.join(orig, "closedhand-com/public/og.png")).convert("RGB")
+    _clear(og, (54, 42, 98, 86))
+    og = og.convert("RGBA"); og.alpha_composite(fit(mask, (40, 40), CREAM), (56, 44))
+    og.convert("RGB").save(out("closedhand-com/public/og.png"), optimize=True)
+    # The old wordmark with the fist above it, in its grey.
+    full = Image.open(os.path.join(orig, "webapp/public/logo-full.png")).convert("RGBA")
+    full.paste((0, 0, 0, 0), (1090, 0, 1332, 267))
+    full.alpha_composite(fit(mask, (242, 267), (193, 191, 192)), (1090, 0))
+    full.save(out("webapp/public/logo-full.png"), optimize=True)
+    # The Mac download window, drawn again from its page with the new ink fist.
+    _dmg_background(out("desktop/dmg/fist-dark.png"), out("desktop/dmg/background.png"), out("desktop/dmg/background@2x.png"))
+    # Not a file in place: the picture for a chat app's bot, set by hand
+    # (Telegram's @BotFather /setuserpic). The app icon's look, square.
+    os.makedirs(os.path.join(dst, "extras"), exist_ok=True)
+    app.resize((640, 640), Image.LANCZOS).convert("RGB").save(os.path.join(dst, "extras/bot-avatar.png"), optimize=True)
     # The traced outline the 3D film extrudes, on the logo's canvas.
     _trace(fit(mask, (3579, 3959), (0, 0, 0)), out("closedhand-com/tools/ring-video/fist.svg"))
     # The installer's pixel fist, from the new fist.png.
@@ -208,6 +228,28 @@ def build_brush(film=False):
             if not os.path.exists(os.path.join(dst, rel)):
                 print(f"{rel}: not filmed yet (run with --film)")
     print("Built the brush set in brand/marks/brush.")
+
+
+def _clear(img, box):
+    """Paint over a box with the background around it, row by row."""
+    x0, y0, x1, y1 = box
+    px = img.load()
+    for y in range(y0, y1):
+        a, b = px[x0 - 1, y], px[x1, y]
+        for x in range(x0, x1):
+            t = (x - x0) / max(1, x1 - x0)
+            px[x, y] = tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _dmg_background(fist, one, two):
+    tmp = tempfile.mkdtemp()
+    shutil.copyfile(os.path.join(ROOT, "desktop/dmg/background.html"), os.path.join(tmp, "background.html"))
+    shutil.copyfile(fist, os.path.join(tmp, "fist-dark.png"))
+    chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    for scale, dest in ((1, one), (2, two)):
+        subprocess.run([chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--allow-file-access-from-files",
+                        "--window-size=640,400", f"--force-device-scale-factor={scale}", "--virtual-time-budget=6000",
+                        f"--screenshot={dest}", "file://" + os.path.join(tmp, "background.html")], capture_output=True, check=True)
 
 
 def _icns_png(path):
