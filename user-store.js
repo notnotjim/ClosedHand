@@ -247,7 +247,7 @@ class UserStore {
     // seconds earlier. The description survives, which is what made it look
     // like a model failure rather than a missing field.
     if (attRes.data) {
-      const { TEXT_EXTENSIONS, IMAGE_EXTENSIONS, OFFICE_EXTENSIONS, MIME_TYPES } = require("./lib/files");
+      const { IMAGE_EXTENSIONS, MIME_TYPES } = require("./lib/files");
       const { ATTACHMENTS_DIR } = require("./lib/attachments");
       const path = require("path");
       // Name first: it is what saveAttachment used, so it round-trips exactly.
@@ -271,7 +271,6 @@ class UserStore {
           date: a.created_at,
           ext,
           isImage: IMAGE_EXTENSIONS.includes(ext),
-          isText: TEXT_EXTENSIONS.includes(ext) || OFFICE_EXTENSIONS.includes(ext),
           isPdf: ext === "pdf",
           // Same shape saveAttachment writes. The file is usually absent in
           // this process, and every reader already falls back to storage, but
