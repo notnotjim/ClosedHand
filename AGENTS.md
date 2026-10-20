@@ -149,6 +149,13 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   that Closedhand is waiting, where it asked and when, and repeats the question.
   It never expects the answer there.
 
+## The fist
+- Every file the Closedhand fist appears in (site, app, favicons, Mac and Bridge icons, the 3D
+  ring film, the installer's pixel art) comes from one set in `brand/marks/<name>/`, and
+  `brand/ACTIVE` names the set in place. Change the mark with `python3 scripts/brand.py use
+  <name>`, never by editing one copy; `scripts/test-brand.js` fails when a file drifts. A new
+  mark is built as a whole set, in the same canvases, colours and treatments as the others.
+
 ## Test data
 - Tests, examples and prompts use invented people, places, bookings and ids, never ones from
   a real Closedhand, even when the bug came from one. `scripts/check-own-data.js` compares each

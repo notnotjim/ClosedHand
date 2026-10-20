@@ -29,3 +29,6 @@ mcp-library
 *.md
 Dockerfile
 docker-compose.yml
+
+# The fist in every version (scripts/brand.py); the image only needs the one in place.
+brand

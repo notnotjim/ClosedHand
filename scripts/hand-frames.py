@@ -8,26 +8,45 @@ from collections import deque
 
 LEVELS = 24
 
+# CLOSE: an optional line (x1,y1,x2,y2 as fractions of the image) that closes
+# an open drawing for the fill only. A one-line fist leaves a gap where the
+# line starts; the fill stops at this line, which is never drawn.
+CLOSE = None
+
 def load(path):
     im = Image.open(path).convert("RGBA")
     a = im.split()[3]
-    w, h = im.size
+    if CLOSE:
+        from PIL import ImageDraw
+        wall = Image.new("L", im.size, 0)
+        x1, y1, x2, y2 = CLOSE
+        ImageDraw.Draw(wall).line([x1 * im.width, y1 * im.height, x2 * im.width, y2 * im.height], fill=255, width=max(3, im.width // 40))
+    # The picture is sized from the drawing itself, not its canvas, so a mark
+    # with room around it is drawn as large as one that fills its frame.
+    box = a.getbbox()
+    a = a.crop(box)
+    if CLOSE: wall = wall.crop(box)
+    w, h = a.size
     px = a.load()
     stroke = [[px[x, y] > 100 for x in range(w)] for y in range(h)]
+    walls = [[False] * w for _ in range(h)]
+    if CLOSE:
+        wp = wall.load()
+        walls = [[wp[x, y] > 0 for x in range(w)] for y in range(h)]
     # flood the outside from the border across non-stroke pixels
     outside = [[False] * w for _ in range(h)]
     q = deque()
     for x in range(w):
         for y in (0, h - 1):
-            if not stroke[y][x] and not outside[y][x]: outside[y][x] = True; q.append((x, y))
+            if not stroke[y][x] and not walls[y][x] and not outside[y][x]: outside[y][x] = True; q.append((x, y))
     for y in range(h):
         for x in (0, w - 1):
-            if not stroke[y][x] and not outside[y][x]: outside[y][x] = True; q.append((x, y))
+            if not stroke[y][x] and not walls[y][x] and not outside[y][x]: outside[y][x] = True; q.append((x, y))
     while q:
         x, y = q.popleft()
         for dx, dy in ((1,0),(-1,0),(0,1),(0,-1)):
             xx, yy = x + dx, y + dy
-            if 0 <= xx < w and 0 <= yy < h and not stroke[yy][xx] and not outside[yy][xx]:
+            if 0 <= xx < w and 0 <= yy < h and not stroke[yy][xx] and not walls[yy][xx] and not outside[yy][xx]:
                 outside[yy][xx] = True; q.append((xx, yy))
     return w, h, stroke, outside
 
@@ -70,6 +89,8 @@ def encode(fr):
 
 if __name__ == "__main__":
     src = sys.argv[1]
+    if "--close" in sys.argv:
+        CLOSE = [float(v) for v in sys.argv[sys.argv.index("--close") + 1].split(",")]
     sizes = [(32, 28), (64, 56)]
     frames = [render(src, W, H) for W, H in sizes]
     if len(sys.argv) > 2 and sys.argv[2] == "export":
