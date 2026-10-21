@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <script src="/theme.js"></script>
   <title>Sign in | Closedhand</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,27 +12,25 @@
   <link rel="stylesheet" href="/interface.css">
   <style>
     :root {
-      --text-primary: rgba(239,230,214,0.92);
-      --text-secondary: rgba(239,230,214,0.65);
-      --text-tertiary: rgba(239,230,214,0.4);
-      --bg-raised: rgba(26,24,23,0.55);
-      --bg-input: #1A1817;
-      --border-default: rgba(239,230,214,0.1);
-      --border-faint: rgba(239,230,214,0.06);
-      --accent: #D8624B;
-      --accent-dim: rgba(208,86,63,0.15);
-      --warn: #D0A652;
+      --text-primary: rgba(var(--fg-rgb),0.92);
+      --text-secondary: rgba(var(--fg-rgb),0.65);
+      --text-tertiary: rgba(var(--fg-rgb),0.4);
+      --bg-raised: rgba(var(--raised-rgb),0.55);
+      --bg-input: var(--raised);
+      --border-default: rgba(var(--fg-rgb),0.1);
+      --border-faint: rgba(var(--fg-rgb),0.06);
+      --accent-dim: rgba(var(--accent-strong-rgb),0.15);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #100E0D; color: var(--text-primary);
+      background: var(--bg); color: var(--text-primary);
       font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px;
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
       -webkit-font-smoothing: antialiased;
     }
     body::before {
       content: ""; position: fixed; inset: 0;
-      background: radial-gradient(560px 380px at 30% 10%, rgba(208,86,63,0.06), transparent 70%);
+      background: radial-gradient(560px 380px at 30% 10%, rgba(var(--accent-strong-rgb),0.06), transparent 70%);
       pointer-events: none;
     }
     .box { width: min(360px, 90vw); position: relative; }
@@ -62,7 +61,7 @@
     .again:hover { transform: none; color: var(--text-secondary); }
     button {
       width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
-      background: var(--accent); color: #100E0D; font-family: inherit; font-size: 14.5px;
+      background: var(--accent); color: var(--bg); font-family: inherit; font-size: 14.5px;
       font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
     }
     button:hover { transform: translateY(-1px); }

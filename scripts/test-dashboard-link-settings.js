@@ -273,7 +273,7 @@ test("Closedhand's two addresses are two matching cards side by side: its person
   assert.doesNotMatch(html, /settings-group-header"><h2 id="assistant-email-heading"/, "no separate full-width card for email");
   const css = fs.readFileSync(require.resolve("../webapp/public/interface.css"), "utf8");
   assert.match(css, /\.address-parts \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 340px\), 1fr\)\); gap: 16px; align-items: stretch;/, "side by side and equal height, stacked on a phone");
-  assert.match(css, /\.address-card \{ display: flex; flex-direction: column;[^}]*background: #1A1817; border: 1px solid rgba\(239,230,214,0\.1\); border-radius: 12px; \}/, "each its own card");
+  assert.match(css, /\.address-card \{ display: flex; flex-direction: column;[^}]*background: var\(--raised\); border: 1px solid rgba\(var\(--fg-rgb\),0\.1\); border-radius: 12px; \}/, "each its own card");
   assert.match(css, /#addresses \.address-foot \{ margin-top: auto; padding-top: 12px; border-top: 1px solid/, "footers sit at the bottom, divided");
   assert.match(css, /#addresses \.address-foot > p, #addresses \.address-foot summary \{ padding: 0; min-height: 32px; font-size: 14px; line-height: 32px; \}/, "footer rows match across both cards");
   const email = fs.readFileSync(require.resolve("../webapp/public/assistant-email.js"), "utf8");

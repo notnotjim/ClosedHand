@@ -32,7 +32,7 @@ test('the strip sits on the sandbox browser, and red stays for problems', () => 
   // A site not yet signed in to is an invitation, not a problem: no red dot on the tab.
   assert.doesNotMatch(page, /needs-signin/);
   // The window corner dots are decoration, one quiet grey, never status colours.
-  assert.match(page, /\.mon-dots span \{ width:8px; height:8px; border-radius:50%; background:rgba\(239,230,214,0\.16\); \}/);
+  assert.match(page, /\.mon-dots span \{ width:8px; height:8px; border-radius:50%; background:rgba\(var\(--fg-rgb\),0\.16\); \}/);
   assert.doesNotMatch(page, /\.mon-dots \.d-[ryg] \{ background/);
   assert.match(page, /'\/api\/sandbox\/sign-in', \{ method: 'POST'/);
 });

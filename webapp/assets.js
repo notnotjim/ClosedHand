@@ -38,11 +38,20 @@ function page(name) {
   if (!entry || entry.mtime !== stat.mtimeMs) { entry = { mtime: stat.mtimeMs, html: fs.readFileSync(file, "utf8") }; pages.set(file, entry); }
   return stamp(entry.html);
 }
-function sendPage(res, name, headers) { if (headers) res.set(headers); res.type("html").send(page(name)); }
+// Light or dark, as the person picked under Appearance in Settings
+// (settings.appearance): put on every page as it is served, so theme.js sets
+// the theme before anything is drawn. "device", or none yet, leaves it to the
+// device. Kept here by the server (server.js) at start and on each change.
+let appearance = "device";
+function setAppearance(pick) { appearance = pick === "light" || pick === "dark" ? pick : "device"; }
+function withAppearance(html) {
+  return appearance === "device" ? html : html.replace(/<html(?=[\s>])/i, `<html data-theme-pick="${appearance}"`);
+}
+function sendPage(res, name, headers) { if (headers) res.set(headers); res.type("html").send(withAppearance(page(name))); }
 // setHeaders for express.static: long-lived only when the address carries the current hash.
 function cacheHeaders(res, file) {
   const urlPath = "/" + path.relative(publicDir, file).split(path.sep).join("/");
   const v = res.req?.query?.v;
   res.set("Cache-Control", v && v === version(urlPath) ? "public, max-age=31536000, immutable" : "no-cache");
 }
-module.exports = { version, stamp, sendPage, cacheHeaders };
+module.exports = { version, stamp, sendPage, cacheHeaders, setAppearance, withAppearance };

@@ -1830,8 +1830,9 @@ app.get("/api/usage/summary", async (req, res) => {
 });
 
 // Closedhand Managed Models (included-ai.js): whether they are in use or
-// waiting beside the person's own AI account, and what is left on it, read
-// from OpenRouter with its own key. Behind the password gate, like Usage.
+// waiting beside the person's own AI account, its plan, and whether most of
+// the fair use is used, read from OpenRouter with its own key. Never an
+// amount: people see a plan, not money. Behind the password gate, like Usage.
 app.get("/api/included-ai", async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
@@ -1840,8 +1841,10 @@ app.get("/api/included-ai", async (req, res) => {
     if (!settings.included_api_key) return res.json({ state: null });
     const included = require("./included-ai");
     const inUse = included.inUse(settings);
+    const credit = inUse ? await included.credit(settings) : null;
     // Whether it reads images: known once in use; tried when switched to.
-    res.json({ state: inUse ? "in-use" : "available", credit: await included.credit(settings),
+    res.json({ state: inUse ? "in-use" : "available", plan: settings.included_ai?.plan || null,
+      nearly: !!credit && credit.used >= credit.limit * included.NEARLY_USED,
       model: settings.included_ai?.name || null, images: inUse ? !!settings.model_config?.roles?.vision : true });
   } catch (e) {
     res.status(503).json({ error: "Could not read Closedhand Managed Models just now." });
@@ -2098,7 +2101,7 @@ function sendLegalPage(res, file) {
   const html = require("fs")
     .readFileSync(path.join(__dirname, "views", file), "utf8")
     .replace(/{{CONTACT_CLAUSE}}/g, clause);
-  res.type("html").send(html);
+  res.type("html").send(assets.withAppearance(html));
 }
 app.get("/privacy", (req, res) => sendLegalPage(res, "privacy.html"));
 app.get("/terms", (req, res) => sendLegalPage(res, "terms.html"));
@@ -4842,6 +4845,24 @@ app.post("/api/settings/preferred-name", async (req, res) => {
   }
 });
 
+// Light or dark (Settings, Appearance): every page the computer serves is
+// drawn in it (assets.js), and it is the same on the person's phone and
+// computer because it is kept in their settings, not in one browser.
+app.post("/api/settings/appearance", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const pick = req.body && req.body.pick;
+  if (!["device", "light", "dark"].includes(pick)) return res.status(400).json({ error: "Match this device, Light or Dark, please." });
+  try {
+    await patchSettings(supabase, userId, { set: { appearance: pick } });
+    assets.setAppearance(pick);
+    res.json({ success: true, pick });
+  } catch (e) {
+    console.error("appearance save error:", e.message);
+    res.status(500).json({ error: "Could not save that just now." });
+  }
+});
+
 app.post("/api/settings/confirm-sends", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -5234,7 +5255,7 @@ async function ownReport(req, res) {
     // Opening a page link: the styled page with the way back. Other callers get the plain message.
     if (req.method === "GET" && /^\/page\/[^/]+$/.test(req.path)) {
       res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'");
-      res.status(404).send(require("./report-page").missingHtml());
+      res.status(404).send(assets.withAppearance(require("./report-page").missingHtml()));
     } else res.status(404).send("This page was not found. It may have been deleted.");
     return null;
   }
@@ -5259,7 +5280,7 @@ app.get("/page/:id", async (req, res) => {
     const report = await ownReport(req, res);
     if (!report) return;
     res.set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'");
-    res.send(require("./report-page").pageHtml(report));
+    res.send(assets.withAppearance(require("./report-page").pageHtml(report)));
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).send("Could not show this page.");
@@ -5299,7 +5320,7 @@ app.post("/api/pages/:id/delete", async (req, res) => {
     if (!report) return;
     const { error } = await supabase.from("reports").delete().eq("id", report.id).eq("user_id", report.user_id);
     if (error) throw error;
-    res.send(require("./report-page").deletedHtml(report));
+    res.send(assets.withAppearance(require("./report-page").deletedHtml(report)));
   } catch (err) {
     console.error("Page delete error:", err.message);
     res.status(500).send("Could not delete this page. Try again.");
@@ -9692,6 +9713,13 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
+  // Light or dark as the person picked it, for every page from now on (assets.js).
+  try {
+    const { data } = await supabase.from("profiles").select("settings").eq("id", getAdminUserId()).maybeSingle();
+    assets.setAppearance(data?.settings?.appearance);
+  } catch (e) {
+    console.error("[appearance] could not read the pick:", e.message);
+  }
   // Closedhand Managed Models follow the models Closedhand picks (included-ai-setup.js).
   require("./included-ai-setup").start();
   // Secrets, provider keys and MCP credentials saved before they were stored

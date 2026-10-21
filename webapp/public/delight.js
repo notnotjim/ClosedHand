@@ -104,6 +104,15 @@ window.Delight = {
   // -----------------------------------------------------------
   // Confetti (seasonal)
   // -----------------------------------------------------------
+  // The colours are the app's names (interface.css); the confetti is drawn on
+  // a canvas, which takes values, so each name is read in the theme in use.
+  _named: function (colors) {
+    var style = getComputedStyle(document.documentElement);
+    return (colors || []).map(function (c) {
+      return String(c).replace(/var\((--[\w-]+)\)/g, function (m, name) { return style.getPropertyValue(name).trim(); });
+    });
+  },
+
   confetti: function (opts) {
     if (typeof window.confetti !== "function") return;
     var month = new Date().getMonth(); // 0-indexed
@@ -122,6 +131,7 @@ window.Delight = {
       origin: { x: originX, y: 0.7 },
       disableForReducedMotion: true,
     }, seasonal, opts || {});
+    if (config.colors) config.colors = Delight._named(config.colors);
 
     window.confetti(config);
 
@@ -138,25 +148,25 @@ window.Delight = {
   _getSeasonalConfig: function (month) {
     var day = new Date().getDate();
     // St Patrick's Day (March 17)
-    if (month === 2 && day === 17) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#D8624B", "#EFE6D6"] };
+    if (month === 2 && day === 17) return { colors: ["var(--accent)", "var(--accent)", "var(--accent)", "var(--accent)", "var(--accent)", "var(--fg)"] };
     // Christmas (Dec 20-31)
-    if (month === 11 && day >= 20) return { colors: ["rgba(239,230,214,0.1)", "rgba(216,98,75,0.16)", "#D8624B", "#D8624B", "#D0A652"] };
+    if (month === 11 && day >= 20) return { colors: ["rgba(var(--fg-rgb),0.1)", "rgba(var(--accent-rgb),0.16)", "var(--accent)", "var(--accent)", "var(--warn)"] };
     // New Year (Jan 1)
-    if (month === 0 && day === 1) return { colors: ["#D0A652", "#D0A652", "#EFE6D6", "rgba(239,230,214,0.9)", "#D8624B"] };
+    if (month === 0 && day === 1) return { colors: ["var(--warn)", "var(--warn)", "var(--fg)", "rgba(var(--fg-rgb),0.9)", "var(--accent)"] };
     // Valentine's Day (Feb 14)
-    if (month === 1 && day === 14) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#EFE6D6"] };
+    if (month === 1 && day === 14) return { colors: ["var(--accent)", "var(--accent)", "var(--accent)", "var(--accent)", "var(--fg)"] };
     // Halloween (Oct 31)
-    if (month === 9 && day === 31) return { colors: ["#D8624B", "#D8624B", "#1A1817", "rgba(239,230,214,0.16)", "rgba(109,106,113,0.2)"] };
+    if (month === 9 && day === 31) return { colors: ["var(--accent)", "var(--accent)", "var(--raised)", "rgba(var(--fg-rgb),0.16)", "rgba(var(--slate-rgb),0.2)"] };
     // 4th July
-    if (month === 6 && day === 4) return { colors: ["#D8624B", "#EFE6D6", "#D8624B"] };
+    if (month === 6 && day === 4) return { colors: ["var(--accent)", "var(--fg)", "var(--accent)"] };
     // Diwali (~Nov)
-    if (month === 10) return { colors: ["#D0A652", "#D0A652", "#D8624B", "#D8624B", "#6D6A71"] };
+    if (month === 10) return { colors: ["var(--warn)", "var(--warn)", "var(--accent)", "var(--accent)", "var(--slate)"] };
     // March-May: spring blossoms
-    if (month >= 2 && month <= 4) return { colors: ["#D8624B", "#D8624B", "#D8624B", "#D8624B", "#D8624B"], scalar: 1.2, shapes: ["circle"] };
+    if (month >= 2 && month <= 4) return { colors: ["var(--accent)", "var(--accent)", "var(--accent)", "var(--accent)", "var(--accent)"], scalar: 1.2, shapes: ["circle"] };
     // Dec-Feb: snowflakes
-    if (month === 11 || month <= 1) return { colors: ["#EFE6D6", "#D8624B", "#D8624B", "#D8624B"], startVelocity: 15, gravity: 0.3, scalar: 1.1, shapes: ["circle"], ticks: 300 };
+    if (month === 11 || month <= 1) return { colors: ["var(--fg)", "var(--accent)", "var(--accent)", "var(--accent)"], startVelocity: 15, gravity: 0.3, scalar: 1.1, shapes: ["circle"], ticks: 300 };
     // Default: party
-    return { colors: ["#D8624B", "#D8624B", "#D0A652", "#D8624B", "#6D6A71", "#D8624B"] };
+    return { colors: ["var(--accent)", "var(--accent)", "var(--warn)", "var(--accent)", "var(--slate)", "var(--accent)"] };
   },
 
   // -----------------------------------------------------------
@@ -266,7 +276,7 @@ window.Delight = {
         window.confetti({
           particleCount: 100,
           spread: 70,
-          colors: ["#D8624B", "#D8624B", "#1A1817", "#EFE6D6"],
+          colors: Delight._named(["var(--accent)", "var(--accent)", "var(--raised)", "var(--fg)"]),
           origin: { y: 0.6 },
           disableForReducedMotion: true,
         });

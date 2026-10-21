@@ -1,55 +1,55 @@
 /* A label inside a section, the dashboard's own: small grey capitals, so it
    never reads as level with the section heading above it. */
-.add-sub {font-size:13px;font-weight:600;color:rgba(239,230,214,0.6);text-transform:uppercase;letter-spacing:0.8px;margin:0 0 12px;}
+.add-sub {font-size:13px;font-weight:600;color:rgba(var(--fg-rgb),0.6);text-transform:uppercase;letter-spacing:0.8px;margin:0 0 12px;}
 #apple-local-section {margin:8px 0 20px;}
 #connected-section #apple-local-section {margin:8px 0 0;}
 #mcp-section.setting-up #apple-local-section {display:none!important;}
 #mcp-list:not(:empty) {margin-top:8px;}
 .catalogue-tiles {display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:0 0 32px;}
-.catalogue-tile {display:flex;align-items:center;gap:10px;min-width:0;min-height:48px;padding:10px 12px;border:1px solid rgba(239,230,214,.16);border-radius:10px;background:#1A1817;color:#EFE6D6;font:inherit;font-size:14px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;}
-.catalogue-tile:hover {border-color:rgba(208,86,63,.4);background:#211D1A;}
+.catalogue-tile {display:flex;align-items:center;gap:10px;min-width:0;min-height:48px;padding:10px 12px;border:1px solid rgba(var(--fg-rgb),.16);border-radius:10px;background:var(--raised);color:var(--fg);font:inherit;font-size:14px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;}
+.catalogue-tile:hover {border-color:rgba(var(--accent-strong-rgb),.4);background:var(--raised-hover);}
 .catalogue-tile img {flex:none;border-radius:5px;}
 .catalogue-tile span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .catalogue-choice {display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-top:20px;}
-.catalogue-quiet {border:0;background:none;padding:0;color:#B6AFA4;font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
-.catalogue-quiet:hover {color:#EFE6D6;}
-.catalogue-form input {width:100%;box-sizing:border-box;border:1px solid rgba(239,230,214,.25);background:#100E0D;color:#EFE6D6;border-radius:8px;padding:12px;font:inherit;min-height:44px;}
-.catalogue-empty,.catalogue-status,#catalogue-setup p {font-size:15px;color:#B6AFA4;line-height:1.6;}
-.catalogue-action,.catalogue-back {min-height:44px;cursor:pointer;font:inherit;border:1px solid rgba(239,230,214,.24);border-radius:8px;background:#26221F;color:#EFE6D6;padding:10px 16px;}
-.catalogue-action:hover,.catalogue-back:hover {background:#352D27;}
+.catalogue-quiet {border:0;background:none;padding:0;color:var(--muted);font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.catalogue-quiet:hover {color:var(--fg);}
+.catalogue-form input {width:100%;box-sizing:border-box;border:1px solid rgba(var(--fg-rgb),.25);background:var(--bg);color:var(--fg);border-radius:8px;padding:12px;font:inherit;min-height:44px;}
+.catalogue-empty,.catalogue-status,#catalogue-setup p {font-size:15px;color:var(--muted);line-height:1.6;}
+.catalogue-action,.catalogue-back {min-height:44px;cursor:pointer;font:inherit;border:1px solid rgba(var(--fg-rgb),.24);border-radius:8px;background:var(--control);color:var(--fg);padding:10px 16px;}
+.catalogue-action:hover,.catalogue-back:hover {background:var(--control-hover);}
 .catalogue-action:disabled {opacity:.65;cursor:default;}
 .catalogue-back {margin-bottom:20px;}
-#catalogue-setup .catalogue-return {display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0 0 12px -2px;padding:0 2px;border:0;background:none;color:#B6AFA4;font:inherit;font-size:14px;cursor:pointer;}
-#catalogue-setup .catalogue-return:hover {color:#EFE6D6;}
+#catalogue-setup .catalogue-return {display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0 0 12px -2px;padding:0 2px;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;cursor:pointer;}
+#catalogue-setup .catalogue-return:hover {color:var(--fg);}
 #catalogue-setup {padding-bottom:24px;}
 #catalogue-setup h3 {font-size:21px;margin:0 0 12px;}
 #catalogue-setup h3:focus {outline:none;}
-#catalogue-setup a {color:#E59B89;text-underline-offset:4px;}
-#catalogue-setup a.catalogue-deep {display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;margin-top:16px;padding:10px 16px;border:1px solid rgba(208,86,63,.45);border-radius:9px;background:rgba(208,86,63,.08);color:#E59B89;font-size:15px;font-weight:500;text-decoration:none;}
-#catalogue-setup a.catalogue-deep:hover {background:rgba(208,86,63,.18);}
+#catalogue-setup a {color:var(--accent-link);text-underline-offset:4px;}
+#catalogue-setup a.catalogue-deep {display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;margin-top:16px;padding:10px 16px;border:1px solid rgba(var(--accent-strong-rgb),.45);border-radius:9px;background:rgba(var(--accent-strong-rgb),.08);color:var(--accent-link);font-size:15px;font-weight:500;text-decoration:none;}
+#catalogue-setup a.catalogue-deep:hover {background:rgba(var(--accent-strong-rgb),.18);}
 .catalogue-form {display:grid;gap:20px;margin-top:24px;max-width:640px;}
 .catalogue-form label {display:grid;gap:8px;}
 .catalogue-form .catalogue-action {justify-self:start;}
 .catalogue-callback {display:grid;gap:8px;}
 .catalogue-callback>span {font-size:15px;}
-.catalogue-copybox {display:flex;align-items:center;gap:8px;min-height:44px;padding-right:4px;border:1px solid rgba(239,230,214,.25);border-radius:8px;background:#100E0D;}
-.catalogue-copybox code {flex:1;min-width:0;padding:11px 0 11px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:#EFE6D6;overflow-wrap:anywhere;user-select:all;}
-.catalogue-copy-btn {flex:none;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:7px;background:none;color:#B6AFA4;cursor:pointer;}
-.catalogue-copy-btn:hover {background:rgba(239,230,214,.08);color:#EFE6D6;}
-.catalogue-copy-btn.done {color:#8DBD79;}
-#catalogue-setup .catalogue-steps {display:grid;gap:8px;margin:16px 0 0;padding-left:22px;font-size:15px;color:#B6AFA4;line-height:1.6;}
-#catalogue-setup .catalogue-accounts {display:grid;gap:6px;margin:0;padding-left:22px;font-size:15px;color:#EFE6D6;line-height:1.5;}
-#catalogue-setup p.catalogue-notice {color:#E6C27A;}
+.catalogue-copybox {display:flex;align-items:center;gap:8px;min-height:44px;padding-right:4px;border:1px solid rgba(var(--fg-rgb),.25);border-radius:8px;background:var(--bg);}
+.catalogue-copybox code {flex:1;min-width:0;padding:11px 0 11px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--fg);overflow-wrap:anywhere;user-select:all;}
+.catalogue-copy-btn {flex:none;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:7px;background:none;color:var(--muted);cursor:pointer;}
+.catalogue-copy-btn:hover {background:rgba(var(--fg-rgb),.08);color:var(--fg);}
+.catalogue-copy-btn.done {color:var(--ok);}
+#catalogue-setup .catalogue-steps {display:grid;gap:8px;margin:16px 0 0;padding-left:22px;font-size:15px;color:var(--muted);line-height:1.6;}
+#catalogue-setup .catalogue-accounts {display:grid;gap:6px;margin:0;padding-left:22px;font-size:15px;color:var(--fg);line-height:1.5;}
+#catalogue-setup p.catalogue-notice {color:var(--warn-soft);}
 .connection-catalogue .mcp-hero {padding:24px 0 32px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;background:none!important;overflow:visible!important;}
 .connection-catalogue .mcp-copy {text-align:center;max-width:none;padding:0!important;margin:0 0 12px!important;}
-.connection-catalogue .mcp-description {font-size:15px!important;color:#B6AFA4!important;}
+.connection-catalogue .mcp-description {font-size:15px!important;color:var(--muted)!important;}
 .connection-catalogue .mcp-pill {max-width:640px!important;margin:0 auto!important;}
 .connection-catalogue #mcp-credentials {max-width:640px!important;margin-left:0!important;}
 .connection-catalogue #mcp-auth-status {text-align:left!important;}
-.connection-catalogue .mcp-scan {display:flex;width:fit-content;align-items:center;gap:6px;margin:12px auto 0;padding:4px 10px 4px 8px;border:1px solid rgba(141,189,121,.22);border-radius:999px;background:rgba(141,189,121,.06);color:#B6AFA4;font-size:12.5px;line-height:1.4;}
-.connection-catalogue .mcp-scan svg {flex:none;color:#8DBD79;}
+.connection-catalogue .mcp-scan {display:flex;width:fit-content;align-items:center;gap:6px;margin:12px auto 0;padding:4px 10px 4px 8px;border:1px solid rgba(var(--ok-rgb),.22);border-radius:999px;background:rgba(var(--ok-rgb),.06);color:var(--muted);font-size:12.5px;line-height:1.4;}
+.connection-catalogue .mcp-scan svg {flex:none;color:var(--ok);}
 .connection-catalogue .mcp-browse {justify-content:center;}
-.connection-catalogue :is(button,input,textarea,summary,a):focus-visible {outline:2px solid #E59B89;outline-offset:4px;}
+.connection-catalogue :is(button,input,textarea,summary,a):focus-visible {outline:2px solid var(--accent-link);outline-offset:4px;}
 .connection-catalogue [hidden] {display:none!important;}
 /* Two columns on a phone, each half the width whatever the names: a plain 1fr
    column grows to fit the longest name, which pushed the page past the screen.
@@ -57,14 +57,14 @@
 @media(max-width:480px){.catalogue-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.catalogue-tile span{white-space:normal;overflow-wrap:break-word;line-height:1.3}}
 
 
-.mcp-setup-choice {text-align:left;padding:20px 0;border-top:1px solid rgba(239,230,214,.16);margin-top:20px;overflow-wrap:anywhere;}
+.mcp-setup-choice {text-align:left;padding:20px 0;border-top:1px solid rgba(var(--fg-rgb),.16);margin-top:20px;overflow-wrap:anywhere;}
 .mcp-setup-choice strong {display:block;margin-bottom:12px;}
 .mcp-setup-choice pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;}
 .mcp-setup-choice label {display:grid;gap:8px;margin:16px 0;}
-.mcp-setup-choice input {min-width:0;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:12px;border-radius:8px;border:1px solid rgba(239,230,214,.25);background:#100E0D;color:#EFE6D6;}
+.mcp-setup-choice input {min-width:0;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:12px;border-radius:8px;border:1px solid rgba(var(--fg-rgb),.25);background:var(--bg);color:var(--fg);}
 .mcp-setup-choice button {margin-top:16px;min-height:44px;}
 
-#mcp-auth-status > a {color:#E59B89;text-underline-offset:3px;}
+#mcp-auth-status > a {color:var(--accent-link);text-underline-offset:3px;}
 /* The Mac card, while it waits under Add a connection, sits as far from Apps
    as Apps sits from Connect anything. */
 #mcp-section > #apple-local-section {margin-bottom:32px;}

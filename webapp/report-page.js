@@ -110,7 +110,8 @@ function shell(title, inner) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
 <style>
 :root { --bg: #f7f3ee; --fg: #241c18; --muted: #75685f; --line: #e3dbd2; --accent: #b9452f; --head: #efe7de; color-scheme: light; }
-@media (prefers-color-scheme: dark) { :root { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme-pick="light"]) { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; } }
+:root[data-theme-pick="dark"] { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 "IBM Plex Sans", system-ui, -apple-system, sans-serif; padding: max(20px, env(safe-area-inset-top)) 16px 64px; }
 main { max-width: 760px; margin: 0 auto; }

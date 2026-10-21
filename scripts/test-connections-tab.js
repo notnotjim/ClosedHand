@@ -134,7 +134,7 @@ test("everything you have is one card size: chat apps, connected and skills", ()
 
 test("a label inside Add a connection never reads as level with its heading", () => {
   const css = read("webapp/public/connection-catalogue.css");
-  assert.match(css, /\.add-sub \{font-size:13px;font-weight:600;color:rgba\(239,230,214,0\.6\);text-transform:uppercase;letter-spacing:0\.8px;/, "small grey capitals, like the dashboard's other labels");
+  assert.match(css, /\.add-sub \{font-size:13px;font-weight:600;color:rgba\(var\(--fg-rgb\),0\.6\);text-transform:uppercase;letter-spacing:0\.8px;/, "small grey capitals, like the dashboard's other labels");
   assert.match(css, /#mcp-section > #apple-local-section \{margin-bottom:32px;\}/, "the Mac card sits as far from Apps as Apps from Connect anything");
 });
 

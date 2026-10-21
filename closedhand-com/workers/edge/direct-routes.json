@@ -1,7 +1,6 @@
 [
   "/.DS_Store*",
   "/.well-known/*",
-  "/ambient-background.js*",
   "/api/*",
   "/art/*",
   "/auth/*",

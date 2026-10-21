@@ -31,22 +31,22 @@
 }
 
 .delight-toast.success {
-  background: rgba(141,189,121,0.15);
-  border-color: rgba(141,189,121,0.3);
-  color: #8DBD79;
+  background: rgba(var(--ok-rgb),0.15);
+  border-color: rgba(var(--ok-rgb),0.3);
+  color: var(--ok);
 }
 
 .delight-toast.error {
-  background: rgba(216,98,75,0.15);
-  border-color: rgba(216,98,75,0.3);
-  color: #D8624B;
+  background: rgba(var(--accent-rgb),0.15);
+  border-color: rgba(var(--accent-rgb),0.3);
+  color: var(--accent);
   animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, shake 0.3s ease 0.35s;
 }
 
 .delight-toast.info {
-  background: rgba(216,98,75,0.15);
-  border-color: rgba(216,98,75,0.3);
-  color: #D8624B;
+  background: rgba(var(--accent-rgb),0.15);
+  border-color: rgba(var(--accent-rgb),0.3);
+  color: var(--accent);
 }
 
 .delight-toast .toast-icon {
@@ -83,7 +83,7 @@
 }
 .int-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(26,24,23,0.3);
+  box-shadow: 0 4px 12px rgba(var(--raised-rgb),0.3);
 }
 .int-card:hover img {
   transform: scale(1.05);
@@ -95,7 +95,7 @@
 }
 .plat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(26,24,23,0.3);
+  box-shadow: 0 4px 12px rgba(var(--raised-rgb),0.3);
 }
 
 /* --- Connection Success Animation --- */
@@ -106,8 +106,8 @@
 }
 
 @keyframes glow-green {
-  0% { border-color: #D8624B; box-shadow: 0 0 12px rgba(208,86,63,0.3); }
-  100% { border-color: rgba(239,230,214,0.16); box-shadow: none; }
+  0% { border-color: var(--accent); box-shadow: 0 0 12px rgba(var(--accent-strong-rgb),0.3); }
+  100% { border-color: rgba(var(--fg-rgb),0.16); box-shadow: none; }
 }
 
 .just-connected .int-badge {
@@ -132,7 +132,7 @@
 
 /* --- Copy Feedback --- */
 @keyframes copy-border-flash {
-  0% { border-color: #D8624B; box-shadow: 0 0 8px rgba(208,86,63,0.2); }
+  0% { border-color: var(--accent); box-shadow: 0 0 8px rgba(var(--accent-strong-rgb),0.2); }
   100% { border-color: inherit; box-shadow: none; }
 }
 
@@ -145,8 +145,8 @@
   top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1A1817;
-  color: #D8624B;
+  background: var(--raised);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 600;
   padding: 3px 10px;
@@ -166,7 +166,7 @@
 
 /* --- Skeleton Loading --- */
 .skeleton {
-  background: linear-gradient(90deg, rgba(239,230,214,0.1) 25%, rgba(239,230,214,0.16) 50%, rgba(239,230,214,0.1) 75%);
+  background: linear-gradient(90deg, rgba(var(--fg-rgb),0.1) 25%, rgba(var(--fg-rgb),0.16) 50%, rgba(var(--fg-rgb),0.1) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite;
   border-radius: 8px;
@@ -188,28 +188,24 @@
 }
 
 /* --- Resistance Mode Theme --- */
-body.resistance-mode {
-  --accent: #D8624B;
-}
-
 body.resistance-mode .badge-connected,
 body.resistance-mode .int-badge {
-  color: #D8624B !important;
+  color: var(--accent) !important;
 }
 
 body.resistance-mode .plat-card.connected {
-  border-color: #1A1817;
-  background: #1A1817;
+  border-color: var(--raised);
+  background: var(--raised);
 }
 
 body.resistance-mode .int-card.connected {
-  border-color: #1A1817;
+  border-color: var(--raised);
 }
 
 body.resistance-mode .delight-toast.success {
-  background: rgba(216,98,75,0.15);
-  border-color: rgba(216,98,75,0.3);
-  color: #D8624B;
+  background: rgba(var(--accent-rgb),0.15);
+  border-color: rgba(var(--accent-rgb),0.3);
+  color: var(--accent);
 }
 
 /* --- Lazy Worker Empty State --- */
@@ -222,7 +218,7 @@ body.resistance-mode .delight-toast.success {
   display: inline-block;
   animation: float-z 2s ease infinite;
   font-size: 18px;
-  color: rgba(239,230,214,0.6);
+  color: rgba(var(--fg-rgb),0.6);
 }
 
 .lazy-worker-z:nth-child(2) { animation-delay: 0.3s; font-size: 14px; }

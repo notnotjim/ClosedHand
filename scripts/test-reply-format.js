@@ -43,7 +43,7 @@ test("nothing in a reply becomes markup of its own", () => {
 });
 
 test("links go on their words; dashboard links open the dashboard panel", () => {
-  const style = 'style="color:#D8624B;text-decoration:underline;text-underline-offset:3px"';
+  const style = 'style="color:var(--accent);text-decoration:underline;text-underline-offset:3px"';
   assert.equal(formatReply("You can watch it run on your [dashboard](/dashboard#agents)."),
     `You can watch it run on your <a href="#" onclick="event.preventDefault();openDashSlide('#agents')" ${style}>dashboard</a>.`);
   assert.equal(formatReply("See [the **listing**](https://example.com/a?b=1&c=2)"),

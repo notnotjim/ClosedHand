@@ -44,7 +44,7 @@ test('wallet currency starts from the browser region', () => {
 test('a bare /dashboard opens the dashboard, and a missing page has a way back', () => {
   assert.match(dash, /window\.location\.replace\("\/\?dash=" \+ encodeURIComponent\(inner \|\| "#connections"\)\);/);
   assert.match(read('webapp/report-page.js'), /function missingHtml\(\)/);
-  assert.match(server, /res\.status\(404\)\.send\(require\("\.\/report-page"\)\.missingHtml\(\)\);/);
+  assert.match(server, /res\.status\(404\)\.send\(assets\.withAppearance\(require\("\.\/report-page"\)\.missingHtml\(\)\)\);/);
 });
 
 test('goals, file search, progress lines, today and the Google card', () => {
