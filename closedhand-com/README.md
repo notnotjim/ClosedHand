@@ -51,7 +51,7 @@ Migrations in `migrations/` apply on start.
 | `INCLUDED_AI_MONTHLY_PEOPLE` | How many first months you expect to start in a calendar month (default 100). Never a stop: the maintainer is told at 75%, 90% and 100%, then every further 25% (lib/capacity.js) |
 | `INCLUDED_AI_DAILY_PEOPLE` | First months in 24 hours worth telling the maintainer about as a burst (default 25). Never a stop |
 | `OPENROUTER_MONTHLY_BUDGET_USD` | The monthly budget set in OpenRouter, the one stop for every Managed Models key; with it, the maintainer is told at 75%, 90% and 100% of this month's spend |
-| `OPERATOR_EMAIL` | The sign-in email of the maintainer's Closedhand account: its computer collects the notices above and Closedhand says them in its chat. A notice not collected within a day is emailed to `ASSISTANT_EMAIL_OPERATOR` through the `MAIL_*` sender |
+| `OPERATOR_EMAILS` | The maintainers' sign-in emails, comma-separated: they can open /insights, and an account signed in with one of them, its address verified, collects the notices above and Closedhand says them in its chat. A notice not collected within a day is emailed to `ASSISTANT_EMAIL_OPERATOR` through the `MAIL_*` sender |
 | `INCLUDED_AI_PER_CONNECTION` | How many people one internet connection can claim it for in 30 days (default 3) |
 | `INCLUDED_AI_FAIR_USE_USD` | Fair use: the most LLM use a key allows (default 20), for the whole first month, or in each calendar month of Closedhand+ (OpenRouter resets it monthly; carrying on past it doubles it for that month) |
 | `POLAR_ACCESS_TOKEN` | A Polar organization access token for Closedhand+ (lib/plus.js), with the scopes `checkouts:write`, `customer_sessions:write` and `subscriptions:write`. Without it, and the three below, Closedhand+ is off |

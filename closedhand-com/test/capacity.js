@@ -87,7 +87,7 @@ test('notices go to the maintainer\'s own Closedhand once, and by email when it 
   const operator = await person('Maintainer@Example.com'), someone = await person();
   const sent = [];
   const request = async (url, opts) => { sent.push({ url, body: JSON.parse(opts.body) }); return new Response('{}'); };
-  const env = { OPERATOR_EMAIL: 'maintainer@example.com', ASSISTANT_EMAIL_OPERATOR: 'alerts@example.com',
+  const env = { OPERATOR_EMAILS: 'someone-else@example.com, maintainer@example.com', ASSISTANT_EMAIL_OPERATOR: 'alerts@example.com',
     MAIL_SES_REGION: 'eu-west-2', MAIL_FROM: 'Closedhand <hello@example.com>', MAIL_AWS_ACCESS_KEY_ID: 'AKIAFIXTURE', MAIL_AWS_SECRET_ACCESS_KEY: 'fixture' };
   const box = notices.create({ db, env, request });
   await box.queue('First notice');
@@ -98,7 +98,7 @@ test('notices go to the maintainer\'s own Closedhand once, and by email when it 
   const got = await box.collect(operator);
   assert.deepEqual(got.map(n => n.text), ['First notice', 'Second notice']);
   assert.deepEqual(await box.collect(operator), [], 'each once');
-  assert.deepEqual(await notices.create({ db, env: {} }).collect(operator), [], 'no OPERATOR_EMAIL, no notices');
+  assert.deepEqual(await notices.create({ db, env: {} }).collect(operator), [], 'no OPERATOR_EMAILS, no notices');
 
   await box.queue('Waiting a day');
   await db.query("UPDATE operator_notices SET created_at = now() - interval '25 hours' WHERE text = 'Waiting a day'");

@@ -1,7 +1,8 @@
 // Notices for the maintainer, never for the people using Closedhand: how many
 // first months of Closedhand Managed Models have started, a burst of them, and
 // this month's OpenRouter spend (lib/capacity.js). They go to the maintainer's
-// own Closedhand: the account signed in with OPERATOR_EMAIL collects them with
+// own Closedhand: an account signed in with an email in OPERATOR_EMAILS (the
+// maintainers, as for the insights page) collects them with
 // its next check for the models (lib/addresses.js), and Closedhand says them
 // in its chat. One its computer has not collected within a day (asleep,
 // offline) is emailed to ASSISTANT_EMAIL_OPERATOR instead, when sending email
@@ -11,7 +12,7 @@ const { sendEmail } = require('./ses');
 const DAY = 24 * 3600 * 1000;
 
 function create({ db, env = process.env, request = fetch }) {
-  const operator = String(env.OPERATOR_EMAIL || '').trim().toLowerCase();
+  const operators = new Set(String(env.OPERATOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
 
   async function queue(text) {
     await db.query('INSERT INTO operator_notices (text) VALUES ($1)', [text]);
@@ -21,11 +22,11 @@ function create({ db, env = process.env, request = fetch }) {
   // is handed over once, and only one request at a time can take it. One
   // already emailed is not said again.
   async function collect(ownerId) {
-    if (!operator || !ownerId) return [];
+    if (!operators.size || !ownerId) return [];
     // Only a sign-in whose provider vouches for the address: Microsoft can
     // carry an address nobody checked, and these are the maintainer's figures.
     const who = (await db.query('SELECT email, email_verified FROM owners WHERE id = $1', [ownerId])).rows[0];
-    if (!who?.email || who.email_verified !== true || who.email.trim().toLowerCase() !== operator) return [];
+    if (!who?.email || who.email_verified !== true || !operators.has(who.email.trim().toLowerCase())) return [];
     const taken = await db.query(
       `UPDATE operator_notices SET delivered_at = now() WHERE id IN (
          SELECT id FROM operator_notices WHERE delivered_at IS NULL AND emailed_at IS NULL ORDER BY seq LIMIT 20 FOR UPDATE SKIP LOCKED)

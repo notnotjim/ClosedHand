@@ -731,7 +731,7 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     if (method === 'DELETE' && path.startsWith('/keys/')) { keys.delete(path.slice(6)); return new Response('{}'); }
     throw new Error('unexpected ' + method + ' ' + url);
   };
-  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64), OPERATOR_EMAIL: 'Quinn@Example.com' }, request: (url, opts) => url.startsWith('https://openrouter.ai/') ? openRouter(url, opts) : request(url, opts) });
+  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64), OPERATOR_EMAILS: 'Quinn@Example.com' }, request: (url, opts) => url.startsWith('https://openrouter.ai/') ? openRouter(url, opts) : request(url, opts) });
   const other = await new Promise(r => { const s = app.listen(0, () => r(s)); });
   const at = 'http://127.0.0.1:' + other.address().port;
   const call = (method, path, body, headers = {}) => fetch(at + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
@@ -761,7 +761,7 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     assert.equal(asked.key, undefined);
     assert.equal(asked.notices, undefined, 'nothing waiting for the maintainer yet');
     assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plan, asked.plan, 'the account page is told the same');
-    // The maintainer's own Closedhand (OPERATOR_EMAIL) collects their notices, once.
+    // The maintainer's own Closedhand (OPERATOR_EMAILS) collects their notices, once.
     await db.query("INSERT INTO operator_notices (text) VALUES ('Closedhand: a fixture notice.')");
     const told = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
     assert.deepEqual(told.notices.map(n => n.text), ['Closedhand: a fixture notice.']);
