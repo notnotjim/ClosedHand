@@ -22,7 +22,7 @@
     tip.setAttribute('role', 'tooltip');
     var which = document.createElement('strong');
     which.textContent = model;
-    tip.append('Currently: ', which, ', for ' + (images ? 'chat, support work and images' : 'chat and support work') + '. Closedhand chooses the current optimal LLM.');
+    tip.append('In use: ', which, ', for ' + (images ? 'chat, support work and images' : 'chat and support work') + '. Closedhand chooses the current optimal LLM.');
     name.setAttribute('aria-describedby', tip.id);
     hint.append(name);
     hint.llmTip = tip;
