@@ -1899,6 +1899,13 @@ app.post("/api/move/start", async (req, res) => {
   }
 });
 app.get("/api/move/status", (req, res) => res.json(move.outboundStatus()));
+// Settings says when a newer Closedhand is out, and the one step that gets it
+// here (release-check.js).
+app.get("/api/update", async (req, res) => {
+  const releases = require("./release-check");
+  const s = await releases.status();
+  res.json({ newer: s.newer, kind: s.kind, line: s.kind === "docker" ? releases.INSTALL_LINE : null });
+});
 
 // BYOK spend: daily token rollups for the dashboard Usage tab. Registered after
 // the password gate on purpose; usage data is the admin's business only.
@@ -2408,6 +2415,27 @@ function consumeOAuthState(state) {
 }
 
 // Start OAuth for any service
+// Whether this service's app has taken a sign-in back at the personal URL.
+const returnsAnywhereKey = (serviceKey) => "SIGN_IN_RETURNS_ANYWHERE_" + String(serviceKey).toUpperCase().replace(/[^A-Z0-9]/g, "_");
+// Said before anyone signs in, when the sign-in could only come back to this
+// computer: where to finish it, and for an app of the person's own, the one
+// address to add so it comes back to any device.
+function sendFinishHere(res, { name, anywhere, again }) {
+  const escape = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  let next = null;
+  if (anywhere) {
+    const u = new URL(again, "http://x");
+    u.searchParams.set("anywhere", "1");
+    next = u.pathname + u.search;
+  }
+  const html = assets.stamp(require("fs").readFileSync(path.join(__dirname, "views", "sign-in-here.html"), "utf8"))
+    .replace(/__NAME__/g, escape(name))
+    .replace("__ANYWHERE__", anywhere ? escape(anywhere) : "")
+    .replace("__NEXT__", next ? escape(next) : "")
+    .replace("__ONLY_HERE__", anywhere ? "" : " only-here");
+  res.set("Cache-Control", "no-store").type("html").send(assets.withAppearance(html));
+}
+
 app.get("/auth/:service", async (req, res) => {
   const serviceKey = req.params.service;
   let svc;
@@ -2423,12 +2451,14 @@ app.get("/auth/:service", async (req, res) => {
   // Google signs in through Closedhand's own Google app when this build has
   // one and the person has no app of their own, or picked the quick route.
   // The sign-in keeps that app with it, so it renews through the same app.
+  let closedhandApp = false;
   if (serviceKey === "google") {
     const googleApp = require("./google-app");
     const quick = googleApp.app();
     const own = !!(svc?.clientId && svc?.clientSecret);
     if (quick && googleApp.canReturnTo(BASE_URL) && (req.query.quick === "1" || !own)) {
       svc = { ...svc, clientId: quick.clientId, clientSecret: quick.clientSecret, personalClient: true, usePKCE: true };
+      closedhandApp = true;
     }
   }
 
@@ -2462,11 +2492,25 @@ app.get("/auth/:service", async (req, res) => {
     if (!userId) return res.redirect("/");
   }
 
-  const redirectUri = `${BASE_URL}/auth/${serviceKey}/callback`;
+  // The sign-in comes back to this computer's own address. On Docker and the
+  // Mac that is localhost, which a phone (or Telegram's browser on it) can't
+  // open, so a sign-in started there ended on a dead page after the person
+  // had agreed. Started away from this computer, it comes back to the
+  // personal URL instead, once the app allows that address; until then, and
+  // always for Closedhand's own Google app, which Google lets return only to
+  // the computer that asked, this says so before anyone signs in.
+  let redirectUri = `${BASE_URL}/auth/${serviceKey}/callback`;
+  if (fromElsewhere(req) && require("./google-app").canReturnTo(BASE_URL)) {
+    const personal = String((await getRuntimeConf("PHONE_PERMANENT_URL")) || "").replace(/\/+$/, "");
+    const anywhere = personal && !closedhandApp ? `${personal}/auth/${serviceKey}/callback` : null;
+    if (anywhere && (req.query.anywhere === "1" || (await getRuntimeConf(returnsAnywhereKey(serviceKey))))) redirectUri = anywhere;
+    else return sendFinishHere(res, { name: svc.name || serviceKey, anywhere, again: req.originalUrl });
+  }
 
   // Build state
   const stateData = {
     service: serviceKey,
+    redirectUri,
     personalClient: svc.personalClient ? { clientId: svc.clientId, clientSecret: svc.clientSecret } : null,
     flow,
     userId: flow === "website" ? getUserIdFromRequest(req) : null,
@@ -3052,9 +3096,11 @@ app.get("/auth/:service/callback", async (req, res) => {
   }
 
   try {
-    const redirectUri = `${BASE_URL}/auth/${serviceKey}/callback`;
+    const redirectUri = stateData.redirectUri || `${BASE_URL}/auth/${serviceKey}/callback`;
     const tokens = await exchangeOAuthCode(svc, code, redirectUri, stateData.storeDomain, stateData.codeVerifier);
     if (svc.personalClient) { tokens.client_id = svc.clientId; tokens.client_secret = svc.clientSecret; }
+    // It came back to the personal URL, so this app allows it from now on.
+    if (redirectUri !== `${BASE_URL}/auth/${serviceKey}/callback`) await setRuntimeConf({ [returnsAnywhereKey(serviceKey)]: "1" }).catch(() => {});
 
     if (stateData.extraAccount && serviceKey === "google") {
       return await handleExtraGoogleAccount(res, stateData, svc, tokens);

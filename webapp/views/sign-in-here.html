@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="/theme.js"></script>
+  <title>Finish on the computer | Closedhand</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: rgba(var(--fg-rgb),0.92);
+      font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.55;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .box { width: min(420px, 100%); }
+    .box > .ch-brand { display: flex; justify-content: center; margin-bottom: 26px; }
+    .card { background: rgba(var(--raised-rgb),0.55); border: 1px solid rgba(var(--fg-rgb),0.06); border-radius: 16px; padding: 26px; }
+    h1 { font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1.25; margin-bottom: 10px; }
+    p { color: rgba(var(--fg-rgb),0.65); font-size: 14px; }
+    p + p, .anywhere { margin-top: 12px; }
+    .card.only-here .anywhere { display: none; }
+    .addr { display: flex; gap: 8px; align-items: center; margin: 10px 0 14px; padding: 8px 10px; border: 1px solid rgba(var(--fg-rgb),0.12); border-radius: 8px; background: var(--raised); }
+    .addr code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 12.5px; color: rgba(var(--fg-rgb),0.9); }
+    button, .go { border: 1px solid rgba(var(--fg-rgb),0.16); border-radius: 8px; background: none; color: var(--fg); font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; text-decoration: none; }
+    .go { display: inline-block; background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+    a.back { color: var(--accent); font-size: 13px; }
+    .row { display: flex; gap: 16px; align-items: center; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <!-- A sign-in started away from the computer running Closedhand, when it
+       could only come back to that computer (server.js, sendFinishHere). -->
+  <div class="box">
+    <span class="ch-brand"><img src="/fist.png" alt=""><span>Closedhand</span></span>
+    <div class="card__ONLY_HERE__">
+      <h1>Finish this on the computer running Closedhand</h1>
+      <p>__NAME__ hands this sign-in back only to that computer, which this device can't reach. Open Closedhand's dashboard there and add it from Connections.</p>
+      <div class="anywhere">
+        <p>To add accounts from any device instead, add this once to the Authorized redirect URIs of the __NAME__ app you made for Closedhand, then continue:</p>
+        <div class="addr"><code id="addr">__ANYWHERE__</code><button type="button" id="copy">Copy</button></div>
+        <a class="go" href="__NEXT__">Continue</a>
+      </div>
+      <div class="row"><a class="back" href="/?dash=%23connections">Back to Connections</a></div>
+    </div>
+  </div>
+  <script>
+    document.getElementById("copy").addEventListener("click", function () {
+      var b = this;
+      navigator.clipboard.writeText(document.getElementById("addr").textContent).then(function () { b.textContent = "Copied"; });
+    });
+  </script>
+</body>
+</html>

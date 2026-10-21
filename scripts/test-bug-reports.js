@@ -23,7 +23,8 @@ function reporter() {
     },
     require: (n) => n === "./context" ? ctx : n === "../user-store" ? { UserStore: { load: async () => ({ conversations: [], profile: ctx.activeUserStore.profile }) } } : n === "crypto" ? crypto
       : n === "./connection-alert" ? { tellAboutReport: async (userId, store, text) => { told.push(text); return true; } }
-      : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
+      : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings
+      : n === "./release-check" ? { status: async () => ({ newer: false, kind: "docker" }), howToUpdate: () => "" } : (() => { throw Error(n); })(),
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8"), sandbox);
   return { api: mod.exports, ctx, calls, told, network };

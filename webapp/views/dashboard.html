@@ -2099,6 +2099,13 @@
           .furl-handle[aria-expanded="true"] .furl-chev { transform:rotate(180deg); }
           .furl-handle:hover .furl-chev { color:var(--fg); }
           .furl-handle:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; border-radius:12px; }
+          /* A newer Closedhand is out: one note at the top of Settings. */
+          .update-note { margin:0 0 16px; padding:14px 16px; border:1px solid rgba(var(--fg-rgb),0.12); border-left:3px solid var(--accent); border-radius:10px; background:var(--raised); font-size:13.5px; line-height:1.55; }
+          .update-note[hidden], .update-line[hidden] { display:none; }
+          .update-note a { color:var(--accent); }
+          .update-line { display:flex; gap:8px; align-items:center; margin-top:10px; padding:8px 10px; border:1px solid rgba(var(--fg-rgb),0.12); border-radius:8px; background:var(--bg); }
+          .update-line code { flex:1; min-width:0; overflow-wrap:anywhere; font-size:12.5px; }
+          .update-line button { flex:none; border:1px solid rgba(var(--fg-rgb),0.16); border-radius:6px; background:none; color:var(--fg); font:inherit; font-size:12px; padding:4px 10px; cursor:pointer; }
           /* Go always-on: one quiet line under Settings that opens to say more. */
           .always-on { margin:4px 4px 24px; }
           .always-on[hidden], .always-on-body[hidden] { display:none; }
@@ -2473,6 +2480,13 @@
 
       <div class="tab-content" id="tab-settings">
         <div style="padding-top:16px;">
+
+          <!-- A newer Closedhand is out (release-check.js): the one step that
+               updates it on this computer. -->
+          <div class="update-note" id="update-note" hidden>
+            <p id="update-text"></p>
+            <div class="update-line" id="update-line" hidden><code id="update-cmd"></code><button type="button" onclick="copyUpdateLine(this)">Copy</button></div>
+          </div>
 
           <!-- Personal access and contact addresses -->
           <!-- Addresses: Closedhand's own addresses, for reaching it from
@@ -3020,6 +3034,7 @@
       document.getElementById("user-name").textContent = (data.name || "").split(" ")[0];
       document.getElementById("always-on").hidden = !data.canGoAlwaysOn;
       if (data.canGoAlwaysOn) followMove();
+      loadUpdate();
 
       initDashboardWelcome(data);
 
@@ -5077,6 +5092,31 @@
       open = typeof open === 'boolean' ? open : handle.getAttribute('aria-expanded') !== 'true';
       handle.setAttribute('aria-expanded', open ? 'true' : 'false');
       body.hidden = !open;
+    }
+    // ---- A newer Closedhand (release-check.js) ----
+    async function loadUpdate() {
+      try {
+        var r = await fetch('/api/update');
+        if (!r.ok) return;
+        var u = await r.json();
+        if (!u.newer) return;
+        var text = document.getElementById('update-text');
+        if (u.kind === 'docker') {
+          text.textContent = 'A new version of Closedhand is out. To update, open Terminal on the computer running Closedhand and run:';
+          document.getElementById('update-cmd').textContent = u.line;
+          document.getElementById('update-line').hidden = false;
+        } else if (u.kind === 'mac') {
+          text.textContent = 'A new version of Closedhand is out. Download it from ';
+          var a = document.createElement('a');
+          a.href = 'https://closedhand.com'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'closedhand.com';
+          text.appendChild(a);
+          text.appendChild(document.createTextNode(' and drag it into Applications to replace this one.'));
+        } else return;
+        document.getElementById('update-note').hidden = false;
+      } catch (e) { /* says nothing when it can't tell */ }
+    }
+    function copyUpdateLine(btn) {
+      navigator.clipboard.writeText(document.getElementById('update-cmd').textContent).then(function () { btn.textContent = 'Copied'; });
     }
     // ---- Moving to Railway (move.js) ----
     var _movePoll = null, _moveUrl = null;
