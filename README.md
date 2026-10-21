@@ -119,13 +119,10 @@ Single-tenant by construction, not by configuration: every request resolves to t
 
 ## Reporting a problem
 
-Send `/bug` followed by what went wrong in the web chat or a chat app. The report stays
-on your computer unless you agree to send it to Closedhand. Before you decide,
-Closedhand explains what is included and lets you review the saved conversation.
-
-Use `/bugs` to see your reports and any outcomes, `/bugs <reference>` to review one,
-`/bugs send <reference>` to send or retry it, and `/bugs delete <reference>` to delete
-your local copy. Deleting a local copy does not withdraw a report already sent.
+Send `/bug` in the web chat or a chat app, with what went wrong or on its own: the last
+few messages of the chat show what happened. Closedhand says what it would send and asks
+first, and only a yes sends it to Closedhand. Nothing is kept on your computer. When the
+problem is fixed, Closedhand tells you.
 
 ## Contributing
 

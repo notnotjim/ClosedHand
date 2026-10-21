@@ -11,7 +11,7 @@ const root = path.join(__dirname, "..");
 process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || crypto.randomBytes(32).toString("base64");
 
 function reporter() {
-  const calls = [], network = { failures: 0 };
+  const calls = [], told = [], network = { failures: 0, status: "resolved" };
   const ctx = { store: { conversations: { alice: [{ role: "user", content: "When does my dentist appointment move to?" }, { role: "assistant", content: "Thursday at 3." }] } }, activeUserStore: { profile: { settings: {}, created_at: "2026-01-01" } } };
   const profileSettings = { updateSettings: async (userId, change, { store } = {}) => { Object.assign(store.profile.settings, change); return store.profile.settings; } };
   const mod = { exports: {} };
@@ -19,13 +19,14 @@ function reporter() {
     fetch: async (url, options) => {
       calls.push({ url, body: JSON.parse(options.body) });
       if (network.failures-- > 0) throw new Error("network timeout");
-      return { ok: true, json: async () => (url.endsWith("/status") ? { status: "resolved", resolution_note: "Fixed in the next update." } : { ok: true, id: "5d1e0c2a-0000-4000-a000-000000000001", receipt: "a".repeat(64), screenshots: 1 }) };
+      return { ok: true, json: async () => (url.endsWith("/status") ? { status: network.status, resolution_note: network.status === "resolved" ? "Fixed in the next update." : null } : { ok: true, id: "5d1e0c2a-0000-4000-a000-000000000001", receipt: "a".repeat(64), screenshots: 1 }) };
     },
-    require: (n) => n === "./context" ? ctx : n === "../user-store" ? { UserStore: { load: async () => ({ conversations: [] }) } } : n === "crypto" ? crypto
+    require: (n) => n === "./context" ? ctx : n === "../user-store" ? { UserStore: { load: async () => ({ conversations: [], profile: ctx.activeUserStore.profile }) } } : n === "crypto" ? crypto
+      : n === "./connection-alert" ? { tellAboutReport: async (userId, store, text) => { told.push(text); return true; } }
       : n === "../crypto-tokens" ? require("../crypto-tokens") : n === "../package.json" ? { version: "test" } : n === "./profile-settings" ? profileSettings : (() => { throw Error(n); })(),
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, "lib/bug-reports.js"), "utf8"), sandbox);
-  return { api: mod.exports, ctx, calls, network };
+  return { api: mod.exports, ctx, calls, told, network };
 }
 const shot = { buffer: Buffer.from("png bytes"), mediaType: "image/png" };
 
@@ -46,7 +47,7 @@ test("/bug on its own sends the conversation, and a yes sends it to Closedhand's
   const ask = await r.api.fileBugReport({ userId: "alice", text: "/bug", fileData: shot, platform: "web" });
   assert.equal(ask, "This sends the last 5 messages of this chat and your screenshot to Closedhand, so the problem can be found and fixed. Send it? Reply yes or no.");
   const sent = await r.api.handleBugSendReply("alice", "yes");
-  assert.equal(sent, "Sent to Closedhand. Reference 5d1e0c2a. Use /bugs to see when it's fixed.");
+  assert.equal(sent, "Sent to Closedhand. I'll tell you when it's fixed.");
   assert.equal(r.calls.length, 1);
   assert.equal(r.calls[0].url, "https://closedhand.com/api/bug-intake");
   const body = r.calls[0].body;
@@ -80,13 +81,28 @@ test("anything but a yes or no, or a late answer, leaves the report unsent", asy
   assert.equal(r.calls.length, 0);
 });
 
-test("/bugs shows what was sent and what came of it", async () => {
+test("Closedhand says once when a report it sent is fixed, with the fix in plain words", async () => {
   const r = reporter();
-  assert.match(await r.api.handleBugCommand("alice", "/bugs"), /^You haven't sent any bug reports/);
-  await r.api.fileBugReport({ userId: "alice", text: "/bug the time is wrong", platform: "web" });
+  await r.api.fileBugReport({ userId: "alice", text: "/bug the time is wrong on the dentist reminder for Thursday afternoon, it says 3 not 4", platform: "web" });
   await r.api.handleBugSendReply("alice", "yes");
-  assert.equal(await r.api.handleBugCommand("alice", "/bugs"), "5d1e0c2a: Fixed · the time is wrong\nFixed in the next update.");
+  assert.equal(await r.api.checkOutcomes("alice"), 1);
+  assert.equal(r.told.length, 1);
+  assert.match(r.told[0], /^Fixed: the problem you reported on \d{1,2} [A-Z][a-z]{2} \("the time is wrong on the dentist reminder for Thursday afternoon, it says 3 not…"\)\. Fixed in the next update\.$/);
   assert.equal(r.calls.at(-1).body.receipt, "a".repeat(64), "the receipt is opened only to ask");
+  assert.equal(await r.api.checkOutcomes("alice"), 0, "told once");
+  assert.equal(r.told.length, 1);
+});
+
+test("a report still being looked at is not mentioned, and there is no /bugs to remember", async () => {
+  const r = reporter();
+  r.network.status = "open";
+  await r.api.fileBugReport({ userId: "alice", text: "/bug", platform: "web" });
+  await r.api.handleBugSendReply("alice", "yes");
+  assert.equal(await r.api.checkOutcomes("alice"), 0);
+  assert.equal(r.told.length, 0);
+  assert.equal(r.api.isBugReport("/bugs"), false, "/bugs is an ordinary message now");
+  assert.equal(r.api.handleBugCommand, undefined);
+  assert.equal(r.api.fixedText({ at: "2026-03-02T10:00:00Z", comment: null }, null), "Fixed: the problem you reported on 2 Mar.");
 });
 
 test("nothing about bug reports is kept or read on the person's computer any more", () => {
