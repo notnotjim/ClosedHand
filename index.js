@@ -212,7 +212,8 @@ async function main() {
   // Routines that wait for something to happen look at what the sync
   // brought in, once a minute (lib/watches.js).
   require("./lib/watches").start();
-  // The Closedhand Managed Models credit, said once when it runs low (lib/included-credit.js).
+  // Closedhand Managed Models: a first month ending, fair use nearly used, and
+  // closedhand.com's notices, each said once (lib/included-credit.js).
   require("./lib/included-credit").start();
   // A report the person sent, said once when it is fixed (lib/bug-reports.js).
   require("./lib/bug-reports").start();

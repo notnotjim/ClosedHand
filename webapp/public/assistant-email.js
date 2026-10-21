@@ -38,14 +38,20 @@
     for (const label of ['', 'Sent', 'Received']) { const cell = el('th', label); cell.scope = 'col'; labels.append(cell); }
     const head = el('thead'); head.append(labels); table.append(head);
     const body = el('tbody');
+    // No limit (Closedhand+ has no monthly one) shows just what was used.
     const count = (used, limit) => {
       const cell = el('td');
-      cell.append(el('strong', Number.isFinite(used) ? used.toLocaleString() : '…'), document.createTextNode(' / ' + limit.toLocaleString()));
+      cell.append(el('strong', Number.isFinite(used) ? used.toLocaleString() : '…'));
+      if (limit !== null) cell.append(document.createTextNode(' / ' + limit.toLocaleString()));
       return cell;
     };
+    // The limits closedhand.com reports for this person, or the usual ones
+    // before it has said.
+    const u = state.usage || {};
+    const limit = (given, usual) => given === null ? null : Number.isFinite(given) ? given : usual;
     for (const [label, sent, received, sentLimit, receivedLimit] of [
-      ['This month', state.usage?.sent, state.usage?.received, 1000, 2000],
-      ['Today', state.usage?.dailySent, state.usage?.dailyReceived, 100, 200]
+      ['This month', u.sent, u.received, limit(u.sentLimit, 1000), limit(u.receivedLimit, 2000)],
+      ['Today', u.dailySent, u.dailyReceived, limit(u.dailySentLimit, 100), limit(u.dailyReceivedLimit, 200)]
     ]) {
       const row = el('tr'); const title = el('th', label); title.scope = 'row';
       row.append(title, count(state.address ? sent : 0, sentLimit), count(state.address ? received : 0, receivedLimit)); body.append(row);

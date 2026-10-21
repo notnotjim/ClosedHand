@@ -101,10 +101,13 @@ async function includedAiOffered() {
 async function includedAiModel() {
   return (await includedAiOffered()) ? serviceCheck.includedAiModel || null : null;
 }
-// The models Closedhand Managed Models use now, asked by this computer
-// (included-ai-setup.js refresh), or null when it is not offered.
-async function includedAiModels() {
-  return (await call('included-ai', 'GET')).models || null;
+// What closedhand.com says about Closedhand Managed Models for this computer
+// (included-ai-setup.js refresh): the models in use, its account's plan, a
+// key waiting for it, and notices for its account. Null on a computer that
+// never asked for a personal URL.
+async function includedAiState() {
+  if (!(await getConf('PHONE_INSTALL_ID'))) return null;
+  return (await call('included-ai', 'GET')) || null;
 }
 function validAddress(value) {
   try {
@@ -215,4 +218,4 @@ async function forget() {
 function status() {
   return { registrationState, ownershipConfirmed: ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(registrationState) };
 }
-module.exports = { begin, claim, claimWithMicrosoft, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, includedAiOffered, includedAiModel, includedAiModels, account, deleteAccount };
+module.exports = { begin, claim, claimWithMicrosoft, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, includedAiOffered, includedAiModel, includedAiState, account, deleteAccount };

@@ -119,9 +119,14 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   it by: the person's own provider's model is shown as set; for Closedhand Managed Models its name
   carries a dotted underline that shows the LLM on hover or tap (webapp/public/llm-hint.js),
   never beside it in brackets.
-- Closedhand Managed Models are never money in anything people read: no credit, balances, dollars or
-  top-ups. What is left shows as a share ("72% of your free use left"). Paying is a monthly plan;
-  credit exists only behind the scenes (closedhand.com's key limits).
+- Closedhand Managed Models are never money in anything people read: no credit, balances, dollars,
+  tokens, shares or top-ups. People see a plan (a first month set up for them, or Closedhand+
+  renewing or ending on a day) and hear about use only near the fair-use ceiling. Credit exists
+  only behind the scenes (closedhand.com's key limits).
+- Closedhand is free software that runs with any LLM the person chooses through their own API key,
+  free ones included; that is the main path. Managed Models and Closedhand+ are conveniences: never
+  "free until" or trial wording, the first month's end is mentioned only in its last week, and an
+  offer of what comes next puts the person's own LLM provider first and Closedhand+ second.
 - LLM providers are equal. No provider gets special treatment, fallback priority, or
   hardcoded references. Each provider is fully isolated.
   Closedhand Managed Models (closedhand.com makes each account an OpenRouter API key,
