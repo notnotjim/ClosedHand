@@ -1829,7 +1829,7 @@ app.get("/api/usage/summary", async (req, res) => {
   }
 });
 
-// Closedhand Managed LLM (included-ai.js): whether it is in use or
+// Closedhand Managed Models (included-ai.js): whether they are in use or
 // waiting beside the person's own AI account, and what is left on it, read
 // from OpenRouter with its own key. Behind the password gate, like Usage.
 app.get("/api/included-ai", async (req, res) => {
@@ -1839,10 +1839,12 @@ app.get("/api/included-ai", async (req, res) => {
     const settings = data?.settings || {};
     if (!settings.included_api_key) return res.json({ state: null });
     const included = require("./included-ai");
-    res.json({ state: included.inUse(settings) ? "in-use" : "available", credit: await included.credit(settings),
-      model: settings.included_ai?.name || null });
+    const inUse = included.inUse(settings);
+    // Whether it reads images: known once in use; tried when switched to.
+    res.json({ state: inUse ? "in-use" : "available", credit: await included.credit(settings),
+      model: settings.included_ai?.name || null, images: inUse ? !!settings.model_config?.roles?.vision : true });
   } catch (e) {
-    res.status(503).json({ error: "Could not read Closedhand Managed LLM just now." });
+    res.status(503).json({ error: "Could not read Closedhand Managed Models just now." });
   }
 });
 app.post("/api/included-ai/use", async (req, res) => {
@@ -1850,7 +1852,7 @@ app.post("/api/included-ai/use", async (req, res) => {
     await require("./included-ai-setup").use();
     res.json({ success: true });
   } catch (e) {
-    res.status(400).json({ error: e.message || "Could not switch to Closedhand Managed LLM." });
+    res.status(400).json({ error: e.message || "Could not switch to Closedhand Managed Models." });
   }
 });
 
@@ -9690,7 +9692,7 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   } catch (_) {}
   require("./recall-settings").backfill(supabase, SERVICES).catch(e => console.error("[Recall]", e.message));
   await ensureAdmin(); // single-tenant admin ready before we announce readiness
-  // Closedhand Managed LLM follows the models Closedhand picks (included-ai-setup.js).
+  // Closedhand Managed Models follow the models Closedhand picks (included-ai-setup.js).
   require("./included-ai-setup").start();
   // Secrets, provider keys and MCP credentials saved before they were stored
   // encrypted are sealed once; reads already handle both.

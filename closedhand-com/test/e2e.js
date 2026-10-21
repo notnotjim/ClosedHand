@@ -737,7 +737,7 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
   const call = (method, path, body, headers = {}) => fetch(at + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
   try {
     const offer = await (await call('GET', '/api/account')).json();
-    assert.equal(offer.includedAi, true, 'setup is told a claim brings Closedhand Managed LLM');
+    assert.equal(offer.includedAi, true, 'setup is told a claim brings Closedhand Managed Models');
     assert.equal(offer.includedAiModel, 'deepseek/deepseek-v4.1-flash', 'and which LLM it is');
     const copy = newCopy();
     const ticket = (await (await call('POST', '/api/phone-enrollment/register', { name: 'quinn-ai', port: 3000, confirm: 'code' }, copy.auth)).json()).ticket;
@@ -759,5 +759,18 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     assert.deepEqual(await (await call('POST', '/api/phone-enrollment/account/delete', {}, copy.auth)).json(), { deleted: true });
     assert.equal(keys.size, 0);
     assert.equal((await db.query('SELECT 1 FROM included_ai_keys WHERE key_hash = $1', [row.key_hash])).rowCount, 0);
+    // The free use was given once, to that sign-in: claiming again with it,
+    // as a new account, brings no key. Only fingerprints are kept for that.
+    const grants = (await db.query('SELECT * FROM starter_grants')).rows;
+    assert.equal(grants.length, 1);
+    assert.ok(!JSON.stringify(grants).includes('g-quinn') && !JSON.stringify(grants).includes('127.0.0.1'), 'no sign-in or address kept as such');
+    const again = newCopy();
+    const second = (await (await call('POST', '/api/phone-enrollment/register', { name: 'quinn-again', port: 3000, confirm: 'code' }, again.auth)).json()).ticket;
+    const back = await signIn('google', google('g-quinn', 'quinn@example.com'));
+    const { code: code2 } = await (await call('POST', '/api/phone-enrollment/approve', { ticket: second }, signedIn(back.cookie))).json();
+    const reclaimed = await (await call('POST', '/api/phone-enrollment/claim', { code: code2 }, again.auth)).json();
+    assert.equal(reclaimed.url, 'https://quinn-again.closedhand.ai', 'the claim itself goes on');
+    assert.equal(reclaimed.included_ai, undefined);
+    assert.equal(keys.size, 0);
   } finally { other.close(); }
 });

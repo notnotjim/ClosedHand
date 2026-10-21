@@ -1,4 +1,4 @@
-// Setting up Closedhand Managed LLM (included-ai.js) on this
+// Setting up Closedhand Managed Models (included-ai.js) on this
 // computer, when claiming the personal URL brings its key
 // (phone-registration.js). The key is kept sealed, then checked and saved as
 // the models the way a key the person pastes in is (model-config.js), so it
@@ -58,15 +58,20 @@ async function use({ unlessOwn = false } = {}) {
   const before = await settings();
   const key = require("./model-policy").openKey(before.included_api_key);
   const models = before.included_ai?.models;
-  if (!key || !models?.chat) throw new Error("This Closedhand has no Managed LLM to switch to.");
+  if (!key || !models?.chat) throw new Error("This Closedhand has no Managed Models to switch to.");
   const own = () => unlessOwn && (before.model_config ? !before.model_config.included : !!before.llm_provider);
   if (own()) return false;
   const modelConfig = require("./model-config");
-  const config = await modelConfig.prepare({
+  const input = {
     primary: { provider: "openrouter", apiKey: key }, model: models.chat,
     backgroundMode: models.background === models.chat ? "same" : "separate", backgroundModel: models.background,
-    visionMode: "off",
-  }, before);
+  };
+  // Images too, when the chat LLM reads them (checked with a real image);
+  // without images otherwise, so an image check never stops it being used.
+  const config = await modelConfig.prepare({ ...input, visionMode: "same" }, before).catch(error => {
+    if (!error.visionNeeded) throw error;
+    return modelConfig.prepare({ ...input, visionMode: "off" }, before);
+  });
   config.included = true;
   // Saved against the settings as they are now, unless the person set up an
   // LLM provider of their own while this was being checked.
@@ -81,7 +86,7 @@ async function use({ unlessOwn = false } = {}) {
 
 // Closedhand picks the models and can change them: a few times a day this
 // computer asks closedhand.com for the current pick and, when it changed,
-// switches to it (if the Managed LLM is in use) and remembers its name.
+// switches to it (if Managed Models are in use) and remembers its name.
 async function refresh() {
   const before = await settings();
   if (!before.included_api_key) return false;

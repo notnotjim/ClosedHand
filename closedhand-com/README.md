@@ -46,9 +46,11 @@ Migrations in `migrations/` apply on start.
 | `PHONE_PROVISIONER_SECRET` | Shared with the provisioner Worker |
 | `BUG_RECEIPT_SECRET` | Signs bug report receipts (defaults to `SESSION_SECRET`) |
 | `ADDRESS_LIMIT` | How many personal URLs may exist (default 100) |
-| `OPENROUTER_PROVISIONING_KEY` | An OpenRouter management key; with it, each account that claims a personal URL gets its own OpenRouter key, the AI that comes with Closedhand (lib/included-ai.js). Without it, no keys are made |
-| `INCLUDED_AI_STARTER_USD` | Credit on each account's first key (default 10) |
-| `INCLUDED_AI_MONTHLY_CAP_USD` | Most new starter credit given in a calendar month (default 300); past it, setup asks for an AI account instead |
+| `OPENROUTER_PROVISIONING_KEY` | An OpenRouter management key; with it, each account that claims a personal URL gets its own OpenRouter key, Closedhand Managed Models (lib/included-ai.js); `TOKEN_ENCRYPTION_KEY` keys the fingerprints. Without it, no keys are made |
+| `INCLUDED_AI_STARTER_USD` | Credit on each person's first key (default 10). Given once per sign-in, ever: a one-way fingerprint of it stays after the account is deleted |
+| `INCLUDED_AI_MONTHLY_CAP_USD` | Most new free use given in a calendar month (default 1000); past it, setup asks for an LLM provider instead |
+| `INCLUDED_AI_DAILY_CAP_USD` | Most new free use given in any 24 hours (default 250), so a burst can't take the month's |
+| `INCLUDED_AI_PER_CONNECTION` | How many people one internet connection can claim it for in 30 days (default 3) |
 | `INCLUDED_AI_MODELS` | The models those keys may use, comma-separated: the first for chat, the second for support work (default `deepseek/deepseek-v4.1-flash`). Computers pick up a change within a few hours |
 | `INCLUDED_AI_RETIRING_MODELS` | Models just switched away from, still allowed while computers switch; clear it after a day |
 | `TRUSTED_PROXY_HOPS` | Proxies in front that add X-Forwarded-For (default 2: Cloudflare, then Railway) |

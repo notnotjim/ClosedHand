@@ -1957,6 +1957,7 @@
   </style>
   <link rel="stylesheet" href="/welcome.css">
   <link rel="stylesheet" href="/interface.css">
+  <script src="/llm-hint.js"></script>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/logocircle.png">
   <meta name="theme-color" content="#100E0D">
@@ -2661,8 +2662,8 @@
               <div id="included-ai" hidden style="margin-bottom:16px;">
                 <p id="included-ai-line" style="margin:0;font-size:14px;color:#EFE6D6;line-height:1.6;"></p>
                 <p id="included-ai-detail" style="margin:0 0 6px;font-size:14px;color:#B6AFA4;line-height:1.6;"></p>
-                <p id="included-ai-note" class="account-action-desc" style="margin:0 0 8px;line-height:1.5;">Closedhand picks the LLM and keeps it current. Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
-                <button type="button" id="included-ai-use" class="btn btn-small" style="display:none;" onclick="useIncludedAi()">Switch to Closedhand Managed LLM</button>
+                <p id="included-ai-note" class="account-action-desc" style="margin:0 0 8px;line-height:1.5;">Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
+                <button type="button" id="included-ai-use" class="btn btn-small" style="display:none;" onclick="useIncludedAi()">Switch to Closedhand Managed Models</button>
                 <a href="#" id="included-ai-own" hidden onclick="showOwnAiAccount(event)" style="font-size:13px;color:#B6AFA4;text-decoration:underline;text-underline-offset:3px;">Use your own LLM provider instead</a>
               </div>
               <div id="byok-panel"></div>
@@ -4433,24 +4434,27 @@
     }
     selectLLM();
 
-    // Closedhand Managed LLM: in use, with the credit left and the person's
-    // own LLM provider one click away; or waiting beside their own, ready to
-    // switch back to.
-    function creditText(credit) {
-      if (!credit) return '';
-      var money = function (n) { return '$' + (Math.round(n * 100) % 100 ? n.toFixed(2) : String(Math.round(n))); };
-      return money(credit.left) + ' of ' + money(credit.limit) + ' credit left';
+    // Closedhand Managed Models: in use, with how much of the free use is left
+    // and the person's own LLM provider one click away; or waiting beside
+    // their own, ready to switch back to. What is left is a share, never
+    // money, and which LLM it is shows on hover or tap of its name.
+    function shareText(credit) {
+      if (!credit || !(credit.limit > 0)) return '';
+      if (!(credit.left > 0)) return 'none of your free use left';
+      return Math.max(1, Math.floor(credit.left / credit.limit * 100)) + '% of your free use left';
     }
+    function includedName(data) { return data.model ? llmHint(data.model, { images: data.images !== false }) : 'Closedhand Managed Models'; }
     async function loadIncludedAi() {
       var box = document.getElementById('included-ai');
       try {
         var res = await fetch('/api/included-ai');
         var data = await res.json();
         if (!res.ok || !data.state) { box.hidden = true; return data; }
-        var inUse = data.state === 'in-use', left = creditText(data.credit);
-        document.getElementById('included-ai-line').textContent = inUse ? 'Closedhand Managed LLM' : 'Closedhand Managed LLM is also available';
-        // Which LLM it is right now, and the credit left.
-        document.getElementById('included-ai-detail').textContent = [data.model ? 'Currently ' + data.model : '', left ? (data.model ? 'with ' : '') + left : ''].filter(Boolean).join(', ') + (data.model || left ? '.' : '');
+        var inUse = data.state === 'in-use', left = shareText(data.credit);
+        var line = document.getElementById('included-ai-line');
+        if (inUse) line.replaceChildren(includedName(data));
+        else line.replaceChildren(includedName(data), ' are also available');
+        document.getElementById('included-ai-detail').textContent = left ? left[0].toUpperCase() + left.slice(1) + '.' : '';
         // .btn sets its own display, so hidden alone would not hide it.
         document.getElementById('included-ai-use').style.display = inUse ? 'none' : '';
         document.getElementById('included-ai-own').hidden = !inUse;
@@ -4471,12 +4475,12 @@
         var res = await fetch('/api/included-ai/use', { method: 'POST' });
         var data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'Could not switch.');
-        showToast('Switched to Closedhand Managed LLM');
+        showToast('Switched to Closedhand Managed Models');
         selectLLM();
       } catch (e) {
         showToast(e.message, true);
       } finally {
-        btn.disabled = false; btn.textContent = 'Switch to Closedhand Managed LLM';
+        btn.disabled = false; btn.textContent = 'Switch to Closedhand Managed Models';
         loadIncludedAi();
       }
     }
@@ -5385,10 +5389,10 @@
         usagePrices = data.prices || {};
         renderUsage(usageRows);
         renderUsagePrices(usageRows);
-        // The Closedhand Managed LLM credit left, while it is in use.
+        // How much of the free use is left, while it is in use.
         fetch('/api/included-ai').then(function (r) { return r.json(); }).then(function (d) {
-          var line = document.getElementById('usage-included'), left = d && d.state === 'in-use' ? creditText(d.credit) : '';
-          line.textContent = left ? 'Closedhand Managed LLM' + (d.model ? ' (currently ' + d.model + ')' : '') + ': ' + left + '.' : '';
+          var line = document.getElementById('usage-included'), left = d && d.state === 'in-use' ? shareText(d.credit) : '';
+          if (left) line.replaceChildren(includedName(d), ': ' + left + '.'); else line.replaceChildren();
           line.hidden = !left;
         }).catch(function () {});
       } catch (e) {

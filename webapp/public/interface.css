@@ -329,3 +329,16 @@ body.dashboard-page { display: block; background: #100E0D; color: var(--ui-text)
 .btn-quiet:hover { background: rgba(239,230,214,0.08); }
 .ch-welcome-primary:disabled, .btn-modal-primary:disabled, .save-btn:disabled, .cta:disabled, .rag-query-btn:disabled, .goals-new:disabled, .rag-upload-btn:disabled, .btn-quiet:disabled { opacity: 0.5; cursor: default; }
 .ch-welcome-primary:focus-visible, .btn-modal-primary:focus-visible, .save-btn:focus-visible, .go:focus-visible, .g-signin:focus-visible, .cta:focus-visible, .btn-quiet:focus-visible, .rag-query-btn:focus-visible, .bridge-cta-dl:focus-visible, .goals-new:focus-visible, .deep:focus-visible, .rag-upload-btn:focus-visible { outline: 2px solid #D8624B; outline-offset: 2px; }
+
+/* Closedhand Managed Models' name (llm-hint.js): a dotted underline that says
+   which LLM it is on hover, focus or tap. The hint is placed on the screen by
+   llm-hint.js, so cards that clip their contents never cut it off. */
+.llm-hint { position: relative; display: inline-block; }
+/* Doubled so a page's own button rules (the dashboard's) never pad it. */
+.llm-hint .llm-hint-name { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font: inherit; letter-spacing: inherit; color: inherit; cursor: help; text-decoration: underline dotted rgba(239,230,214,0.5); text-decoration-thickness: 1px; text-underline-offset: 4px; transition: text-decoration-color .15s; }
+.llm-hint .llm-hint-name:hover, .llm-hint.open .llm-hint-name { text-decoration-color: #D8624B; }
+.llm-hint-name:focus-visible { outline: 2px solid #D8624B; outline-offset: 3px; border-radius: 3px; }
+.llm-hint-tip { position: fixed; left: 0; top: 0; width: max-content; max-width: min(17rem, 80vw); padding: 9px 12px; border-radius: 10px; background: #1A1817; border: 1px solid rgba(239,230,214,0.14); box-shadow: 0 10px 30px rgba(0,0,0,0.45); color: #B6AFA4; font-size: 13px; font-weight: 400; line-height: 1.5; text-align: left; white-space: normal; opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .16s ease, transform .16s ease, visibility .16s; z-index: 30; pointer-events: none; }
+.llm-hint-tip strong { color: #EFE6D6; font-weight: 600; }
+.llm-hint-tip.shown { opacity: 1; visibility: visible; transform: none; }
+@media (prefers-reduced-motion: reduce) { .llm-hint-tip { transition: none; } }

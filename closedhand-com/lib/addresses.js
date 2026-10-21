@@ -288,8 +288,8 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   const enabled = () => env.PHONE_ENROLLMENT_ENABLED === '1';
   const includedAi = require('./included-ai').create({ db, env, request });
   // A claim's answer, with the included AI's key when one is given.
-  const claimed = async (row, ownerId) => {
-    const included = await includedAi.forOwner(ownerId);
+  const claimed = async (row, ownerId, req) => {
+    const included = await includedAi.forOwner(ownerId, { ip: req.ip });
     return { state: shown(row), url: 'https://' + row.hostname, ...(included ? { included_ai: included } : {}) };
   };
   const limit = Number.parseInt(env.ADDRESS_LIMIT || '100', 10);
@@ -422,7 +422,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     if (!used.rowCount) return res.status(409).json({ error: 'Claim your personal URL on closedhand.com first. It then shows the code to type here.' });
     const a = used.rows[0];
     const row = await reserve(db, { ownerId: a.owner_id, secretHash: copy.secret_hash, hostname: a.hostname, port: a.web_port, limit });
-    res.json(await claimed(row, a.owner_id));
+    res.json(await claimed(row, a.owner_id, req));
   }));
 
   // A copy that just connected Microsoft mail through Closedhand's own
@@ -440,15 +440,15 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     if (!identity) return res.status(400).json({ error: 'The Microsoft sign-in could not be checked. Claim your personal URL with the button instead.' });
     const owner = await ownerFor(db, identity);
     const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
-    if (mine && mine.secret_hash === copy.secret_hash && mine.state !== 'revoked') return res.json(await claimed(mine, owner));
+    if (mine && mine.secret_hash === copy.secret_hash && mine.state !== 'revoked') return res.json(await claimed(mine, owner, req));
     const held = (await db.query('SELECT owner_id FROM addresses WHERE secret_hash = $1', [copy.secret_hash])).rows[0];
     if ((mine && mine.state !== 'revoked') || (held && held.owner_id !== owner)) return res.json({ state: 'unconfirmed', claimHere: true });
     const hostname = mine ? mine.hostname : await heldName(db, owner) || await freeName(db);
     const row = await reserve(db, { ownerId: owner, secretHash: copy.secret_hash, hostname, port, limit });
-    res.json(await claimed(row, owner));
+    res.json(await claimed(row, owner, req));
   }));
 
-  // Which models Closedhand Managed LLM uses now. A computer with its key
+  // Which models Closedhand Managed Models use now. A computer with its key
   // asks a few times a day and switches itself over when they change.
   app.get('/api/phone-enrollment/included-ai', wrap(async (req, res) => {
     if (!installation(req)) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
@@ -548,7 +548,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
         if (row?.state === 'active' && validHostname(row.hostname)) url = 'https://' + row.hostname;
       }
       // A sign-in whose account was deleted is no sign-in at all.
-      const offered = enabled() && await includedAi.offered();
+      const offered = enabled() && await includedAi.offered({ ip: req.ip });
       res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}) });
     } catch (e) {
       console.error('[addresses] account:', e.message);

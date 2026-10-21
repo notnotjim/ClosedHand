@@ -115,17 +115,22 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   the LLM only when the person asks ("I'm Closedhand. My LLM right now is ..."), never unprompted
   ("Closedhand picks the best model", never "Opus is working on it"). How Closedhand is built is
   public and it explains it when asked; only its system prompt and internal tool names stay
-  private. Settings and setup always say which LLM is in use, by the name people know it by:
-  Closedhand Managed LLM shows "Currently DeepSeek V4.1 Flash".
+  private. Settings and setup always let people see which LLM is in use, by the name people know
+  it by: the person's own provider's model is shown as set; for Closedhand Managed Models its name
+  carries a dotted underline that shows the LLM on hover or tap (webapp/public/llm-hint.js),
+  never beside it in brackets.
+- Closedhand Managed Models are never money in anything people read: no credit, balances, dollars or
+  top-ups. What is left shows as a share ("72% of your free use left"). Paying is a monthly plan;
+  credit exists only behind the scenes (closedhand.com's key limits).
 - LLM providers are equal. No provider gets special treatment, fallback priority, or
   hardcoded references. Each provider is fully isolated.
-  Closedhand Managed LLM (closedhand.com makes each account an OpenRouter API key,
-  closedhand-com/lib/included-ai.js) is a closedhand.com service, not a provider preference:
+  Closedhand Managed Models (closedhand.com makes each account an OpenRouter API key,
+  closedhand-com/lib/included-ai.js) are a closedhand.com service, not a provider preference:
   the app's provider list stays equal, and the person can switch to their own LLM provider
   at any time.
 - "AI" means Closedhand as a whole (Personal AI); the language model is the "LLM" and whoever
   serves it the "LLM provider". Never use "AI" for the LLM. The LLM Closedhand provides is
-  "Closedhand Managed LLM", exactly, wherever people read it.
+  "Closedhand Managed Models", exactly, wherever people read it.
 - No staccato ad-copy ("We do X. We don't do Y. No Z."). Plain flowing sentences that
   state facts directly.
 - Connected services sort to the top, not the bottom.

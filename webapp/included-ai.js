@@ -1,7 +1,7 @@
 // included-ai.js: vendored. lib/included-ai.js and webapp/included-ai.js are
 // byte-identical (scripts/vendored-manifest.json).
 //
-// Closedhand Managed LLM: an OpenRouter API key of the person's own,
+// Closedhand Managed Models: an OpenRouter API key of the person's own,
 // made by closedhand.com when they claimed their personal URL
 // (closedhand-com/lib/included-ai.js). It is kept sealed in the settings
 // (included_api_key) and used like any key the person pastes in. What is
@@ -9,7 +9,7 @@
 // never sees it being used.
 const { openKey } = require("./model-policy");
 
-// Closedhand is answering with its Managed LLM right now.
+// Closedhand is answering with its Managed Models right now.
 function inUse(settings) {
   return !!(settings?.model_config?.included && settings?.included_api_key);
 }
@@ -47,10 +47,10 @@ function dashboard(link, web) {
 // What the person is told, in fixed words: when the credit has run out there
 // is no model left to write them.
 function nearlyUsedText(link, web) {
-  return `You've used most of your Closedhand Managed LLM credit. To carry on without a break, connect your own LLM provider in the ${dashboard(link, web)}.`;
+  return `You've used most of your free use of Closedhand Managed Models. To carry on without a break, connect your own LLM provider in the ${dashboard(link, web)}.`;
 }
 function usedUpText(link, web) {
-  return `Your Closedhand Managed LLM credit has run out, so I can't reply for now. Connect your own LLM provider in the ${dashboard(link, web)} and I'll carry on.`;
+  return `Your free use of Closedhand Managed Models has run out, so I can't reply for now. Connect your own LLM provider in the ${dashboard(link, web)} and I'll carry on.`;
 }
 // The person's own LLM provider refused: out of credit, or the key rejected.
 function accountProblemText(status, link, web) {

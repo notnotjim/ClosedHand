@@ -290,7 +290,7 @@
     .g-step.is-on { display: block; }
     .g-step h3 { font-size: 15px; margin: 0 0 6px; }
     .card-body p.quiet-links { font-size: 13px; margin: 0 0 4px; }
-    /* Which LLM Closedhand Managed LLM is right now: the name people know it by. */
+    /* Which LLM Closedhand Managed Models use right now: the name people know it by. */
     .card-body p.model-current { margin: 0 0 12px; padding: 0; color: var(--text-secondary); line-height: 1.6; }
     .card-body p.model-current strong { color: var(--text-primary, #EFE6D6); font-weight: 600; }
     .card-body p.model-current .status { display: block; }
@@ -385,6 +385,7 @@
   <script src="/model-settings.js"></script>
   <script src="/ask.js"></script>
   <script src="/setup-personal-url.js"></script>
+  <script src="/llm-hint.js"></script>
 </head>
 <body class="setup-page">
 <div class="wrap">
@@ -446,8 +447,8 @@
         </button>
         <div class="card-body">
           <div id="model-included" hidden>
-            <p class="model-current"><span id="model-included-model" hidden>Currently <strong id="model-included-name"></strong></span><span id="model-included-line" class="status"></span></p>
-            <p class="note">Closedhand picks the LLM and keeps it current. Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
+            <p class="model-current"><strong id="model-included-name">Closedhand Managed Models</strong><span id="model-included-line" class="status"></span></p>
+            <p class="note">Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
             <p class="quiet-links"><a href="#" id="model-own">Use your own LLM provider instead</a></p>
           </div>
           <div id="model-own-account">
@@ -942,7 +943,7 @@
       function () { return "Recall is on. It starts reading with your first connected service."; });
   });
 
-  // --- Closedhand Managed LLM ------------------------------------------------
+  // --- Closedhand Managed Models ------------------------------------------------
   // Shown while it is in use or on its way with the personal URL, with the
   // person's own LLM provider one click away.
   var ownAccount = false;
@@ -950,8 +951,8 @@
   function renderIncluded(state) {
     $("#model-included").hidden = !included();
     $("#model-own-account").hidden = included();
-    $("#model-included-model").hidden = !state.modelIncludedName;
-    $("#model-included-name").textContent = state.modelIncludedName || "";
+    // Which LLM it is shows on hover or tap, not beside the name.
+    $("#model-included-name").replaceChildren(state.modelIncludedName ? llmHint(state.modelIncludedName, { images: state.modelIncludedImages !== false }) : "Closedhand Managed Models");
     $("#model-included-line").textContent = state.modelIncluded === "ready" ? "Ready."
       : personalUrl.settled() ? "Getting it ready." : "Ready once your personal URL is claimed.";
   }
@@ -1033,7 +1034,7 @@
     // Done-notes: name what's connected without exposing anything secret.
     var provLabel = state.chatProviderLabel || (state.chatProvider === "deepinfra" ? "DeepInfra" : state.chatProvider);
     renderIncluded(state);
-    $("#model-done-note").textContent = included() ? "Closedhand Managed LLM"
+    $("#model-done-note").textContent = included() ? "Closedhand Managed Models"
       : provLabel ? "Models connected through " + provLabel
       : "";
     $("#tg-done-note").textContent = state.botUsername ? "@" + state.botUsername + " is yours" : "";

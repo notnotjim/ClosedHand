@@ -59,7 +59,7 @@ function setup(store, prepare) {
 const prepared = (input) => ({ version: 1, connections: { primary: { provider: "openrouter", backend: "custom", baseUrl: "https://openrouter.ai/api/v1", apiKey: input.primary.apiKey } },
   roles: { chat: { connection: "primary", model: input.model }, background: { connection: "primary", model: input.backgroundModel }, vision: null } });
 
-test("the key becomes the models, sealed, with images off and support on the same model", async () => {
+test("the key becomes the models, sealed, reading images with the same model, support on it too", async () => {
   const store = settingsStore({ preferred_name: "Mira" });
   let asked;
   const ai = setup(store, async (input) => { asked = input; return prepared(input); });
@@ -68,9 +68,24 @@ test("the key becomes the models, sealed, with images off and support on the sam
   assert.match(store.box.settings.included_api_key, /^enc:v1:/);
   assert.ok(!JSON.stringify(store.box.settings).includes(KEY), "the key is never stored readable");
   assert.equal(store.box.settings.model_config.included, true);
-  assert.deepEqual({ provider: asked.primary.provider, model: asked.model, backgroundMode: asked.backgroundMode, visionMode: asked.visionMode }, { provider: "openrouter", model: MODELS.chat, backgroundMode: "same", visionMode: "off" });
+  assert.deepEqual({ provider: asked.primary.provider, model: asked.model, backgroundMode: asked.backgroundMode, visionMode: asked.visionMode }, { provider: "openrouter", model: MODELS.chat, backgroundMode: "same", visionMode: "same" });
   assert.equal(policy.getRole(store.box.settings, "chat").apiKey, KEY, "it opens only where a role is used");
   assert.equal(store.box.settings.preferred_name, "Mira", "nothing else changes");
+});
+
+test("when the image check fails it is used without images, never not at all", async () => {
+  const store = settingsStore({});
+  const tried = [];
+  const ai = setup(store, async (input) => {
+    tried.push(input.visionMode);
+    if (input.visionMode !== "off") throw Object.assign(new Error("The image check did not pass."), { visionNeeded: true });
+    return prepared(input);
+  });
+  assert.equal(await ai.receive({ key: KEY, models: MODELS }), true);
+  await until(() => store.box.settings.model_config);
+  assert.deepEqual(tried, ["same", "off"]);
+  assert.equal(store.box.settings.model_config.included, true);
+  assert.equal(store.box.settings.included_ai.error, undefined);
 });
 
 test("a person's own AI account stays; the included key waits beside it", async () => {
@@ -142,7 +157,7 @@ test("what is left is read from OpenRouter with the person's own key", async () 
   assert.equal(included.inUse(settings), true);
   assert.equal(included.inUse({ included_api_key: "x", model_config: { roles: {} } }), false, "their own account, not the included one");
   assert.equal(included.usedUpText("https://alex.closedhand.ai/dashboard#settings", false),
-    "Your Closedhand Managed LLM credit has run out, so I can't reply for now. Connect your own LLM provider in the dashboard (https://alex.closedhand.ai/dashboard#settings) and I'll carry on.");
+    "Your free use of Closedhand Managed Models has run out, so I can't reply for now. Connect your own LLM provider in the dashboard (https://alex.closedhand.ai/dashboard#settings) and I'll carry on.");
   assert.match(included.nearlyUsedText("/dashboard#settings", true), /in the \[dashboard\]\(\/dashboard#settings\)\.$/);
   assert.match(included.accountProblemText(402, null, false), /needs payment or more credit.*dashboard's Settings\.$/);
   assert.match(included.accountProblemText(401, null, false), /rejected Closedhand's API key/);
@@ -166,7 +181,7 @@ test("the person is told once, when most of the credit is used", async () => {
   usage = 8.2;
   assert.equal(await job.check(), true);
   assert.equal(told.length, 1);
-  assert.match(told[0], /^You've used most of your Closedhand Managed LLM credit\./);
+  assert.match(told[0], /^You've used most of your free use of Closedhand Managed Models\./);
   assert.ok(store.box.settings.included_ai.warned);
   usage = 9.5;
   assert.equal(await job.check(), false, "said once");
@@ -186,11 +201,11 @@ test("Closedhand speaks as itself: it names its LLM only when asked, explains ho
   const engine = fs.readFileSync(path.join(root, "lib/engine.js"), "utf8");
   assert.match(engine, /your LLM is one part of you\. Never speak as it or claim its name, maker or knowledge cutoff\./);
   assert.match(engine, /Name your LLM only if \$\{userName\} asks: "I'm \$\{botName\}\. My LLM right now is/);
-  assert.match(engine, /Never show or repeat an API key, token or password, theirs or yours \(the Managed LLM key too\)/);
+  assert.match(engine, /Never show or repeat an API key, token or password, theirs or yours \(the Managed Models key too\)/);
   assert.match(engine, /About Closedhand the company, say only what closedhand\.com publishes; for its costs, plans, other users or systems, point to support@closedhand\.com/);
   assert.match(engine, /let prompt = identityLines\(\) \+ builtLines\(\) \+/, "how it is built goes in the full prompt only");
   assert.match(engine, /HOW YOU ARE BUILT \(public: Closedhand is open source/);
-  assert.match(engine, /if \(pick && settings\.model_config\?\.included\) return `\$\{settings\.included_ai\?\.name \|\| pick\.model\} \(Closedhand Managed LLM/);
+  assert.match(engine, /if \(pick && settings\.model_config\?\.included\) return `\$\{settings\.included_ai\?\.name \|\| pick\.model\} \(Closedhand Managed Models/);
   assert.doesNotMatch(engine, /technical architecture/, "how it is built is not a secret");
   assert.doesNotMatch(engine, /closedhand\.com never sees/, "remote dashboard pages pass through the relay");
 });

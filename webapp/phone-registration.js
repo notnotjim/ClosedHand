@@ -101,7 +101,7 @@ async function includedAiOffered() {
 async function includedAiModel() {
   return (await includedAiOffered()) ? serviceCheck.includedAiModel || null : null;
 }
-// The models Closedhand Managed LLM uses now, asked by this computer
+// The models Closedhand Managed Models use now, asked by this computer
 // (included-ai-setup.js refresh), or null when it is not offered.
 async function includedAiModels() {
   return (await call('included-ai', 'GET')).models || null;
