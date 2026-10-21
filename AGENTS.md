@@ -88,9 +88,10 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   where the point is ownership ("stays on your computer"). Availability is what the chosen home
   gives ("whenever the computer running it is awake and online"), never a chore ("keep it
   awake"). On closedhand.com it is explained once, in the home page's "Where Closedhand lives";
-  only Terms, Privacy and the offline page repeat the caveat. Never imply its data can move to
-  another computer (there is no supported way) or that a schedule due while it slept runs later
-  (it is skipped). `scripts/test-agreed-names.js` checks this and the names above.
+  only Terms, Privacy and the offline page repeat the caveat. Its data moves to another computer
+  one way only: Go always-on in Settings moves all of it to Railway, and this computer stops
+  running Closedhand. Never imply another way, or that both keep running, or that a schedule due
+  while it slept runs later (it is skipped). `scripts/test-agreed-names.js` checks this and the names above.
 - The recall design is the "Preemptive Context Layer" (PCL), defined at closedhand.com/pcl, first
   published there on 2026-09-29. It is free for anyone to use: no trademark sign. Describe it as
   one live picture of the person's world searched once before the model reads a message, never

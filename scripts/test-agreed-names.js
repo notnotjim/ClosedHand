@@ -99,7 +99,7 @@ test("closedhand.com explains when Closedhand is there in one place, as a choice
       const start = html.indexOf('<section class="lives'), end = html.indexOf("</section>", start);
       const lives = html.slice(start, end);
       assert.ok(start > 0 && /Where Closedhand lives/.test(lives), "the one section that owns it");
-      assert.match(lives, /can’t be moved to another one/, "no move between homes is implied");
+      assert.match(lives, /or move it to Railway later to have it on all the time/, "the one way to move, and no other");
       assert.match(lives, /Schedules due while it sleeps are skipped/, "a laptop does not catch up on schedules");
       html = html.slice(0, start) + html.slice(end);
     }
@@ -111,6 +111,6 @@ test("closedhand.com explains when Closedhand is there in one place, as a choice
   const readme = read("README.md");
   assert.doesNotMatch(readme, /full product|sets the tier|catches up/i);
   assert.match(readme, /a schedule due while it slept is skipped/);
-  assert.match(readme, /no supported way to move Closedhand's data to another computer/);
+  assert.match(readme, /Closedhand's data moves one way: Go always-on in Settings moves all of it to Railway/);
   assert.doesNotMatch(visibleText("webapp/views/setup.html"), /while this computer is on/);
 });
