@@ -843,7 +843,7 @@ test('Closedhand+: checkout, a signed webhook, the computer collects its key, ca
     const done = await (await call('POST', '/api/phone-enrollment/claim', { code }, copy.auth)).json();
     assert.equal(done.included_ai, undefined);
     const ownerId = (await db.query("SELECT id FROM owners WHERE subject = 'g-rowan'")).rows[0].id;
-    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: false, extended: false });
+    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: false, extended: false, nearly: false });
 
     assert.equal((await call('POST', '/api/plus/checkout', {}, { cookie: owner.cookie })).status, 403, 'only from closedhand.com');
     const checkout = await (await call('POST', '/api/plus/checkout', {}, signedIn(owner.cookie))).json();
@@ -872,7 +872,7 @@ test('Closedhand+: checkout, a signed webhook, the computer collects its key, ca
     // Cancelled in the portal: on until the paid month ends, then stopped.
     await hook('subscription.canceled', subscription('active', { cancel_at_period_end: true }));
     await synced(ownerId);
-    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: true, ends_at: '2026-12-01T00:00:00.000Z', extended: false });
+    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: true, ends_at: '2026-12-01T00:00:00.000Z', extended: false, nearly: false });
     made.usage = 4.2;
     await hook('subscription.revoked', subscription('canceled', { cancel_at_period_end: true }));
     await synced(ownerId);

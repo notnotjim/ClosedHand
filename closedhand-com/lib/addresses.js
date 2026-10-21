@@ -560,8 +560,9 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
       // A sign-in whose account was deleted is no sign-in at all.
       const offered = enabled() && await includedAi.offered({ ip: req.ip });
       const plusState = person && plus ? await plus.state(owner) : null;
+      const plusPrices = plusState?.available ? await plus.prices(req.headers['cf-ipcountry']) : null;
       const plan = person ? await planFor(db, env, owner) : null;
-      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}), ...(plusState ? { plus: plusState } : {}), ...(plan ? { plan } : {}) });
+      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}), ...(plusState ? { plus: { ...plusState, ...(plusPrices ? { prices: plusPrices } : {}) } } : {}), ...(plan ? { plan } : {}) });
     } catch (e) {
       console.error('[addresses] account:', e.message);
       res.status(503).json({ error: 'Could not look up your account. Please try again.' });

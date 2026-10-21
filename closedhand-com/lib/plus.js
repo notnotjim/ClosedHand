@@ -11,6 +11,17 @@ const crypto = require('crypto');
 const { equal } = require('./session');
 
 const LIVE = ['active', 'trialing', 'past_due'];
+// Most of a month's fair use: the account page offers carrying on from here.
+const NEARLY_USED = 0.8;
+// The currency each country pays in: pounds in the UK and its islands, euros
+// in the euro area, dollars everywhere else.
+const EURO = new Set(['AT', 'BE', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'AD', 'MC', 'SM', 'VA', 'ME', 'XK']);
+function currencyFor(country) {
+  const code = String(country || '').toUpperCase();
+  if (['GB', 'GG', 'JE', 'IM'].includes(code)) return 'gbp';
+  if (EURO.has(code)) return 'eur';
+  return 'usd';
+}
 // Polar's clock and ours may differ a little; anything older is a replay.
 const TOLERANCE_S = 5 * 60;
 
@@ -71,17 +82,60 @@ function create({ db, env = process.env, request = fetch, includedAi, baseUrl = 
   }
 
   // What the account page and the person's computer are told: whether it is
-  // on, and when it renews or ends. Never anything about the payment.
+  // on, when it renews or ends, and whether most of this month's fair use is
+  // used. Never anything about the payment or an amount.
   async function state(ownerId) {
     const sub = ownerId ? await row(ownerId) : null;
     const active = !!sub && LIVE.includes(sub.status);
     const until = sub?.current_period_end ? new Date(sub.current_period_end).toISOString() : null;
+    const used = active ? await includedAi.usage(ownerId).catch(() => null) : null;
     return {
       available: enabled(),
       active,
       ...(active && until ? (sub.cancel_at_period_end ? { ends_at: until } : { renews_at: until }) : {}),
       extended: active && sub.extended_month === thisMonth(),
+      nearly: !!used && used.used >= used.limit * NEARLY_USED,
     };
+  }
+
+  // The prices people see, in their own currency: Polar charges in the
+  // currency it picks from where they are, and the page says the same. Read
+  // from the products (each has a price per currency, in cents) once an hour.
+  let priced = { at: 0, list: null };
+  async function priceList() {
+    if (priced.list && Date.now() - priced.at < 3600000) return priced.list;
+    const list = {};
+    for (const [name, id] of [['plus', plusProduct], ['extend', extendProduct]]) {
+      if (!id) continue;
+      const product = await api('/v1/products/' + encodeURIComponent(id));
+      list[name] = {};
+      for (const price of product?.prices || []) {
+        if (price.amount_type === 'fixed' && !price.is_archived && Number.isInteger(price.price_amount)) list[name][String(price.price_currency).toLowerCase()] = price.price_amount;
+      }
+    }
+    priced = { at: Date.now(), list };
+    return list;
+  }
+  // "£6", "€7" or "$8" for where the person is (Cloudflare's country), or
+  // null when Polar's prices can't be read just now.
+  async function prices(country) {
+    if (!enabled()) return null;
+    try {
+      const list = await priceList();
+      const want = currencyFor(country);
+      const label = (amounts) => {
+        if (!amounts) return null;
+        const currency = amounts[want] !== undefined ? want : amounts.usd !== undefined ? 'usd' : Object.keys(amounts)[0];
+        if (!currency) return null;
+        const cents = amounts[currency];
+        const locale = { gbp: 'en-GB', eur: 'en-IE' }[currency] || 'en-US';
+        return new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
+      };
+      return { plus: label(list.plus), extend: label(list.extend) };
+    } catch (e) {
+      console.error('[plus] prices:', e.message);
+      return null;
+    }
   }
 
   // Polar's checkout for one product, tied to this account by its own ID, so
@@ -250,7 +304,7 @@ function create({ db, env = process.env, request = fetch, includedAi, baseUrl = 
     });
   }
 
-  return { enabled, state, checkout, extend, portal, handle, sweep, sync, forget, register };
+  return { enabled, state, prices, checkout, extend, portal, handle, sweep, sync, forget, register };
 }
 
-module.exports = { create, verify, signingKeys };
+module.exports = { create, verify, signingKeys, currencyFor };

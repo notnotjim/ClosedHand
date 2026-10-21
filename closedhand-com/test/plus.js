@@ -53,7 +53,7 @@ function world({ polarFails = null } = {}) {
         return reply(201, { data: { hash, limit: body.limit }, key });
       }
       const m = path.match(/^\/keys\/([a-f0-9]{64})$/);
-      if (m && method === 'GET') { const k = keys.get(m[1]); return k ? reply(200, { data: { limit: k.limit, usage: k.usage, limit_reset: k.limit_reset } }) : reply(404, {}); }
+      if (m && method === 'GET') { const k = keys.get(m[1]); return k ? reply(200, { data: { limit: k.limit, usage: k.usage, usage_monthly: k.usage_monthly ?? k.usage, limit_reset: k.limit_reset } }) : reply(404, {}); }
       if (m && method === 'PATCH') { Object.assign(keys.get(m[1]), body); return reply(200, { data: keys.get(m[1]) }); }
       if (m && method === 'DELETE') { keys.delete(m[1]); return reply(200, {}); }
     }
@@ -64,6 +64,11 @@ function world({ polarFails = null } = {}) {
       if (path === '/v1/checkouts/') return reply(201, { id: 'chk_1', url: 'https://polar.sh/checkout/fixture-' + body.products[0].slice(0, 4) });
       if (path === '/v1/customer-sessions/') return reply(201, { token: 't', customer_portal_url: 'https://polar.sh/portal/fixture' });
       if (path.startsWith('/v1/subscriptions/') && method === 'DELETE') return reply(200, { status: 'canceled' });
+      const product = path.match(/^\/v1\/products\/(.+)$/);
+      if (product && method === 'GET') {
+        const each = (usd, gbp, eur) => [['usd', usd], ['gbp', gbp], ['eur', eur]].map(([c, a]) => ({ amount_type: 'fixed', price_currency: c, price_amount: a, is_archived: false }));
+        return reply(200, { id: product[1], prices: product[1] === PLUS ? each(800, 600, 700) : each(800, 600, 750) });
+      }
     }
     throw new Error('unexpected ' + method + ' ' + url);
   };
@@ -152,7 +157,7 @@ test('subscribing sets the key to the fair-use ceiling, reset monthly; carrying 
   await w.plus.handle(subscription('subscription.active', p.id));
   await settled(p.id);
   assert.deepEqual([(await heldKey(w, p.id)).limit, (await heldKey(w, p.id)).limit_reset], [20, 'monthly']);
-  assert.deepEqual(await w.plus.state(p.id), { available: true, active: true, renews_at: '2026-12-01T00:00:00.000Z', extended: false });
+  assert.deepEqual(await w.plus.state(p.id), { available: true, active: true, renews_at: '2026-12-01T00:00:00.000Z', extended: false, nearly: false });
 
   assert.equal(await w.plus.handle(paid(p.id)), 'carried on to the end of the month');
   await settled(p.id);
@@ -163,7 +168,7 @@ test('subscribing sets the key to the fair-use ceiling, reset monthly; carrying 
   // Cancelled: it runs to the end of the paid month.
   await w.plus.handle(subscription('subscription.canceled', p.id, { cancel: true }));
   await settled(p.id);
-  assert.deepEqual(await w.plus.state(p.id), { available: true, active: true, ends_at: '2026-12-01T00:00:00.000Z', extended: true });
+  assert.deepEqual(await w.plus.state(p.id), { available: true, active: true, ends_at: '2026-12-01T00:00:00.000Z', extended: true, nearly: false });
   assert.equal((await heldKey(w, p.id)).limit, 40, 'still on until it ends');
   // An older event arriving late changes nothing.
   assert.equal(await w.plus.handle(subscription('subscription.updated', p.id, { at: '2020-01-01T00:00:00Z' })), 'older than what is known');
@@ -269,4 +274,29 @@ test('deleting an account stops its subscription at Polar first, and waits when 
 
   const none = await person({}, w);
   assert.equal(await w.plus.forget(none.id), false, 'nothing to stop');
+});
+
+test('prices are shown in the currency Polar will charge where the person is', async () => {
+  const w = world();
+  const { currencyFor } = require('../lib/plus');
+  assert.deepEqual(['GB', 'JE', 'DE', 'ie', 'US', 'JP', '', undefined].map(currencyFor), ['gbp', 'gbp', 'eur', 'eur', 'usd', 'usd', 'usd', 'usd']);
+  assert.deepEqual(await w.plus.prices('GB'), { plus: '£6', extend: '£6' });
+  assert.deepEqual(await w.plus.prices('FR'), { plus: '€7', extend: '€7.50' });
+  assert.deepEqual(await w.plus.prices('US'), { plus: '$8', extend: '$8' }, 'each currency written as its own customers write it');
+  const asked = w.calls.filter(c => c.url.includes('/v1/products/')).length;
+  await w.plus.prices('GB');
+  assert.equal(w.calls.filter(c => c.url.includes('/v1/products/')).length, asked, 'read once an hour, not per visit');
+});
+
+test('the account page is told when most of this month\'s fair use is used, never how much', async () => {
+  const w = world();
+  const p = await person({ freeKey: true }, w);
+  await w.plus.handle(subscription('subscription.active', p.id));
+  await settled(p.id);
+  assert.equal((await w.plus.state(p.id)).nearly, false);
+  const [, key] = [...w.keys][0];
+  key.usage_monthly = 17;
+  const now = await w.plus.state(p.id);
+  assert.equal(now.nearly, true);
+  assert.ok(!JSON.stringify(now).includes('17'), 'no amount reaches the page');
 });

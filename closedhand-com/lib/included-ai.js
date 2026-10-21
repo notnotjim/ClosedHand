@@ -291,13 +291,25 @@ function create({ db, env = process.env, request = fetch }) {
     await api('/keys/' + held.key_hash, 'DELETE').catch(e => console.error('[included ai] could not delete a key:', e.message));
   }
 
+  // How much of the account's fair use is used, as OpenRouter counts it (this
+  // month's for a key that resets monthly), or null without a key. Never
+  // shown as an amount: the account page only says when most of it is used.
+  async function usage(ownerId) {
+    if (!enabled()) return null;
+    const held = (await db.query('SELECT key_hash FROM included_ai_keys WHERE owner_id = $1', [ownerId])).rows[0];
+    if (!held) return null;
+    const key = (await api('/keys/' + held.key_hash))?.data;
+    const limit = Number(key?.limit), used = Number(key?.limit_reset === 'monthly' ? key.usage_monthly : key?.usage);
+    return Number.isFinite(limit) && limit > 0 && Number.isFinite(used) ? { limit, used } : null;
+  }
+
   // The models in use now, for computers checking whether Closedhand has
   // switched them.
   function current() {
     return enabled() ? roles() : null;
   }
 
-  return { forOwner, forget, offered, current, enabled, collect, subscribe, end, sweep, spentThisMonth, fairUse };
+  return { forOwner, forget, offered, current, enabled, collect, subscribe, end, sweep, spentThisMonth, usage, fairUse };
 }
 
 module.exports = { create };
