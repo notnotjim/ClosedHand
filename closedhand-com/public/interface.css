@@ -341,20 +341,52 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .get-sheet-trap { position: absolute; left: -624.9375rem; width: 1px; height: 1px; opacity: 0; }
 
 /* Light or dark (theme.js): the sun or moon to switch to, drawn with the
-   fist's brush (brand/icons). The one shown turns in as the other turns out. */
-.theme-toggle { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; transition: color .2s; -webkit-tap-highlight-color: transparent; }
+   fist's brush (brand/icons). The button is a little horizon: the sun sets
+   down to the right as the moon rises from the left, and back. Each icon's
+   holder moves across while the icon inside moves up or down, so together
+   they ride an arc. */
+.theme-toggle { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; overflow: hidden; transition: color .2s; -webkit-tap-highlight-color: transparent; }
 .theme-toggle:hover { color: var(--fg); }
 .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.theme-toggle > span { grid-area: 1 / 1; width: 1.125rem; height: 1.125rem; transition: transform .6s cubic-bezier(.2, .7, .2, 1), opacity .35s ease; }
-.theme-toggle svg { display: block; width: 100%; height: 100%; }
-:root[data-theme="light"] .theme-toggle .sun, :root:not([data-theme="light"]) .theme-toggle .moon { opacity: 0; transform: rotate(-120deg) scale(.4); }
+.theme-toggle > span { grid-area: 1 / 1; width: 1.125rem; height: 1.125rem; transition: translate 1s cubic-bezier(.45, 0, .55, 1), opacity .6s ease .1s; }
+.theme-toggle svg { display: block; width: 100%; height: 100%; transition: translate 1s cubic-bezier(.25, .8, .35, 1.12); }
+:root[data-theme="light"] .theme-toggle .sun { translate: 80% 0; opacity: 0; }
+:root[data-theme="light"] .theme-toggle .sun svg { translate: 0 170%; }
+:root:not([data-theme="light"]) .theme-toggle .moon { translate: -80% 0; opacity: 0; }
+:root:not([data-theme="light"]) .theme-toggle .moon svg { translate: 0 170%; }
 .theme-toggle:active > span { scale: .85; }
+/* The other theme spreads from the button, its edge an ember ring that
+   glows and fades as it reaches the corners. */
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
-::view-transition-new(root) { animation: theme-spread .7s cubic-bezier(.2, .7, .2, 1); }
+::view-transition-new(root) { animation: theme-spread 1.15s cubic-bezier(.6, .04, .3, 1); }
 @keyframes theme-spread {
   from { clip-path: circle(0 at var(--reveal-x, 100%) var(--reveal-y, 0)); }
-  to { clip-path: circle(150vmax at var(--reveal-x, 100%) var(--reveal-y, 0)); }
+  to { clip-path: circle(var(--reveal-r, 150vmax) at var(--reveal-x, 100%) var(--reveal-y, 0)); }
+}
+.theme-ring { position: fixed; z-index: 2147483647; pointer-events: none; left: calc(var(--reveal-x) - var(--reveal-r)); top: calc(var(--reveal-y) - var(--reveal-r)); width: calc(var(--reveal-r) * 2); height: calc(var(--reveal-r) * 2); border-radius: 50%; view-transition-name: theme-ring;
+  box-shadow: 0 0 0 1.5px rgba(var(--accent-rgb), .9), 0 0 2.25rem .6rem rgba(var(--accent-rgb), .42), inset 0 0 2.25rem .6rem rgba(var(--accent-rgb), .32), 0 0 5rem 1.5rem rgba(var(--accent-rgb), .14); }
+::view-transition-group(theme-ring) { animation: none; }
+::view-transition-new(theme-ring) { animation: theme-ring 1.15s cubic-bezier(.6, .04, .3, 1) both; }
+@keyframes theme-ring {
+  from { transform: scale(0); opacity: 1; }
+  75% { opacity: .9; }
+  to { transform: scale(1); opacity: 0; }
+}
+/* Stars come out on the way to dark; a warm glow comes up on the way to light. */
+.theme-sparkle { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
+.theme-sparkle i { position: absolute; width: var(--size, .25rem); height: var(--size, .25rem); margin: calc(var(--size, .25rem) / -2); border-radius: 50%; background: var(--fg); box-shadow: 0 0 .5rem .1rem rgba(var(--fg-rgb), .7); opacity: 0; animation: theme-star 1.1s ease-out both; }
+.theme-sparkle b { position: absolute; width: 9rem; height: 9rem; margin: -4.5rem; border-radius: 50%; background: radial-gradient(circle, rgba(var(--accent-rgb), .4), rgba(var(--accent-rgb), 0) 68%); opacity: 0; animation: theme-glow 1.2s ease-out both; }
+@keyframes theme-star {
+  0% { opacity: 0; transform: scale(.2); }
+  30% { opacity: 1; transform: scale(1.15); }
+  60% { opacity: .55; transform: scale(.8); }
+  100% { opacity: 0; transform: scale(.4); }
+}
+@keyframes theme-glow {
+  0% { opacity: 0; transform: scale(.3); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.6); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .theme-toggle > span { transition: none; }
+  .theme-toggle > span, .theme-toggle svg { transition: none; }
 }

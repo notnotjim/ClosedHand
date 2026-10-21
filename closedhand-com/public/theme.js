@@ -43,16 +43,57 @@
     },
   };
 
-  // The sun and moon: the other theme spreads from the button in a circle.
+  // The sun and moon: the other theme spreads from the button inside a
+  // glowing ember ring, the home page's smoke ring, while in the button the
+  // sun sets and the moon rises (interface.css). Stars come out on the way
+  // to dark; a warm glow comes up on the way to light.
+  function sparkle(box, theme) {
+    var x = box.left + box.width / 2, y = box.top + box.height / 2;
+    var layer = document.createElement('div');
+    layer.className = 'theme-sparkle';
+    layer.setAttribute('aria-hidden', 'true');
+    if (theme === 'dark') {
+      for (var i = 0; i < 7; i++) {
+        var star = document.createElement('i');
+        // Spread round the lower half, where the page is: the header is above.
+        var angle = Math.PI * (i + 0.2 + 0.6 * Math.random()) / 7;
+        var far = 24 + Math.random() * 48;
+        star.style.left = Math.round(x + Math.cos(angle) * far) + 'px';
+        star.style.top = Math.round(y + Math.sin(angle) * far * 0.8) + 'px';
+        star.style.animationDelay = (320 + Math.random() * 420) + 'ms';
+        star.style.setProperty('--size', (0.19 + Math.random() * 0.19).toFixed(2) + 'rem');
+        layer.appendChild(star);
+      }
+    } else {
+      var glow = document.createElement('b');
+      glow.style.left = Math.round(x) + 'px';
+      glow.style.top = Math.round(y) + 'px';
+      layer.appendChild(glow);
+    }
+    document.body.appendChild(layer);
+    setTimeout(function () { layer.remove(); }, 1900);
+  }
   document.addEventListener('click', function (event) {
     var button = event.target.closest && event.target.closest('.theme-toggle');
     if (!button) return;
     var next = current() === 'light' ? 'dark' : 'light';
     var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (still || !document.startViewTransition) { window.closedhandTheme.set(next); return; }
     var box = button.getBoundingClientRect();
-    root.style.setProperty('--reveal-x', Math.round(box.left + box.width / 2) + 'px');
-    root.style.setProperty('--reveal-y', Math.round(box.top + box.height / 2) + 'px');
-    document.startViewTransition(function () { window.closedhandTheme.set(next); });
+    if (still) { window.closedhandTheme.set(next); return; }
+    sparkle(box, next);
+    if (!document.startViewTransition) { window.closedhandTheme.set(next); return; }
+    var x = box.left + box.width / 2, y = box.top + box.height / 2;
+    var reach = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)));
+    root.style.setProperty('--reveal-x', Math.round(x) + 'px');
+    root.style.setProperty('--reveal-y', Math.round(y) + 'px');
+    root.style.setProperty('--reveal-r', reach + 'px');
+    var ring = document.createElement('div');
+    ring.className = 'theme-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    var shift = document.startViewTransition(function () {
+      window.closedhandTheme.set(next);
+      document.body.appendChild(ring);
+    });
+    shift.finished.finally(function () { ring.remove(); });
   });
 })();
