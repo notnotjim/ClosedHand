@@ -168,7 +168,7 @@ test('the dashboard starts, checks and ends sessions through this module', () =>
   assert.match(logout, /await dashboardSessions\.end\(readCookie\(req, browserAccess\.sessionName\(req\)\)\)/);
   assert.match(logout, /sessionCookie\(req, "", 0\)/);
   const setPw = server.slice(server.indexOf('app.post("/api/setup/password"'), server.indexOf('app.post("/api/setup/detect"'));
-  assert.match(setPw, /await dashboardSessions\.endAll\(\);\n(\s*\/\/.*\n)*\s*await startAdminSession\(req, res, viaTunnel\(req\) \? \{ kind: signInCode\.KIND \} : undefined\);/);
+  assert.match(setPw, /await dashboardSessions\.endAll\(\);\n(\s*\/\/.*\n)*\s*await startAdminSession\(req, res, fromElsewhere\(req\) \? \{ kind: signInCode\.KIND \} : undefined\);/);
   const login = server.slice(server.indexOf('app.post("/api/login"'), server.indexOf('// --- Reach the dashboard from your phone'));
   assert.match(login, /await startAdminSession\(req, res\);/);
   const calls = server.replace('async function hasAdminSession(req, res)', '').match(/(await )?hasAdminSession\(req[^)]*\)/g) || [];
@@ -211,7 +211,8 @@ test('the sign-in form, the wallet check and Basic auth share one count of wrong
 test('through the personal URL, 100 wrong passwords an hour from all addresses together stop every try; this computer is never held to it', () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp/server.js'), 'utf8');
   const src = server.slice(server.indexOf('const _loginFails = new Map();'), server.indexOf('app.post("/api/login"'));
-  const box = new Function(src + '; return { lockedOut, noteWrongPassword, clientIp };')();
+  const make = (enabled) => new Function('setupCode', src + '; return { lockedOut, noteWrongPassword, clientIp };')({ enabled });
+  const box = make(false);
   const tunnel = (ip) => ({ socket: { remoteAddress: '::1' }, headers: { 'cf-connecting-ip': ip } });
   const local = { socket: { remoteAddress: '172.18.0.1' }, headers: {} };
   for (let i = 0; i < 100; i++) {
@@ -222,6 +223,11 @@ test('through the personal URL, 100 wrong passwords an hour from all addresses t
   const fresh = tunnel('203.0.113.77');
   assert.equal(box.lockedOut(box.clientIp(fresh), fresh), true, 'a new address through the personal URL is refused too');
   assert.equal(box.lockedOut(box.clientIp(local), local), false, 'the computer itself still signs in');
+  // On a host (SETUP_CODE) there is no computer of its own to sign in at: its
+  // web address counts towards the same ceiling.
+  const host = make(true);
+  for (let i = 0; i < 100; i++) host.noteWrongPassword('10.0.0.' + (i % 4), local);
+  assert.equal(host.lockedOut('10.0.0.9', local), true, "the host's web address is held to it");
 });
 
 test('a dashboard password has at least 8 characters, on the setup page and on the server', () => {
