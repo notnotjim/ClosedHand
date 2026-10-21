@@ -1,7 +1,9 @@
 // The second step of signing in over the internet. Through the personal URL
 // a right password is not enough: Closedhand sends a six-digit code to the
 // chat apps it already talks to the person on (lib/sign-in-code.js), and the
-// browser has to give that code back. On the computer running Closedhand
+// browser has to give that code back. A Closedhand on a host (SETUP_CODE)
+// signs in this way at the host's own web address too, and asks for the setup
+// code when there is nowhere to send one. On the computer running Closedhand
 // (localhost) the password alone still signs in, since nobody else can reach
 // that address.
 //
@@ -43,19 +45,37 @@ function createChallenges({ now = () => Date.now() } = {}) {
     issued.push(now());
     return { id, code };
   }
+  // A challenge answered with the setup code instead (setup-code.js), for a
+  // Closedhand on a host with no chat app or email to send a code to. Only
+  // the person's account at the host shows that code. Nothing is sent, so it
+  // is not counted towards the hourly cap.
+  function issueForSetupCode() {
+    sweep();
+    const id = crypto.randomBytes(32).toString("base64url");
+    open.set(digest(id).toString("hex"), { setupCode: true, expires: now() + CODE_TTL_MS, tries: 0 });
+    return { id };
+  }
+  function asksForSetupCode(id) {
+    const c = open.get(digest(String(id || "")).toString("hex"));
+    return !!(c && c.setupCode);
+  }
   // A code that could not be sent is withdrawn at once.
   function withdraw(id) {
     open.delete(digest(String(id || "")).toString("hex"));
   }
   // "ok" (signed in; the code is spent), "wrong", "used-up" (that was the
   // last try) or "gone" (no such challenge: run out, used, or never made).
-  function verify(id, code) {
+  // isSetupCode checks the answer to a setup code challenge.
+  function verify(id, code, isSetupCode = () => false) {
     sweep();
     const key = digest(String(id || "")).toString("hex");
     const c = open.get(key);
     if (!c) return "gone";
     const given = String(code || "").replace(/\s+/g, "");
-    if (/^\d{6}$/.test(given) && crypto.timingSafeEqual(digest(`${id}:${given}`), c.codeHash)) {
+    const right = c.setupCode
+      ? isSetupCode(given)
+      : /^\d{6}$/.test(given) && crypto.timingSafeEqual(digest(`${id}:${given}`), c.codeHash);
+    if (right) {
       open.delete(key);
       return "ok";
     }
@@ -66,7 +86,7 @@ function createChallenges({ now = () => Date.now() } = {}) {
     }
     return "wrong";
   }
-  return { canIssue, issue, withdraw, verify };
+  return { canIssue, issue, issueForSetupCode, asksForSetupCode, withdraw, verify };
 }
 
 module.exports = { createChallenges, KIND, CODE_TTL_MS, MAX_TRIES, MAX_CODES_PER_HOUR };

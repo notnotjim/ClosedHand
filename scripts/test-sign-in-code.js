@@ -127,17 +127,58 @@ test("sessions report their kind, and code sign-ins stay signed in like password
 
 test("through the personal URL only a password-and-code session counts, and no door takes a password alone", () => {
   const server = read("webapp/server.js");
-  assert.match(server, /if \(r\.ok && viaTunnel\(req\) && r\.kind !== signInCode\.KIND\) return false;/, "old password-only and Telegram sessions sign in again");
+  assert.match(server, /if \(r\.ok && fromElsewhere\(req\) && r\.kind !== signInCode\.KIND\) return false;/, "old password-only and Telegram sessions sign in again");
   const login = server.slice(server.indexOf('app.post("/api/login",'), server.indexOf('// --- Reach the dashboard from your phone'));
-  assert.ok(login.indexOf("if (viaTunnel(req)) return sendSignInCode(req, res);") < login.indexOf("_loginFails.delete(ip);"), "the password is only the first step, and the lockout count stays until the code is right");
+  assert.ok(login.indexOf("if (fromElsewhere(req)) return sendSignInCode(req, res);") < login.indexOf("_loginFails.delete(ip);"), "the password is only the first step, and the lockout count stays until the code is right");
   assert.match(login, /await startAdminSession\(req, res, \{ kind: signInCode\.KIND \}\);/);
   assert.match(login, /signInRecord\("wrong sign-in code", req\);\n    noteWrongPassword\(ip, req\);/, "wrong codes count towards the lockout");
   assert.match(login, /Path=\/api\/login; HttpOnly; SameSite=Strict/);
-  assert.match(server, /if \(viaTunnel\(req\)\) return res\.status\(403\)\.json\(\{ error: "Sign in with your password and the code Closedhand sends you\." \}\);/, "Telegram's one tap is a single step");
-  assert.match(server, /if \(viaTunnel\(req\)\) return res\.status\(401\)\.json\(\{ error: "Through your personal URL, sign in on the sign-in page\./, "Basic auth is refused through the personal URL");
-  assert.match(server, /await startAdminSession\(req, res, viaTunnel\(req\) \? \{ kind: signInCode\.KIND \} : undefined\);/, "a password changed through the personal URL keeps that browser signed in");
+  assert.match(server, /if \(fromElsewhere\(req\)\) return res\.status\(403\)\.json\(\{ error: "Sign in with your password and the code Closedhand sends you\." \}\);/, "Telegram's one tap is a single step");
+  assert.match(server, /if \(fromElsewhere\(req\)\) return res\.status\(401\)\.json\(\{ error: "Over the internet, sign in on the sign-in page\./, "Basic auth is refused through the personal URL");
+  assert.match(server, /await startAdminSession\(req, res, fromElsewhere\(req\) \? \{ kind: signInCode\.KIND \} : undefined\);/, "a password changed through the personal URL keeps that browser signed in");
+  assert.match(server, /if \(!fromElsewhere\(req\)\) return false;/, "the hourly ceiling for all addresses together");
+  assert.match(server, /if \(fromElsewhere\(req\)\) _tunnelFails\.push\(Date\.now\(\)\);/);
   const page = read("webapp/views/login.html");
   assert.match(page, /autocomplete="one-time-code"/);
   assert.match(page, /<h1 class="step-title" id="code-title">/, "the code step has its own heading, so the change of screen is seen");
-  assert.match(page, /document\.getElementById\("code-title"\)\.textContent = "Check your " \+/);
+  assert.match(page, /showCodeForm\("Check your " \+/);
+});
+
+test("a Closedhand on a host signs in like the personal URL at its own web address, whatever name a request gives", () => {
+  const server = read("webapp/server.js");
+  const src = server.slice(server.indexOf("const isLoopback = "), server.indexOf("function lockedOut("));
+  const make = (enabled) => new Function("setupCode", src.replace(/^\/\/.*$/gm, "") + "; return fromElsewhere;")({ enabled });
+  const req = (host, peer, cf) => ({ headers: { host, ...(cf ? { "cf-connecting-ip": cf } : {}) }, socket: { remoteAddress: peer } });
+  const docker = make(false), host = make(true);
+  assert.equal(docker(req("localhost:3000", "127.0.0.1")), false, "on Docker or the Mac app, localhost signs in with the password");
+  assert.equal(docker(req("x.closedhand.com", "127.0.0.1", "203.0.113.9")), true, "the personal URL takes the code");
+  assert.equal(host(req("ch.up.railway.app", "10.0.0.4")), true, "the host's web address takes the code");
+  assert.equal(host(req("localhost", "10.0.0.4")), true, "a request naming localhost on a host is still from elsewhere");
+  assert.match(server, /function setupAllowed\(req\) \{\n\s*if \(setupCode\.enabled\) return setupCode\.passed\(readCookie\(req, setupCode\.COOKIE\)\);\n\s*return addressedLocally\(req\);\n\}/, "before a password, only the setup code opens setup on a host");
+});
+
+test("with nowhere to send a code, a Closedhand on a host asks for its setup code", () => {
+  const c = createChallenges();
+  const { id } = c.issueForSetupCode();
+  assert.equal(c.asksForSetupCode(id), true);
+  const isSetupCode = (given) => given === "K7M2Q9X4P8R3T6W5";
+  assert.equal(c.verify(id, "123456", isSetupCode), "wrong", "a six-digit code doesn't answer it");
+  assert.equal(c.verify(id, " K7M2 Q9X4 P8R3 T6W5 ", isSetupCode), "ok", "spaces typed in are ignored");
+  assert.equal(c.verify(id, "K7M2Q9X4P8R3T6W5", isSetupCode), "gone", "it works once");
+  const sent = c.issue();
+  assert.equal(c.asksForSetupCode(sent.id), false);
+  assert.equal(c.verify(sent.id, "K7M2Q9X4P8R3T6W5", () => true), "wrong", "a sent code is never answered with the setup code");
+  const capped = createChallenges();
+  for (let i = 0; i < MAX_CODES_PER_HOUR; i++) capped.issueForSetupCode();
+  assert.equal(capped.canIssue(), true, "nothing is sent, so the hourly cap is untouched");
+  const server = read("webapp/server.js");
+  assert.match(server, /_signInCodes\.withdraw\(id\);\n\s*if \(r\.status === 409 && setupCode\.enabled\) return askForSetupCode\(req, res\);/, "only when the bot has nowhere to send it, and only on a host");
+  assert.match(server, /_signInCodes\.verify\(challenge, \(req\.body \|\| \{\}\)\.code, setupCode\.matches\)/);
+  const { createSetupCode } = require("../webapp/setup-code");
+  const sc = createSetupCode({ code: "K7M2Q9X4P8R3T6W5", secret: "s".repeat(64) });
+  assert.equal(sc.matches(" K7M2Q9X4P8R3T6W5 "), true);
+  assert.equal(sc.matches("K7M2Q9X4P8R3T6W4"), false);
+  assert.equal(createSetupCode({ code: undefined, secret: "s" }).matches(""), false, "without a setup code nothing matches");
+  const page = read("webapp/views/login.html");
+  assert.match(page, /if \(r\.ok && r\.j\.needsCode && r\.j\.setupCode\) askForSetupCode\(\);/);
 });

@@ -2,8 +2,9 @@
 // reach, like one on Railway. The host makes a random code (or the person
 // chooses one) and shows it only to the account that owns it, as SETUP_CODE.
 // Until a dashboard password exists, a browser elsewhere must type it before
-// setup answers; once a password exists it does nothing. Without SETUP_CODE,
-// setup stays on localhost as before.
+// setup answers. After that it is the second step of signing in when
+// Closedhand has no chat app or email to send a code to (server.js). Without
+// SETUP_CODE, setup stays on localhost as before.
 const crypto = require("crypto");
 
 const COOKIE = "ch_setup_pass";
@@ -23,6 +24,7 @@ function createSetupCode({ code = process.env.SETUP_CODE, secret = process.env.C
   const value = typeof code === "string" ? code.trim() : "";
   const enabled = value.length >= MIN_LENGTH && typeof secret === "string" && secret.length > 0;
   const sign = (exp) => crypto.createHmac("sha256", secret).update("setup-pass:" + value + ":" + exp).digest("base64url");
+  const matches = (typed) => enabled && typeof typed === "string" && equal(typed.trim(), value);
   return {
     enabled,
     COOKIE,
@@ -34,9 +36,12 @@ function createSetupCode({ code = process.env.SETUP_CODE, secret = process.env.C
       if (!/^\d+$/.test(exp || "") || Number(exp) * 1000 < now() || !sig) return false;
       return equal(sig, sign(exp));
     },
+    // Whether this is the code, with no wait: as a sign-in step it has that
+    // step's own tries and lockout instead.
+    matches,
     // The Set-Cookie value for a right code, or null for a wrong one.
     async check(typed, secure) {
-      if (enabled && typeof typed === "string" && equal(typed.trim(), value)) {
+      if (matches(typed)) {
         const exp = Math.floor(now() / 1000) + PASS_SEC;
         return `${COOKIE}=${exp}.${sign(exp)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${PASS_SEC}${secure ? "; Secure" : ""}`;
       }

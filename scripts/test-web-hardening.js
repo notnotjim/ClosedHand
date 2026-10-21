@@ -99,7 +99,7 @@ test('before a password exists, only requests addressed to this computer by name
   for (const h of ['localhost:3000', '127.0.0.1:3000', '[::1]:3000', 'webapp:3000', 'closedhand.localhost', 'LOCALHOST:3100']) assert.equal(at(h), true, h);
   for (const h of ['evil.example', 'evil.example:3000', 'localhost.evil.example', '192.168.1.20:3000', 'name.closedhand.ai', '']) assert.equal(at(h), false, h);
   // The only other way in before a password: the setup code (setup-code.js).
-  assert.match(server, /function setupAllowed\(req\) \{\n\s*return addressedLocally\(req\) \|\| setupCode\.passed\(readCookie\(req, setupCode\.COOKIE\)\);\n\}/);
+  assert.match(server, /function setupAllowed\(req\) \{\n\s*if \(setupCode\.enabled\) return setupCode\.passed\(readCookie\(req, setupCode\.COOKIE\)\);\n\s*return addressedLocally\(req\);\n\}/);
   const access = server.slice(server.indexOf('async function requireSetupAccess('), server.indexOf('app.get("/login"'));
   assert.match(access, /if \(setupAllowed\(req\)\) return true;\n\s*res\.status\(403\)/);
   const gate = server.slice(server.indexOf('const SIGNED_BY_BRIDGE = new Set('), server.indexOf('// BYOK spend: daily token rollups'));

@@ -52,6 +52,8 @@
        went, and a larger code field, so the change of screen is seen. */
     input.code { font-size: 26px; text-align: center; letter-spacing: 0.4em; padding: 12px 14px 12px calc(14px + 0.4em); font-variant-numeric: tabular-nums; }
     input.code::placeholder { letter-spacing: 0.4em; color: var(--text-tertiary); }
+    /* The setup code is 24 characters, typed or pasted. */
+    input.code.long { font-size: 15px; text-align: left; letter-spacing: 0.04em; padding: 11px 14px; }
     .step-title { font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1.25; margin-bottom: 8px; color: var(--text-primary); }
     .sent { font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px; }
     #code-form:not([hidden]) { animation: step-in 0.25s ease-out; }
@@ -81,7 +83,8 @@
       <button type="submit">Sign in</button>
       <p class="err" id="err"></p>
     </form>
-    <!-- Through the personal URL: the second step, the code sent to a chat app. -->
+    <!-- Through the personal URL: the second step, the code sent to a chat app,
+         or on a host with nowhere to send one, the setup code. -->
     <form class="card" id="code-form" method="post" hidden>
       <h1 class="step-title" id="code-title">Check your chat app</h1>
       <p class="sent" id="sent"></p>
@@ -121,22 +124,38 @@
     if (message) show(err, message);
     document.getElementById("pw").focus();
   }
+  function showCodeForm(title, text, setupCode) {
+    var input = document.getElementById("code");
+    document.getElementById("code-title").textContent = title;
+    document.getElementById("sent").textContent = text;
+    document.querySelector('label[for="code"]').textContent = setupCode ? "Setup code" : "Sign-in code";
+    input.inputMode = setupCode ? "text" : "numeric";
+    input.autocomplete = setupCode ? "off" : "one-time-code";
+    input.classList.toggle("long", setupCode);
+    if (setupCode) { input.removeAttribute("maxlength"); input.removeAttribute("pattern"); input.placeholder = ""; }
+    form.hidden = true; hint.hidden = true; codeForm.hidden = false;
+    codeErr.style.display = "none";
+    input.value = "";
+    input.focus();
+  }
   // Names where the code went: "Check your Telegram and WhatsApp".
   function askForCode(sentTo) {
     var places = sentTo.map(function (s) { return String(s).replace(/^your /, ""); });
-    document.getElementById("code-title").textContent = "Check your " + (places.length > 1 ? places.slice(0, -1).join(", ") + " and " + places[places.length - 1] : places[0]);
-    document.getElementById("sent").textContent = "Closedhand sent you a 6-digit sign-in code. It works for 10 minutes.";
-    form.hidden = true; hint.hidden = true; codeForm.hidden = false;
-    codeErr.style.display = "none";
-    document.getElementById("code").value = "";
-    document.getElementById("code").focus();
+    showCodeForm("Check your " + (places.length > 1 ? places.slice(0, -1).join(", ") + " and " + places[places.length - 1] : places[0]),
+      "Closedhand sent you a 6-digit sign-in code. It works for 10 minutes.", false);
+  }
+  // On a host, with no chat app or email to send a code to.
+  function askForSetupCode() {
+    showCodeForm("Type your setup code",
+      "With no chat app or email linked yet, your setup code is the second step. On Railway it's under the webapp service's Variables, as SETUP_CODE.", true);
   }
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     err.style.display = "none";
     post("/api/login", { password: document.getElementById("pw").value })
       .then(function (r) {
-        if (r.ok && r.j.needsCode) askForCode(r.j.sentTo || ["your chat app"]);
+        if (r.ok && r.j.needsCode && r.j.setupCode) askForSetupCode();
+        else if (r.ok && r.j.needsCode) askForCode(r.j.sentTo || ["your chat app"]);
         else if (r.ok) signedIn();
         else show(err, r.j.error || "Wrong password");
       })

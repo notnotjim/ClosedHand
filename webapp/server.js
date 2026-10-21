@@ -691,7 +691,7 @@ async function hasAdminSession(req, res) {
   try {
     const token = readCookie(req, browserAccess.sessionName(req));
     const r = await dashboardSessions.check(token);
-    if (r.ok && viaTunnel(req) && r.kind !== signInCode.KIND) return false;
+    if (r.ok && fromElsewhere(req) && r.kind !== signInCode.KIND) return false;
     if (r.ok && r.refreshSec && res) res.append("Set-Cookie", sessionCookie(req, token, r.refreshSec));
     return r.ok;
   } catch (_) {
@@ -713,10 +713,12 @@ function addressedLocally(req) {
 const FIRST_RUN_ELSEWHERE = "Finish setting up on the computer running Closedhand, at http://localhost:3000.";
 // Where there is no localhost to reach (Railway), a browser that typed the
 // setup code (SETUP_CODE, setup-code.js) counts as being at this computer
-// until a password exists.
+// until a password exists, and nothing else does: whatever name a request
+// gives, it came over the internet.
 const setupCode = require("./setup-code").createSetupCode();
 function setupAllowed(req) {
-  return addressedLocally(req) || setupCode.passed(readCookie(req, setupCode.COOKIE));
+  if (setupCode.enabled) return setupCode.passed(readCookie(req, setupCode.COOKIE));
+  return addressedLocally(req);
 }
 const SETUP_CODE_FIRST = "Type the setup code first, at /setup-code.";
 
@@ -765,10 +767,15 @@ const _tunnelFails = []; // when each wrong password through the personal URL ca
 function viaTunnel(req) {
   return !!req.headers["cf-connecting-ip"] && isLoopback((req.socket && req.socket.remoteAddress) || "");
 }
+// A Closedhand on a host (SETUP_CODE) has no localhost anyone can reach, so
+// its own web address there signs in the way the personal URL does.
+function fromElsewhere(req) {
+  return viaTunnel(req) || setupCode.enabled;
+}
 function lockedOut(ip, req) {
   const rec = _loginFails.get(ip);
   if (rec && rec.until > Date.now()) return true;
-  if (!viaTunnel(req)) return false;
+  if (!fromElsewhere(req)) return false;
   const hourAgo = Date.now() - 60 * 60 * 1000;
   while (_tunnelFails.length && _tunnelFails[0] < hourAgo) _tunnelFails.shift();
   return _tunnelFails.length >= TUNNEL_FAILS_PER_HOUR;
@@ -782,14 +789,15 @@ function maskedIp(ip) {
   return s.includes(":") ? s.split(":").slice(0, 3).join(":") + ":x" : s;
 }
 function signInRecord(what, req) {
-  console.log(`[sign-in] ${what} from ${maskedIp(clientIp(req))} (${viaTunnel(req) ? "personal URL" : "this computer"})`);
+  const where = viaTunnel(req) ? "personal URL" : fromElsewhere(req) ? "the host's web address" : "this computer";
+  console.log(`[sign-in] ${what} from ${maskedIp(clientIp(req))} (${where})`);
 }
 function noteWrongPassword(ip, req) {
   const rec = _loginFails.get(ip) || { n: 0, until: 0 };
   rec.n += 1;
   if (rec.n >= 5) { rec.until = Date.now() + LOGIN_LOCK_MS; rec.n = 0; }
   _loginFails.set(ip, rec);
-  if (viaTunnel(req)) _tunnelFails.push(Date.now());
+  if (fromElsewhere(req)) _tunnelFails.push(Date.now());
 }
 app.post("/api/login", async (req, res) => {
   try {
@@ -802,7 +810,7 @@ app.post("/api/login", async (req, res) => {
       // Through the personal URL the password is the first step: the second
       // is a code sent to the person's chat app. The address keeps its count
       // of wrong tries until the code is right.
-      if (viaTunnel(req)) return sendSignInCode(req, res);
+      if (fromElsewhere(req)) return sendSignInCode(req, res);
       _loginFails.delete(ip);
       try {
         await startAdminSession(req, res);
@@ -846,6 +854,7 @@ async function sendSignInCode(req, res) {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !Array.isArray(j.sentTo) || !j.sentTo.length) {
       _signInCodes.withdraw(id);
+      if (r.status === 409 && setupCode.enabled) return askForSetupCode(req, res);
       signInRecord("password right, but the code could not be sent", req);
       return res.status(503).json({ error: (r.status === 409 && j.error) || "Closedhand couldn't send your sign-in code just now. Try again in a minute." });
     }
@@ -858,6 +867,14 @@ async function sendSignInCode(req, res) {
     return res.status(503).json({ error: "Closedhand couldn't send your sign-in code just now. Try again in a minute." });
   }
 }
+// With no chat app or email to send a code to, a Closedhand on a host asks
+// for its setup code, which only the person's account at the host shows.
+function askForSetupCode(req, res) {
+  const { id } = _signInCodes.issueForSetupCode();
+  res.append("Set-Cookie", codeCookie(req, id, Math.floor(signInCode.CODE_TTL_MS / 1000)));
+  signInRecord("password right; setup code asked, with nowhere to send a code", req);
+  return res.json({ needsCode: true, setupCode: true });
+}
 app.post("/api/login/code", async (req, res) => {
   try {
     const ip = clientIp(req);
@@ -865,7 +882,9 @@ app.post("/api/login/code", async (req, res) => {
       signInRecord("code refused, too many tries", req);
       return res.status(429).json({ error: "Too many tries. Wait fifteen minutes." });
     }
-    const result = _signInCodes.verify(readCookie(req, CODE_COOKIE), (req.body || {}).code);
+    const challenge = readCookie(req, CODE_COOKIE);
+    const wrong = _signInCodes.asksForSetupCode(challenge) ? "That isn't the setup code. Check it and try again." : "That code isn't right. Use the latest one Closedhand sent.";
+    const result = _signInCodes.verify(challenge, (req.body || {}).code, setupCode.matches);
     if (result === "ok") {
       _loginFails.delete(ip);
       res.append("Set-Cookie", codeCookie(req, "", 0));
@@ -883,7 +902,7 @@ app.post("/api/login/code", async (req, res) => {
     noteWrongPassword(ip, req);
     await new Promise((r) => setTimeout(r, 400));
     if (result === "used-up") return res.status(403).json({ restart: true, error: "That was the last try for this code. Sign in again for a new one." });
-    return res.status(403).json({ error: "That code isn't right. Use the latest one Closedhand sent." });
+    return res.status(403).json({ error: wrong });
   } catch (e) {
     return res.status(500).json({ error: "sign-in failed" });
   }
@@ -1294,7 +1313,7 @@ app.post("/api/setup/password", async (req, res) => {
     await dashboardSessions.endAll();
     // Through the personal URL this request came from a session that passed
     // the code, and the current password was given again.
-    await startAdminSession(req, res, viaTunnel(req) ? { kind: signInCode.KIND } : undefined);
+    await startAdminSession(req, res, fromElsewhere(req) ? { kind: signInCode.KIND } : undefined);
     signInRecord("dashboard password set; every other session ended", req);
     res.json({ success: true });
   } catch (e) {
@@ -1716,7 +1735,7 @@ app.post("/api/telegram/session", async (req, res) => {
   try {
     // Telegram alone is one step. Through the personal URL signing in takes
     // the password and a code, so /tg/open goes on to the sign-in page.
-    if (viaTunnel(req)) return res.status(403).json({ error: "Sign in with your password and the code Closedhand sends you." });
+    if (fromElsewhere(req)) return res.status(403).json({ error: "Sign in with your password and the code Closedhand sends you." });
     const initData = String((req.body || {}).initData || "");
     const tgUser = validateTelegramInitData(initData, await telegramBotToken(), TELEGRAM_PROOF_MAX_AGE_SEC);
     if (!tgUser || !tgUser.id) return res.status(403).json({ error: "Telegram could not confirm who opened this." });
@@ -1774,7 +1793,7 @@ app.use(async (req, res, next) => {
     const [scheme, encoded] = (req.headers.authorization || "").split(" ");
     if (scheme === "Basic" && encoded) {
       // Through the personal URL a password alone never signs in.
-      if (viaTunnel(req)) return res.status(401).json({ error: "Through your personal URL, sign in on the sign-in page. A password sent with a request works only on the computer running Closedhand." });
+      if (fromElsewhere(req)) return res.status(401).json({ error: "Over the internet, sign in on the sign-in page. A password sent with a request works only on the computer running Closedhand." });
       // Scripts may send the password with each request, under the same
       // five tries as the sign-in form; without that this was a way round it.
       const ip = clientIp(req);
