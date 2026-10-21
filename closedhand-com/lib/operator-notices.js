@@ -28,9 +28,9 @@ function create({ db, env = process.env, request = fetch }) {
     if (!who?.email || who.email_verified !== true || who.email.trim().toLowerCase() !== operator) return [];
     const taken = await db.query(
       `UPDATE operator_notices SET delivered_at = now() WHERE id IN (
-         SELECT id FROM operator_notices WHERE delivered_at IS NULL AND emailed_at IS NULL ORDER BY created_at LIMIT 20 FOR UPDATE SKIP LOCKED)
-       RETURNING id, text, created_at`);
-    return taken.rows.sort((a, b) => a.created_at - b.created_at).map(({ id, text }) => ({ id, text }));
+         SELECT id FROM operator_notices WHERE delivered_at IS NULL AND emailed_at IS NULL ORDER BY seq LIMIT 20 FOR UPDATE SKIP LOCKED)
+       RETURNING id, text, seq`);
+    return taken.rows.sort((a, b) => Number(a.seq) - Number(b.seq)).map(({ id, text }) => ({ id, text }));
   }
 
   // Run hourly: a notice waiting a day goes by email instead, once.
@@ -39,7 +39,7 @@ function create({ db, env = process.env, request = fetch }) {
     const mail = { region: env.MAIL_SES_REGION, from: env.MAIL_FROM, key: env.MAIL_AWS_ACCESS_KEY_ID, secret: env.MAIL_AWS_SECRET_ACCESS_KEY };
     if (!to || !mail.region || !mail.from || !mail.key || !mail.secret) return 0;
     const stale = (await db.query(
-      'SELECT id, text FROM operator_notices WHERE delivered_at IS NULL AND emailed_at IS NULL AND created_at < $1 ORDER BY created_at LIMIT 20',
+      'SELECT id, text FROM operator_notices WHERE delivered_at IS NULL AND emailed_at IS NULL AND created_at < $1 ORDER BY seq LIMIT 20',
       [new Date(now - DAY)])).rows;
     let sent = 0;
     for (const notice of stale) {
