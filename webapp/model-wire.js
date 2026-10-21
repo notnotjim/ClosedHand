@@ -351,6 +351,8 @@ function hideKeys(text, conn) {
     .replace(KEY_RUN, (run) => (longRunIsKey(run) ? "<hidden>" : run));
 }
 const KEY_AS_MODEL = "That looks like an API key, not a model ID, so Closedhand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
+// Models that refused to skip thinking; their fast jobs think as little as they allow.
+const mustThink = new Set();
 async function request(conn, params, options = {}) {
   const model = params.model || conn.model;
   if (looksLikeKey(model)) throw Object.assign(new Error(KEY_AS_MODEL), { status: 400, code: "model_id_is_key" });
@@ -362,6 +364,7 @@ async function request(conn, params, options = {}) {
   const effort = params.effort || (params.thinking?.type === "enabled" ? "strong" : "default");
   const max = params.max_tokens || 4096;
   const controls = policy.effortOptions(cap, effort, max);
+  if (controls.reasoning?.enabled === false && mustThink.has(model)) controls.reasoning = { effort: "low" };
   const headers = { "Content-Type": "application/json" };
   let url, body, convert;
   if (conn.backend === "anthropic") {
@@ -413,6 +416,10 @@ async function request(conn, params, options = {}) {
       const limit = Number(detail.error?.n_ctx) || Number((said.match(/context size \((\d+) tokens\)/i) || [])[1]) || null;
       const used = Number(detail.error?.n_prompt_tokens) || Number((said.match(/request \((\d+) tokens\)/i) || [])[1]) || null;
       throw Object.assign(new Error("The model context window was exceeded."), { status: 400, code: "context_length_exceeded", limit, used });
+    }
+    if (response.status === 400 && body.reasoning?.enabled === false && /reasoning is mandatory/i.test(said)) {
+      mustThink.add(model);
+      return request(conn, params, options);
     }
     // The provider's own message goes to the log, trimmed, so a 400 can be
     // diagnosed; never to the user, and never the body, which can carry the request.

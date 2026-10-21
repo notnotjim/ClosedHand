@@ -171,6 +171,27 @@ test("OpenRouter uses advertised parameters and keeps real model suffixes", asyn
   assert.deepEqual(calls[0].body.reasoning, { effort: "high" });
   assert.deepEqual(calls[0].body.provider, { require_parameters: true });
 });
+test("OpenRouter quick work skips thinking, and a model that must think is asked again at low", async () => {
+  const calls = [];
+  global.fetch = async (url, opts = {}) => {
+    const body = JSON.parse(opts.body);
+    calls.push(body);
+    if (body.model === "thinks-always" && body.reasoning?.enabled === false) {
+      return Response.json({ error: { message: "Reasoning is mandatory for this endpoint and cannot be disabled." } }, { status: 400 });
+    }
+    return Response.json({ choices: [{ finish_reason: "stop", message: { role: "assistant", content: "ready" } }], usage: { prompt_tokens: 10, completion_tokens: 5 } });
+  };
+  const conn = policy.connection({ provider: "openrouter", apiKey: "key" });
+  conn.capabilities = policy.capabilities(conn, "any", { supported_parameters: ["reasoning"] });
+  await wire.request(conn, { ...params, model: "can-skip", effort: "fast" });
+  assert.deepEqual(calls[0].reasoning, { enabled: false });
+  assert.equal(wire.responseText(await wire.request(conn, { ...params, model: "thinks-always", effort: "fast" })), "ready");
+  assert.deepEqual(calls.slice(1).map(c => c.reasoning), [{ enabled: false }, { effort: "low" }]);
+  await wire.request(conn, { ...params, model: "thinks-always", effort: "fast" });
+  assert.deepEqual(calls.slice(3).map(c => c.reasoning), [{ effort: "low" }]);
+  await wire.request(conn, { ...params, model: "thinks-always" });
+  assert.deepEqual(calls[4].reasoning, { effort: "medium" });
+});
 test("reasoning survives a tool round trip only on its original model, host and credential", async () => {
   const calls = mockProvider();
   const conn = policy.connection({ provider: "deepseek", apiKey: "first" });

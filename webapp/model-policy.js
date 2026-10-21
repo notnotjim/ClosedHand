@@ -58,7 +58,11 @@ function capabilities(conn, model, metadata = {}) {
 function effortOptions(cap, effort = "default", maxTokens = 4096) {
   const low = effort === "fast", high = effort === "strong";
   switch (cap?.reasoning) {
-    case "router": return { reasoning: { effort: low ? "low" : high ? "high" : "medium" }, provider: { require_parameters: true } };
+    // A fast job through OpenRouter skips thinking: even "low" used up a support
+    // job's small allowance and answered nothing (picking emails, every time),
+    // and was slower without being right more often. A model that must think
+    // refuses, and model-wire asks it again at "low".
+    case "router": return { reasoning: low ? { enabled: false } : { effort: high ? "high" : "medium" }, provider: { require_parameters: true } };
     case "deepseek": return low ? { thinking: { type: "disabled" } } : { thinking: { type: "enabled" }, reasoning_effort: high ? "max" : "high" };
     case "deepinfra": return { reasoning_effort: low ? "none" : high ? "high" : "medium" };
     case "qwen": return { chat_template_kwargs: { enable_thinking: !low } };
