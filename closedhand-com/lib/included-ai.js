@@ -23,6 +23,12 @@
 // off between the change and its next look.
 // Past a limit, without a provisioning key, or with OpenRouter unreachable,
 // the claim goes on without a key and setup asks for an LLM provider instead.
+//
+// Closedhand+ (lib/plus.js) continues it: a subscriber's key has a fair-use
+// ceiling that OpenRouter resets every month (limit_reset), doubled for the
+// month the person paid to carry on past it. A subscriber is never held to
+// the free use's limits; one whose account has no key gets one the next time
+// their computer asks (collect), and an ended subscription stops the key.
 const crypto = require('crypto');
 
 const API = 'https://openrouter.ai/api/v1';
@@ -51,7 +57,9 @@ function create({ db, env = process.env, request = fetch }) {
   const list = value => String(value || '').split(',').map(s => s.trim()).filter(Boolean);
   const models = list(env.INCLUDED_AI_MODELS || 'deepseek/deepseek-v4.1-flash');
   const allowed = [...new Set([...models, ...list(env.INCLUDED_AI_RETIRING_MODELS)])];
+  const fairUse = Number(env.INCLUDED_AI_FAIR_USE_USD || 20);
   const enabled = () => managementKey.startsWith('sk-or-') && pepper.length >= 16 && starter > 0 && models.length > 0;
+  const thisMonth = () => new Date().toISOString().slice(0, 7);
 
   async function api(path, method = 'GET', body) {
     const response = await request(API + path, {
@@ -91,8 +99,8 @@ function create({ db, env = process.env, request = fetch }) {
     return guardrailId;
   }
 
-  async function makeKey(ownerId, limit) {
-    const made = await api('/keys', 'POST', { name: 'Closedhand ' + ownerId, limit: Math.round(limit * 100) / 100 });
+  async function makeKey(ownerId, limit, { monthly = false } = {}) {
+    const made = await api('/keys', 'POST', { name: 'Closedhand ' + ownerId, limit: Math.round(limit * 100) / 100, ...(monthly ? { limit_reset: 'monthly' } : {}) });
     const key = made?.key, hash = made?.data?.hash;
     if (typeof key !== 'string' || !key.startsWith('sk-or-') || typeof hash !== 'string') throw new Error('OpenRouter did not return a key');
     try {
@@ -112,16 +120,22 @@ function create({ db, env = process.env, request = fetch }) {
     if (!enabled()) return null;
     try {
       const held = (await db.query('SELECT * FROM included_ai_keys WHERE owner_id = $1', [ownerId])).rows[0];
+      const sub = await subscription(ownerId);
       if (held) {
         const oldHash = held.key_hash;
-        const old = (await api('/keys/' + oldHash))?.data;
-        const left = old ? Number(old.limit_remaining ?? (Number(old.limit) - Number(old.usage))) : 0;
-        if (!(left > 0.01)) return null;
-        const made = await makeKey(ownerId, left);
+        let made;
+        if (sub) made = await makeKey(ownerId, limitFor(sub), { monthly: true });
+        else {
+          const old = (await api('/keys/' + oldHash))?.data;
+          const left = old ? Number(old.limit_remaining ?? (Number(old.limit) - Number(old.usage))) : 0;
+          if (!(left > 0.01)) return null;
+          made = await makeKey(ownerId, left);
+        }
         await db.query('UPDATE included_ai_keys SET key_hash = $2, updated_at = now() WHERE owner_id = $1', [ownerId, made.hash]);
         await api('/keys/' + oldHash, 'DELETE').catch(e => console.error('[included ai] could not delete a replaced key:', e.message));
         return { key: made.key, models: roles() };
       }
+      if (sub) return await keyForSubscriber(ownerId, sub);
       const who = (await db.query('SELECT provider, subject FROM owners WHERE id = $1', [ownerId])).rows[0];
       const person = fingerprint('person', who && who.subject ? who.provider + ':' + who.subject : 'owner:' + ownerId);
       const place = connection(ip) && fingerprint('connection', connection(ip));
@@ -170,6 +184,76 @@ function create({ db, env = process.env, request = fetch }) {
     try { return !(await full(connection(ip) && fingerprint('connection', connection(ip)))); } catch (_) { return false; }
   }
 
+  // Closedhand+: the account's subscription while it gives access (Polar keeps
+  // access through a failed payment it is still retrying), or null.
+  async function subscription(ownerId) {
+    return (await db.query(
+      "SELECT status, extended_month FROM plus_subscriptions WHERE owner_id = $1 AND status IN ('active', 'trialing', 'past_due')", [ownerId])).rows[0] || null;
+  }
+  const limitFor = sub => fairUse * (sub.extended_month === thisMonth() ? 2 : 1);
+
+  // A subscriber's key, made now: no free-use limits apply. Saved first, so two
+  // requests at once can't both hand one out; the loser's key is deleted.
+  async function keyForSubscriber(ownerId, sub) {
+    const made = await makeKey(ownerId, limitFor(sub), { monthly: true });
+    const saved = await db.query(
+      'INSERT INTO included_ai_keys (owner_id, key_hash, granted_usd) VALUES ($1, $2, 0) ON CONFLICT (owner_id) DO NOTHING RETURNING owner_id', [ownerId, made.hash]);
+    if (!saved.rowCount) {
+      await api('/keys/' + made.hash, 'DELETE').catch(() => {});
+      return null;
+    }
+    return { key: made.key, models: roles() };
+  }
+
+  // A key for a subscriber whose account holds none (the free use was never
+  // given, or the subscription came first), handed once to their computer
+  // when it next asks. Null for anyone else. Never throws.
+  async function collect(ownerId) {
+    if (!enabled()) return null;
+    try {
+      const sub = await subscription(ownerId);
+      if (!sub || (await db.query('SELECT 1 FROM included_ai_keys WHERE owner_id = $1', [ownerId])).rowCount) return null;
+      return await keyForSubscriber(ownerId, sub);
+    } catch (error) {
+      console.error('[included ai] no key collected:', error.message);
+      return null;
+    }
+  }
+
+  // The held key set to what the subscription gives: the fair-use ceiling,
+  // reset every month, or twice it in the month the person paid to carry on.
+  // False when the account holds no key yet (its computer collects one).
+  async function subscribe(ownerId) {
+    if (!enabled()) return false;
+    const sub = await subscription(ownerId);
+    const held = (await db.query('SELECT key_hash FROM included_ai_keys WHERE owner_id = $1', [ownerId])).rows[0];
+    if (!sub || !held) return false;
+    await api('/keys/' + held.key_hash, 'PATCH', { limit: limitFor(sub), limit_reset: 'monthly' });
+    return true;
+  }
+
+  // An ended subscription stops the key where it stands: its limit becomes
+  // what it has used, never reset. False when there is no key.
+  async function end(ownerId) {
+    if (!enabled()) return false;
+    const held = (await db.query('SELECT key_hash FROM included_ai_keys WHERE owner_id = $1', [ownerId])).rows[0];
+    if (!held) return false;
+    const used = Number((await api('/keys/' + held.key_hash))?.data?.usage || 0);
+    await api('/keys/' + held.key_hash, 'PATCH', { limit: Math.floor(used * 100) / 100, limit_reset: null });
+    return true;
+  }
+
+  // Run hourly: a month someone carried on past fair use is over once the
+  // month changes, and their key goes back to the fair-use ceiling.
+  async function sweep() {
+    const over = (await db.query(
+      'SELECT owner_id FROM plus_subscriptions WHERE extended_month IS NOT NULL AND extended_month <> $1', [thisMonth()])).rows;
+    for (const { owner_id: ownerId } of over) {
+      await db.query('UPDATE plus_subscriptions SET extended_month = NULL, key_synced = false, updated_at = now() WHERE owner_id = $1', [ownerId]);
+    }
+    return over.length;
+  }
+
   // Which model does which job: the person's computer uses these as given.
   function roles() {
     return { chat: models[0], background: models[1] || models[0] };
@@ -188,7 +272,7 @@ function create({ db, env = process.env, request = fetch }) {
     return enabled() ? roles() : null;
   }
 
-  return { forOwner, forget, offered, current, enabled };
+  return { forOwner, forget, offered, current, enabled, collect, subscribe, end, sweep, fairUse };
 }
 
 module.exports = { create };

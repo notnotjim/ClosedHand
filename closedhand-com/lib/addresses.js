@@ -284,9 +284,8 @@ async function releaseIdle(pool, days) {
   return idle.length;
 }
 
-function register(app, { db, sessions, secret, baseUrl, env = process.env, request = fetch }) {
+function register(app, { db, sessions, secret, baseUrl, env = process.env, request = fetch, includedAi = require('./included-ai').create({ db, env, request }), plus = null }) {
   const enabled = () => env.PHONE_ENROLLMENT_ENABLED === '1';
-  const includedAi = require('./included-ai').create({ db, env, request });
   // A claim's answer, with the included AI's key when one is given.
   const claimed = async (row, ownerId, req) => {
     const included = await includedAi.forOwner(ownerId, { ip: req.ip });
@@ -449,10 +448,17 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   }));
 
   // Which models Closedhand Managed Models use now. A computer with its key
-  // asks a few times a day and switches itself over when they change.
+  // asks a few times a day and switches itself over when they change. It is
+  // also told its plan (Closedhand+ or the free use), and a subscriber whose
+  // account holds no key yet gets one here, once, to seal.
   app.get('/api/phone-enrollment/included-ai', wrap(async (req, res) => {
     if (!installation(req)) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
-    res.json({ models: includedAi.current() });
+    const found = await owned(req);
+    const ownerId = found?.row.owner_id || null;
+    const now = ownerId && plus ? await plus.state(ownerId) : null;
+    const plan = now ? { name: now.active ? 'plus' : 'free', ...(now.renews_at ? { renews_at: now.renews_at } : {}), ...(now.ends_at ? { ends_at: now.ends_at } : {}), extended: now.extended } : null;
+    const key = now?.active ? await includedAi.collect(ownerId) : null;
+    res.json({ models: includedAi.current(), ...(plan ? { plan } : {}), ...(key ? { key: key.key } : {}) });
   }, { always: true }));
 
   // The copy renames its address. It is known by its secret, like every
@@ -513,6 +519,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     const found = await owned(req);
     // Nothing on closedhand.com is linked to this computer: nothing to delete.
     if (!found) return res.json({ deleted: false });
+    if (plus) await plus.forget(found.row.owner_id);
     await includedAi.forget(found.row.owner_id);
     await deleteAccount(db, found.row.owner_id);
     res.json({ deleted: true });
@@ -523,6 +530,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     if (!owner) return res.status(401).json({ error: 'Sign in to delete your Closedhand account.' });
     if (req.headers.origin !== baseUrl) return res.status(403).json({ error: 'Open this on closedhand.com.' });
     try {
+      if (plus) await plus.forget(owner);
       await includedAi.forget(owner);
       await deleteAccount(db, owner);
       sessions.signOut(res);
@@ -549,7 +557,8 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
       }
       // A sign-in whose account was deleted is no sign-in at all.
       const offered = enabled() && await includedAi.offered({ ip: req.ip });
-      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}) });
+      const plan = person && plus ? await plus.state(owner) : null;
+      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}), ...(plan ? { plus: plan } : {}) });
     } catch (e) {
       console.error('[addresses] account:', e.message);
       res.status(503).json({ error: 'Could not look up your account. Please try again.' });
@@ -574,7 +583,8 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
   // but only while the Worker's last-seen reports are current (seenAt), so
   // a broken report can never make every address look unused. A sign-in
   // that holds nothing, a day on, is forgotten: an account exists only
-  // while it has a personal URL (or a name held for it).
+  // while it has a personal URL (or a name held for it), or while its
+  // Closedhand+ runs, so a subscription never outlives its account.
   const idleDays = Number.parseInt(env.ADDRESS_IDLE_DAYS || '90', 10);
   let seenAt = 0;
   async function releaseStale() {
@@ -590,7 +600,8 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
          AND NOT EXISTS (SELECT 1 FROM addresses a WHERE a.owner_id = o.id)
          AND NOT EXISTS (SELECT 1 FROM retired_names r WHERE r.owner_id = o.id)
          AND NOT EXISTS (SELECT 1 FROM held_names h WHERE h.owner_id = o.id)
-         AND NOT EXISTS (SELECT 1 FROM approvals p WHERE p.owner_id = o.id)`);
+         AND NOT EXISTS (SELECT 1 FROM approvals p WHERE p.owner_id = o.id)
+         AND NOT EXISTS (SELECT 1 FROM plus_subscriptions s WHERE s.owner_id = o.id AND s.status IN ('active', 'trialing', 'past_due'))`);
   }
   // When each address's computer was last connected, from Cloudflare's
   // record of its tunnel, reported by the Worker every hour.

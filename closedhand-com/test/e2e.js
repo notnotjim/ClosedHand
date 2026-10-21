@@ -126,7 +126,7 @@ test('signing in keeps only the email: names and pictures the provider sends are
   assert.equal(new URL(start.headers.get('location')).searchParams.get('scope'), 'openid email');
   await signIn('google', { ...google('g-named', 'named@example.com'), name: 'Pat Example', picture: 'https://example.com/pat.png' });
   await signIn('microsoft', { ...microsoft('22222222-2222-4333-8444-555555555555', '77777777-7777-4888-9999-000000000000', 'ms-named@example.com'), name: 'Sam Example' });
-  const columns = (await db.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'owners' ORDER BY 1")).rows.map(r => r.column_name);
+  const columns = (await db.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'owners' AND table_schema = current_schema() ORDER BY 1")).rows.map(r => r.column_name);
   assert.deepEqual(columns, ['created_at', 'email', 'email_verified', 'id', 'provider', 'subject', 'updated_at'], 'the email, and whether the provider vouches for it');
   assert.doesNotMatch(JSON.stringify((await db.query('SELECT * FROM owners')).rows), /Pat Example|Sam Example|pat\.png/);
 });
@@ -753,7 +753,10 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     assert.ok(!JSON.stringify(row).includes(done.included_ai.key), 'the key itself is not kept');
     assert.equal([...keys.values()][0].name, 'Closedhand ' + row.owner_id, 'named by the account, not its email');
     // The computer can ask which models are current, and only a known computer.
-    assert.deepEqual(await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json(), { models: done.included_ai.models });
+    const asked = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
+    assert.deepEqual(asked.models, done.included_ai.models);
+    assert.equal(asked.plan.name, 'free', 'and that it is on the free use');
+    assert.equal(asked.key, undefined);
     assert.equal((await call('GET', '/api/phone-enrollment/included-ai')).status, 401);
     // Deleting the account from its computer deletes the key too.
     assert.deepEqual(await (await call('POST', '/api/phone-enrollment/account/delete', {}, copy.auth)).json(), { deleted: true });
@@ -772,5 +775,106 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     assert.equal(reclaimed.url, 'https://quinn-again.closedhand.ai', 'the claim itself goes on');
     assert.equal(reclaimed.included_ai, undefined);
     assert.equal(keys.size, 0);
+  } finally { other.close(); }
+});
+
+// Closedhand+ through the real routes: the account subscribes on
+// closedhand.com, Polar's signed webhooks say so, the computer collects its
+// key, and cancelling then ending stops it. Polar and OpenRouter are stand-ins.
+test('Closedhand+: checkout, a signed webhook, the computer collects its key, cancelling ends it', async () => {
+  const PLUS = '44444444-4444-4444-8444-444444444444', SECRET = 'whsec_' + crypto.randomBytes(32).toString('base64');
+  const keys = new Map(), polar = [];
+  const fake = async (url, opts = {}) => {
+    const method = opts.method || 'GET', body = opts.body ? JSON.parse(opts.body) : null;
+    if (url.startsWith('https://openrouter.ai/api/v1')) {
+      const path = url.replace('https://openrouter.ai/api/v1', '');
+      if (path.startsWith('/guardrails?')) return new Response(JSON.stringify({ data: [{ id: 'rail-1', name: 'Closedhand included AI' }] }));
+      if (path === '/guardrails/rail-1' || path === '/guardrails/rail-1/assignments/keys') return new Response('{}');
+      if (path === '/keys' && method === 'POST') {
+        const hash = crypto.randomBytes(32).toString('hex'), key = 'sk-or-v1-' + crypto.randomBytes(32).toString('hex');
+        keys.set(hash, { ...body, usage: 0 });
+        return new Response(JSON.stringify({ data: { hash }, key }), { status: 201 });
+      }
+      const hash = path.slice(6);
+      if (method === 'GET') return new Response(JSON.stringify({ data: keys.get(hash) }));
+      if (method === 'PATCH') { Object.assign(keys.get(hash), body); return new Response('{}'); }
+      if (method === 'DELETE') { keys.delete(hash); return new Response('{}'); }
+    }
+    if (url.startsWith('https://sandbox-api.polar.sh/')) {
+      polar.push({ method, url, body });
+      if (url.endsWith('/v1/checkouts/')) return new Response(JSON.stringify({ url: 'https://sandbox.polar.sh/checkout/fixture' }), { status: 201 });
+      if (url.endsWith('/v1/customer-sessions/')) return new Response(JSON.stringify({ customer_portal_url: 'https://sandbox.polar.sh/portal/fixture' }), { status: 201 });
+    }
+    return request(url, opts);
+  };
+  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64), INCLUDED_AI_PER_CONNECTION: '0',
+    POLAR_SERVER: 'sandbox', POLAR_ACCESS_TOKEN: 'polar-token', POLAR_WEBHOOK_SECRET: SECRET, POLAR_PLUS_PRODUCT_ID: PLUS }, request: fake });
+  const other = await new Promise(r => { const s = app.listen(0, () => r(s)); });
+  const at = 'http://127.0.0.1:' + other.address().port;
+  const call = (method, path, body, headers = {}) => fetch(at + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
+  let n = 0;
+  const hook = (type, data) => {
+    const raw = JSON.stringify({ type, timestamp: new Date().toISOString(), data }), id = 'msg_' + (++n), stamp = String(Math.floor(Date.now() / 1000));
+    const signature = 'v1,' + crypto.createHmac('sha256', Buffer.from(SECRET.slice(6), 'base64')).update(`${id}.${stamp}.${raw}`).digest('base64');
+    return fetch(at + '/api/plus/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json', 'webhook-id': id, 'webhook-timestamp': stamp, 'webhook-signature': signature }, body: raw });
+  };
+  const synced = async ownerId => {
+    for (let i = 0; i < 100; i++) {
+      if ((await db.query('SELECT key_synced FROM plus_subscriptions WHERE owner_id = $1', [ownerId])).rows[0]?.key_synced) return;
+      await new Promise(r => setTimeout(r, 10));
+    }
+    throw new Error('never synced');
+  };
+  try {
+    // Claimed without free use (this connection has had it), so no key yet.
+    const copy = newCopy();
+    const ticket = (await (await call('POST', '/api/phone-enrollment/register', { name: 'rowan-plus', port: 3000, confirm: 'code' }, copy.auth)).json()).ticket;
+    const owner = await signIn('google', google('g-rowan', 'rowan@example.com'));
+    const { code } = await (await call('POST', '/api/phone-enrollment/approve', { ticket }, signedIn(owner.cookie))).json();
+    const done = await (await call('POST', '/api/phone-enrollment/claim', { code }, copy.auth)).json();
+    assert.equal(done.included_ai, undefined);
+    const ownerId = (await db.query("SELECT id FROM owners WHERE subject = 'g-rowan'")).rows[0].id;
+    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: false, extended: false });
+
+    assert.equal((await call('POST', '/api/plus/checkout', {}, { cookie: owner.cookie })).status, 403, 'only from closedhand.com');
+    const checkout = await (await call('POST', '/api/plus/checkout', {}, signedIn(owner.cookie))).json();
+    assert.equal(checkout.url, 'https://sandbox.polar.sh/checkout/fixture');
+    assert.deepEqual(polar.at(-1).body, { products: [PLUS], external_customer_id: ownerId, customer_email: 'rowan@example.com', success_url: 'https://closedhand.com/account?plus=welcome', metadata: { owner_id: ownerId } });
+
+    const subscription = (status, extra = {}) => ({ id: 'sub_rowan', status, product_id: PLUS, customer_id: 'cus_rowan', customer: { id: 'cus_rowan', external_id: ownerId },
+      current_period_end: '2026-12-01T00:00:00Z', cancel_at_period_end: false, modified_at: new Date(Date.now() + (++n) * 1000).toISOString(), ...extra });
+    const forged = await fetch(at + '/api/plus/webhook', { method: 'POST', headers: { 'webhook-id': 'x', 'webhook-timestamp': String(Math.floor(Date.now() / 1000)), 'webhook-signature': 'v1,AAAA' }, body: JSON.stringify({ type: 'subscription.active', data: subscription('active') }) });
+    assert.equal(forged.status, 403, 'an unsigned event changes nothing');
+    assert.equal((await hook('subscription.active', subscription('active'))).status, 202);
+    await synced(ownerId);
+
+    // The computer learns its plan and collects its key, once.
+    const first = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
+    assert.deepEqual(first.plan, { name: 'plus', renews_at: '2026-12-01T00:00:00.000Z', extended: false });
+    assert.match(first.key, /^sk-or-v1-[a-f0-9]{64}$/);
+    const [, made] = [...keys][0];
+    assert.deepEqual([made.limit, made.limit_reset], [20, 'monthly']);
+    assert.equal((await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json()).key, undefined, 'handed over once');
+    assert.equal((await db.query("SELECT count(*) AS n FROM included_ai_keys WHERE owner_id = $1 AND key_hash = $2", [ownerId, [...keys.keys()][0]])).rows[0].n, '1');
+    const manage = await (await call('POST', '/api/plus/manage', {}, signedIn(owner.cookie))).json();
+    assert.equal(manage.url, 'https://sandbox.polar.sh/portal/fixture');
+    assert.equal((await call('POST', '/api/plus/checkout', {}, signedIn(owner.cookie))).status, 409, 'already subscribed');
+
+    // Cancelled in the portal: on until the paid month ends, then stopped.
+    await hook('subscription.canceled', subscription('active', { cancel_at_period_end: true }));
+    await synced(ownerId);
+    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plus, { available: true, active: true, ends_at: '2026-12-01T00:00:00.000Z', extended: false });
+    made.usage = 4.2;
+    await hook('subscription.revoked', subscription('canceled', { cancel_at_period_end: true }));
+    await synced(ownerId);
+    assert.deepEqual([made.limit, made.limit_reset], [4.2, null]);
+    assert.equal((await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json()).plan.name, 'free');
+
+    // The account goes; an ended subscription needs nothing from Polar.
+    const before = polar.length;
+    assert.deepEqual(await (await call('POST', '/api/phone-enrollment/account/delete', {}, copy.auth)).json(), { deleted: true });
+    assert.equal(polar.length, before);
+    assert.equal(keys.size, 0, 'its key is deleted');
+    assert.equal((await db.query('SELECT 1 FROM plus_subscriptions WHERE owner_id = $1', [ownerId])).rowCount, 0);
   } finally { other.close(); }
 });

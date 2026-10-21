@@ -51,6 +51,12 @@ Migrations in `migrations/` apply on start.
 | `INCLUDED_AI_MONTHLY_CAP_USD` | Most new free use given in a calendar month (default 1000); past it, setup asks for an LLM provider instead |
 | `INCLUDED_AI_DAILY_CAP_USD` | Most new free use given in any 24 hours (default 250), so a burst can't take the month's |
 | `INCLUDED_AI_PER_CONNECTION` | How many people one internet connection can claim it for in 30 days (default 3) |
+| `INCLUDED_AI_FAIR_USE_USD` | Closedhand+'s fair use: the most LLM use a subscriber's key allows in a calendar month (default 20); OpenRouter resets it monthly, and carrying on past it doubles it for that month |
+| `POLAR_ACCESS_TOKEN` | A Polar organization access token for Closedhand+ (lib/plus.js), with the scopes `checkouts:write`, `customer_sessions:write` and `subscriptions:write`. Without it, and the three below, Closedhand+ is off |
+| `POLAR_WEBHOOK_SECRET` | The secret of Polar's webhook to `BASE_URL/api/plus/webhook`, as Polar shows it (`whsec_...`), sending `subscription.created`, `subscription.updated`, `subscription.active`, `subscription.uncanceled`, `subscription.canceled`, `subscription.revoked` and `order.paid` |
+| `POLAR_PLUS_PRODUCT_ID` | The Closedhand+ product: monthly |
+| `POLAR_EXTEND_PRODUCT_ID` | The one-time product that carries a subscriber on past fair use to the end of the month (optional) |
+| `POLAR_SERVER` | `sandbox` to use Polar's sandbox (sandbox-api.polar.sh) while trying it out; anything else is live |
 | `INCLUDED_AI_MODELS` | The models those keys may use, comma-separated: the first for chat, the second for support work (default `deepseek/deepseek-v4.1-flash`). Computers pick up a change within a few hours |
 | `INCLUDED_AI_RETIRING_MODELS` | Models just switched away from, still allowed while computers switch; clear it after a day |
 | `TRUSTED_PROXY_HOPS` | Proxies in front that add X-Forwarded-For (default 2: Cloudflare, then Railway) |

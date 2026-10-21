@@ -42,7 +42,7 @@ jobs:
       - name: Install the service's packages
         run: npm ci --prefix closedhand-com --no-audit --no-fund
       - name: Sign-in, personal URLs and bug reports against a real database
-        run: node --test closedhand-com/test/e2e.js closedhand-com/test/download-link.js closedhand-com/test/included-ai.js
+        run: node --test closedhand-com/test/e2e.js closedhand-com/test/download-link.js closedhand-com/test/included-ai.js closedhand-com/test/plus.js
         env:
           DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
       # Its own step: it rebuilds the same database, so it must not run alongside.
