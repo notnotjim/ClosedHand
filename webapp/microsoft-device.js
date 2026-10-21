@@ -27,8 +27,7 @@ function failure(data) {
 }
 
 // connect(tokens) saves the account and resolves to { email }. claimPersonalUrl
-// (optional) is handed the sign-in's ID token, and resolves to the personal URL
-// it claimed with it, or null.
+// (optional) is handed the sign-in's ID token to claim the personal URL with.
 function register(app, { requireAccess, connect, claimPersonalUrl }) {
   // One owner per install, so one sign-in in progress at a time.
   let pending = null;
@@ -106,12 +105,11 @@ function register(app, { requireAccess, connect, claimPersonalUrl }) {
       // The same sign-in claims the personal URL, when this computer has none
       // yet. Mail is connected either way; a claim that fails leaves the
       // usual way to get one on the setup page.
-      let personalUrl = null;
       if (claimPersonalUrl && data.id_token) {
-        try { personalUrl = await claimPersonalUrl(data.id_token); }
+        try { await claimPersonalUrl(data.id_token); }
         catch (e) { console.error("[microsoft-device] Personal URL not claimed:", e.message); }
       }
-      res.json({ connected: true, email: account.email, personalUrl });
+      res.json({ connected: true, email: account.email });
     } catch (e) {
       if (pending === current) pending = null;
       console.error("[microsoft-device] Could not finish sign-in:", e.message);

@@ -171,12 +171,13 @@ async function claim(code, state) {
   if (validAddress(data.url)) await setConf({ PHONE_ADDRESS_NAME: new URL(data.url).hostname.split('.')[0] });
   return data;
 }
-// Claim in one step with the Microsoft sign-in this computer has just done
-// through Closedhand's own Microsoft app, checked by closedhand.com against
-// Microsoft's keys. Null when closedhand.com wants it claimed on its
-// confirmation page instead (an address already used on another computer).
-async function claimWithMicrosoft(idToken) {
-  const data = withIncludedAi(await call('claim-microsoft', 'POST', { idToken, port: Number(process.env.PORT || 3000) }));
+// Claim in one step with the Google or Microsoft sign-in this computer has
+// just done through Closedhand's own app for it, checked by closedhand.com
+// against that provider's keys. Null when closedhand.com wants it claimed on
+// its confirmation page instead (an address already used on another computer).
+async function claimWithSignIn(provider, idToken) {
+  if (!['google', 'microsoft'].includes(provider)) throw new Error('Unknown sign-in');
+  const data = withIncludedAi(await call('claim-' + provider, 'POST', { idToken, port: Number(process.env.PORT || 3000) }));
   if (data.claimHere || !validAddress(data.url)) return null;
   if (['pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state)) registrationState = data.state;
   await setConf({ PHONE_ENROLLMENT: '2', PHONE_ADDRESS_NAME: new URL(data.url).hostname.split('.')[0] });
@@ -218,4 +219,4 @@ async function forget() {
 function status() {
   return { registrationState, ownershipConfirmed: ['pending', 'provisioning', 'connecting', 'active', 'error'].includes(registrationState) };
 }
-module.exports = { begin, claim, claimWithMicrosoft, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, includedAiOffered, includedAiModel, includedAiState, account, deleteAccount };
+module.exports = { begin, claim, claimWithSignIn, rename, cleanName, connection, validAddress, confirm, challenge, status, serviceAvailable, includedAiOffered, includedAiModel, includedAiState, account, deleteAccount };

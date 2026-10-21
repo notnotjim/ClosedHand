@@ -18,16 +18,18 @@ const env = {
 const mails = [];
 const idToken = claims => 'x.' + Buffer.from(JSON.stringify(claims)).toString('base64url') + '.y';
 let db, server, base, nextClaims = null, challengeSecret = null;
-// Stand-in Microsoft signing key, for sign-ins a copy passes on (claim-microsoft).
-const msKey = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
-const msJwk = { ...msKey.publicKey.export({ format: 'jwk' }), kid: 'test-kid', use: 'sig' };
-const signedToken = (claims, key = msKey.privateKey, kid = 'test-kid') => {
+// Stand-in Google and Microsoft signing keys, for sign-ins a copy passes on
+// (claim-google, claim-microsoft).
+const providerKeys = { google: crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }), microsoft: crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }) };
+const jwkOf = provider => ({ ...providerKeys[provider].publicKey.export({ format: 'jwk' }), kid: 'test-kid', use: 'sig' });
+const signedToken = (claims, key, kid = 'test-kid') => {
   const head = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid })).toString('base64url');
   const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
   return head + '.' + body + '.' + crypto.sign('RSA-SHA256', Buffer.from(head + '.' + body), key).toString('base64url');
 };
 const request = async (url, opts) => {
-  if (url === 'https://login.microsoftonline.com/common/discovery/v2.0/keys') return new Response(JSON.stringify({ keys: [msJwk] }));
+  if (url === 'https://login.microsoftonline.com/common/discovery/v2.0/keys') return new Response(JSON.stringify({ keys: [jwkOf('microsoft')] }));
+  if (url === 'https://www.googleapis.com/oauth2/v3/certs') return new Response(JSON.stringify({ keys: [jwkOf('google')] }));
   if (url.includes('oauth2.googleapis.com/token') || url.includes('login.microsoftonline.com')) {
     const nonce = new URLSearchParams(opts.body).get('code');
     return new Response(JSON.stringify({ id_token: idToken({ ...nextClaims, nonce }) }));
@@ -602,40 +604,55 @@ test('a sign-in holding nothing is forgotten after a day; one with a held name i
   assert.equal((await db.query("SELECT 1 FROM held_names WHERE hostname = 'held-over.closedhand.ai'")).rowCount, 0, 'a hold ends on time');
 });
 
-test('connecting Microsoft mail through Closedhand\'s app claims the personal URL in one step, and only a genuine sign-in does', async () => {
-  const DEVICE_APP = '4f57d28c-dabb-4369-9874-f7c72262859b';
-  const { app } = createApp({ db, env: { ...env, MICROSOFT_ASSOCIATED_APP_IDS: '526c0b07-ae5c-46a2-9911-f7220b9f96d0,' + DEVICE_APP, MICROSOFT_CLIENT_ID: '526c0b07-ae5c-46a2-9911-f7220b9f96d0' }, request });
+test('connecting mail through Closedhand\'s Google or Microsoft app claims the personal URL in one step, and only a genuine sign-in does', async () => {
+  const GOOGLE_APP = '123456789012-closedhanddesktop.apps.googleusercontent.com', MICROSOFT_APP = '4f57d28c-dabb-4369-9874-f7c72262859b';
+  const { app } = createApp({ db, env: { ...env,
+    GOOGLE_ASSOCIATED_CLIENT_IDS: 'google-client,' + GOOGLE_APP,
+    MICROSOFT_ASSOCIATED_APP_IDS: '526c0b07-ae5c-46a2-9911-f7220b9f96d0,' + MICROSOFT_APP, MICROSOFT_CLIENT_ID: '526c0b07-ae5c-46a2-9911-f7220b9f96d0' }, request });
   const srv = await new Promise(r => { const s = app.listen(0, () => r(s)); });
   const at = 'http://127.0.0.1:' + srv.address().port;
-  const post = (body, headers) => fetch(at + '/api/phone-enrollment/claim-microsoft', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const tid = '0d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d', oid = '11111111-2222-4333-8444-555555555555';
+  const now = Math.floor(Date.now() / 1000);
+  const cases = {
+    google: {
+      claims: (over = {}) => ({ iss: 'https://accounts.google.com', aud: GOOGLE_APP, sub: 'g-passed-river', email: 'river@example.com', email_verified: true, iat: now, exp: now + 3600, ...over }),
+      ownApp: 'google-client', wrongIssuer: { iss: 'https://accounts.example.com' }, stranger: { sub: 'g-passed-lee', email: 'lee@example.com' },
+      onSite: () => google('g-passed-river', 'river@example.com'),
+    },
+    microsoft: {
+      claims: (over = {}) => ({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: MICROSOFT_APP, tid, oid, email: 'sam@contoso.example', name: 'Sam', iat: now, exp: now + 3600, ...over }),
+      ownApp: '526c0b07-ae5c-46a2-9911-f7220b9f96d0', wrongIssuer: { iss: 'https://login.microsoftonline.com/other/v2.0' }, stranger: { oid: '99999999-2222-4333-8444-555555555555', email: 'lee@contoso.example' },
+      onSite: () => microsoft(tid, oid, 'sam@contoso.example'),
+    },
+  };
   try {
-    const tid = '0d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d', oid = '11111111-2222-4333-8444-555555555555';
-    const claims = (over = {}) => ({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, aud: DEVICE_APP, tid, oid, email: 'sam@contoso.example', name: 'Sam',
-      iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600, ...over });
-    const copy = newCopy();
-    assert.equal((await post({ idToken: signedToken(claims()), port: 3000 })).status, 401, 'no copy');
-    const forged = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
-    for (const [why, token] of [['forged', signedToken(claims(), forged)], ['another app', signedToken(claims({ aud: '526c0b07-ae5c-46a2-9911-f7220b9f96d0' }))],
-      ['expired', signedToken(claims({ exp: Math.floor(Date.now() / 1000) - 3600 }))], ['unsigned', 'x.' + Buffer.from(JSON.stringify(claims())).toString('base64url') + '.y'],
-      ['wrong issuer', signedToken(claims({ iss: 'https://login.microsoftonline.com/other/v2.0' }))]]) {
-      const r = await post({ idToken: token, port: 3000 }, copy.auth);
-      assert.equal(r.status, 400, why); assert.match((await r.json()).error, /could not be checked/, why);
+    for (const [provider, c] of Object.entries(cases)) {
+      const key = providerKeys[provider].privateKey, other = providerKeys[provider === 'google' ? 'microsoft' : 'google'].privateKey;
+      const post = (body, headers) => fetch(at + '/api/phone-enrollment/claim-' + provider, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+      const copy = newCopy();
+      assert.equal((await post({ idToken: signedToken(c.claims(), key), port: 3000 })).status, 401, provider + ': no copy');
+      const forged = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+      for (const [why, token] of [['forged', signedToken(c.claims(), forged)], ['signed by the other provider', signedToken(c.claims(), other)],
+        ['closedhand.com\'s own sign-in app', signedToken(c.claims({ aud: c.ownApp }), key)],
+        ['expired', signedToken(c.claims({ exp: now - 3600 }), key)], ['unsigned', 'x.' + Buffer.from(JSON.stringify(c.claims())).toString('base64url') + '.y'],
+        ['wrong issuer', signedToken(c.claims(c.wrongIssuer), key)]]) {
+        const r = await post({ idToken: token, port: 3000 }, copy.auth);
+        assert.equal(r.status, 400, provider + ': ' + why); assert.match((await r.json()).error, /could not be checked/, provider + ': ' + why);
+      }
+      assert.equal((await db.query('SELECT 1 FROM addresses WHERE secret_hash = $1', [copy.hash])).rowCount, 0, provider + ': nothing reserved by a bad sign-in');
+      const done = await (await post({ idToken: signedToken(c.claims(), key), port: 3000 }, copy.auth)).json();
+      assert.equal(done.state, 'pending', provider); assert.match(done.url, /^https:\/\/[a-z]+-[a-z]+-\d+\.closedhand\.ai$/, provider + ': a picked name');
+      assert.deepEqual(await (await post({ idToken: signedToken(c.claims(), key), port: 3000 }, copy.auth)).json(), done, provider + ': asking again changes nothing');
+      // The same account signing in on closedhand.com is the same Closedhand account.
+      const seen = await account((await signIn(provider, c.onSite())).cookie);
+      assert.equal(seen.signedIn, true); assert.equal(seen.address, new URL(done.url).hostname, provider + ': the same account, holding the same address');
+      // An address in use on one computer is never moved by another's sign-in.
+      const elsewhere = newCopy();
+      assert.deepEqual(await (await post({ idToken: signedToken(c.claims(), key), port: 3000 }, elsewhere.auth)).json(), { state: 'unconfirmed', claimHere: true });
+      assert.equal((await db.query('SELECT secret_hash FROM addresses WHERE hostname = $1', [new URL(done.url).hostname])).rows[0].secret_hash, copy.hash);
+      // A computer already holding someone else's address is sent to the confirmation page too.
+      assert.deepEqual(await (await post({ idToken: signedToken(c.claims(c.stranger), key), port: 3000 }, copy.auth)).json(), { state: 'unconfirmed', claimHere: true });
     }
-    assert.equal((await db.query('SELECT 1 FROM addresses WHERE secret_hash = $1', [copy.hash])).rowCount, 0, 'nothing reserved by a bad sign-in');
-    const done = await (await post({ idToken: signedToken(claims()), port: 3000 }, copy.auth)).json();
-    assert.equal(done.state, 'pending'); assert.match(done.url, /^https:\/\/[a-z]+-[a-z]+-\d+\.closedhand\.ai$/, 'a picked name');
-    assert.deepEqual(await (await post({ idToken: signedToken(claims()), port: 3000 }, copy.auth)).json(), done, 'asking again changes nothing');
-    // The same Microsoft account signing in on closedhand.com is the same Closedhand account.
-    const web = await signIn('microsoft', microsoft(tid, oid, 'sam@contoso.example'));
-    const seen = await account(web.cookie);
-    assert.equal(seen.signedIn, true); assert.equal(seen.address, new URL(done.url).hostname, 'the same account, holding the same address');
-    // An address in use on one computer is never moved by another's sign-in.
-    const other = newCopy();
-    assert.deepEqual(await (await post({ idToken: signedToken(claims()), port: 3000 }, other.auth)).json(), { state: 'unconfirmed', claimHere: true });
-    assert.equal((await db.query('SELECT secret_hash FROM addresses WHERE hostname = $1', [new URL(done.url).hostname])).rows[0].secret_hash, copy.hash);
-    // A computer already holding someone else's address is sent to the confirmation page too.
-    const stranger = signedToken(claims({ oid: '99999999-2222-4333-8444-555555555555', email: 'lee@contoso.example' }));
-    assert.deepEqual(await (await post({ idToken: stranger, port: 3000 }, copy.auth)).json(), { state: 'unconfirmed', claimHere: true });
   } finally { srv.close(); }
 });
 

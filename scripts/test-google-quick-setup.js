@@ -48,6 +48,12 @@ test('sign-in uses Closedhand\'s app without an own app, or when asked, and keep
  assert.match(read('webapp/setup-state.js'),/const googleQuick = !!googleApp\.app\(\) && googleApp\.canReturnTo\(/);
 });
 
+test('a sign-in through Closedhand\'s Google app claims the personal URL too, and one through an own project never does',()=>{
+ const server=read('webapp/server.js');
+ assert.match(server,/const idToken = tokens\.raw\?\.id_token;\n\s+if \(connected && serviceKey === "google" && idToken && closedhandApp && tokens\.client_id === closedhandApp\.clientId\) \{\n\s+try \{ await claimPersonalUrlWith\("google", idToken\); \}/);
+ assert.match(server,/claimPersonalUrl: \(idToken\) => claimPersonalUrlWith\("microsoft", idToken\)/,'both sign-ins claim the same way');
+});
+
 test('setup offers the quick route first and keeps the own project one link away',()=>{
  const html=read('webapp/views/setup.html');
  assert.match(html,/<div id="g-quick" hidden>/);

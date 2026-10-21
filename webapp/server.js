@@ -2723,20 +2723,24 @@ async function connectMcpHandler(req, res) {
   }
 }
 
+// Connecting Google or Microsoft through Closedhand's own app also claims the
+// personal URL, so there is no second sign-in, when this computer has none
+// yet. Mail is connected either way; a claim that fails leaves the usual way
+// to get one on the setup page.
+async function claimPersonalUrlWith(provider, idToken) {
+  const registration = require("./phone-registration");
+  if (await getRuntimeConf("PHONE_PERMANENT_URL") || registration.status().ownershipConfirmed) return null;
+  if (!(await registration.serviceAvailable())) return null;
+  const claimed = await registration.claimWithSignIn(provider, idToken);
+  if (!claimed) return null;
+  await phoneAccess.enable("managed");
+  return claimed.url;
+}
+
 require("./microsoft-device").register(app, {
   requireAccess: requireSetupAccess,
   connect: (tokens) => saveMicrosoftAccount(getAdminUserId(), SERVICES.microsoft, tokens),
-  // Connecting Microsoft through Closedhand's app also claims the personal
-  // URL, so there is no second sign-in, when this computer has none yet.
-  claimPersonalUrl: async (idToken) => {
-    const registration = require("./phone-registration");
-    if (await getRuntimeConf("PHONE_PERMANENT_URL") || registration.status().ownershipConfirmed) return null;
-    if (!(await registration.serviceAvailable())) return null;
-    const claimed = await registration.claimWithMicrosoft(idToken);
-    if (!claimed) return null;
-    await phoneAccess.enable("managed");
-    return claimed.url;
-  },
+  claimPersonalUrl: (idToken) => claimPersonalUrlWith("microsoft", idToken),
 });
 
 app.post("/api/mcps/probe", connectMcpHandler);
@@ -3136,12 +3140,25 @@ async function handleSignupOAuthComplete(res, stateData, serviceKey, svc, tokens
   // Set cookie FIRST, before any potentially-failing operations
   console.log(`[Auth] Cookie set for user ${user.id}`);
 
+  let connected = false;
   try {
     const metadata = await fetchAccountMetadata(serviceKey, svc, tokens);
     await saveConnection(user.id, serviceKey, tokens, svc, metadata);
+    connected = true;
   } catch (connErr) {
     console.error(`[Auth] saveConnection error (non-fatal): ${connErr.message}`);
     // Cookie is already set, user is logged in. Connection save failed but that's recoverable.
+  }
+
+  // A Google sign-in through Closedhand's own Google app claims the personal
+  // URL too, as Microsoft's does. One through the person's own Google project
+  // can't: closedhand.com has no way to trust a sign-in made by someone
+  // else's app, so the setup page offers its own sign-in for that.
+  const closedhandApp = require("./google-app").app();
+  const idToken = tokens.raw?.id_token;
+  if (connected && serviceKey === "google" && idToken && closedhandApp && tokens.client_id === closedhandApp.clientId) {
+    try { await claimPersonalUrlWith("google", idToken); }
+    catch (e) { console.error("[Auth] Personal URL not claimed with the Google sign-in:", e.message); }
   }
 
   // Two-step redirect: first to /dashboard (sets cookie via server-side auth check),

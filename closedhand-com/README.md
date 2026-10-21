@@ -41,7 +41,8 @@ Migrations in `migrations/` apply on start.
 | `BASE_URL` | `https://closedhand.com` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, asking only for the email |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Microsoft sign-in, same |
-| `MICROSOFT_ASSOCIATED_APP_IDS` | Microsoft app IDs published at `/.well-known/microsoft-identity-association.json`, so their permission screens name closedhand.com (defaults to `MICROSOFT_CLIENT_ID`) |
+| `MICROSOFT_ASSOCIATED_APP_IDS` | Microsoft app IDs published at `/.well-known/microsoft-identity-association.json`, so their permission screens name closedhand.com (defaults to `MICROSOFT_CLIENT_ID`). Those other than `MICROSOFT_CLIENT_ID` are the apps a computer connects mail through, and their sign-in claims a personal URL in one step |
+| `GOOGLE_ASSOCIATED_CLIENT_IDS` | Closedhand's own Google app (the Desktop app client official builds carry), comma separated; its sign-in claims a personal URL in one step |
 | `PHONE_ENROLLMENT_ENABLED` | `1` to accept new personal URLs |
 | `PHONE_PROVISIONER_SECRET` | Shared with the provisioner Worker |
 | `BUG_RECEIPT_SECRET` | Signs bug report receipts (defaults to `SESSION_SECRET`) |

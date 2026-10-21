@@ -140,17 +140,17 @@ Earlier versions released under MIT remain available under that licence.
 Setup gets Closedhand its personal URL as you connect your mail and calendar (or
 use **Settings → Personal URL** later). closedhand.com picks the name, two
 ordinary words and a number like amber-fox-42, so it says nothing about you.
-Connecting Microsoft through Closedhand's own Microsoft app claims it with that
-same sign-in, which closedhand.com checks against Microsoft's keys. Otherwise,
-claim it on closedhand.com by signing in with Google or Microsoft, then paste the
-code closedhand.com shows you back into Closedhand. Google always takes this
-second sign-in: its mail connection uses your own Google project, and
-closedhand.com can't tell that sign-in from one made by any other app. Either
-way, claiming creates your Closedhand account, which holds your personal URL.
-You sign in to it with Google or Microsoft, and closedhand.com keeps only the
-email you sign in with. The code, or the Microsoft sign-in, means
-a claim link sent by somebody else can never point your address at their
-computer. Bookmark your address, pin it in a chat app,
+Connecting Google or Microsoft through Closedhand's own app claims it with that
+same sign-in, which closedhand.com checks against Google's or Microsoft's keys.
+Otherwise, claim it on closedhand.com by signing in with Google or Microsoft,
+then paste the code closedhand.com shows you back into Closedhand. Connecting
+Google through your own Google project takes this second sign-in: closedhand.com
+can't tell a sign-in made by your own project from one made by any other app.
+Either way, claiming creates your Closedhand account, which holds your personal
+URL. You sign in to it with Google or Microsoft, and closedhand.com keeps only
+the email you sign in with. The code, or the sign-in through Closedhand's own
+app, means a claim link sent by somebody else can never point your address at
+their computer. Bookmark your address, pin it in a chat app,
 or add it to your phone's home screen (in Safari on iPhone, **Share → Add to Home
 Screen**).
 

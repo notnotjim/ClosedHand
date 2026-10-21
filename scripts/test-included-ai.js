@@ -45,7 +45,7 @@ test("a claim's AI key is kept by the claim and never handed on", async () => {
   assert.equal(data.included_ai, undefined, "the answer carries no key");
   assert.ok(!JSON.stringify(data).includes(KEY));
   assert.deepEqual(received, [{ key: KEY, models: MODELS }]);
-  const microsoft = await registration.claimWithMicrosoft("id-token");
+  const microsoft = await registration.claimWithSignIn("microsoft", "id-token");
   assert.equal(microsoft.included_ai, undefined);
   assert.equal(received.length, 2);
 });

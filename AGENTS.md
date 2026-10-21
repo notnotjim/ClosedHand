@@ -59,11 +59,12 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   account is named, the copy says what it keeps, the email, in those words: "stores your email
   and nothing else" is right, a bare "keeps nothing" is not. The privacy page carries the full
   list (the sign-in's account number and the URL's routing details). Signing in to take a personal URL is "claim", never
-  "confirm it with Google or Microsoft". Connecting Microsoft through Closedhand's own app
-  claims the personal URL with that same sign-in (closedhand.com checks it against
-  Microsoft's keys); Google always needs the second sign-in on closedhand.com, because its
-  mail connection uses the person's own Google project, which closedhand.com cannot trust.
-  After the mail sign-in, setup offers that second sign-in as one button, "Claim your personal
+  "confirm it with Google or Microsoft". Connecting Google or Microsoft through Closedhand's own app
+  claims the personal URL with that same sign-in (closedhand.com checks it against Google's or
+  Microsoft's keys). Connecting Google through the
+  person's own Google project needs a second sign-in on closedhand.com, because closedhand.com
+  cannot trust a sign-in made by someone else's project. After that mail sign-in, setup offers
+  the second sign-in as one button, "Claim your personal
   URL": closedhand.com signs in with the account just connected (any Google or Microsoft account
   may claim it), and the code goes back by itself to setup on that same computer, never
   anywhere else, so nothing is typed. Nothing else is ever called a

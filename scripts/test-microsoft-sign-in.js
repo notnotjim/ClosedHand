@@ -55,7 +55,7 @@ test('code sign-in hands back the code, waits, then saves a public sign-in',asyn
  const again=await h.call('/api/setup/microsoft/start');
  assert.equal(again.data.code,'ABCD1234');assert.equal(h.calls.length,1,'a second click shows the same code');
  const done=await h.call('/api/setup/microsoft/check');
- assert.deepEqual(done.data,{connected:true,email:'person@outlook.com',personalUrl:null});
+ assert.deepEqual(done.data,{connected:true,email:'person@outlook.com'});
  const t=h.connected();
  assert.equal(t.public_client,true);assert.equal(t.client_id,APP);assert.equal(t.authority,'consumers');assert.equal(t.client_secret,undefined);
  assert.equal((await h.call('/api/setup/microsoft/check')).data.idle,true);
@@ -103,11 +103,11 @@ test('the same Microsoft sign-in claims the personal URL, and a failed claim sti
  const token=idToken(app.PERSONAL_ACCOUNTS_TENANT),given=[];
  const h=harness([{access_token:'a',refresh_token:'r',expires_in:3600,id_token:token}],{claim:async t=>{given.push(t);return 'https://amber-fox-42.closedhand.ai';}});
  await h.call('/api/setup/microsoft/start');
- assert.deepEqual((await h.call('/api/setup/microsoft/check')).data,{connected:true,email:'person@outlook.com',personalUrl:'https://amber-fox-42.closedhand.ai'});
+ assert.deepEqual((await h.call('/api/setup/microsoft/check')).data,{connected:true,email:'person@outlook.com'});
  assert.deepEqual(given,[token],'closedhand.com is handed the sign-in Microsoft gave back');
  const broken=harness([{access_token:'a',refresh_token:'r',expires_in:3600,id_token:token}],{claim:async()=>{throw new Error('closedhand.com unreachable');}});
  await broken.call('/api/setup/microsoft/start');
  const done=await broken.call('/api/setup/microsoft/check');
- assert.equal(done.code,200);assert.deepEqual(done.data,{connected:true,email:'person@outlook.com',personalUrl:null});
+ assert.equal(done.code,200);assert.deepEqual(done.data,{connected:true,email:'person@outlook.com'});
  assert.ok(broken.connected(),'mail is connected either way');
 });

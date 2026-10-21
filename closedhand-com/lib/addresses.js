@@ -6,9 +6,9 @@
 // copy proves it answers at the new address before the address is marked
 // ready. Only routing records live here.
 //
-// A copy that has just connected Microsoft mail through Closedhand's own
-// Microsoft app can claim in one step instead (claim-microsoft): it passes
-// on that sign-in, which is checked against Microsoft's keys.
+// A copy that has just connected mail through Closedhand's own Google or
+// Microsoft app can claim in one step instead (claim-google, claim-microsoft):
+// it passes on that sign-in, which is checked against the provider's keys.
 //
 // The sign-in that claims a personal URL is the owner's Closedhand account.
 // Only its email is kept, with the address, and deleting it
@@ -21,7 +21,7 @@ const { encryptString, decryptString } = require('./crypto-tokens');
 const { equal } = require('./session');
 const { randomName, cleanName } = require('./names');
 const { reportDnsRecords } = require('./alerts');
-const { verifyMicrosoftToken } = require('./microsoft-token');
+const { verifyPassedSignIn } = require('./passed-sign-in');
 const { PROVIDERS } = require('./signin');
 const { ownerFor } = require('./owners');
 
@@ -425,28 +425,36 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     res.json(await claimed(row, a.owner_id, req));
   }));
 
-  // A copy that just connected Microsoft mail through Closedhand's own
-  // Microsoft app passes on that sign-in and claims in one step: Microsoft's
-  // signature stands in for signing in here, and the copy's own secret for
-  // the code. An address the owner already uses on another computer is never
-  // moved this way; the copy is told to claim it on the confirmation page.
-  app.post('/api/phone-enrollment/claim-microsoft', wrap(async (req, res) => {
-    const copy = installation(req), { idToken, port } = req.body || {};
-    if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update Closedhand on your computer and try again.' });
-    const apps = String(env.MICROSOFT_ASSOCIATED_APP_IDS || '').split(',').map(s => s.trim()).filter(id => uuid.test(id) && id !== env.MICROSOFT_CLIENT_ID);
-    const claims = apps.length ? await verifyMicrosoftToken(idToken, { appIds: apps, request }) : null;
-    const identity = claims && PROVIDERS.microsoft.identity(claims, claims.aud);
-    if (!identity) return res.status(400).json({ error: 'The Microsoft sign-in could not be checked. Claim your personal URL with the button instead.' });
-    const owner = await ownerFor(db, identity);
-    const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
-    if (mine && mine.secret_hash === copy.secret_hash && mine.state !== 'revoked') return res.json(await claimed(mine, owner, req));
-    const held = (await db.query('SELECT owner_id FROM addresses WHERE secret_hash = $1', [copy.secret_hash])).rows[0];
-    if ((mine && mine.state !== 'revoked') || (held && held.owner_id !== owner)) return res.json({ state: 'unconfirmed', claimHere: true });
-    const hostname = mine ? mine.hostname : await heldName(db, owner) || await freeName(db);
-    const row = await reserve(db, { ownerId: owner, secretHash: copy.secret_hash, hostname, port, limit });
-    res.json(await claimed(row, owner, req));
-  }));
+  // A copy that just connected mail through Closedhand's own Google or
+  // Microsoft app passes on that sign-in and claims in one step: the
+  // provider's signature stands in for signing in here, and the copy's own
+  // secret for the code. Closedhand's apps are the ones the copies sign in
+  // through, never closedhand.com's own sign-in app. An address the owner
+  // already uses on another computer is never moved this way; the copy is
+  // told to claim it on the confirmation page.
+  const passedApps = {
+    google: { ids: env.GOOGLE_ASSOCIATED_CLIENT_IDS, own: env.GOOGLE_CLIENT_ID, valid: /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/, name: 'Google' },
+    microsoft: { ids: env.MICROSOFT_ASSOCIATED_APP_IDS, own: env.MICROSOFT_CLIENT_ID, valid: uuid, name: 'Microsoft' },
+  };
+  for (const [provider, apps] of Object.entries(passedApps)) {
+    app.post('/api/phone-enrollment/claim-' + provider, wrap(async (req, res) => {
+      const copy = installation(req), { idToken, port } = req.body || {};
+      if (!copy) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
+      if (!Number.isInteger(port) || port < 1024 || port > 65535) return res.status(400).json({ error: 'Update Closedhand on your computer and try again.' });
+      const ids = String(apps.ids || '').split(',').map(s => s.trim()).filter(id => apps.valid.test(id) && id !== apps.own);
+      const claims = ids.length ? await verifyPassedSignIn(provider, idToken, { appIds: ids, request }) : null;
+      const identity = claims && PROVIDERS[provider].identity(claims, claims.aud);
+      if (!identity) return res.status(400).json({ error: `The ${apps.name} sign-in could not be checked. Claim your personal URL with the button instead.` });
+      const owner = await ownerFor(db, identity);
+      const mine = (await db.query('SELECT * FROM addresses WHERE owner_id = $1', [owner])).rows[0];
+      if (mine && mine.secret_hash === copy.secret_hash && mine.state !== 'revoked') return res.json(await claimed(mine, owner, req));
+      const held = (await db.query('SELECT owner_id FROM addresses WHERE secret_hash = $1', [copy.secret_hash])).rows[0];
+      if ((mine && mine.state !== 'revoked') || (held && held.owner_id !== owner)) return res.json({ state: 'unconfirmed', claimHere: true });
+      const hostname = mine ? mine.hostname : await heldName(db, owner) || await freeName(db);
+      const row = await reserve(db, { ownerId: owner, secretHash: copy.secret_hash, hostname, port, limit });
+      res.json(await claimed(row, owner, req));
+    }));
+  }
 
   // Which models Closedhand Managed Models use now. A computer with its key
   // asks a few times a day and switches itself over when they change. It is

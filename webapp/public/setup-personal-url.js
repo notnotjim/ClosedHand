@@ -1,6 +1,6 @@
-/* The personal URL, setup's step after email and calendar. Connecting Microsoft
-   through Closedhand's app claims it with that same sign-in; otherwise one
-   click claims it on closedhand.com (which picks the name). Then "Your
+/* The personal URL, setup's step after email and calendar. Connecting Google
+   or Microsoft through Closedhand's app claims it with that same sign-in;
+   otherwise one click claims it on closedhand.com (which picks the name). Then "Your
    Closedhand is at name.closedhand.ai", with Change to rename. Claimed, the
    step folds by itself: connecting carries on in the background. */
 (function (root) {

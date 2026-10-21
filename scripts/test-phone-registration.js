@@ -190,21 +190,26 @@ test('the Closedhand account: shown only as closedhand.com states it, and delete
   assert.equal(values.PHONE_PERMANENT_URL, null); assert.equal(values.PHONE_TUNNEL_TOKEN, null);
 });
 
-test('claiming with the Microsoft sign-in sends it once, by this copy, and steps aside when closedhand.com wants the confirmation page', async () => {
-  const values = {}, calls = [];
-  const client = registration(values, async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ state: 'pending', url: 'https://amber-fox-42.closedhand.ai' }) }; });
-  const done = await client.claimWithMicrosoft('id.token.here');
-  assert.equal(done.url, 'https://amber-fox-42.closedhand.ai');
-  assert.ok(calls[0].url.endsWith('/api/phone-enrollment/claim-microsoft'));
-  assert.deepEqual(JSON.parse(calls[0].options.body), { idToken: 'id.token.here', port: 3000 });
-  assert.match(calls[0].options.headers.Authorization, /^Bearer [a-f0-9-]{36}\.[a-f0-9]{64}$/);
-  assert.equal(values.PHONE_ADDRESS_NAME, 'amber-fox-42'); assert.equal(values.PHONE_ENROLLMENT, '2');
-  assert.equal(client.status().ownershipConfirmed, true);
-  const elsewhere = registration({}, async () => ({ ok: true, json: async () => ({ state: 'unconfirmed', claimHere: true }) }));
-  assert.equal(await elsewhere.claimWithMicrosoft('id.token.here'), null);
-  assert.equal(elsewhere.status().ownershipConfirmed, false);
-  const attacker = registration({}, async () => ({ ok: true, json: async () => ({ state: 'pending', url: 'https://evil.example' }) }));
-  assert.equal(await attacker.claimWithMicrosoft('id.token.here'), null, 'an address that is not a personal URL is ignored');
+test('claiming with the Google or Microsoft sign-in sends it once, by this copy, and steps aside when closedhand.com wants the confirmation page', async () => {
+  for (const provider of ['google', 'microsoft']) {
+    const values = {}, calls = [];
+    const client = registration(values, async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ state: 'pending', url: 'https://amber-fox-42.closedhand.ai' }) }; });
+    const done = await client.claimWithSignIn(provider, 'id.token.here');
+    assert.equal(done.url, 'https://amber-fox-42.closedhand.ai');
+    assert.ok(calls[0].url.endsWith('/api/phone-enrollment/claim-' + provider));
+    assert.deepEqual(JSON.parse(calls[0].options.body), { idToken: 'id.token.here', port: 3000 });
+    assert.match(calls[0].options.headers.Authorization, /^Bearer [a-f0-9-]{36}\.[a-f0-9]{64}$/);
+    assert.equal(values.PHONE_ADDRESS_NAME, 'amber-fox-42'); assert.equal(values.PHONE_ENROLLMENT, '2');
+    assert.equal(client.status().ownershipConfirmed, true);
+    const elsewhere = registration({}, async () => ({ ok: true, json: async () => ({ state: 'unconfirmed', claimHere: true }) }));
+    assert.equal(await elsewhere.claimWithSignIn(provider, 'id.token.here'), null);
+    assert.equal(elsewhere.status().ownershipConfirmed, false);
+    const attacker = registration({}, async () => ({ ok: true, json: async () => ({ state: 'pending', url: 'https://evil.example' }) }));
+    assert.equal(await attacker.claimWithSignIn(provider, 'id.token.here'), null, 'an address that is not a personal URL is ignored');
+  }
+  const asked = [];
+  await assert.rejects(registration({}, async (url) => { asked.push(url); return { ok: true, json: async () => ({}) }; }).claimWithSignIn('account/delete', 'id.token.here'));
+  assert.deepEqual(asked, [], 'only a Google or Microsoft sign-in is sent');
 });
 
 test('a code handed straight back counts only with the state from this copy\'s own recent link, and only once', async () => {
