@@ -47,11 +47,13 @@ Migrations in `migrations/` apply on start.
 | `BUG_RECEIPT_SECRET` | Signs bug report receipts (defaults to `SESSION_SECRET`) |
 | `ADDRESS_LIMIT` | How many personal URLs may exist (default 100) |
 | `OPENROUTER_PROVISIONING_KEY` | An OpenRouter management key; with it, each account that claims a personal URL gets its own OpenRouter key, Closedhand Managed Models (lib/included-ai.js); `TOKEN_ENCRYPTION_KEY` keys the fingerprints. Without it, no keys are made |
-| `INCLUDED_AI_STARTER_USD` | Credit on each person's first key (default 10). Given once per sign-in, ever: a one-way fingerprint of it stays after the account is deleted |
-| `INCLUDED_AI_MONTHLY_CAP_USD` | Most new free use given in a calendar month (default 1000); past it, setup asks for an LLM provider instead |
-| `INCLUDED_AI_DAILY_CAP_USD` | Most new free use given in any 24 hours (default 250), so a burst can't take the month's |
+| `INCLUDED_AI_FIRST_MONTH_DAYS` | How long the first month of Closedhand Managed Models lasts (default 30). Given once per sign-in, ever: a one-way fingerprint of it stays after the account is deleted. Its key has the fair-use ceiling, never reset, and is stopped when the month ends unless Closedhand+ takes over |
+| `INCLUDED_AI_MONTHLY_PEOPLE` | How many first months you expect to start in a calendar month (default 100). Never a stop: the maintainer is told at 75%, 90% and 100%, then every further 25% (lib/capacity.js) |
+| `INCLUDED_AI_DAILY_PEOPLE` | First months in 24 hours worth telling the maintainer about as a burst (default 25). Never a stop |
+| `OPENROUTER_MONTHLY_BUDGET_USD` | The monthly budget set in OpenRouter, the one stop for every Managed Models key; with it, the maintainer is told at 75%, 90% and 100% of this month's spend |
+| `OPERATOR_EMAIL` | The sign-in email of the maintainer's Closedhand account: its computer collects the notices above and Closedhand says them in its chat. A notice not collected within a day is emailed to `ASSISTANT_EMAIL_OPERATOR` through the `MAIL_*` sender |
 | `INCLUDED_AI_PER_CONNECTION` | How many people one internet connection can claim it for in 30 days (default 3) |
-| `INCLUDED_AI_FAIR_USE_USD` | Closedhand+'s fair use: the most LLM use a subscriber's key allows in a calendar month (default 20); OpenRouter resets it monthly, and carrying on past it doubles it for that month |
+| `INCLUDED_AI_FAIR_USE_USD` | Fair use: the most LLM use a key allows (default 20), for the whole first month, or in each calendar month of Closedhand+ (OpenRouter resets it monthly; carrying on past it doubles it for that month) |
 | `POLAR_ACCESS_TOKEN` | A Polar organization access token for Closedhand+ (lib/plus.js), with the scopes `checkouts:write`, `customer_sessions:write` and `subscriptions:write`. Without it, and the three below, Closedhand+ is off |
 | `POLAR_WEBHOOK_SECRET` | The secret of Polar's webhook to `BASE_URL/api/plus/webhook`, as Polar shows it (`whsec_...`), sending `subscription.created`, `subscription.updated`, `subscription.active`, `subscription.uncanceled`, `subscription.canceled`, `subscription.revoked` and `order.paid` |
 | `POLAR_PLUS_PRODUCT_ID` | The Closedhand+ product: monthly |

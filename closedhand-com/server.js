@@ -116,10 +116,14 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
     },
   });
   // Closedhand Managed Models' keys (lib/included-ai.js) and Closedhand+,
-  // which continues them (lib/plus.js), shared by the account routes.
+  // which continues them (lib/plus.js), shared by the account routes; the
+  // maintainer's notices about them (lib/capacity.js, lib/operator-notices.js)
+  // reach the maintainer's own Closedhand through those routes too.
   const includedAi = require('./lib/included-ai').create({ db, env, request });
   const plus = require('./lib/plus').create({ db, env, request, includedAi, baseUrl });
-  require('./lib/addresses').register(app, { db, sessions, secret, baseUrl, env, request, includedAi, plus });
+  const notices = require('./lib/operator-notices').create({ db, env, request });
+  const capacity = require('./lib/capacity').create({ db, env, includedAi, notices });
+  require('./lib/addresses').register(app, { db, sessions, secret, baseUrl, env, request, includedAi, plus, notices });
   plus.register(app, { sessions });
   require('./lib/bugs').register(app, { db, secret: env.BUG_RECEIPT_SECRET || secret });
   require('./lib/download-link').register(app, { env, request });
@@ -144,7 +148,17 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
     if (res.headersSent) return next(err);
     res.status(status).json({ error: status === 413 ? 'That request is too large.' : status < 500 ? 'That request could not be read.' : 'Something went wrong. Please try again.' });
   });
-  return { app, sessions, plus, stopMail: () => typeof mailWorker === 'function' && mailWorker() };
+  // Run hourly: first months that have run out and months carried on past
+  // fair use end, keys are brought in line with their subscriptions, the
+  // maintainer is told what needs raising, and a notice their computer has
+  // not collected for a day goes by email.
+  async function hourly() {
+    await includedAi.sweep().catch(e => console.error('[included ai] sweep:', e.message));
+    await plus.sweep().catch(e => console.error('[plus] sweep:', e.message));
+    await capacity.check().catch(e => console.error('[capacity] check:', e.message));
+    await notices.emailStale().catch(e => console.error('[operator] notices:', e.message));
+  }
+  return { app, sessions, plus, hourly, stopMail: () => typeof mailWorker === 'function' && mailWorker() };
 }
 
 if (require.main === module) {
@@ -152,10 +166,8 @@ if (require.main === module) {
   (async () => {
     const db = connect();
     await migrate(db);
-    const { app, plus } = createApp({ db });
-    // Hourly: months carried on past fair use end, and keys that could not be
-    // set to match their subscription are tried again.
-    setInterval(() => plus.sweep().catch(e => console.error('[plus] sweep:', e.message)), 3600000).unref();
+    const { app, hourly } = createApp({ db });
+    setInterval(hourly, 3600000).unref();
     const port = Number(process.env.PORT || 8080);
     app.listen(port, () => console.log(`[closedhand.com] listening on ${port}`));
   })().catch(e => { console.error('[closedhand.com] failed to start:', e.message); process.exit(1); });

@@ -30,7 +30,7 @@ function openRouter({ down = false, failAssign = false } = {}) {
     }
     if (method === 'POST' && path === '/keys') {
       const hash = crypto.randomBytes(32).toString('hex'), key = 'sk-or-v1-' + crypto.randomBytes(32).toString('hex');
-      keys.set(hash, { name: body.name, limit: body.limit, usage: 0, key, guardrail: null });
+      keys.set(hash, { name: body.name, limit: body.limit, limit_reset: body.limit_reset || null, usage: 0, usage_monthly: 0, key, guardrail: null });
       return reply(201, { data: { hash, name: body.name, limit: body.limit, limit_remaining: body.limit, usage: 0 }, key });
     }
     m = path.match(/^\/keys\/([a-f0-9]{64})$/);
@@ -38,35 +38,37 @@ function openRouter({ down = false, failAssign = false } = {}) {
       const k = keys.get(m[1]);
       return k ? reply(200, { data: { hash: m[1], limit: k.limit, usage: k.usage, limit_remaining: k.limit - k.usage } }) : reply(404, { error: 'not found' });
     }
+    if (m && method === 'PATCH') { Object.assign(keys.get(m[1]), body); return reply(200, { data: keys.get(m[1]) }); }
     if (m && method === 'DELETE') { keys.delete(m[1]); return reply(200, { deleted: true }); }
+    m = path.match(/^\/keys\?offset=(\d+)$/);
+    if (m && method === 'GET') return reply(200, { data: [...keys.values()].slice(Number(m[1]), Number(m[1]) + 100).map(k => ({ usage_monthly: k.usage_monthly })) });
     throw new Error('unexpected ' + method + ' ' + url);
   };
   return { request, keys, guardrails, calls };
 }
 
 // The few queries included-ai.js makes, over lists of rows: accounts (owners),
-// their keys (included_ai_keys) and the free use given (starter_grants).
+// their keys (included_ai_keys) and the first months given (starter_grants).
 function database() {
   const rows = [], grants = [], owners = new Map();
-  const DAY = 24 * 3600 * 1000;
-  const monthStart = () => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d; };
   const result = list => ({ rows: list, rowCount: list.length });
   return {
     rows, grants, owners,
     async query(sql, args = []) {
       if (sql.startsWith('SELECT * FROM included_ai_keys') || sql.startsWith('SELECT key_hash FROM included_ai_keys')) return result(rows.filter(r => r.owner_id === args[0]));
-      if (sql.startsWith('INSERT INTO included_ai_keys')) { rows.push({ owner_id: args[0], key_hash: args[1], granted_usd: args[2], granted_at: new Date() }); return result([]); }
-      if (sql.startsWith('UPDATE included_ai_keys')) { rows.find(r => r.owner_id === args[0]).key_hash = args[1]; return result([]); }
+      if (sql.startsWith('INSERT INTO included_ai_keys')) {
+        rows.push({ owner_id: args[0], key_hash: args[1], granted_usd: args[2], granted_at: new Date(), ends_at: new Date(Date.now() + args[3] * DAY), stopped_at: null });
+        return result([]);
+      }
+      if (sql.startsWith('UPDATE included_ai_keys SET key_hash')) { rows.find(r => r.owner_id === args[0]).key_hash = args[1]; return result([]); }
+      if (sql.startsWith('UPDATE included_ai_keys SET stopped_at = now()')) { rows.find(r => r.owner_id === args[0]).stopped_at = new Date(); return result([]); }
+      if (sql.includes('FROM included_ai_keys k')) return result(rows.filter(r => !r.stopped_at && r.ends_at && r.ends_at <= new Date()).map(r => ({ owner_id: r.owner_id })));
       if (sql.startsWith('SELECT provider, subject FROM owners')) return result(owners.has(args[0]) ? [owners.get(args[0])] : []);
       // Closedhand+ is test/plus.js's: nobody here subscribes.
       if (sql.includes('FROM plus_subscriptions')) return result([]);
       if (sql.startsWith('UPDATE starter_grants SET network_hash = NULL')) { for (const g of grants) if (Date.now() - g.granted_at > 30 * DAY) g.network_hash = null; return result([]); }
       if (sql.startsWith('SELECT 1 FROM starter_grants WHERE person_hash')) return result(grants.filter(g => g.person_hash === args[0]));
       if (sql.includes('FROM starter_grants WHERE network_hash')) return result([{ n: grants.filter(g => g.network_hash === args[0] && Date.now() - g.granted_at < 30 * DAY).length }]);
-      if (sql.includes('SUM(granted_usd) FILTER')) {
-        const sum = list => list.reduce((n, g) => n + g.granted_usd, 0);
-        return result([{ day: sum(grants.filter(g => Date.now() - g.granted_at < DAY)), month: sum(grants.filter(g => g.granted_at >= monthStart())) }]);
-      }
       if (sql.startsWith('INSERT INTO starter_grants')) {
         if (grants.some(g => g.person_hash === args[0])) return result([]);
         const g = { id: grants.length + 1, person_hash: args[0], network_hash: args[1], granted_usd: args[2], granted_at: new Date() };
@@ -78,6 +80,7 @@ function database() {
     },
   };
 }
+const DAY = 24 * 3600 * 1000;
 // An account signed in with an invented Google account.
 const ACCOUNT_KEY = 'k'.repeat(44);
 const env = (more = {}) => ({ OPENROUTER_PROVISIONING_KEY: MANAGEMENT, TOKEN_ENCRYPTION_KEY: ACCOUNT_KEY, ...more });
@@ -88,7 +91,7 @@ let addresses = 0;
 const from = () => ({ ip: '198.51.100.' + (++addresses % 250) });
 const quiet = fn => async () => { const log = console.log, err = console.error; console.log = console.error = () => {}; try { await fn(); } finally { console.log = log; console.error = err; } };
 
-test('a claim gets a key of its own: the starter credit, the chosen model only, on providers that keep nothing', async () => {
+test('a claim gets a first month of its own: the fair-use ceiling, never reset, the chosen model only, on providers that keep nothing', async () => {
   const or = openRouter(), db = database();
   const ai = create({ db, env: env(), request: or.request });
   const id = owner(db);
@@ -96,21 +99,23 @@ test('a claim gets a key of its own: the starter credit, the chosen model only, 
   assert.match(given.key, /^sk-or-v1-[a-f0-9]{64}$/);
   assert.deepEqual(given.models, { chat: 'deepseek/deepseek-v4.1-flash', background: 'deepseek/deepseek-v4.1-flash' });
   const [hash, made] = [...or.keys][0];
-  assert.equal(made.limit, 10);
+  assert.deepEqual([made.limit, made.limit_reset], [20, null], 'the whole month, not reset');
   assert.equal(made.name, 'Closedhand ' + id, 'named by the account, never its email');
   const rail = or.guardrails[0];
   assert.equal(made.guardrail, rail.id, 'attached to the guardrail');
   assert.deepEqual(rail.allowed_models, ['deepseek/deepseek-v4.1-flash']);
   for (const field of ['enforce_zdr_other', 'enforce_zdr_anthropic', 'enforce_zdr_openai', 'enforce_zdr_google', 'enforce_zdr_xai']) assert.equal(rail[field], true, field);
   for (const field of ['allow_safety_retention_other', 'allow_safety_retention_google', 'enable_paid_model_training', 'enable_free_model_training', 'enable_free_model_publication']) assert.equal(rail[field], false, field);
-  assert.deepEqual(db.rows.map(r => [r.key_hash, r.granted_usd]), [[hash, 10]], 'only the hash is kept, with the credit given');
+  assert.deepEqual(db.rows.map(r => [r.key_hash, r.granted_usd]), [[hash, 20]], 'only the hash is kept');
+  const days = (db.rows[0].ends_at - Date.now()) / DAY;
+  assert.ok(days > 29.9 && days <= 30, 'the first month ends in 30 days');
   assert.ok(!JSON.stringify(db.rows).includes(given.key), 'the key itself is never stored');
   // A second account reuses the guardrail instead of making another.
   await ai.forOwner(owner(db), from());
   assert.equal(or.guardrails.length, 1);
 });
 
-test('claiming again gets a new key with what was left; the old one stops working', async () => {
+test('claiming again gets a new key with what was left and the same end; the old one stops working', async () => {
   const or = openRouter(), db = database();
   const ai = create({ db, env: env(), request: or.request });
   const id = owner(db);
@@ -121,22 +126,46 @@ test('claiming again gets a new key with what was left; the old one stops workin
   assert.ok(again.key);
   assert.ok(!or.keys.has(firstHash), 'the old key is deleted');
   const [, second] = [...or.keys][0];
-  assert.equal(second.limit, 3.75, 'it carries what was left');
+  assert.equal(second.limit, 13.75, 'it carries what was left');
   assert.equal(db.rows.length, 1);
-  assert.equal(db.rows[0].granted_usd, 10, 'no new starter credit');
-  // Used up: nothing more to hand over.
-  second.usage = 3.75;
+  const ends = db.rows[0].ends_at;
+  assert.ok(ends > new Date(), 'the same first month');
+  // Once the month is over, claiming again brings nothing.
+  db.rows[0].ends_at = new Date(Date.now() - 1000);
   assert.equal(await ai.forOwner(id, from()), null);
 });
 
-test('new starter credit stops at the monthly cap, and the claim goes on without a key', quiet(async () => {
+test('how many people start is never a reason to refuse one', quiet(async () => {
   const or = openRouter(), db = database();
-  const ai = create({ db, env: env({ INCLUDED_AI_MONTHLY_CAP_USD: '25' }), request: or.request });
-  assert.ok(await ai.forOwner(owner(db), from()));
-  assert.ok(await ai.forOwner(owner(db), from()));
-  assert.equal(await ai.forOwner(owner(db), from()), null, '$30 would pass the $25 cap');
-  assert.equal(or.keys.size, 2);
+  const ai = create({ db, env: env({ INCLUDED_AI_MONTHLY_PEOPLE: '2', INCLUDED_AI_DAILY_PEOPLE: '2' }), request: or.request });
+  for (let i = 0; i < 6; i++) assert.ok(await ai.forOwner(owner(db), from()), 'person ' + (i + 1));
+  assert.equal(await ai.offered(from()), true);
+  assert.equal(or.keys.size, 6);
 }));
+
+test('the hourly sweep stops a first month that has run out, once', quiet(async () => {
+  const or = openRouter(), db = database();
+  const ai = create({ db, env: env(), request: or.request });
+  const id = owner(db), still = owner(db);
+  await ai.forOwner(id, from());
+  await ai.forOwner(still, from());
+  const made = or.keys.get(db.rows[0].key_hash);
+  made.usage = 7.326;
+  db.rows[0].ends_at = new Date(Date.now() - 1000);
+  assert.equal(await ai.sweep(), 1);
+  assert.deepEqual([made.limit, made.limit_reset], [7.32, null], 'stopped where it stands');
+  assert.ok(db.rows[0].stopped_at);
+  assert.equal(or.keys.get(db.rows[1].key_hash).limit, 20, 'a month still running is left alone');
+  assert.equal(await ai.sweep(), 0, 'stopped once');
+}));
+
+test('this month\'s spend is added up across every key, a page at a time', async () => {
+  const or = openRouter(), db = database();
+  const ai = create({ db, env: env(), request: or.request });
+  for (let i = 0; i < 150; i++) or.keys.set(String(i), { usage_monthly: 0.5 });
+  assert.equal(await ai.spentThisMonth(), 75);
+  assert.deepEqual(or.calls.filter(c => c.startsWith('GET /keys?')), ['GET /keys?offset=0', 'GET /keys?offset=100', 'GET /keys?offset=150']);
+});
 
 test('nothing is made without a management key, or when OpenRouter is unreachable', quiet(async () => {
   const or = openRouter();
@@ -152,7 +181,7 @@ test('a key the guardrail could not be attached to is deleted, never handed over
   assert.equal(await ai.forOwner(owner(db), from()), null);
   assert.equal(or.keys.size, 0, 'the unguarded key is gone');
   assert.equal(db.rows.length, 0);
-  assert.equal(db.grants.length, 0, 'the free use it held is given back');
+  assert.equal(db.grants.length, 0, 'the first month it held is given back');
 }));
 
 test('deleting the account deletes its key', async () => {
@@ -166,7 +195,7 @@ test('deleting the account deletes its key', async () => {
 
 test('the models come from the settings: chat first, support second; ones being switched away from stay allowed', async () => {
   const or = openRouter();
-  const ai = create({ db: database(), env: env({ INCLUDED_AI_MODELS: 'deepseek/deepseek-v4.1-flash, qwen/qwen3-next', INCLUDED_AI_RETIRING_MODELS: 'deepseek/deepseek-v4-flash', INCLUDED_AI_STARTER_USD: '5' }), request: or.request });
+  const ai = create({ db: database(), env: env({ INCLUDED_AI_MODELS: 'deepseek/deepseek-v4.1-flash, qwen/qwen3-next', INCLUDED_AI_RETIRING_MODELS: 'deepseek/deepseek-v4-flash', INCLUDED_AI_FAIR_USE_USD: '5' }), request: or.request });
   const given = await ai.forOwner(owner(), from());
   assert.deepEqual(given.models, { chat: 'deepseek/deepseek-v4.1-flash', background: 'qwen/qwen3-next' });
   assert.deepEqual(ai.current(), given.models, 'computers asking get the same pick');
@@ -175,7 +204,7 @@ test('the models come from the settings: chat first, support second; ones being 
   assert.equal([...or.keys.values()][0].limit, 5);
 });
 
-test('free use is given once per person: deleting the account and claiming again gives nothing new', quiet(async () => {
+test('a first month is given once per person: deleting the account and claiming again gives nothing new', quiet(async () => {
   const or = openRouter(), db = database();
   const ai = create({ db, env: env(), request: or.request });
   const first = owner(db, 'g-avery');
@@ -201,13 +230,4 @@ test('one connection gets it a few times a month, then no more; others still do'
   for (const g of db.grants) g.granted_at = new Date(Date.now() - 31 * 24 * 3600 * 1000);
   assert.ok(await ai.forOwner(owner(db), home));
   assert.equal(db.grants.filter(g => g.network_hash === null).length, 4);
-}));
-
-test('no more than a day\'s ceiling of new free use goes out in a day', quiet(async () => {
-  const or = openRouter(), db = database();
-  const ai = create({ db, env: env({ INCLUDED_AI_DAILY_CAP_USD: '25' }), request: or.request });
-  assert.ok(await ai.forOwner(owner(db), from()));
-  assert.ok(await ai.forOwner(owner(db), from()));
-  assert.equal(await ai.forOwner(owner(db), from()), null, '$30 would pass the $25 day');
-  assert.equal(await ai.offered(from()), false);
 }));

@@ -170,11 +170,11 @@ function create({ db, env = process.env, request = fetch, includedAi, baseUrl = 
     return 'not used';
   }
 
-  // Run hourly: months carried on past fair use end, and any key not yet set
-  // to match its subscription (OpenRouter was unreachable) is tried again.
+  // Run hourly, after included-ai.js's own sweep has ended months carried on
+  // past fair use: any key not yet set to match its subscription (OpenRouter
+  // was unreachable, or that month just ended) is tried again.
   async function sweep() {
     if (!enabled()) return 0;
-    await includedAi.sweep();
     const unsynced = (await db.query('SELECT owner_id FROM plus_subscriptions WHERE NOT key_synced LIMIT 50')).rows;
     for (const { owner_id: ownerId } of unsynced) await sync(ownerId).catch(e => console.error('[plus] sweep:', e.message));
     return unsynced.length;

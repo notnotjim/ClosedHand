@@ -731,7 +731,7 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     if (method === 'DELETE' && path.startsWith('/keys/')) { keys.delete(path.slice(6)); return new Response('{}'); }
     throw new Error('unexpected ' + method + ' ' + url);
   };
-  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64) }, request: (url, opts) => url.startsWith('https://openrouter.ai/') ? openRouter(url, opts) : request(url, opts) });
+  const { app } = createApp({ db, env: { ...env, OPENROUTER_PROVISIONING_KEY: 'sk-or-v1-' + 'm'.repeat(64), OPERATOR_EMAIL: 'Quinn@Example.com' }, request: (url, opts) => url.startsWith('https://openrouter.ai/') ? openRouter(url, opts) : request(url, opts) });
   const other = await new Promise(r => { const s = app.listen(0, () => r(s)); });
   const at = 'http://127.0.0.1:' + other.address().port;
   const call = (method, path, body, headers = {}) => fetch(at + path, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body && JSON.stringify(body) });
@@ -749,14 +749,23 @@ test('claiming a personal URL hands that computer its own AI key, kept here only
     assert.deepEqual(done.included_ai.models, { chat: 'deepseek/deepseek-v4.1-flash', background: 'deepseek/deepseek-v4.1-flash' });
     const row = (await db.query("SELECT k.* FROM included_ai_keys k JOIN owners o ON o.id = k.owner_id WHERE o.subject = 'g-quinn'")).rows[0];
     assert.ok(keys.has(row.key_hash), 'the hash names the key at OpenRouter');
-    assert.equal(Number(row.granted_usd), 10);
+    assert.equal(Number(row.granted_usd), 20);
+    assert.equal([...keys.values()][0].limit, 20, 'the first month has the fair-use ceiling');
+    assert.ok(new Date(row.ends_at) > new Date(Date.now() + 29 * 24 * 3600 * 1000), 'and ends in a month');
     assert.ok(!JSON.stringify(row).includes(done.included_ai.key), 'the key itself is not kept');
     assert.equal([...keys.values()][0].name, 'Closedhand ' + row.owner_id, 'named by the account, not its email');
     // The computer can ask which models are current, and only a known computer.
     const asked = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
     assert.deepEqual(asked.models, done.included_ai.models);
-    assert.equal(asked.plan.name, 'free', 'and that it is on the free use');
+    assert.deepEqual(asked.plan, { name: 'first-month', ends_at: new Date(row.ends_at).toISOString(), email: false }, 'and that it is in its first month');
     assert.equal(asked.key, undefined);
+    assert.equal(asked.notices, undefined, 'nothing waiting for the maintainer yet');
+    assert.deepEqual((await (await call('GET', '/api/account', undefined, { cookie: owner.cookie })).json()).plan, asked.plan, 'the account page is told the same');
+    // The maintainer's own Closedhand (OPERATOR_EMAIL) collects their notices, once.
+    await db.query("INSERT INTO operator_notices (text) VALUES ('Closedhand: a fixture notice.')");
+    const told = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
+    assert.deepEqual(told.notices.map(n => n.text), ['Closedhand: a fixture notice.']);
+    assert.equal((await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json()).notices, undefined, 'said once');
     assert.equal((await call('GET', '/api/phone-enrollment/included-ai')).status, 401);
     // Deleting the account from its computer deletes the key too.
     assert.deepEqual(await (await call('POST', '/api/phone-enrollment/account/delete', {}, copy.auth)).json(), { deleted: true });
@@ -850,7 +859,7 @@ test('Closedhand+: checkout, a signed webhook, the computer collects its key, ca
 
     // The computer learns its plan and collects its key, once.
     const first = await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json();
-    assert.deepEqual(first.plan, { name: 'plus', renews_at: '2026-12-01T00:00:00.000Z', extended: false });
+    assert.deepEqual(first.plan, { name: 'plus', renews_at: '2026-12-01T00:00:00.000Z', extended: false, email: false });
     assert.match(first.key, /^sk-or-v1-[a-f0-9]{64}$/);
     const [, made] = [...keys][0];
     assert.deepEqual([made.limit, made.limit_reset], [20, 'monthly']);
@@ -868,7 +877,7 @@ test('Closedhand+: checkout, a signed webhook, the computer collects its key, ca
     await hook('subscription.revoked', subscription('canceled', { cancel_at_period_end: true }));
     await synced(ownerId);
     assert.deepEqual([made.limit, made.limit_reset], [4.2, null]);
-    assert.equal((await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json()).plan.name, 'free');
+    assert.equal((await (await call('GET', '/api/phone-enrollment/included-ai', undefined, copy.auth)).json()).plan.name, 'ended');
 
     // The account goes; an ended subscription needs nothing from Polar.
     const before = polar.length;

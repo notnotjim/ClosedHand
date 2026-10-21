@@ -284,7 +284,8 @@ async function releaseIdle(pool, days) {
   return idle.length;
 }
 
-function register(app, { db, sessions, secret, baseUrl, env = process.env, request = fetch, includedAi = require('./included-ai').create({ db, env, request }), plus = null }) {
+function register(app, { db, sessions, secret, baseUrl, env = process.env, request = fetch, includedAi = require('./included-ai').create({ db, env, request }), plus = null, notices = null }) {
+  const { planFor } = require('./plan');
   const enabled = () => env.PHONE_ENROLLMENT_ENABLED === '1';
   // A claim's answer, with the included AI's key when one is given.
   const claimed = async (row, ownerId, req) => {
@@ -449,16 +450,17 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
 
   // Which models Closedhand Managed Models use now. A computer with its key
   // asks a few times a day and switches itself over when they change. It is
-  // also told its plan (Closedhand+ or the free use), and a subscriber whose
-  // account holds no key yet gets one here, once, to seal.
+  // also told its plan (lib/plan.js: its first month, Closedhand+, ended or
+  // none), a subscriber whose account holds no key yet gets one here, once,
+  // to seal, and the maintainer's own Closedhand collects their notices.
   app.get('/api/phone-enrollment/included-ai', wrap(async (req, res) => {
     if (!installation(req)) return res.status(401).json({ error: 'Closedhand could not be recognised. Update it on your computer and try again.' });
     const found = await owned(req);
     const ownerId = found?.row.owner_id || null;
-    const now = ownerId && plus ? await plus.state(ownerId) : null;
-    const plan = now ? { name: now.active ? 'plus' : 'free', ...(now.renews_at ? { renews_at: now.renews_at } : {}), ...(now.ends_at ? { ends_at: now.ends_at } : {}), extended: now.extended } : null;
-    const key = now?.active ? await includedAi.collect(ownerId) : null;
-    res.json({ models: includedAi.current(), ...(plan ? { plan } : {}), ...(key ? { key: key.key } : {}) });
+    const plan = await planFor(db, env, ownerId);
+    const key = plan.name === 'plus' ? await includedAi.collect(ownerId) : null;
+    const told = notices ? await notices.collect(ownerId) : [];
+    res.json({ models: includedAi.current(), plan, ...(key ? { key: key.key } : {}), ...(told.length ? { notices: told } : {}) });
   }, { always: true }));
 
   // The copy renames its address. It is known by its secret, like every
@@ -557,8 +559,9 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
       }
       // A sign-in whose account was deleted is no sign-in at all.
       const offered = enabled() && await includedAi.offered({ ip: req.ip });
-      const plan = person && plus ? await plus.state(owner) : null;
-      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}), ...(plan ? { plus: plan } : {}) });
+      const plusState = person && plus ? await plus.state(owner) : null;
+      const plan = person ? await planFor(db, env, owner) : null;
+      res.json({ signedIn: !!person, provider, email, emailVerified, url, address, available: enabled(), includedAi: offered, ...(offered ? { includedAiModel: includedAi.current().chat } : {}), ...(plusState ? { plus: plusState } : {}), ...(plan ? { plan } : {}) });
     } catch (e) {
       console.error('[addresses] account:', e.message);
       res.status(503).json({ error: 'Could not look up your account. Please try again.' });

@@ -1,6 +1,7 @@
-// Closedhand+ (lib/plus.js) against a real Postgres, in a schema of its own so
-// it can run beside e2e.js, with a stand-in Polar and a stand-in OpenRouter:
-// nothing leaves this machine. Invented people only.
+// Closedhand+ (lib/plus.js) against a real Postgres, in a database of its own
+// so it can run beside e2e.js (which empties its own as it starts), with a
+// stand-in Polar and a stand-in OpenRouter: nothing leaves this machine.
+// Invented people only.
 // Run: DATABASE_URL=postgres://... node --test closedhand-com/test/plus.js
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,17 +13,21 @@ const { create, verify } = require('../lib/plus');
 const PLUS = '11111111-1111-4111-8111-111111111111', EXTEND = '22222222-2222-4222-8222-222222222222';
 const MANAGEMENT = 'sk-or-v1-' + 'm'.repeat(64);
 const SECRET = 'whsec_' + crypto.randomBytes(32).toString('base64');
+const NAME = 'closedhand_plus_test';
 let admin, db;
 
 before(async () => {
   admin = new Pool({ connectionString: process.env.DATABASE_URL });
-  await admin.query('DROP SCHEMA IF EXISTS plus_test CASCADE; CREATE SCHEMA plus_test');
-  db = new Pool({ connectionString: process.env.DATABASE_URL, options: '-c search_path=plus_test' });
+  await admin.query(`DROP DATABASE IF EXISTS ${NAME}`);
+  await admin.query(`CREATE DATABASE ${NAME}`);
+  const url = new URL(process.env.DATABASE_URL);
+  url.pathname = '/' + NAME;
+  db = new Pool({ connectionString: url.toString() });
   await migrate(db);
 });
 after(async () => {
   await db?.end();
-  await admin?.query('DROP SCHEMA IF EXISTS plus_test CASCADE');
+  await admin?.query(`DROP DATABASE IF EXISTS ${NAME}`);
   await admin?.end();
 });
 
@@ -223,6 +228,8 @@ test('the hourly sweep ends a month carried on past fair use, and retries keys O
   await w.plus.sweep();
   assert.equal((await heldKey(w, p.id)).limit, 40, 'carried on this month');
   await db.query('UPDATE plus_subscriptions SET extended_month = $2 WHERE owner_id = $1', [p.id, lastMonth()]);
+  // The server's hourly run: the month carried on ends, then the key follows.
+  await w.includedAi.sweep();
   await w.plus.sweep();
   assert.equal((await heldKey(w, p.id)).limit, 20, 'back to fair use in a new month');
   assert.equal((await db.query('SELECT extended_month FROM plus_subscriptions WHERE owner_id = $1', [p.id])).rows[0].extended_month, null);
