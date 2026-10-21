@@ -29,6 +29,7 @@ const MANIFEST = path.join(__dirname, "vendored-manifest.json");
 const PAIRS = [
   { name: "assistant-email-protocol", copies: ["lib/assistant-email-protocol.js", "webapp/assistant-email-protocol.js", "closedhand-com/lib/assistant-email-protocol.js"] },
   { name: "goals-time", copies: ["lib/goals-time.js", "webapp/goals-time.js"] },
+  { name: "move-marker", copies: ["lib/move-marker.js", "webapp/move-marker.js"] },
   { name: "storage-driver-pg", copies: ["lib/storage-driver-pg.js", "webapp/storage-driver-pg.js"] },
   { name: "name-guess", copies: ["lib/name-guess.js", "webapp/name-guess.js"] },
   { name: "settings-patch", copies: ["lib/settings-patch.js", "webapp/settings-patch.js"] },

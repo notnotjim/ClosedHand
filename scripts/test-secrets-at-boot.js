@@ -60,10 +60,10 @@ test('a shared secret that is missing, short or an example value stops the start
 test('both services check the web chat secret at boot, and no known fallback is left in the code', () => {
   assert.match(read('index.js'), /require\("\.\/crypto-tokens"\)\.assertReady\(\);\nrequire\("\.\/lib\/required-secrets"\)\.requireSecret\("WS_AUTH_SECRET"\);/);
   assert.match(read('webapp/server.js'), /require\("\.\/crypto-tokens"\)\.assertReady\(\);\nrequire\("\.\/required-secrets"\)\.requireSecret\("WS_AUTH_SECRET"\);/);
-  for (const f of ['index.js', 'webapp/server.js', 'lib/web-chat-ws.js']) {
+  for (const f of ['index.js', 'webapp/server.js', 'lib/web-chat-ws.js', 'lib/ws-ticket.js']) {
     assert.doesNotMatch(read(f), /fallback-dev-secret|change-me-sandbox-token|change-me-dev-secret/, f);
   }
-  assert.match(read('lib/web-chat-ws.js'), /if \(!token \|\| !WS_AUTH_SECRET\) return null;/);
+  assert.match(read('lib/ws-ticket.js'), /if \(!token \|\| !WS_AUTH_SECRET\) return null;/);
 });
 
 test('Docker will not start without the generated secrets', () => {

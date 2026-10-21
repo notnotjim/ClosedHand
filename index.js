@@ -15,6 +15,10 @@ require("./crypto-tokens").guardEnvironment();
 require("./crypto-tokens").assertReady();
 require("./lib/required-secrets").requireSecret("WS_AUTH_SECRET");
 
+// A Closedhand moving to another computer, or moved, starts nothing here, so
+// two never answer the same chat (lib/move-marker.js, webapp/move.js).
+if (require("./lib/move-marker").read()) return require("./lib/move-idle").start();
+
 // Prevent unhandled rejections from crashing the process
 process.on("unhandledRejection", (reason, promise) => {
   console.error("[FATAL] Unhandled rejection:", reason?.message || reason);
@@ -122,14 +126,17 @@ require("./lib/platforms/whatsapp-linked").setup();
 // A restart used to kill the process outright. WhatsApp's keys on disk could
 // then lag what was in memory, and the phone could not read the next message.
 let _stopping = false;
-async function stopCleanly(signal) {
+async function closeCleanly(signal, code = 0) {
   if (_stopping) return;
   _stopping = true;
   console.log(`[shutdown] ${signal}: closing WhatsApp and flushing usage`);
-  const finish = setTimeout(() => process.exit(0), 5000);
+  const finish = setTimeout(() => process.exit(code), 5000);
   try { await require("./lib/platforms/whatsapp-linked").closeForShutdown(); } catch (_) {}
   try { await require("./lib/usage").flushUsage(); } catch (_) {}
   clearTimeout(finish);
+}
+async function stopCleanly(signal) {
+  await closeCleanly(signal);
   process.exit(0);
 }
 process.on("SIGTERM", () => stopCleanly("SIGTERM"));
@@ -168,6 +175,8 @@ ctx.expressApp.get("/health", (req, res) => {
 // The files on emails Closedhand keeps, asked for by the dashboard (lib/mail-file.js).
 require("./lib/mail-file").register(ctx.expressApp);
 require("./lib/sign-in-code").register(ctx.expressApp);
+// The dashboard starts the bot again when a move begins or ends (webapp/move.js).
+require("./lib/move-idle").registerRestart(ctx.expressApp, () => closeCleanly("restart", 1));
 // The web chat's mic, written out by the built-in speech to text (lib/dictation.js).
 require("./lib/dictation").register(ctx.expressApp);
 // Recordings and videos File Search finds, written out the same way (lib/hear-route.js).

@@ -16,6 +16,10 @@ require("./crypto-tokens").guardEnvironment();
 require("./crypto-tokens").assertReady();
 require("./required-secrets").requireSecret("WS_AUTH_SECRET");
 
+// A Closedhand that has moved to another computer shows only where it went,
+// and starts nothing else (move.js, moved-server.js).
+if ((require("./move-marker").read() || {}).state === "moved") return require("./moved-server").serve();
+
 const express = require("express");
 const http = require("http");
 const https = require("https");
@@ -1780,6 +1784,67 @@ app.post("/api/setup-code", async (req, res) => {
   res.append("Set-Cookie", cookie);
   res.json({ ok: true, next: "/setup" });
 });
+// --- A Closedhand moving here from another computer (move.js) -------------
+// Open only on a Closedhand with a setup code and no password yet: hello
+// takes the setup code and hands out the token the other calls carry.
+const move = require("./move");
+const moveMarker = require("./move-marker");
+async function restartBot() {
+  const { BOT_INTERNAL_URL, botToken } = require("./bot-call");
+  const { getAdminUserId } = require("./admin");
+  const r = await fetch(`${BOT_INTERNAL_URL}/internal/restart`, { method: "POST", headers: { "x-closedhand-token": botToken(getAdminUserId()) }, signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw new Error(`the bot answered ${r.status}`);
+}
+async function botMoveState() {
+  const { BOT_INTERNAL_URL } = require("./bot-call");
+  const r = await fetch(`${BOT_INTERNAL_URL}/health`, { signal: AbortSignal.timeout(3000) });
+  return (await r.json()).move || null;
+}
+// Docker, the Mac app and the host start the dashboard again, reading the
+// move afresh. A non-zero exit, since a host may restart only on failure.
+const exitSoon = () => setTimeout(() => process.exit(1), 3000);
+const moveStorage = () => (process.env.STORAGE_DRIVER || "local").toLowerCase() === "pg" ? "pg" : (process.env.STORAGE_DIR || "./data/storage");
+const intoHereDeps = () => ({ setupCode, passwordConfigured, pool: supabase._pool, storage: moveStorage(), restartBot, exitSoon });
+function moveFailed(res, e) {
+  if (!e.status) console.error("[move]", e.message);
+  res.status(e.status || 500).json({ error: e.status ? e.message : "The move stopped here. Try again." });
+}
+function moveToken(req, res) {
+  if (move.tokenOk(req.get("x-move-token"))) return true;
+  res.status(401).json({ error: "This move has ended. Start it again." });
+  return false;
+}
+app.post("/api/move/hello", async (req, res) => {
+  try { res.json(await move.hello((req.body || {}).code, intoHereDeps())); } catch (e) { moveFailed(res, e); }
+});
+app.post("/api/move/part", express.raw({ type: "application/octet-stream", limit: "64mb" }), async (req, res) => {
+  if (!moveToken(req, res)) return;
+  try { await move.receivePart(Number(req.query.n), req.body); res.json({ ok: true }); } catch (e) { moveFailed(res, e); }
+});
+app.post("/api/move/commit", (req, res) => {
+  if (!moveToken(req, res)) return;
+  try { move.commit(req.body || {}, intoHereDeps()); res.status(202).json({ ok: true }); } catch (e) { moveFailed(res, e); }
+});
+app.get("/api/move/progress", (req, res) => {
+  if (!moveToken(req, res)) return;
+  res.json(move.progress());
+});
+app.post("/api/move/finish", (req, res) => {
+  if (!moveToken(req, res)) return;
+  try { move.finish(intoHereDeps()); res.json({ ok: true }); } catch (e) { moveFailed(res, e); }
+});
+// A move this dashboard was making when it stopped can't go on: Closedhand
+// carries on here, and the bot, sitting still for the move, starts again.
+if ((moveMarker.read() || {}).state === "moving") {
+  moveMarker.clear();
+  console.log("[move] a move was cut short when the dashboard stopped; Closedhand carries on here");
+  (async () => {
+    for (let i = 0; i < 30; i++) {
+      try { return await restartBot(); } catch (_) { await new Promise((r) => setTimeout(r, 2000)); }
+    }
+  })();
+}
+
 const SIGNED_BY_BRIDGE = new Set(["/api/bridge/file-upload", "/api/bridge/thumb-upload", "/api/bridge/sync-cache", "/api/bridge/disconnect"]);
 app.use(async (req, res, next) => {
   try {
@@ -1812,6 +1877,28 @@ app.use(async (req, res, next) => {
     return res.status(500).send("auth check failed");
   }
 });
+
+// --- Moving this Closedhand to another computer (move.js) -----------------
+// Settings starts it with the new Closedhand's address and setup code, then
+// follows it here.
+app.post("/api/move/start", async (req, res) => {
+  try {
+    const status = move.startMove({ address: (req.body || {}).address, code: (req.body || {}).code }, {
+      pool: supabase._pool,
+      storageDir: moveStorage() === "pg" ? null : moveStorage(),
+      marker: moveMarker,
+      restartBot,
+      botMoveState,
+      stopTunnel: () => phoneAccess.shutdown(),
+      personalUrl: async () => (await getRuntimeConf("PHONE_PERMANENT_URL")) || null,
+      exitSoon,
+    });
+    res.json(status);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+app.get("/api/move/status", (req, res) => res.json(move.outboundStatus()));
 
 // BYOK spend: daily token rollups for the dashboard Usage tab. Registered after
 // the password gate on purpose; usage data is the admin's business only.
@@ -4542,6 +4629,9 @@ app.get("/api/status", async (req, res) => {
       signInAgain: health.signInAgain,
       platforms,
       availableServices: getAvailableServices(),
+      // Settings offers to move to Railway where a move can start: not on a
+      // host already (SETUP_CODE), and with a storage folder to mark it in.
+      canGoAlwaysOn: !setupCode.enabled && moveMarker.available(),
     });
   } catch (err) {
     console.error("Status error:", err.message);

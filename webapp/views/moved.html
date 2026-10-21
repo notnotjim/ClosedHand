@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="/theme.js"></script>
+  <title>Moved | Closedhand</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/interface.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: rgba(var(--fg-rgb),0.92);
+      font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.55;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .box { width: min(400px, 100%); }
+    .box > .ch-brand { display: flex; justify-content: center; margin-bottom: 26px; }
+    .card { background: rgba(var(--raised-rgb),0.55); border: 1px solid rgba(var(--fg-rgb),0.06); border-radius: 16px; padding: 26px; }
+    h1 { font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1.25; margin-bottom: 10px; }
+    p { color: rgba(var(--fg-rgb),0.65); font-size: 14px; }
+    p + p { margin-top: 10px; }
+    a { color: var(--accent); overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <!-- A Closedhand that moved to another computer (move.js) shows only this. -->
+  <div class="box">
+    <span class="ch-brand"><img src="/fist.png" alt=""><span>Closedhand</span></span>
+    <div class="card">
+      <h1>Closedhand has moved</h1>
+      <p>It runs __WHERE__ now, at <a href="__URL__">__URL_TEXT__</a>.</p>
+      <p>Its data is still on this computer too, until you remove it.</p>
+    </div>
+  </div>
+</body>
+</html>

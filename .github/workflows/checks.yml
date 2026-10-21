@@ -70,7 +70,7 @@ jobs:
       - name: Install the Postgres client for the test
         run: npm install --prefix "$RUNNER_TEMP/pg-test" --ignore-scripts --no-audit --no-fund pg@8
       - name: Baseline and migrations on an empty database
-        run: NODE_PATH="$RUNNER_TEMP/pg-test/node_modules" node --test scripts/test-fresh-database.js
+        run: NODE_PATH="$RUNNER_TEMP/pg-test/node_modules" node --test scripts/test-fresh-database.js scripts/test-move.js
         env:
           DATABASE_URL: postgres://postgres:test@localhost:5432/postgres
   checks:

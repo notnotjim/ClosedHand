@@ -88,11 +88,23 @@ function encryptString(plaintext) {
   if (plaintext.startsWith(PREFIX)) return plaintext; // idempotent
   _resolveKeys();
   if (!_current) throw new Error("[crypto-tokens] Cannot encrypt: TOKEN_ENCRYPTION_KEY is missing or invalid");
+  return sealWith(plaintext, _current);
+}
+
+// Sealing with a key the caller holds, for moving a Closedhand to another
+// computer (webapp/move.js): the source seals each stored secret again under
+// a one-time key and the other computer seals it under its own, so neither
+// computer's own key ever leaves it. openWith throws on the wrong key.
+function sealWith(plaintext, key) {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(ALG, _current, iv);
+  const cipher = crypto.createCipheriv(ALG, key, iv);
   const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return PREFIX + Buffer.concat([iv, tag, ct]).toString("base64");
+}
+function openWith(value, key) {
+  if (typeof value !== "string" || !value.startsWith(PREFIX)) return value;
+  return _tryDecrypt(Buffer.from(value.slice(PREFIX.length), "base64"), key);
 }
 
 function _tryDecrypt(buf, key) {
@@ -247,7 +259,7 @@ function subkey(purpose) {
   return Buffer.from(crypto.hkdfSync("sha256", _current, Buffer.alloc(0), "closedhand:" + purpose, 32));
 }
 
-module.exports = { encryptString, decryptString, encryptTokens, decryptTokens, assertReady, guardEnvironment, subkey };
+module.exports = { encryptString, decryptString, encryptTokens, decryptTokens, assertReady, guardEnvironment, subkey, sealWith, openWith, PREFIX };
 
 // Drift check + roundtrip smoke test. Run: node crypto-tokens.js
 if (require.main === module) {
