@@ -48,3 +48,12 @@ test('the screen and the writer are both given it', async () => {
   assert.match(pulse, /REMINDERS ALREADY SET/);
   assert.match(pulse, /never call the entry wrong or "an hour off"/);
 });
+
+test('the writer reads what the rest of the person\'s world says about the flagged items', () => {
+  const pulse = fs.readFileSync(path.join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
+  // The same recall a chat message gets: mail, chats such as WhatsApp, files.
+  assert.match(pulse, /const recalled = await require\("\.\/brain"\)\.fetchRelevantContext\(userId, flaggedText\)\.catch\(\(\) => null\);/);
+  assert.match(pulse, /already known\.\$\{recalled \|\| ""\}`/, 'it comes with the flagged items');
+  assert.match(pulse, /RECALLED ITEMS: the flagged items can come with POSSIBLY RELATED items/, 'and the instructions say how to use it');
+  assert.match(require('../lib/brain').fetchRelevantContext.toString(), /POSSIBLY RELATED/, 'the block points at those instructions');
+});
