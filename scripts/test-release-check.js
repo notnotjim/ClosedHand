@@ -65,6 +65,12 @@ test("the step is the installer line for Docker and a download for the Mac app",
   assert.match(read("install.sh"), /a plain re-run already upgrades and keeps your data/, "running the line again is an update");
 });
 
+test("both privacy pages say what the daily check sends", () => {
+  for (const page of ["webapp/views/privacy.html", "closedhand-com/views/privacy.html"]) {
+    assert.match(read(page), /Once a day Closedhand asks GitHub whether a newer version is out\. GitHub sees the version it runs and the internet address of the computer running it\./, page);
+  }
+});
+
 test("a Fixed notice carries the step, and Settings shows it", () => {
   const bug = read("lib/bug-reports.js");
   const fixedText = new Function(bug.slice(bug.indexOf("function fixedText("), bug.indexOf("// Each sent report not yet told about")) + "; return fixedText;")();

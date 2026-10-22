@@ -2214,7 +2214,7 @@ function sendLegalPage(res, file) {
   const html = require("fs")
     .readFileSync(path.join(__dirname, "views", file), "utf8")
     .replace(/{{CONTACT_CLAUSE}}/g, clause);
-  res.type("html").send(assets.withAppearance(html));
+  res.type("html").send(assets.withAppearance(assets.forHost(html)));
 }
 app.get("/privacy", (req, res) => sendLegalPage(res, "privacy.html"));
 app.get("/terms", (req, res) => sendLegalPage(res, "terms.html"));
@@ -2269,7 +2269,7 @@ app.get("/line-app", (req, res) => {
   const fs = require("fs");
   let html = fs.readFileSync(path.join(__dirname, "views", "line-app.html"), "utf8");
   html = html.replace("__LIFF_ID__", liffId);
-  res.type("html").send(html);
+  res.type("html").send(assets.forHost(html));
 });
 
 app.get("/line-setup-complete", (req, res) => {

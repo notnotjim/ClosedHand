@@ -60,6 +60,6 @@ test('the web chat sends the zone from phones only, before the weather loads, an
   assert.match(route, /phoneZone\.noteZone\(data\?\.settings\?\.location, tz\);\n\s+if \(noted\) await patchSettings\(supabase, userId, \{ set: \{ location: noted \} \}\);/);
   assert.match(server, /if \(phoneZone\.movedZone\(loc\)\) return res\.json\(\{ location: null \}\);/);
   assert.equal((server.match(/phoneZone\.zoneOf\(/g) || []).length, 3, 'today, usage and goals follow it too');
-  assert.match(read('lib/engine.js'), /their phone's clock changed to \$\{moved\} after it was saved/);
+  assert.match(read('lib/location.js'), /their phone's clock changed to \$\{moved\} after it was saved/);
   assert.equal(read('lib/phone-zone.js'), read('webapp/phone-zone.js'));
 });

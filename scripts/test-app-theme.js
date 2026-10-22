@@ -56,7 +56,7 @@ test("the pick is put on every page as it is served, and only a real pick", () =
   const server = read("webapp/server.js");
   assert.match(server, /app\.post\("\/api\/settings\/appearance"[\s\S]{0,400}\["device", "light", "dark"\]\.includes\(pick\)[\s\S]{0,300}patchSettings\(supabase, userId, \{ set: \{ appearance: pick \} \}\);\n    assets\.setAppearance\(pick\);/, "saved in the person's settings");
   assert.match(server, /assets\.setAppearance\(data\?\.settings\?\.appearance\);/, "and read back when the app starts");
-  assert.match(server, /res\.type\("html"\)\.send\(assets\.withAppearance\(html\)\);/, "Privacy and Terms carry it");
+  assert.match(server, /res\.type\("html"\)\.send\(assets\.withAppearance\(assets\.forHost\(html\)\)\);/, "Privacy and Terms carry it");
   assert.match(server, /res\.send\(assets\.withAppearance\(require\("\.\/report-page"\)\.pageHtml\(report\)\)\);/, "Pages carry it");
   assert.match(read("webapp/report-page.js"), /:root\[data-theme-pick="dark"\] \{/, "and follow it");
 });

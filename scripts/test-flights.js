@@ -337,5 +337,5 @@ test('each flight check moves the location before landed flights are cleared, an
   const scheduler = fs.readFileSync(path.join(root, 'lib/flights-scheduler.js'), 'utf8');
   assert.ok(scheduler.indexOf('moveToLanding()') > 0 && scheduler.indexOf('moveToLanding()') < scheduler.indexOf('cleanupExpiredFlights(userId);'));
   assert.doesNotMatch(scheduler, /update my location to/, 'nobody is asked to move it themselves');
-  assert.match(fs.readFileSync(path.join(root, 'lib/engine.js'), 'utf8'), /Set when their flight landed at \$\{ctx\.store\.location\.landedAt\}/);
+  assert.match(fs.readFileSync(path.join(root, 'lib/location.js'), 'utf8'), /Set when their flight landed at \$\{location\.landedAt\}/);
 });

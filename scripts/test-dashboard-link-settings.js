@@ -227,6 +227,7 @@ function accountPage(respond) {
     document: { getElementById: el, createElement: () => ({ textContent: "" }), querySelector: () => null },
     fetch: async (url, options = {}) => { calls.push([options.method || "GET", url]); const r = respond(url, options); return { ok: !r.status || r.status < 400, json: async () => r.body }; },
     showToast: message => calls.push(["toast", message]),
+    hostText: (computer) => computer,
   });
   vm.runInContext(region(html, "    function cancelAccountAction(action)", "    function switchTab(tabName)"), state);
   return { state, el, calls };
@@ -356,7 +357,8 @@ test("a place whose town couldn't be looked up has no name, never a stand-in", (
   assert.ok(box.kmApart(porto, { latitude: 41.13, longitude: -8.61 }) <= box.SAME_TOWN_KM, "across the river keeps the town's name");
   assert.ok(box.kmApart(porto, { latitude: 38.72, longitude: -9.14 }) > box.SAME_TOWN_KM, "another city does not");
   assert.match(source, /kmApart\(was, \{ latitude: lat, longitude: lon \}\) <= SAME_TOWN_KM\) name = placeName\(was\);/);
+  assert.match(fs.readFileSync(require.resolve("../lib/location.js"), "utf8"), /const named = location\.name \? /, "the location line leaves out a missing name");
   for (const f of ["../lib/engine.js", "../lib/agents.js"]) {
-    assert.match(fs.readFileSync(require.resolve(f), "utf8"), /const named = (ctx\.store|userStore)\.location\.name \? /, `${f} leaves out a missing name`);
+    assert.match(fs.readFileSync(require.resolve(f), "utf8"), /require\("\.\/location"\)\.locationLine\((ctx\.store|userStore)\.location\)/, `${f} states the location with that line`);
   }
 });

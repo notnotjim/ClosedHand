@@ -18,7 +18,6 @@ test('the list is the default view and profile facts are labelled by what they a
   vm.runInNewContext(labels + '\n' + dash.slice(fn, dash.indexOf('\n    }\n', fn) + 6) + '\nthis.f = factLabel;', box);
   assert.equal(box.f({ key: 'profile-name', subject: 'Sam Fixture' }), 'Name');
   assert.equal(box.f({ key: 'profile-email', subject: 'Sam Fixture' }), 'Email');
-  assert.equal(box.f({ key: 'profile-location' }), 'Where you are');
   assert.equal(box.f({ key: 'person-mei', subject: 'Mei' }), 'Mei');
   assert.match(dash, />used ' \+ n\.accessCount \+ \(n\.accessCount === 1 \? ' time' : ' times'\)/);
 });

@@ -2597,7 +2597,7 @@
               <p class="section-desc">Cards Closedhand may use at checkout. It asks you first unless your rules say otherwise.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
-              <p class="section-desc">Card numbers are encrypted on your computer, and the LLM never sees them.</p>
+              <p class="section-desc" data-railway="Card numbers are encrypted in your Railway account, and the LLM never sees them.">Card numbers are encrypted on your computer, and the LLM never sees them.</p>
               <div id="wallet-unavailable" style="display:none;font-size:13px;color:var(--muted);"></div>
               <div id="wallet-main" style="display:none;">
                 <div class="wallet-confirm" id="wallet-confirm" hidden>
@@ -2783,12 +2783,12 @@
             <div class="account-action" id="action-delete-account">
               <div class="account-action-info">
                 <div class="account-action-title danger">Delete account</div>
-                <div class="account-action-desc">Your Closedhand account and everything kept on your computer.</div>
+                <div class="account-action-desc" data-railway="Your Closedhand account and everything kept in your Railway account.">Your Closedhand account and everything kept on your computer.</div>
               </div>
               <button class="account-action-btn account-action-btn-danger" onclick="startAccountAction('delete-account')">Delete</button>
             </div>
             <div class="account-confirm-inline" id="confirm-delete-account">
-              <div class="account-confirm-text danger" id="delete-account-text">This permanently deletes everything Closedhand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
+              <div class="account-confirm-text danger" id="delete-account-text" data-railway="This permanently deletes everything Closedhand keeps for you in your own Railway account, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.">This permanently deletes everything Closedhand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.</div>
               <div class="account-confirm-actions">
                 <input class="confirm-type-input" id="input-delete-account" placeholder="Type DELETE" oninput="checkConfirmInput('delete-account','DELETE')">
                 <button class="confirm-go confirm-go-danger" id="go-delete-account" data-orig-text="Delete my account" onclick="executeAccountAction('delete-account')">Delete my account</button>
@@ -2923,6 +2923,12 @@
   </div>
 
   <script>
+    // On Railway (Go always-on) Closedhand lives in the person's own Railway
+    // account, not on their computer; the server marks the page so
+    // (webapp/assets.js, forHost) and wording written here follows it.
+    function hostText(computer, railway) {
+      return document.documentElement.dataset.host === 'railway' ? railway : computer;
+    }
     function logoImg(logoUrl, size) {
       size = size || 22;
       if (logoUrl) {
@@ -3887,10 +3893,10 @@
       }
       if (!voice.on) {
         var could = both ? 'listen and speak' : voice.speak ? 'speak' : 'write out what you say';
-        return 'Closedhand uses its built-in voice, which never leaves your computer. Switch this on to ' + could + ' with ' + name + ' instead.';
+        return 'Closedhand uses its built-in voice, which never leaves ' + hostText('your computer', 'your Railway account') + '. Switch this on to ' + could + ' with ' + name + ' instead.';
       }
       var does = both ? 'listens and speaks' : voice.speak ? 'speaks' : 'writes out what you say';
-      return 'Closedhand ' + does + ' with ' + name + ' instead of its built-in voice. ' + goes + ', which may charge your account for it. The built-in voice never leaves your computer.';
+      return 'Closedhand ' + does + ' with ' + name + ' instead of its built-in voice. ' + goes + ', which may charge your account for it. The built-in voice never leaves ' + hostText('your computer', 'your Railway account') + '.';
     }
 
     // What a connection does in place of Closedhand's own, for each job other
@@ -4950,7 +4956,7 @@
     async function loadAccountSummary() {
       const box = document.getElementById("account-summary"), divider = document.getElementById("account-summary-divider");
       const text = document.getElementById("account-summary-text"), confirmText = document.getElementById("delete-account-text");
-      const local = "everything Closedhand keeps for you on your own computer, including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
+      const local = "everything Closedhand keeps for you " + hostText("on your own computer", "in your own Railway account") + ", including the synced copies of your mail and calendar. You will be logged out immediately. This cannot be undone.";
       const row = (label, value) => {
         const dt = document.createElement("dt"); dt.textContent = label;
         const dd = document.createElement("dd"); dd.textContent = value;
@@ -4966,11 +4972,11 @@
         row("Signed in with", (account.provider === "microsoft" ? "Microsoft" : "Google") + (account.email ? " \u00b7 " + account.email : ""));
         row("Used for", "Your personal URL, " + host);
         row("closedhand.com stores", "Your email and nothing else");
-        row("Your data", "Stays on your own computer");
+        row("Your data", hostText("Stays on your own computer", "Stays in your own Railway account"));
         confirmText.textContent = "This deletes your Closedhand account: " + host + " stops working and closedhand.com forgets your sign-in. It also permanently deletes " + local;
       } else {
         row("Signed in with", "Nothing yet. Claiming a personal URL creates your Closedhand account, which you sign in to with Google or Microsoft.");
-        row("Your data", "Stays on your own computer");
+        row("Your data", hostText("Stays on your own computer", "Stays in your own Railway account"));
         confirmText.textContent = "This permanently deletes " + local;
       }
       box.hidden = false; divider.hidden = false;
@@ -7922,7 +7928,7 @@
       }
     }
 
-    var PROFILE_LABELS = { name: 'Name', email: 'Email', location: 'Where you are', phone: 'Phone', birthday: 'Birthday', timezone: 'Time zone' };
+    var PROFILE_LABELS = { name: 'Name', email: 'Email', phone: 'Phone', birthday: 'Birthday', timezone: 'Time zone' };
     // The tab row says when it has more to scroll to, and keeps the open tab in view.
     (function() {
       var bar = document.querySelector('.tab-bar');

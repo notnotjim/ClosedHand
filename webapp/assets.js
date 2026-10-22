@@ -31,11 +31,22 @@ function stamp(html) {
     return v ? prefix + urlPath + "?v=" + v + '"' : match;
   });
 }
+// Where Closedhand runs. Moved to Railway (Go always-on), it lives in the
+// person's own Railway account, not on their computer: a sentence that says
+// "your computer" carries its Railway wording in data-railway, put in place
+// here, and the page is marked data-host="railway" for what its scripts write.
+const onRailway = !!process.env.RAILWAY_ENVIRONMENT_ID;
+function forHost(html, railway = onRailway) {
+  if (!railway) return html;
+  return html
+    .replace(/(<([a-z][a-z0-9]*)\b[^>]*?)\s+data-railway="([^"]*)"([^>]*>)[^<]*(<\/\2>)/gi, (match, open, tag, wording, rest, close) => open + rest + wording + close)
+    .replace(/<html(?=[\s>])/i, '<html data-host="railway"');
+}
 function page(name) {
   const file = path.join(viewsDir, name);
   const stat = fs.statSync(file);
   let entry = pages.get(file);
-  if (!entry || entry.mtime !== stat.mtimeMs) { entry = { mtime: stat.mtimeMs, html: fs.readFileSync(file, "utf8") }; pages.set(file, entry); }
+  if (!entry || entry.mtime !== stat.mtimeMs) { entry = { mtime: stat.mtimeMs, html: forHost(fs.readFileSync(file, "utf8")) }; pages.set(file, entry); }
   return stamp(entry.html);
 }
 // Light or dark, as the person picked under Appearance in Settings
@@ -54,4 +65,4 @@ function cacheHeaders(res, file) {
   const v = res.req?.query?.v;
   res.set("Cache-Control", v && v === version(urlPath) ? "public, max-age=31536000, immutable" : "no-cache");
 }
-module.exports = { version, stamp, sendPage, cacheHeaders, setAppearance, withAppearance };
+module.exports = { version, stamp, forHost, sendPage, cacheHeaders, setAppearance, withAppearance };
