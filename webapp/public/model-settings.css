@@ -19,6 +19,13 @@
 .model-current dd small { display: block; margin-top: 4px; color: var(--fg); font-size: 14px; }
 .model-current dd .model-local-badge { display: block; width: fit-content; margin-top: 6px; padding: 3px 9px; border-radius: 5px; background: rgba(var(--ok-rgb),.12); color: var(--ok-soft); font-size: 13px; line-height: 1.5; }
 .model-current .model-hint { color: var(--fg); font-size: 15px; line-height: 1.6; margin: 20px 0 0; max-width: 65ch; }
+.model-current .run-here { display: grid; gap: 10px; justify-items: start; margin-top: 10px; max-width: 60ch; }
+.model-current .run-here p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--fg); }
+.model-current .run-here button { min-height: 44px; padding: 11px 18px; border: 1px solid rgba(var(--fg-rgb),0.4); border-radius: 10px; background: var(--raised); color: var(--fg); font: inherit; cursor: pointer; }
+.model-current .run-here button:disabled { opacity: .55; cursor: progress; }
+.model-current .run-here button:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+.model-current .run-here .model-link { min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--muted); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(var(--fg-rgb),0.3); }
+.model-current .run-here .model-link:hover { color: var(--fg); text-decoration-color: rgba(var(--fg-rgb),0.6); }
 .model-editor > summary { cursor: pointer; padding: 14px 0; font-size: 16px; color: var(--fg); }
 .model-editor > .model-fields { margin-top: 20px; }
 .model-editor > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }

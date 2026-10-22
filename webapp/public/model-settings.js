@@ -98,7 +98,7 @@
       var list = document.createElement("dl"); list.className = "model-role-list";
       rows.forEach(function (row) {
         var label = row.label === "Chat model" ? "Primary model" : row.label === "Images" ? "Image model" : row.label;
-        var term = document.createElement("dt"); term.textContent = label;
+        var term = document.createElement("dt"); term.textContent = label; term.dataset.role = label;
         explain(term, label, /^local:/.test(row.model));
         var definition = document.createElement("dd");
         var name = document.createElement("span"); name.textContent = row.model.replace(/^local:/, "");
@@ -113,12 +113,66 @@
         list.append(term, definition);
       });
       current.append(list);
+      if (root.id !== "model-configuration") runHere(list);
       var download = data.localModels?.embedder;
       if (root.id !== "model-configuration" && download && ["downloading", "error"].includes(download.state)) {
         var status = document.createElement("p"); status.className = "model-hint";
         status.textContent = download.state === "downloading" ? "Downloading the embedding model: " + (download.pct || 0) + "%." : "The embedding model could not finish downloading. Closedhand will retry when syncing.";
         current.append(status);
       }
+    }
+    // A job's LLM can run on this computer instead, when it plainly fits and
+    // will be fast (run-here.js). Shown under that job's row, rarely.
+    var JOBS = { "Primary model": "chat", "Support model": "background", "Image model": "vision" };
+    var runHereTimer = null;
+    function size(bytes) { var gb = bytes / 1e9; return (gb < 10 ? Math.round(gb * 10) / 10 : Math.round(gb)) + " GB"; }
+    async function runHere(list) {
+      clearTimeout(runHereTimer);
+      var data;
+      try { var r = await fetch("/api/run-here", { cache: "no-store" }); data = r.ok ? await r.json() : null; } catch (_) { data = null; }
+      if (!data || !data.available || !list.isConnected) return;
+      var busy = false;
+      list.querySelectorAll("dt").forEach(function (term) {
+        var job = JOBS[term.dataset.role], dd = term.nextElementSibling;
+        if (!job || !dd) return;
+        var old = dd.querySelector(".run-here"); if (old) old.remove();
+        var box = document.createElement("div"); box.className = "run-here";
+        var line = document.createElement("p");
+        var state = data.jobs && data.jobs[job], offer = data.offers && data.offers[job], note = data.notes && data.notes[job];
+        if (state && state.state === "here") {
+          var back = document.createElement("button"); back.type = "button"; back.className = "model-link";
+          back.textContent = "Use " + state.provider + " again";
+          back.onclick = async function () {
+            back.disabled = true;
+            try { await fetch("/api/run-here/undo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job: job }) }); } catch (_) {}
+            initialize();
+          };
+          box.append(back);
+        } else if (state && ["downloading", "checking", "starting"].includes(state.state)) {
+          busy = true;
+          line.textContent = state.state === "downloading" ? "Downloading it to this computer: " + (state.pct || 0) + "% of " + size(state.totalBytes) + "."
+            : "Checking it runs fast enough here.";
+          box.append(line);
+        } else if (note) {
+          line.textContent = note; box.append(line);
+        } else if (offer) {
+          line.textContent = "This LLM can also run on this computer for free, and nothing it reads would leave it. It needs " + size(offer.bytes) + " of space.";
+          var go = document.createElement("button"); go.type = "button"; go.textContent = "Run it here";
+          go.onclick = async function () {
+            go.disabled = true;
+            try {
+              var res = await fetch("/api/run-here/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job: job }) });
+              if (!res.ok) { line.textContent = (await res.json().catch(function () { return {}; })).error || "It couldn't start. Try again."; go.disabled = false; return; }
+            } catch (_) { go.disabled = false; return; }
+            runHere(list);
+          };
+          box.append(line, go);
+        } else return;
+        dd.append(box);
+      });
+      if (busy) runHereTimer = setTimeout(function () { runHere(list); }, 2000);
+      else if (list.dataset.runHereBusy) initialize();
+      list.dataset.runHereBusy = busy ? "1" : "";
     }
     function value(key) { return field(key).value.trim(); }
     function modelName(model, provider) {

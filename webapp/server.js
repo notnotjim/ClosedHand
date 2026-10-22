@@ -6908,19 +6908,22 @@ app.put("/api/location", async (req, res) => {
 });
 
 // GET /api/api-key — check if user has their own API key set
+async function authorizeModels(req, res) {
+  if (mcpClient.isSelfHost()) {
+    if (!(await requireSetupAccess(req, res))) return null;
+    return getAdminUserId();
+  }
+  const id = getUserIdFromRequest(req);
+  if (!id) res.status(401).json({ error: "Sign in to change your models." });
+  return id;
+}
+// A job's LLM run on this computer instead of the provider (run-here.js).
+require("./run-here").install(app, { supabase, getAdminUserId, authorize: authorizeModels });
 require("./model-config").install(app, {
   supabase,
   local: true,
   readRuntime: key => process.env[key],
-  authorize: async (req, res) => {
-    if (mcpClient.isSelfHost()) {
-      if (!(await requireSetupAccess(req, res))) return null;
-      return getAdminUserId();
-    }
-    const id = getUserIdFromRequest(req);
-    if (!id) res.status(401).json({ error: "Sign in to change your models." });
-    return id;
-  },
+  authorize: authorizeModels,
   ensureMemory: async () => {
     if (!mcpClient.isSelfHost()) return;
     const embed = process.env.EMBED_MODEL || await getRuntimeConf("EMBED_MODEL");
@@ -9894,6 +9897,8 @@ const server = app.listen(PORT, process.env.LISTEN_HOST || undefined, async () =
   }
   // Closedhand Managed Models follow the models Closedhand picks (included-ai-setup.js).
   require("./included-ai-setup").start();
+  // Jobs run on this computer get their runner back (run-here.js).
+  require("./run-here").resume().catch((e) => console.error("[run-here] resume:", e.message));
   // Secrets, provider keys and MCP credentials saved before they were stored
   // encrypted are sealed once; reads already handle both.
   try {
