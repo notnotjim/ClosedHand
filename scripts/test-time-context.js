@@ -35,6 +35,7 @@ test('the actual chat prompt tail includes the current airport date evidence', (
     require: name => {
       if (name === './time-context') return { currentTimeContext, flightDateContext };
       if (name === './services/google') return { listGoogleAccounts: () => [] };
+      if (name === './routine-offers') return { offerFor: () => '' };
       throw Error(name);
     }, getSkillsForPrompt: () => '', getUserSkillsBlock: () => '', buildTravelTimezoneBlock: () => '',
     matters: { getMattersBlock: () => '' },

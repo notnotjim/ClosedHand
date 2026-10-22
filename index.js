@@ -214,6 +214,8 @@ async function main() {
   loadAllSkills();
   // Learned skills nobody has needed for two months go (lib/skill-learning.js).
   require("./lib/skill-learning").startUpkeep();
+  // Once a day, requests the person keeps making at a steady rhythm become routine offers (lib/routine-offers.js).
+  require("./lib/routine-offers").startRoutineOffers();
   registerAllSchedules();
   startFlightTracking();
   require("./lib/bookings").startBookingsDiscovery();
