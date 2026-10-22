@@ -3,7 +3,7 @@
 // instead of a new Python process and a fresh connection for every step, and
 // reads a page as a numbered outline it acts on by number instead of guessing
 // CSS selectors. Measured on the sandbox image: a step went from 0.85 to 2
-// seconds to tens of milliseconds.
+// seconds to tens of milliseconds. Running code there has no daily cap.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -86,4 +86,10 @@ test("the bot sends every step but a card fill through the lasting connection, a
   assert.match(defs, /enum: \["outline", "batch", "screenshot", "scrape_text", "extract_data", "click", "fill", "press", "wait_for", "eval_js", "fill_card"\]/);
   assert.match(defs, /ref: \{\n\s*type: "number",\n\s*description: "For click, fill, press and wait_for: the \[number\] of the element in the latest outline\./);
   assert.match(read("lib/sandbox.js"), /async function sandboxBrowse\(userId, body, timeoutMs = 60000\) \{/);
+});
+
+test("running code on the sandbox computer has no daily cap: it is part of the person's own computer", () => {
+  const sandbox = read("lib/sandbox.js");
+  assert.doesNotMatch(sandbox, /Daily execution limit|daily_exec/);
+  assert.match(sandbox, /total_exec_count: \(sandbox\?\.total_exec_count \|\| 0\) \+ 1,\n\s*last_used_at: new Date\(\)\.toISOString\(\),/);
 });
