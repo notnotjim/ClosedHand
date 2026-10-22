@@ -9,27 +9,43 @@
 (function () {
   var made = 0;
   window.llmHint = function (model, { images = true } = {}) {
-    tidy();
-    var hint = document.createElement('span');
-    hint.className = 'llm-hint';
     var name = document.createElement('button');
     name.type = 'button';
     name.className = 'llm-hint-name';
     name.textContent = 'Closedhand Managed Models';
     var tip = document.createElement('span');
-    tip.className = 'llm-hint-tip';
-    tip.id = 'llm-hint-' + (++made);
-    tip.setAttribute('role', 'tooltip');
     var which = document.createElement('strong');
     which.textContent = model;
     tip.append(which, ', for ' + (images ? 'chat, support work and images' : 'chat and support work') + '. Closedhand chooses the current optimal LLM.');
-    name.setAttribute('aria-describedby', tip.id);
-    hint.append(name);
+    return attach(name, tip);
+  };
+  // The same hint behind a small "i", for a short explanation that would
+  // otherwise sit on the page as a paragraph (the dashboard's Learned by
+  // Closedhand label). The text is set as text, never markup.
+  window.infoHint = function (text, label) {
+    var mark = document.createElement('button');
+    mark.type = 'button';
+    mark.className = 'info-hint-mark';
+    mark.textContent = 'i';
+    mark.setAttribute('aria-label', label || 'What this means');
+    var tip = document.createElement('span');
+    tip.textContent = text;
+    return attach(mark, tip);
+  };
+  function attach(button, tip) {
+    tidy();
+    var hint = document.createElement('span');
+    hint.className = 'llm-hint';
+    tip.className = 'llm-hint-tip';
+    tip.id = 'llm-hint-' + (++made);
+    tip.setAttribute('role', 'tooltip');
+    button.setAttribute('aria-describedby', tip.id);
+    hint.append(button);
     hint.llmTip = tip;
     tip.llmHint = hint;
     document.body.append(tip);
     return hint;
-  };
+  }
   // Hints whose name has left the page go too.
   function tidy() {
     document.querySelectorAll('body > .llm-hint-tip').forEach(function (tip) { if (tip.llmHint && !tip.llmHint.isConnected && tip.llmHint.dataset.made) tip.remove(); });

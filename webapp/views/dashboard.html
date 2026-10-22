@@ -855,6 +855,30 @@
       flex: 1;
     }
 
+    /* Adding a skill: the last card among the person's skills, dashed, as
+       something to do rather than something they have. */
+    .dashboard-container .int-card.add-skill-card { border-style: dashed; background: transparent; color: var(--muted); }
+    .dashboard-container .int-card.add-skill-card .int-name { color: var(--muted); }
+    .dashboard-container .int-card.add-skill-card:hover, .dashboard-container .int-card.add-skill-card:focus-visible { color: var(--fg); border-color: rgba(var(--fg-rgb),0.36); outline: none; }
+    .dashboard-container .int-card.add-skill-card:hover .int-name, .dashboard-container .int-card.add-skill-card:focus-visible .int-name { color: var(--fg); }
+
+    /* Learned skills: their own group under the Skills section's cards. */
+    #skills-learned-heading { margin-top: 24px; }
+
+    /* The whole text of a skill Closedhand learned, as it reads it. */
+    .learned-skill-text {
+      margin: 10px 0 4px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(var(--fg-rgb),0.04);
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--fg);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .learned-skill-text strong { font-weight: 600; }
+
     .conn-divider {
       border: none;
       border-top: 1px solid rgba(var(--fg-rgb),0.1);
@@ -2078,8 +2102,10 @@
              any added by pasting a link into the box under Connect anything. -->
         <div class="section" id="skills-section">
           <h2>Skills</h2>
-          <p style="color:rgba(var(--fg-rgb),0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">Instructions Closedhand follows for a particular kind of task. Add one in the Connect box below.</p>
+          <p style="color:rgba(var(--fg-rgb),0.6);font-size:14px;margin:0 0 12px;line-height:1.5;">Instructions Closedhand follows for a particular kind of task.</p>
           <div class="integrations-grid" id="skills-connected"></div>
+          <h3 class="add-sub skills-learned-heading" id="skills-learned-heading" hidden>Learned by Closedhand</h3>
+          <div class="integrations-grid" id="skills-learned"></div>
         </div>
 
         <!-- Connect a Service - Hero Section -->
@@ -6526,17 +6552,25 @@
       var missingFor = function (skill) {
         return [].concat(skill.requires_service || []).filter(function (id) { return connectedKeys.indexOf(id) === -1; });
       };
+      // Skills Closedhand learned sit apart, under their own small label, so
+      // they never mix with the ones the person added or that come built in.
+      // The label says what they are, so their cards carry no tag: a learned
+      // skill's name is a whole phrase and needs the room.
+      var isLearned = function (skill) { return skill.category === 'learned'; };
       var all = _builtinSkills.map(function (skill) { return { skill: skill, builtin: true }; })
-        .concat(_installedSkills.map(function (skill) { return { skill: skill, builtin: false }; }));
+        .concat(_installedSkills.filter(function (skill) { return !isLearned(skill); }).map(function (skill) { return { skill: skill, builtin: false }; }));
+      var learnedList = _installedSkills.filter(isLearned).map(function (skill) { return { skill: skill, builtin: false }; });
       if (window._connectionsCache) all.sort(function (a, b) { return (missingFor(a.skill).length ? 1 : 0) - (missingFor(b.skill).length ? 1 : 0); });
-      list.innerHTML = all.map(function (item) {
+      var skillCard = function (item) {
         var skill = item.skill;
         var missing = window._connectionsCache ? missingFor(skill) : [];
         var missingNames = missing.map(function (id) { return SKILL_SERVICES[id] || String(id).replace(/_/g, ' '); });
         // The apps it works with, unless its name already says so ("Meta Ads").
         var needs = [].concat(skill.requires_service || []).map(function (id) { return SKILL_SERVICES[id] || String(id).replace(/_/g, ' '); })
           .filter(function (app) { return String(skill.name || '').toLowerCase().indexOf(app.toLowerCase()) === -1; });
+        var learned = !item.builtin && skill.category === 'learned';
         var detail = (skill.description ? '<p style="font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 8px;">' + escHtml(skill.description) + '</p>' : '') +
+          (learned ? learnedSkillRows(skill) : '') +
           (needs.length ? '<div class="conn-row"><span class="conn-row-label">Works with</span><span class="conn-row-value">' + escHtml(needs.join(' and ')) + '</span></div>' : '') +
           (!item.builtin && skill.source_url ? '<div class="conn-row"><span class="conn-row-label">From</span><span class="conn-row-value" style="word-break:break-all;">' + escHtml(skill.source_url) + '</span></div>' : '') +
           (item.builtin ? '' : '<div class="conn-drawer-actions"><button onclick="event.stopPropagation();deleteSkill(\'' + skill.id + '\', this)" class="conn-btn conn-btn-disconnect">Remove</button></div>');
@@ -6547,12 +6581,46 @@
             logoHtml +
             '<span class="int-name">' + escHtml(skill.name) + '</span>' +
             (missing.length ? '<span class="int-tag" title="Connect it below to use this skill">Needs ' + escHtml(missingNames.join(' and ')) + '</span>'
-              : item.builtin ? '<span class="int-tag">Built in</span>' : '<span class="int-tag">Added</span>') +
+              : item.builtin ? '<span class="int-tag">Built in</span>' : learned ? '' : '<span class="int-tag">Added</span>') +
             '<span class="int-chevron"><span class="chevron-down"></span></span>' +
           '</div>' +
           '<div class="int-unfurl"><div class="int-unfurl-inner">' + detail + '</div></div>' +
         '</div>';
-      }).join('');
+      };
+      list.innerHTML = all.map(skillCard).join('') + ADD_SKILL_CARD;
+      var learnedGrid = document.getElementById('skills-learned');
+      var learnedHeading = document.getElementById('skills-learned-heading');
+      if (learnedGrid && learnedHeading) {
+        learnedGrid.innerHTML = learnedList.map(skillCard).join('');
+        learnedHeading.hidden = learnedList.length === 0;
+        if (!learnedHeading.querySelector('.llm-hint') && window.infoHint) learnedHeading.append(window.infoHint(LEARNED_HINT, 'About learned skills'));
+      }
+    }
+
+    // A skill Closedhand wrote itself (lib/skill-learning.js): where it was
+    // learned, how often it has been used, and the whole text it follows.
+    // Last among the person's skills: any skill can be added, and this says
+    // so where they are listed, then takes them to the box that adds it.
+    var ADD_SKILL_CARD = '<div class="int-wrap"><div class="int-card add-skill-card" role="button" tabindex="0" onclick="focusConnectBox()" onkeydown="if (event.key === \'Enter\' || event.key === \' \') { event.preventDefault(); focusConnectBox(); }">' +
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+      '<span class="int-name">Add a skill</span></div></div>';
+    function focusConnectBox() {
+      var input = document.getElementById('mcp-url-input');
+      if (!input) return;
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () { input.focus({ preventScroll: true }); }, 400);
+    }
+    var LEARNED_HINT = "Closedhand writes these itself when it has to work out how to do something, so it goes quicker next time. Any it hasn't used for two months are removed.";
+    var LEARNED_IN = { web: 'In the web chat', task: 'During a task in the background', telegram: 'In Telegram', whatsapp: 'In WhatsApp',
+      whatsapp_linked: 'In WhatsApp', slack: 'In Slack', discord: 'In Discord', line: 'In LINE', email: 'By email' };
+    function learnedSkillRows(skill) {
+      var day = function (d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+      var where = (LEARNED_IN[skill.learned_from] || 'In a chat') + ', ' + day(skill.installed_at);
+      var used = skill.uses ? (skill.uses === 1 ? 'Once' : skill.uses + ' times') + (skill.last_used_at ? ', last on ' + day(skill.last_used_at) : '') : 'Not yet';
+      return '<div class="conn-row"><span class="conn-row-label">Learned</span><span class="conn-row-value">' + escHtml(where) + '</span></div>' +
+        (skill.updated_at && new Date(skill.updated_at) - new Date(skill.installed_at) > 60000 ? '<div class="conn-row"><span class="conn-row-label">Improved</span><span class="conn-row-value">' + escHtml(day(skill.updated_at)) + '</span></div>' : '') +
+        '<div class="conn-row"><span class="conn-row-label">Used</span><span class="conn-row-value">' + escHtml(used) + '</span></div>' +
+        (skill.content ? '<div class="learned-skill-text">' + escHtml(skill.content).replace(/^## (.+)$/gm, '<strong>$1</strong>') + '</div>' : '');
     }
 
     // A skill pasted into the Connections box: scanned, then added. What the

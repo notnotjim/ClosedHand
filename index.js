@@ -212,6 +212,8 @@ async function main() {
   await require("./lib/admin").ensureAdmin();
   await connectAllMCPServers();
   loadAllSkills();
+  // Learned skills nobody has needed for two months go (lib/skill-learning.js).
+  require("./lib/skill-learning").startUpkeep();
   registerAllSchedules();
   startFlightTracking();
   require("./lib/bookings").startBookingsDiscovery();

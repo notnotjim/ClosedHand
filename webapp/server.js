@@ -6059,11 +6059,17 @@ app.get("/api/skills", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("user_skills")
-      .select("id, name, description, source_url, category, installed_at")
+      .select("id, name, description, source_url, category, installed_at, uses, last_used_at, updated_at, learned_from, content")
       .eq("user_id", userId)
       .order("installed_at", { ascending: false });
     if (error) throw error;
-    res.json(data || []);
+    // A skill Closedhand learned is shown in full, so the person can read
+    // what it will follow; one added from a link keeps its source instead.
+    res.json((data || []).map((s) => {
+      if (s.category === "learned") return { ...s, content: String(s.content || "").replace(/^---\n[\s\S]*?\n---\n/, "").trim() };
+      const { content, ...rest } = s;
+      return rest;
+    }));
   } catch (e) {
     res.status(500).json({ error: "Failed to load skills" });
   }
