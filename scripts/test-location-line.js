@@ -27,4 +27,5 @@ test("setup saves the place as the location only, never as a pinned fact", () =>
   assert.doesNotMatch(onboarding, /profile-location/);
   assert.match(onboarding, /ctx\.store\.location = loc;\n\s*await saveProfileSetting\("location", loc\);/);
   assert.match(read("lib/tools/definitions.js"), /Where they are at the moment is not a fact either: it is their saved location \(save_location\)/);
+  assert.match(read("migrations/063_location_is_not_a_fact.sql"), /^DELETE FROM facts WHERE key = 'profile-location';$/m, "the place setup pinned before goes");
 });
