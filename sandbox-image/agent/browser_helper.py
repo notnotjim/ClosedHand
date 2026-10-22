@@ -28,35 +28,41 @@ import time
 
 import os
 
-# The container's Chrome listens on 9222; the desktop app says where its own is.
+# The visible Chrome (the one the person watches on the Computers tab) listens
+# on 9222 in the container; the desktop app says where its own is. The hidden
+# one is a second Chrome with no window that the sandbox agent starts when a
+# step wants it (sandbox-image/agent/server.js).
 CDP_URL = os.environ.get("CDP_URL", "http://localhost:9222")
+CDP_URLS = {"visible": CDP_URL, "headless": os.environ.get("HEADLESS_CDP_URL", "http://localhost:9223")}
 
 # The bot's tab is marked in the page itself, so it is found again whether the
-# connection was kept (serve) or made fresh for a one-off call. window.name survives navigation within
-# a tab, which makes it the one piece of state that outlives both the process
-# and a page load.
+# connection was kept (serve) or made fresh for a one-off call.
 TAB_MARKER = "closedhand-bot"
 
-
-# Set by serve(): the connection is kept between requests instead of closed.
+# Set by serve(): connections are kept between requests instead of closed,
+# one per browser, on one Playwright.
 _PERSIST = False
-_conn = None
+_pw = None
+_browsers = {}
 
 
-def _drop():
-    """Forget the kept connection; the next request makes a fresh one."""
-    global _conn
-    if _conn:
-        pw, browser = _conn
+def _drop(engine=None):
+    """Forget kept connections, one browser's or all; the next request makes
+    fresh ones."""
+    global _pw
+    for e in ([engine] if engine else list(_browsers)):
+        b = _browsers.pop(e, None)
+        if b:
+            try:
+                b.close()
+            except Exception:
+                pass
+    if engine is None and _pw:
         try:
-            browser.close()
+            _pw.stop()
         except Exception:
             pass
-        try:
-            pw.stop()
-        except Exception:
-            pass
-    _conn = None
+        _pw = None
 
 
 def _release(pw, browser):
@@ -67,11 +73,11 @@ def _release(pw, browser):
     pw.stop()
 
 
-def _get_browser():
-    """Connect to the running Chrome over CDP. Returns (playwright, browser, context).
+def _get_browser(engine="visible"):
+    """Connect to a running Chrome over CDP. Returns (playwright, browser, context).
 
-    While serving, the connection made the first time is reused for as long as
-    Chrome keeps it open, with the context picked afresh each time.
+    While serving, each browser's connection is made once and reused for as
+    long as Chrome keeps it open, with the context picked afresh each time.
 
     Context choice matters: the whole point of attaching over CDP is to inherit
     the user's logged-in session. browser.new_context() would create a fresh,
@@ -80,22 +86,25 @@ def _get_browser():
     (the real window the user is using) and never silently fall back to an
     empty one.
     """
-    global _conn
-    if _PERSIST and _conn:
-        pw, browser = _conn
+    global _pw
+    if _PERSIST and engine in _browsers:
+        b = _browsers[engine]
         try:
-            contexts = list(browser.contexts) if browser.is_connected() else []
+            contexts = list(b.contexts) if b.is_connected() else []
             if contexts:
-                return pw, browser, max(contexts, key=lambda c: len(c.pages))
+                return _pw, b, max(contexts, key=lambda c: len(c.pages))
         except Exception:
             pass
-        _drop()
+        _drop(engine)
     from playwright.sync_api import sync_playwright
-    pw = sync_playwright().start()
+    pw = _pw if (_PERSIST and _pw) else sync_playwright().start()
+    if _PERSIST:
+        _pw = pw
+    url = CDP_URLS[engine]
     last_err = None
     for _ in range(3):
         try:
-            browser = pw.chromium.connect_over_cdp(CDP_URL)
+            browser = pw.chromium.connect_over_cdp(url)
             contexts = list(browser.contexts)
             if not contexts:
                 raise RuntimeError(
@@ -104,13 +113,79 @@ def _get_browser():
                 )
             context = max(contexts, key=lambda c: len(c.pages))
             if _PERSIST:
-                _conn = (pw, browser)
+                _browsers[engine] = browser
             return pw, browser, context
         except Exception as e:
             last_err = e
             time.sleep(2)
-    pw.stop()
-    raise RuntimeError(f"Could not attach to browser at {CDP_URL}: {last_err}")
+    if not _PERSIST:
+        pw.stop()
+    raise RuntimeError(f"Could not attach to the {engine} browser at {url}: {last_err}")
+
+
+def _host(url):
+    try:
+        from urllib.parse import urlparse
+        return (urlparse(url).hostname or "").lower()
+    except Exception:
+        return ""
+
+
+def _cookie_for(cookie, host):
+    domain = (cookie.get("domain") or "").lstrip(".").lower()
+    return bool(domain) and (host == domain or host.endswith("." + domain))
+
+
+def _sync_in(hidden):
+    """Give the hidden browser the visible one's logins: its cookies as they
+    are now, so a sign-out there is a sign-out here too."""
+    try:
+        cookies = _get_browser("visible")[2].cookies()
+    except Exception:
+        return
+    hidden.clear_cookies()
+    if cookies:
+        try:
+            hidden.add_cookies(cookies)
+        except Exception:
+            for c in cookies:  # one odd cookie must not cost all the others
+                try:
+                    hidden.add_cookies([c])
+                except Exception:
+                    pass
+
+
+def _sync_out(hidden, hosts):
+    """Hand back what the sites the hidden browser visited set, so a session
+    one of them renewed there is not left stale in the visible browser."""
+    hosts = {h for h in hosts if h}
+    if not hosts:
+        return
+    try:
+        fresh = [c for c in hidden.cookies() if any(_cookie_for(c, h) for h in hosts)]
+        if fresh:
+            _get_browser("visible")[2].add_cookies(fresh)
+    except Exception:
+        pass
+
+
+def _probe(page):
+    """What the bot decides "was this a check for bots?" from (lib/blocked-page.js):
+    the start of the page's HTML, its text and the status it was served with."""
+    out = {"url": page.url}
+    try:
+        out["status"] = page.evaluate("() => (performance.getEntriesByType('navigation')[0] || {}).responseStatus || null")
+    except Exception:
+        out["status"] = None
+    try:
+        out["html"] = page.content()[:20000]
+    except Exception:
+        out["html"] = ""
+    try:
+        out["text"] = page.inner_text("body")[:1600]
+    except Exception:
+        out["text"] = ""
+    return out
 
 
 def _same_page(a, b):
@@ -375,6 +450,13 @@ def _do(page, context, step):
         return dict({"went_to": step["url"]}, **_where(page, context))
     if action == "outline":
         return dict({"outline": _outline(page)}, **_where(page, context))
+    if action == "page_text":
+        # The whole visible text, for the spend check to read a checkout.
+        try:
+            text = page.inner_text("body")[:30000]
+        except Exception:
+            text = ""
+        return dict({"text": text}, **_where(page, context))
     if action == "screenshot":
         img = page.screenshot(full_page=bool(step.get("full_page")))
         return dict({"image": base64.b64encode(img).decode("utf-8")}, **_where(page, context))
@@ -473,30 +555,52 @@ def _with_outline(page, res, step):
     return res
 
 
-def _one(step):
-    """Run a single step on Closedhand's tab."""
-    pw, browser, context = _get_browser()
+def _hidden_start(engine, context):
+    """The hidden browser starts each request with the visible one's logins."""
+    if engine == "headless":
+        _sync_in(context)
+
+
+def _hidden_end(engine, context, page, hosts, out, want_probe=False):
+    """And ends it handing back what the sites set, with the probe the bot
+    uses to tell a check for bots from the page. The visible browser is
+    probed only when asked: after the hidden one met a check, to see whether
+    it passed there or needs a person."""
+    if engine == "headless":
+        hosts.add(_host(page.url))
+        _sync_out(context, hosts)
+    if engine == "headless" or want_probe:
+        out["probe"] = _probe(page)
+    return out
+
+
+def _one(step, engine="visible"):
+    """Run a single step on Closedhand's tab in one of the browsers."""
+    pw, browser, context = _get_browser(engine)
     try:
+        _hidden_start(engine, context)
         page = _page(context, step.get("url"))
-        return _with_outline(page, _do(page, context, step), step)
+        hosts = {_host(page.url)}
+        out = _with_outline(page, _do(page, context, step), step)
+        return _hidden_end(engine, context, page, hosts, out, bool(step.get("probe")))
     finally:
         _release(pw, browser)
 
 
-def batch(steps, url=None):
-    """Run several steps on ONE connection.
+def batch(steps, url=None, engine="visible"):
+    """Run several steps in one request.
 
-    Connecting Playwright over CDP costs seconds, and every separate call pays it
-    again: a comment flow done as five calls spends most of its time connecting
-    and tearing down rather than doing anything. Batching a whole flow into one
-    call is the difference between a task finishing and a task timing out.
-
-    Stops at the first failed step and returns what happened up to that point, so
-    a broken selector does not silently carry on into a wrong page.
+    Each request is a round trip to the LLM and back, so a flow whose steps are
+    already known goes as one. Stops at the first failed step and returns what
+    happened up to that point, so a broken step does not silently carry on
+    into a wrong page.
     """
-    pw, browser, context = _get_browser()
+    pw, browser, context = _get_browser(engine)
     try:
+        _hidden_start(engine, context)
         page = _page(context, url)
+        hosts = {_host(page.url)}
+        want_probe = any(st.get("probe") for st in steps or [])
         results = []
         for i, step in enumerate(steps or []):
             if step.get("url") and not _same_page(page.url, step["url"]):
@@ -505,17 +609,81 @@ def batch(steps, url=None):
                 res = _do(page, context, step)
             except Exception as e:
                 res = {"error": f"{type(e).__name__}: {e}"}
+            hosts.add(_host(page.url))
             res["step"] = i
             res["action"] = step.get("action")
             results.append(res)
             failed = res.get("error") or res.get("clicked") is False or res.get("filled") is False
             if failed:
-                return {"completed": i, "of": len(steps), "stopped_early": True, "results": results,
-                        "outline": res.get("outline") or _outline(page)}
+                return _hidden_end(engine, context, page, hosts, {
+                    "completed": i, "of": len(steps), "stopped_early": True, "results": results,
+                    "outline": res.get("outline") or _outline(page)}, want_probe)
         # Where the batch left the page, once, for the next step.
-        return {"completed": len(results), "of": len(steps), "stopped_early": False, "results": results,
-                "outline": _outline(page)}
+        return _hidden_end(engine, context, page, hosts, {
+            "completed": len(results), "of": len(steps), "stopped_early": False, "results": results,
+            "outline": _outline(page)}, want_probe)
     finally:
+        _release(pw, browser)
+
+
+# Not fetched when reading: Chrome drops these itself, so the requests never
+# queue through Python (routing them there made pages load one at a time).
+_SKIP_WHEN_READING = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif", "*.svg", "*.ico", "*.bmp",
+                      "*.mp4", "*.webm", "*.m3u8", "*.mp3", "*.woff", "*.woff2", "*.ttf", "*.otf"]
+
+
+def read_pages(urls, engine="headless"):
+    """Read several pages at once, each in its own hidden tab: title and text.
+
+    All of them load together, so ten pages take about as long as the slowest
+    one, and images, video and fonts are never fetched: reading needs none of
+    them. Closedhand's own tab is left where it was.
+    """
+    pw, browser, context = _get_browser(engine)
+    pages = []
+    try:
+        _hidden_start(engine, context)
+        for u in list(urls or [])[:10]:
+            page = context.new_page()
+            try:
+                cdp = context.new_cdp_session(page)
+                cdp.send("Network.enable")
+                cdp.send("Network.setBlockedURLs", {"urls": _SKIP_WHEN_READING})
+            except Exception:
+                pass  # images and all, then
+            try:
+                page.evaluate("u => { location.href = u }", u)
+            except Exception:
+                pass  # the navigation it started can cut the call short
+            pages.append((u, page))
+        for u, page in pages:
+            try:
+                page.wait_for_url(lambda now: now != "about:blank", wait_until="domcontentloaded", timeout=20000)
+            except Exception:
+                pass
+        # One short settle for all of them, for text filled in just after load.
+        if pages:
+            pages[0][1].wait_for_timeout(700)
+        out = []
+        for u, page in pages:
+            try:
+                if page.url == "about:blank":
+                    raise RuntimeError("The page did not open within 20 seconds.")
+                item = {"asked": u, "url": page.url, "title": page.title(), "text": page.inner_text("body")[:6000]}
+                if engine == "headless":
+                    item["probe"] = _probe(page)
+                out.append(item)
+            except Exception as e:
+                out.append({"asked": u, "error": f"{type(e).__name__}: {e}"})
+        if engine == "headless":
+            _sync_out(context, {_host(p.url) for _, p in pages})
+        return {"pages": out}
+    finally:
+        for _, page in pages:
+            try:
+                page.close()
+            except Exception:
+                pass
         _release(pw, browser)
 
 
@@ -564,11 +732,14 @@ def serve():
             req = json.loads(line)
         except ValueError:
             continue
+        engine = req.get("engine") or "visible"
         try:
             if req.get("op") == "batch":
-                out = batch(req.get("steps") or [], url=req.get("url"))
+                out = batch(req.get("steps") or [], url=req.get("url"), engine=engine)
+            elif req.get("op") == "read_pages":
+                out = read_pages(req.get("urls") or [], engine=engine)
             else:
-                out = _one(req.get("step") or {})
+                out = _one(req.get("step") or {}, engine=engine)
         except Exception as e:
             out = {"error": f"{type(e).__name__}: {e}"}
             _drop()

@@ -17,7 +17,7 @@ const helper = read("sandbox-image/agent/browser_helper.py");
 // The agent's queue, run against a stand-in Python process.
 function agentQueue(answer) {
   const start = server.indexOf("let browseChild = null");
-  const end = server.indexOf('app.post("/browse"', start);
+  const end = server.indexOf("// Started when a step first wants it", start);
   const spawned = [];
   const box = {
     console: { error() {} }, setTimeout, clearTimeout, JSON, Map, Promise, Error, Math, Date,
@@ -79,11 +79,11 @@ test("the helper keeps its connection while serving and reads pages as a numbere
 test("the bot sends every step but a card fill through the lasting connection, and the LLM is told to use numbers", () => {
   const handlers = read("lib/tools/handlers.js");
   const browse = handlers.slice(handlers.indexOf('case "sandbox_browse": {'), handlers.indexOf("// --- Background Agents ---"));
-  assert.match(browse, /const answer = await sandboxBrowse\(userId, body, 60000\);/);
+  assert.match(browse, /let answer = await sandboxBrowse\(userId, \{ \.\.\.body, engine \}, 60000\);/);
   assert.equal((browse.match(/sandboxExec\(/g) || []).length, 1, "only the card fill runs as a one-off script");
-  assert.match(browse, /const code = wallet\.fillScript\(secret\);[\s\S]*?await sandboxExec\(userId, "python", code, 60000\);/);
+  assert.match(browse, /const code = wallet\.fillScript\(secret, [^\n]+\);[\s\S]*?await sandboxExec\(userId, "python", code, 60000\);/);
   const defs = read("lib/tools/definitions.js");
-  assert.match(defs, /enum: \["outline", "batch", "screenshot", "scrape_text", "extract_data", "click", "fill", "press", "wait_for", "eval_js", "fill_card"\]/);
+  assert.match(defs, /enum: \["outline", "read_pages", "batch", "screenshot", "scrape_text", "extract_data", "click", "fill", "press", "wait_for", "eval_js", "fill_card"\]/);
   assert.match(defs, /ref: \{\n\s*type: "number",\n\s*description: "For click, fill, press and wait_for: the \[number\] of the element in the latest outline\./);
   assert.match(read("lib/sandbox.js"), /async function sandboxBrowse\(userId, body, timeoutMs = 60000\) \{/);
 });

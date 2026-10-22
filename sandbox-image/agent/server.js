@@ -32,6 +32,12 @@ const BROWSER_CMD = process.env.BROWSER_CMD || "";
 // Mac; the container needs nothing, it is the fence.
 const SANDBOX_PROFILE = process.env.SANDBOX_PROFILE || "";
 const BROWSER_PROFILE = path.join(WORKSPACE, ".chromium-profile");
+// The hidden browser: a second Chrome with no window, which Closedhand uses
+// wherever it is the better choice (lib/tools/handlers.js decides). It keeps
+// no profile of its own; the logins come from the visible one's cookies.
+const HEADLESS_PORT = process.env.HEADLESS_CDP_PORT || "9223";
+const HEADLESS_PROFILE = path.join(os.tmpdir(), "closedhand-headless");
+const HEADLESS_IDLE_MS = 10 * 60 * 1000;
 // What the container image pre-installs, so code written for one runs on the other.
 const PY_PACKAGES = ["pandas", "numpy", "requests", "matplotlib", "beautifulsoup4", "pillow", "openpyxl", "playwright", "lxml", "scipy", "scikit-learn", "seaborn", "tabulate", "python-dateutil", "pytz", "httpx", "pydantic", "chardet", "plotly", "yt-dlp", "av"];
 const MAX_TIMEOUT = 120000; // 120s absolute max
@@ -124,7 +130,7 @@ ensurePython();
 // The environment code runs in. On the desktop the helper modules sit beside
 // this file and the browser is wherever the app put it.
 function execEnv() {
-  const env = { ...process.env, HOME: EXEC_HOME, CDP_URL: `http://127.0.0.1:${CDP_PORT}` };
+  const env = { ...process.env, HOME: EXEC_HOME, CDP_URL: `http://127.0.0.1:${CDP_PORT}`, HEADLESS_CDP_URL: `http://127.0.0.1:${HEADLESS_PORT}` };
   if (DESKTOP) env.PYTHONPATH = __dirname + (process.env.PYTHONPATH ? ":" + process.env.PYTHONPATH : "");
   return env;
 }
@@ -222,7 +228,7 @@ async function parkIdleTab() {
 setInterval(() => { parkIdleTab().catch(() => {}); }, 60 * 1000).unref();
 
 // The browser was started by this agent; it goes when the agent goes.
-for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } try { browseChild && browseChild.kill(); } catch {} process.exit(0); });
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } try { browseChild && browseChild.kill(); } catch {} stopHeadless(); process.exit(0); });
 
 // --- Health ---
 app.get("/health", (_req, res) => {
@@ -687,6 +693,44 @@ function browseRequest(body, timeout) {
   browseQueue = next.catch(() => {});
   return next;
 }
+// Started when a step first wants it and stopped after ten quiet minutes, so
+// it only takes memory while it is being used.
+let headlessChild = null, headlessStarting = null, lastHeadlessAt = 0;
+function chromeBinary() {
+  if (BROWSER_CMD) return BROWSER_CMD;
+  return ["/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find((c) => fs.existsSync(c)) || null;
+}
+async function ensureHeadless() {
+  lastHeadlessAt = Date.now();
+  if (await httpJson(`http://127.0.0.1:${HEADLESS_PORT}/json/version`, 1500).catch(() => null)) return;
+  if (headlessStarting) return headlessStarting;
+  headlessStarting = (async () => {
+    const bin = chromeBinary();
+    if (!bin) throw new Error("No Chrome or Chromium to run the hidden browser with.");
+    // Sites are told the same browser as the visible one, not "HeadlessChrome",
+    // which many of them turn away on sight.
+    const visible = await httpJson(`http://127.0.0.1:${CDP_PORT}/json/version`, 1500).catch(() => null);
+    const agent = visible && visible["User-Agent"] ? visible["User-Agent"].replace(/HeadlessChrome/g, "Chrome") : null;
+    fs.rmSync(HEADLESS_PROFILE, { recursive: true, force: true });
+    const args = ["--headless=new", `--remote-debugging-port=${HEADLESS_PORT}`, `--user-data-dir=${HEADLESS_PROFILE}`,
+      "--no-first-run", "--no-default-browser-check", "--window-size=1280,800", ...(agent ? [`--user-agent=${agent}`] : []),
+      ...(DESKTOP ? [] : ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]), "about:blank"];
+    const child = spawn(bin, args, { stdio: "ignore", detached: false });
+    child.on("exit", () => { if (headlessChild === child) headlessChild = null; });
+    headlessChild = child;
+    for (let i = 0; i < 40; i++) {
+      if (await httpJson(`http://127.0.0.1:${HEADLESS_PORT}/json/version`, 1000).catch(() => null)) return;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    throw new Error("The hidden browser did not start.");
+  })().finally(() => { headlessStarting = null; });
+  return headlessStarting;
+}
+function stopHeadless() {
+  if (headlessChild) { try { headlessChild.kill(); } catch {} headlessChild = null; }
+}
+setInterval(() => { if (headlessChild && !browseBusy && Date.now() - lastHeadlessAt > HEADLESS_IDLE_MS) { stopHeadless(); console.log("[browser] stopped the hidden browser after ten quiet minutes"); } }, 60 * 1000).unref();
+
 app.post("/browse", async (req, res) => {
   lastExecAt = Date.now(); parked = false;
   if (pythonState !== "ready") {
@@ -694,12 +738,15 @@ app.post("/browse", async (req, res) => {
       ? "Python is still being set up on this Mac (a one-time download). Try again in a minute or two."
       : `Python is not available here: ${pythonError || pythonState}.` });
   }
-  const { op, step, steps, url, timeout_ms } = req.body || {};
-  if (op !== "batch" && op !== "step") return res.status(400).json({ error: "op must be step or batch" });
+  const { op, step, steps, url, urls, engine, timeout_ms } = req.body || {};
+  if (!["batch", "step", "read_pages"].includes(op)) return res.status(400).json({ error: "op must be step, batch or read_pages" });
+  if (engine !== undefined && engine !== "visible" && engine !== "headless") return res.status(400).json({ error: "engine must be visible or headless" });
   const timeout = Math.min(timeout_ms || 60000, MAX_TIMEOUT);
   browseBusy++;
   try {
-    const result = await browseRequest(op === "batch" ? { op, steps, url } : { op, step }, timeout);
+    if (engine === "headless") await ensureHeadless();
+    const body = op === "batch" ? { op, steps, url, engine } : op === "read_pages" ? { op, urls, engine } : { op, step, engine };
+    const result = await browseRequest(body, timeout);
     res.json({ result });
   } catch (e) {
     res.json({ error: e.message });

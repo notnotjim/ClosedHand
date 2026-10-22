@@ -107,7 +107,7 @@ test('no log line prints a whole address, which can carry a token in its query',
   }).map(({ at }) => at);
   assert.deepEqual(found, []);
   const handlers = read('lib/tools/handlers.js'), gateway = read('lib/gateway.js');
-  assert.match(handlers, /\[browse\] \$\{action\}\$\{browseUrl \? " " \+ require\("\.\.\/log-text"\)\.peekUrl\(browseUrl\)/);
+  assert.match(handlers, /\[browse\] \$\{action\} \(\$\{engine\}\)\$\{browseUrl \? " " \+ require\("\.\.\/log-text"\)\.peekUrl\(browseUrl\)/);
   assert.match(gateway, /\[gateway\/api\] \$\{method\} \$\{require\("\.\/log-text"\)\.peekUrl\(url\)\}/);
   assert.match(gateway, /\[gateway\/fetch\] \$\{method\} \$\{require\("\.\/log-text"\)\.peekUrl\(url\)\}/);
 });
