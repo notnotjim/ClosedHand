@@ -7175,12 +7175,51 @@
 
     // What a watch looks at and for, and where it stands (lib/watches.js).
     function watchLine(a) {
-      var looks = { email: 'each new email', bank: 'each new bank transaction', messages: 'each new chat message' }[a.trigger_event_source] || 'each new email';
+      var looks = a.watch_text || 'each new email';
+      var timed = a.trigger_when === 'before' || a.trigger_when === 'after';
       var what = a.trigger_event_condition || a.description || '';
       var day = function(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch (e) { return ''; } };
-      if (a.status === 'done') return 'Arrived ' + day(a.fired_at) + ': ' + what;
+      if (a.status === 'done') return (timed ? 'Ran ' : 'Arrived ') + day(a.fired_at) + ': ' + what;
       if (a.status === 'expired') return 'Nothing arrived by ' + day(a.expires_at) + ': ' + what;
+      if (timed) return 'Runs ' + looks + ', for: ' + what;
       return 'Watching ' + looks + ' for: ' + what + (a.run_once && a.expires_at ? ' (until ' + day(a.expires_at) + ')' : '');
+    }
+
+    // What a routine can wait for comes from the server (lib/watch-kinds.js),
+    // the same list the watches run by. A kind with a time of its own can
+    // also run before each one starts or after it ends.
+    var _watchKinds = null;
+    async function loadWatchKinds() {
+      if (!_watchKinds) {
+        try { var res = await fetch('/api/watch-kinds'); if (res.ok) _watchKinds = await res.json(); } catch (e) {}
+        _watchKinds = _watchKinds || [{ id: 'email', label: 'Emails', timed: false }];
+      }
+      var sel = document.getElementById('auto-event-source');
+      // A routine being edited says which kind it watches before the list is here.
+      var keep = sel.dataset.want || sel.value;
+      delete sel.dataset.want;
+      sel.innerHTML = _watchKinds.map(function (k) { return '<option value="' + escHtml(k.id) + '">' + escHtml(k.label) + '</option>'; }).join('');
+      if (keep && _watchKinds.some(function (k) { return k.id === keep; })) sel.value = keep;
+      showWatchTiming();
+      return _watchKinds;
+    }
+    function showWatchTiming() {
+      var kind = (_watchKinds || []).find(function (k) { return k.id === document.getElementById('auto-event-source').value; });
+      var timed = !!(kind && kind.timed);
+      var whenSel = document.getElementById('auto-event-when');
+      if (!timed) whenSel.value = 'arrives';
+      // Only kinds with a time of their own can run before or after one.
+      whenSel.disabled = !timed;
+      var around = whenSel.value !== 'arrives';
+      document.getElementById('auto-event-offset').style.display = around ? 'block' : 'none';
+      document.getElementById('auto-event-once-text').textContent = around ? 'Only the first one, then stop' : 'Stop after the first one (it ends after 30 days if nothing comes)';
+      document.getElementById('auto-event-condition-label').textContent = around ? 'Which ones (leave empty for every one)' : 'What it waits for';
+    }
+    // Waiting for one thing usually ends when it comes; a routine around each
+    // meeting goes on.
+    function changeWatchWhen() {
+      document.getElementById('auto-event-once').checked = document.getElementById('auto-event-when').value === 'arrives';
+      showWatchTiming();
     }
 
     function truncatePrompt(text, max) {
@@ -7216,7 +7255,10 @@
           selectTrigger(a.trigger_type || 'manual');
         }
         if (a.trigger_type === 'event') {
-          document.getElementById('auto-event-source').value = a.trigger_event_source || 'email';
+          document.getElementById('auto-event-source').dataset.want = a.trigger_event_source || 'email';
+          document.getElementById('auto-event-when').value = a.trigger_when || 'arrives';
+          document.getElementById('auto-event-offset').value = String(a.trigger_offset_minutes || 0);
+          loadWatchKinds();
           document.getElementById('auto-event-condition').value = a.trigger_event_condition || '';
           document.getElementById('auto-event-words').value = (a.watch_words || []).join(', ');
           document.getElementById('auto-event-once').checked = a.run_once !== false;
@@ -7335,6 +7377,7 @@
       });
       document.getElementById('auto-schedule-picker').style.display = type === 'scheduled' ? 'block' : 'none';
       document.getElementById('auto-event-picker').style.display = type === 'event' ? 'block' : 'none';
+      if (type === 'event') loadWatchKinds();
       var manualHint = document.getElementById('auto-manual-hint');
       if (manualHint) manualHint.style.display = type === 'manual' ? 'block' : 'none';
     }
@@ -7454,10 +7497,12 @@
         }
       }
 
-      var eventCondition = null, eventSource = null, eventWords = [], eventOnce = false;
+      var eventCondition = null, eventSource = null, eventWords = [], eventOnce = false, eventWhen = 'arrives', eventOffset = 0;
       if (_selectedTrigger === 'event') {
         eventCondition = document.getElementById('auto-event-condition').value.trim();
-        if (!eventCondition) { errEl.textContent = 'Say what it waits for.'; errEl.style.display = 'block'; return; }
+        eventWhen = document.getElementById('auto-event-when').value || 'arrives';
+        eventOffset = eventWhen === 'arrives' ? 0 : Number(document.getElementById('auto-event-offset').value) || 0;
+        if (!eventCondition && eventWhen === 'arrives') { errEl.textContent = 'Say what it waits for.'; errEl.style.display = 'block'; return; }
         eventSource = document.getElementById('auto-event-source').value;
         eventWords = document.getElementById('auto-event-words').value.split(',').map(function(w) { return w.trim(); }).filter(Boolean);
         eventOnce = document.getElementById('auto-event-once').checked;
@@ -7483,6 +7528,8 @@
             trigger_human_schedule: humanSchedule,
             trigger_event_condition: eventCondition,
             trigger_event_source: eventSource,
+            trigger_when: eventWhen,
+            trigger_offset_minutes: eventOffset,
             watch_words: eventWords,
             run_once: eventOnce,
             task_prompt: withRules(prompt, document.getElementById('auto-quality-input').value),
@@ -8966,18 +9013,34 @@
       <!-- Event picker (hidden by default): a watch, lib/watches.js -->
       <div id="auto-event-picker" style="display:none;margin-bottom:10px;">
         <div style="font-size:13px;color:rgba(var(--fg-rgb),0.6);margin:0 0 4px;">What it looks at</div>
-        <select id="auto-event-source" style="width:100%;padding:8px 10px;border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:6px;">
-          <option value="email">Each new email</option>
-          <option value="bank">Each new bank transaction</option>
-          <option value="messages">Each new chat message (Slack, WhatsApp)</option>
+        <select id="auto-event-source" onchange="showWatchTiming()" style="width:100%;padding:8px 10px;border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;font-family:inherit;margin-bottom:6px;">
+          <option value="email">Emails</option>
         </select>
-        <div style="font-size:13px;color:rgba(var(--fg-rgb),0.6);margin:0 0 4px;">What it waits for</div>
+        <div id="auto-event-when-row">
+          <div style="font-size:13px;color:rgba(var(--fg-rgb),0.6);margin:0 0 4px;">When it runs</div>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <select id="auto-event-when" onchange="changeWatchWhen()" style="flex:1;padding:8px 10px;border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;font-family:inherit;">
+              <option value="arrives">As each new one arrives</option>
+              <option value="before">Before each one starts</option>
+              <option value="after">After each one ends</option>
+            </select>
+            <select id="auto-event-offset" style="flex:1;display:none;padding:8px 10px;border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;font-family:inherit;">
+              <option value="0">Right then</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">An hour</option>
+              <option value="120">2 hours</option>
+              <option value="1440">A day</option>
+            </select>
+          </div>
+        </div>
+        <div id="auto-event-condition-label" style="font-size:13px;color:rgba(var(--fg-rgb),0.6);margin:0 0 4px;">What it waits for</div>
         <input type="text" id="auto-event-condition" placeholder="e.g. the shop's email saying my order has shipped" style="width:100%;padding:8px 10px;background:var(--raised);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;box-sizing:border-box;margin-bottom:6px;">
         <div style="font-size:13px;color:rgba(var(--fg-rgb),0.6);margin:0 0 4px;">Words it will contain (optional)</div>
         <input type="text" id="auto-event-words" placeholder="An order number or the sender, separated by commas" style="width:100%;padding:8px 10px;background:var(--raised);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;color:var(--fg);font-size:13px;box-sizing:border-box;">
         <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted);font-weight:400;cursor:pointer;">
           <input type="checkbox" id="auto-event-once" checked style="width:16px;height:16px;margin:0;accent-color:var(--ok);">
-          Stop after the first one (it ends after 30 days if nothing comes)
+          <span id="auto-event-once-text">Stop after the first one (it ends after 30 days if nothing comes)</span>
         </label>
       </div>
 

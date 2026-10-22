@@ -39,6 +39,7 @@ const PAIRS = [
   { name: "db-driver-pg", copies: ["lib/db-driver-pg.js", "webapp/db-driver-pg.js", "closedhand-com/lib/db-driver-pg.js"] },
   { name: "recall-settings", copies: ["lib/services/recall-settings.js", "webapp/recall-settings.js"] },
   { name: "skill-scan-prompt", copies: ["lib/skill-scan-prompt.js", "webapp/skill-scan-prompt.js"] },
+  { name: "watch-kinds", copies: ["lib/watch-kinds.js", "webapp/watch-kinds.js"] },
   { name: "model-policy", copies: ["lib/model-policy.js", "webapp/model-policy.js"] },
   { name: "model-wire", copies: ["lib/model-wire.js", "webapp/model-wire.js"] },
   { name: "included-ai", copies: ["lib/included-ai.js", "webapp/included-ai.js"] },

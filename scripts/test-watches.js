@@ -1,6 +1,6 @@
 // A routine set to run "when something happens" is a watch: it is checked
-// against each new email, bank transaction or synced chat message as the sync
-// brings them in (lib/watches.js). Before, such a routine was saved, said
+// against each new item of its kind as the sync brings them in
+// (lib/watches.js, lib/watch-kinds.js). Before, such a routine was saved, said
 // "Routine saved", and nothing ever ran it. Pulse leaves an item a watch is
 // waiting for, or one anyone has told the person about, alone (told-items.js).
 const { test } = require("node:test");
@@ -43,7 +43,7 @@ function fakeDb(rows) {
 const BEGAN = "2026-11-02T10:00:00.000Z";
 const AT = Date.parse("2026-11-03T09:00:00.000Z");
 const email = (id, fields, syncedAt = "2026-11-03T08:00:00.000Z", receivedAt = "2026-11-03T07:58:00.000Z") =>
-  ({ source: "gmail", type: "email", external_id: id, received_at: receivedAt, synced_at: syncedAt, data: { from: "", subject: "", body: "", labels: ["INBOX"], ...fields } });
+  ({ source: "gmail", type: "email", external_id: id, received_at: receivedAt, synced_at: syncedAt, created_at: syncedAt, data: { from: "", subject: "", body: "", labels: ["INBOX"], ...fields } });
 const watch = (extra = {}) => ({
   id: "w1", user_id: "u1", name: "brightwater-order-shipping", status: "active", trigger_type: "event",
   trigger_event_source: "email", trigger_event_condition: "Brightwater Toys' email saying order BW-40417 has shipped",
@@ -59,13 +59,15 @@ function deps(db, answer) {
   };
 }
 
-test("what a watch can see: new email, bank transactions and synced chat messages, and nothing else", () => {
+test("what a watch can see: every kind the sync stores, and bookings, and nothing else", () => {
   assert.equal(watches.sourceOf("Gmail"), "email");
   assert.equal(watches.sourceOf(undefined), "email");
   assert.equal(watches.sourceOf("transactions"), "bank");
   assert.equal(watches.sourceOf("whatsapp"), "messages");
+  assert.equal(watches.sourceOf("calendar"), "calendar");
+  assert.equal(watches.sourceOf("notion"), "notes");
+  assert.equal(watches.sourceOf("flights"), "bookings");
   assert.equal(watches.sourceOf("shopify"), null);
-  assert.equal(watches.sourceOf("calendar"), null);
 });
 
 test("the shipping email fires the watch once: the routine runs with it, it is recorded as told, and the watch closes", async () => {
@@ -143,12 +145,12 @@ test("a watch for one thing that runs out says so and ends", async () => {
 });
 
 test("bank transactions count by their day, and the person's own chat messages never count", async () => {
-  const bank = { source: "lunchflow", type: "bank_transaction", external_id: "tx:1", received_at: "2026-11-02T00:00:00.000Z", synced_at: "2026-11-03T08:00:00.000Z",
+  const bank = { source: "lunchflow", type: "bank_transaction", external_id: "tx:1", received_at: "2026-11-02T00:00:00.000Z", synced_at: "2026-11-03T08:00:00.000Z", created_at: "2026-11-03T08:00:00.000Z",
     data: { date: "2026-11-02", amount: -950, currency: "GBP", payee: "Harbour Lettings", description: "RENT NOV", account_name: "Current" } };
   const d1 = deps(fakeDb([bank]), '{"matches":[1]}');
   const r1 = await watches.checkWatch(watch({ trigger_event_source: "bank", watch_words: ["harbour lettings"], trigger_event_condition: "November rent leaving the account" }), d1.deps);
   assert.equal(r1.fired, 1, "dated the day the watch began, still counts");
-  const mine = { source: "whatsapp", type: "message", external_id: "wa-1", received_at: "2026-11-03T07:59:00.000Z", synced_at: "2026-11-03T08:00:00.000Z", data: { sender: "me", text: "did the parcel come?", chat_name: "Sam" } };
+  const mine = { source: "whatsapp", type: "message", external_id: "wa-1", received_at: "2026-11-03T07:59:00.000Z", synced_at: "2026-11-03T08:00:00.000Z", created_at: "2026-11-03T08:00:00.000Z", data: { sender: "me", text: "did the parcel come?", chat_name: "Sam" } };
   assert.equal(watches.ignored(mine), true);
 });
 
@@ -167,12 +169,12 @@ test("Pulse leaves alone what a watch with words is waiting for, and what anyone
 
 test("the chat tool makes a watch only for what one can see, with its words, end date and plain message", () => {
   const h = read("lib/tools/handlers.js");
-  assert.match(h, /if \(isWatch && !watchSource\) return \{ error: "A watch can look at new email, bank transactions or synced chat messages/);
+  assert.match(h, /if \(isWatch && !watchSource\) return \{ error: "A watch can look at " \+ kinds\.choices\(\)/);
   assert.match(h, /const modelMap = \{ fast: "haiku", balanced: "sonnet", thorough: "opus"/, "the effort the tool offers reaches the routine");
   assert.match(h, /run_once: runOnce,\n\s+watch_words: watchWords,\n\s+expires_at: expiresAt,/);
-  assert.match(h, /"Watch '" \+ auto\.name \+ "' is on: each " \+ looks/);
+  assert.match(h, /"Watch '" \+ auto\.name \+ "' is on: " \+ looks/);
   const defs = read("lib/tools/definitions.js");
-  assert.match(defs, /event_source: \{ type: "string", enum: \["email", "bank", "messages"\]/);
+  assert.match(defs, /event_source: \{ type: "string", enum: \["email", "messages", "calendar", "bank", "notes", "bookings"\]/);
   assert.match(defs, /never promise to watch those/);
   assert.match(read("lib/engine.js"), /is made only with a watch behind it: in the same turn, create one with automation_create/);
   assert.match(read("index.js"), /require\("\.\/lib\/watches"\)\.start\(\);/);
@@ -180,7 +182,7 @@ test("the chat tool makes a watch only for what one can see, with its words, end
 
 test("the dashboard checks a watch it saves, arms it from now, and shows where it stands", () => {
   const server = read("webapp/server.js");
-  const watchFields = new Function(server.slice(server.indexOf("const WATCH_SOURCES"), server.indexOf("// Create saved automation")) + "return watchFields;")();
+  const watchFields = new Function("watchKinds", server.slice(server.indexOf("function watchFields("), server.indexOf("// What the routine form offers to wait for.")) + "return watchFields;")(require("../webapp/watch-kinds"));
   assert.equal(watchFields({ trigger_type: "event", trigger_event_source: "shopify", trigger_event_condition: "x" }).ok, false);
   assert.equal(watchFields({ trigger_type: "event", trigger_event_condition: " " }).ok, false);
   const now = Date.parse("2026-11-03T09:00:00.000Z");
@@ -190,7 +192,7 @@ test("the dashboard checks a watch it saves, arms it from now, and shows where i
   assert.equal(w.expires_at, "2026-12-03T09:00:00.000Z");
   assert.equal(w.watched_until, "2026-11-03T09:00:00.000Z");
   assert.equal(w.status, "active");
-  assert.deepEqual(watchFields({ trigger_type: "scheduled" }).fields, { run_once: false, watch_words: [], expires_at: null });
+  assert.deepEqual(watchFields({ trigger_type: "scheduled" }).fields, { run_once: false, watch_words: [], expires_at: null, trigger_when: "arrives", trigger_offset_minutes: 0 });
   assert.match(server, /watched_until: _looked, watch_seen: _judged, fired_at: _fired, expires_at: _ends, \.\.\.changes \} = req\.body/, "how far it looked is not the browser's to set");
   const dash = read("webapp/views/dashboard.html");
   for (const id of ["auto-event-source", "auto-event-condition", "auto-event-words", "auto-event-once"]) assert.match(dash, new RegExp(`id="${id}"`));

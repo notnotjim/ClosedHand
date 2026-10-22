@@ -34,6 +34,7 @@ const { supabase } = require("./db");
 
 const { scanMcpTools, scanSkillContent, configureScanBackend } = require("./security-scan");
 const mcpClient = require("./mcp-client");
+const watchKinds = require("./watch-kinds"); // what a routine can wait for, shared with the bot
 const apiKeys = require("./api-keys");
 const phoneZone = require("./phone-zone");
 const bridgeToken = require("./bridge-token");
@@ -5659,7 +5660,7 @@ app.get("/api/automations", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("automations")
-      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, run_once, watch_words, expires_at, fired_at, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, created_at, updated_at")
+      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, trigger_when, trigger_offset_minutes, run_once, watch_words, expires_at, fired_at, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
@@ -5681,7 +5682,8 @@ app.get("/api/automations", async (req, res) => {
       }
     }
 
-    res.json(autos);
+    // A watch's trigger in words, from the same list the bot runs it by.
+    res.json(autos.map((a) => (a.trigger_type === "event" ? { ...a, watch_text: watchKinds.describe(a.trigger_event_source, a.trigger_when, a.trigger_offset_minutes) } : a)));
   } catch (e) {
     console.error("List automations error:", e);
     res.status(500).json({ error: "Failed to load automations" });
@@ -5761,27 +5763,37 @@ app.get("/api/automations/stats", async (req, res) => {
   }
 });
 
-// A routine for "when something happens" is a watch (lib/watches.js in the
-// bot): it reads new email, bank transactions or synced chat messages as they
-// arrive. A watch for one thing stops after it fires, or after 30 days with
-// nothing. Saving one, new or edited, arms it from now: it looks only at what
-// arrives after.
-const WATCH_SOURCES = ["email", "bank", "messages"];
+// A routine that waits for something (a watch, run by lib/watches.js in the
+// bot): it looks at any kind of item the sync stores, or bookings, as each
+// arrives, or at a time an item sets, before it starts or after it ends
+// (lib/watch-kinds.js, shared with the bot). A watch for one thing stops
+// after it fires, or after 30 days with nothing. Saving one, new or edited,
+// arms it from now: it looks only at what arrives after.
 function watchFields(body, now = Date.now()) {
-  if (body.trigger_type !== "event") return { ok: true, fields: { run_once: false, watch_words: [], expires_at: null } };
-  const source = body.trigger_event_source || "email";
-  if (!WATCH_SOURCES.includes(source)) return { ok: false, error: "A routine can watch new email, bank transactions or chat messages as they arrive." };
-  const condition = String(body.trigger_event_condition || "").trim();
+  if (body.trigger_type !== "event") return { ok: true, fields: { run_once: false, watch_words: [], expires_at: null, trigger_when: "arrives", trigger_offset_minutes: 0 } };
+  const source = watchKinds.kindOf(body.trigger_event_source || "email");
+  if (!source) return { ok: false, error: "A routine can watch " + watchKinds.choices().map((c) => c.label.toLowerCase()).join(", ") + "." };
+  const when = watchKinds.WHEN.includes(body.trigger_when) ? body.trigger_when : "arrives";
+  if (when !== "arrives" && !watchKinds.KINDS[source].timed) return { ok: false, error: `A ${watchKinds.KINDS[source].noun} has no time of its own, so a routine can only run as each one arrives.` };
+  const offset = when === "arrives" ? 0 : Math.min(Math.max(Math.round(Number(body.trigger_offset_minutes) || 0), 0), 30 * 1440);
+  const condition = String(body.trigger_event_condition || "").trim() || (when !== "arrives" ? `every ${watchKinds.KINDS[source].noun}` : "");
   if (!condition) return { ok: false, error: "Say what it waits for." };
-  const once = body.run_once !== false;
+  const once = when === "arrives" ? body.run_once !== false : body.run_once === true;
   const words = (Array.isArray(body.watch_words) ? body.watch_words : String(body.watch_words || "").split(","))
     .map((w) => String(w).trim()).filter((w) => w.length >= 2 && w.length <= 60).slice(0, 5);
   return { ok: true, fields: {
     trigger_event_source: source, trigger_event_condition: condition, run_once: once, watch_words: words,
+    trigger_when: when, trigger_offset_minutes: offset,
     expires_at: once ? new Date(now + 30 * 86400000).toISOString() : null,
     watched_until: new Date(now).toISOString(), watch_seen: [], fired_at: null, status: "active",
   } };
 }
+
+// What the routine form offers to wait for.
+app.get("/api/watch-kinds", (req, res) => {
+  if (!getUserIdFromRequest(req)) return res.status(401).json({ error: "Not authenticated" });
+  res.json(watchKinds.choices());
+});
 
 // Create saved automation
 app.post("/api/automations", async (req, res) => {
