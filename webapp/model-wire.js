@@ -353,7 +353,21 @@ function hideKeys(text, conn) {
 const KEY_AS_MODEL = "That looks like an API key, not a model ID, so Closedhand didn't send it anywhere. To use another provider, choose it under Provider and paste the key in its API key box.";
 // Models that refused to skip thinking; their fast jobs think as little as they allow.
 const mustThink = new Set();
+// A runner on this computer that has stopped or is still loading its model.
+function runnerAway(e) {
+  const code = e?.cause?.code || e?.code;
+  return e?.status === 503 || ["ECONNREFUSED", "ECONNRESET", "UND_ERR_SOCKET", "UND_ERR_CLOSED"].includes(code) || /fetch failed/i.test(String(e?.message || ""));
+}
 async function request(conn, params, options = {}) {
+  // A job run on this computer (webapp/run-here.js) goes to the person's
+  // provider for any request its runner can't take.
+  if (conn.fallback) {
+    try { return await request({ ...conn, fallback: null }, params, options); }
+    catch (e) {
+      if (!runnerAway(e)) throw e;
+      return request(conn.fallback, { ...params, model: conn.fallback.model }, options);
+    }
+  }
   const model = params.model || conn.model;
   if (looksLikeKey(model)) throw Object.assign(new Error(KEY_AS_MODEL), { status: 400, code: "model_id_is_key" });
   const cap = conn.capabilities || policy.capabilities(conn, model);

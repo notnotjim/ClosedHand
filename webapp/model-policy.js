@@ -91,11 +91,22 @@ function getRole(settings, role) {
   if (!pick) return null;
   const conn = config.connections?.[pick.connection];
   if (!conn) throw new Error("The model connection is missing. Check Models in Settings.");
-  return { ...conn, apiKey: openKey(conn.apiKey), model: pick.model, capabilities: pick.capabilities };
+  const resolved = { ...conn, apiKey: openKey(conn.apiKey), model: pick.model, capabilities: pick.capabilities };
+  // A job run on this computer (webapp/run-here.js) keeps the person's
+  // provider beside it; model-wire uses it whenever the runner isn't answering.
+  const back = pick.fallback && config.connections?.[pick.fallback.connection];
+  if (back) resolved.fallback = { ...back, apiKey: openKey(back.apiKey), model: pick.fallback.model, capabilities: pick.fallback.capabilities };
+  return resolved;
 }
+// Settings' model form edits the provider setup, so a job run on this
+// computer shows there as the provider pick it falls back to.
 function publicConfig(config) {
   if (!config) return null;
-  return { ...config, connections: Object.fromEntries(Object.entries(config.connections).map(([id, c]) =>
+  const roles = Object.fromEntries(Object.entries(config.roles || {}).map(([job, r]) =>
+    [job, r?.here && r.fallback ? { ...r.fallback, runsHere: true } : r]));
+  const used = new Set(Object.values(roles).map(r => r?.connection));
+  return { ...config, roles, connections: Object.fromEntries(Object.entries(config.connections)
+    .filter(([id, c]) => c.provider !== "here" || used.has(id)).map(([id, c]) =>
     [id, { provider: c.provider, backend: c.backend, baseUrl: c.baseUrl, hasKey: !!c.apiKey }])) };
 }
 function publicSettings(settings = {}) {
