@@ -152,7 +152,8 @@ test("offers appear only in the Mac app, for a job whose model fits beside what 
   const env = { ...process.env };
   try {
     process.env.LLAMA_SERVER_BIN = bin; process.env.CLOSEDHAND_DESKTOP = "1"; delete process.env.RUN_HERE_FORCE;
-    runHere.configure({ fetch: fixtures.hub().impl, supabase, getAdminUserId: () => "u", platform: "darwin", arch: "arm64",
+    // A stand-in for the Mac's sandbox tool, so this also runs where there is none (CI on Linux).
+    runHere.configure({ fetch: fixtures.hub().impl, supabase, getAdminUserId: () => "u", platform: "darwin", arch: "arm64", sandboxExec: bin,
       hardware: () => big(64, "Apple M4 Max"), state: { read: async () => state, write: async (s) => { state = s; } } });
     const offered = await runHere.offers(settings);
     assert.deepEqual(Object.keys(offered), ["chat", "background"], "no image role");
