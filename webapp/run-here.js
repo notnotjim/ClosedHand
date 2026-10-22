@@ -114,13 +114,16 @@ function isLocal(baseUrl) {
   try { return ["localhost", "127.0.0.1", "[::1]", "host.docker.internal"].includes(new URL(baseUrl).hostname); } catch (_) { return false; }
 }
 // The model's Hugging Face repository, when its weights are published there.
-// Providers that don't name models by repository (and closed models) have
-// none, so they are never offered.
+// Only names that are Hugging Face's own are looked up: OpenRouter's list
+// links a model to its repository, and DeepInfra's names are repositories.
+// Other providers' models (and closed models) are never offered.
 async function repoFor(conn, model) {
   if (!conn || !model || conn.provider === "here" || conn.provider === "ollama") return null;
   if (isLocal(conn.baseUrl)) return null;
   if (conn.provider === "openrouter") return openRouterRepo(model);
-  if (["deepinfra", "custom"].includes(conn.provider) && safeRepo(model)) return model;
+  // DeepInfra names its models by their Hugging Face repository. A custom
+  // provider's names may be private, so they are never looked up.
+  if (conn.provider === "deepinfra" && safeRepo(model)) return model;
   return null;
 }
 // The chat template the model's makers publish, read at their pinned
@@ -205,19 +208,29 @@ async function readSettings() {
   return data.settings || {};
 }
 async function saveConfig(settings, config) {
-  await require("./settings-patch").patchSettings(deps.supabase, deps.getAdminUserId(), { set: { model_config: config } });
+  await require("./settings-patch").patchSettings(deps.supabase, deps.getAdminUserId(), { set: { model_config: config }, by: "run-here" });
   return { ...settings, model_config: config };
 }
 
-// One thing at a time: setting a job up, undoing one, starting again after
-// a restart and tidying up never overlap, so they never share a half-written
-// file or stop each other's runner.
+// Setting jobs up, and starting runners again after a restart, go one at a
+// time: they never share a half-written file or start the same runner twice.
+// Changes to the model settings are short and go one at a time too; undoing
+// a job and tidying up need only those, so they never wait behind a
+// download, and they leave alone what a run in progress is using.
 let chain = Promise.resolve();
 function exclusive(fn) {
   const next = chain.then(fn, fn);
   chain = next.catch(() => {});
   return next;
 }
+let edits = Promise.resolve();
+function editConfig(fn) {
+  const next = edits.then(fn, fn);
+  edits = next.catch(() => {});
+  return next;
+}
+const activeRunners = new Set(); // runners a run in progress has started or is changing
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 // --- Offers -------------------------------------------------------------------
 
@@ -227,11 +240,11 @@ function reserved(config, except) {
   return hereConnections(config).filter(([id]) => id !== except).reduce((n, [, c]) => n + (Number(c.here?.memoryBytes) || 0), 0);
 }
 const connectionId = (gguf, quant) => "here-" + crypto.createHash("sha256").update(gguf.repo + "|" + quant.label).digest("hex").slice(0, 10);
+// Each version is judged beside the LLMs already running there, apart from
+// the runner that version would share.
 function choose(job, model, hw, config) {
   if (forced()) return forcedChoice(job, model, hw);
-  const first = fit.pick(job, model.quants, model.shape, { ...hw, reservedBytes: 0 }, model.projector);
-  if (!first.ok) return first;
-  return fit.pick(job, model.quants, model.shape, { ...hw, reservedBytes: reserved(config, connectionId(model.gguf, first.quant)) }, model.projector);
+  return fit.pick(job, model.quants, model.shape, hw, model.projector, (q) => reserved(config, connectionId(model.gguf, q)));
 }
 async function offers(settings) {
   const result = {};
@@ -313,6 +326,7 @@ const release = (files) => files.forEach(f => { const n = (inFlight.get(f) || 1)
 
 // connection id -> { child, port, key, spec, state: loading|running|restarting, supervised, stopping, restarts, timer }
 const runners = new Map();
+const MAX_FAILURES = 4;
 function freePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -333,11 +347,17 @@ async function health(port, key, ms = 3000) {
     return res.ok;
   } catch (_) { return false; }
 }
-// On macOS the runner is sandboxed: it reads its own program and the models
-// folder, writes only temporary files, listens on this computer only and
-// can reach no network at all.
+// The runner is sandboxed: it may run only its own program and start
+// nothing else, reads only that program's folder and the models folder in
+// the home folder, writes only temporary files, listens on this computer
+// only, reaches no network, and can't open apps, send Apple events or touch
+// the pasteboard. Without the sandbox it doesn't run at all.
 const SANDBOX = `(version 1)
 (allow default)
+(deny process-fork)
+(deny process-exec*)
+(allow process-exec (literal (param "BIN")))
+(deny mach-lookup (global-name "com.apple.coreservices.launchservicesd") (global-name "com.apple.coreservices.appleevents") (global-name-prefix "com.apple.pasteboard"))
 (deny network*)
 (allow network-bind (local ip "localhost:*"))
 (allow network-inbound (local ip "localhost:*"))
@@ -346,8 +366,10 @@ const SANDBOX = `(version 1)
 (deny file-read* (subpath "/Users") (subpath "/Volumes"))
 (allow file-read* (subpath (param "MODELS")) (subpath (param "RUNNER")))`;
 function command(bin, args) {
-  if ((deps.platform || process.platform) !== "darwin" || !fs.existsSync("/usr/bin/sandbox-exec") || deps.spawn) return [bin, args];
-  return ["/usr/bin/sandbox-exec", ["-D", `MODELS=${path.resolve(modelsDir())}`, "-D", `RUNNER=${path.dirname(path.resolve(bin))}`, "-p", SANDBOX, bin, ...args]];
+  const sandbox = deps.sandboxExec || "/usr/bin/sandbox-exec";
+  if (!fs.existsSync(sandbox)) throw new Error("the runner can't be sandboxed on this computer, so it wasn't started");
+  const real = fs.realpathSync(bin);
+  return [sandbox, ["-D", `MODELS=${path.resolve(modelsDir())}`, "-D", `RUNNER=${path.dirname(real)}`, "-D", `BIN=${real}`, "-p", SANDBOX, real, ...args]];
 }
 // llama-server on this computer only, behind its own key, with every layer
 // on the GPU, never reaching the network, one request at a time with the
@@ -358,34 +380,61 @@ function launch(id, held) {
     "-ngl", "999", "--alias", spec.alias, "--no-webui", "--offline", "-cram", "1024", "--jinja", "--chat-template-file", spec.template];
   if (spec.projector) args.push("--mmproj", spec.projector);
   const env = { PATH: process.env.PATH || "/usr/bin:/bin", HOME: process.env.HOME || os.homedir(), TMPDIR: process.env.TMPDIR || os.tmpdir(), LLAMA_API_KEY: key };
-  const [file, argv] = command(runnerBinary(), args);
+  held.tail = "";
+  held.ended = false;
+  let file, argv;
+  try { [file, argv] = command(runnerBinary(), args); }
+  catch (e) {
+    console.error(`[run-here] ${e.message}`);
+    held.tail = e.message;
+    held.child = { exitCode: 1, signalCode: null, kill() {} };
+    return stopped(id, held, held.child);
+  }
   const child = (deps.spawn || spawn)(file, argv, { env, stdio: ["ignore", "ignore", "pipe"] });
   held.child = child;
-  held.tail = "";
   child.stderr?.on("data", d => { held.tail = (held.tail + d).slice(-2000); });
-  const ended = () => {
-    if (held.child !== child || held.ended) return;
-    held.ended = true;
-    if (held.stopping || runners.get(id) !== held) return;
-    if (!held.supervised) return;
-    // A runner that stops on its own is started again; until then the
-    // provider answers.
-    held.state = "restarting";
-    const delays = deps.restartDelays || RESTART_DELAYS;
-    const delay = delays[Math.min(held.restarts, delays.length - 1)];
-    held.restarts += 1;
-    console.error(`[run-here] the runner stopped; starting it again in ${delay / 1000} s`);
-    held.timer = setTimeout(() => {
-      if (held.stopping || runners.get(id) !== held) return;
-      held.ended = false;
-      launch(id, held);
-      waitUntilUp(held).then(() => { held.state = "running"; held.restarts = 0; }).catch(() => { held.child?.kill("SIGKILL"); ended(); });
-    }, delay);
-    held.timer.unref?.();
-  };
-  child.on("exit", ended);
-  child.on("error", (e) => { held.tail += `\n${e.message}`; ended(); });
+  child.on("exit", () => stopped(id, held, child));
+  child.on("error", (e) => { held.tail += `\n${e.message}`; stopped(id, held, child); });
   try { fs.mkdirSync(filesDir(), { recursive: true }); fs.writeFileSync(path.join(filesDir(), `runner-${id}.pid`), String(child.pid || "")); } catch (_) {}
+}
+// A supervised runner that stops on its own is started again, sooner at
+// first and then every five minutes; until then the provider answers. After
+// four failures in a row its jobs go back to their provider.
+function stopped(id, held, child) {
+  if (held.child !== child || held.ended) return;
+  held.ended = true;
+  if (held.stopping || runners.get(id) !== held || !held.supervised) return;
+  if (held.restarts >= MAX_FAILURES) { giveUp(id); return; }
+  held.state = "restarting";
+  const delays = deps.restartDelays || RESTART_DELAYS;
+  const delay = delays[Math.min(held.restarts, delays.length - 1)];
+  held.restarts += 1;
+  console.error(`[run-here] the runner stopped; starting it again in ${delay / 1000} s`);
+  held.timer = setTimeout(() => { relaunch(id, held).catch(() => {}); }, delay);
+  held.timer.unref?.();
+}
+async function relaunch(id, held) {
+  if (held.stopping || runners.get(id) !== held) return;
+  // Something else may have taken its port meanwhile.
+  if (!(await portFree(held.port))) {
+    held.port = await freePort();
+    await editConfig(async () => {
+      const settings = await readSettings();
+      const conn = settings.model_config?.connections?.[id];
+      if (!conn) return;
+      const next = structuredClone(settings.model_config);
+      next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${held.port}/v1` };
+      await saveConfig(settings, next);
+    }).catch(() => {});
+  }
+  if (held.stopping || runners.get(id) !== held) return;
+  launch(id, held);
+  watchUp(held);
+}
+// Up and answering: running. Not up in time: stopped, which counts as a failure.
+function watchUp(held) {
+  waitUntilUp(held).then(() => { held.state = "running"; held.restarts = 0; })
+    .catch(() => { if (held.child.exitCode === null && held.child.signalCode === null) held.child.kill("SIGKILL"); });
 }
 async function waitUntilUp(held, ms = 180000) {
   const until = Date.now() + ms;
@@ -394,7 +443,7 @@ async function waitUntilUp(held, ms = 180000) {
       throw new Error("the runner stopped while loading: " + String(held.tail || "").split("\n").filter(Boolean).slice(-2).join(" ").slice(0, 200));
     }
     if (await health(held.port, held.key)) return;
-    await new Promise(r => setTimeout(r, 1000));
+    await wait(1000);
   }
   throw new Error("the runner didn't finish loading");
 }
@@ -456,6 +505,22 @@ function specOf(config, id, place, alias) {
     ctx: Math.max(Number(here.ctx) || 0, ...jobs.map(j => fit.JOBS[j].context)),
     projector: here.projector ? place.projector : null };
 }
+// A runner that keeps failing is let go: its jobs go back to their provider,
+// and the person is told once.
+function giveUp(id) {
+  console.error("[run-here] the runner kept stopping; its jobs go back to their provider");
+  return editConfig(async () => {
+    await stopRunner(id);
+    const settings = await readSettings();
+    const config = structuredClone(settings.model_config || {});
+    for (const job of JOB_NAMES.filter(j => config.roles?.[j]?.connection === id && config.roles[j].fallback)) {
+      config.roles[job] = config.roles[job].fallback;
+      await say(job, `It couldn't start on ${HOME}, so it's back with ${providerName(config, config.roles[job])}.`);
+    }
+    if (config.connections) delete config.connections[id];
+    return saveConfig(settings, config);
+  }).then(removeUnused).catch(e => console.error("[run-here] letting the runner go:", e.message));
+}
 
 // --- Checking and timing ----------------------------------------------------------
 
@@ -481,25 +546,37 @@ async function timeIt(port, key, job) {
   return (await res.json()).timings || {};
 }
 // The same checks the model got when it was first chosen: tool calls for
-// chat, a plain answer for support work, a picture for images.
+// chat, a plain answer for support work, a picture for images. A runner
+// that fails with a server error is asked once more before that counts.
 async function checkJob(job, conn, model) {
-  const config = require("./model-config");
-  const wire = require("./model-wire");
-  if (job === "vision") {
-    const reply = await wire.request({ ...conn, capabilities: { vision: true } }, { model, effort: "fast", max_tokens: 256,
-      messages: [{ role: "user", content: [{ type: "text", text: "What is the main colour in this image? Answer in one word." },
-        { type: "image", source: { type: "base64", media_type: "image/png", data: config.RED_IMAGE } }] }] }, { signal: AbortSignal.timeout(120000) });
-    if (!/\bred\b/i.test(wire.responseText(reply))) throw new Error("it didn't pass the image check there");
-    return;
+  const once = async () => {
+    const config = require("./model-config");
+    const wire = require("./model-wire");
+    if (job === "vision") {
+      const reply = await wire.request({ ...conn, capabilities: { vision: true, reasoning: "here" } }, { model, effort: "fast", max_tokens: 256,
+        messages: [{ role: "user", content: [{ type: "text", text: "What is the main colour in this image? Answer in one word." },
+          { type: "image", source: { type: "base64", media_type: "image/png", data: config.RED_IMAGE } }] }] }, { signal: AbortSignal.timeout(120000) });
+      if (!/\bred\b/i.test(wire.responseText(reply))) throw new Error("it didn't pass the image check there");
+      return;
+    }
+    await config.checkModel(conn, model, job === "chat" ? "chat" : "support", []);
+  };
+  try { await once(); }
+  catch (e) {
+    if (!(Number(e?.status) >= 500)) throw e;
+    await wait(deps.retryMs ?? 3000);
+    await once().catch(again => { throw Object.assign(again, { serverErrorTwice: Number(again?.status) >= 500 }); });
   }
-  await config.checkModel(conn, model, job === "chat" ? "chat" : "support", []);
 }
-// Only a model that answered and got it wrong is remembered as failing; a
-// timeout or a dropped connection may go better next time.
+// Only a model that answered and got it wrong is remembered as failing, or
+// a runner that failed with a server error twice; a timeout, a dropped
+// connection or a refused key may go better next time.
 function answeredWrong(e) {
   const code = e?.cause?.code || e?.code;
+  if (e?.serverErrorTwice) return true;
   if (["TimeoutError", "AbortError"].includes(e?.name) || /fetch failed|timed? ?out|aborted/i.test(String(e?.message))) return false;
-  if (["ECONNREFUSED", "ECONNRESET", "UND_ERR_SOCKET", "UND_ERR_CLOSED"].includes(code) || Number(e?.status) >= 500) return false;
+  if (["ECONNREFUSED", "ECONNRESET", "UND_ERR_SOCKET", "UND_ERR_CLOSED"].includes(code)) return false;
+  if ([401, 403].includes(Number(e?.status)) || Number(e?.status) >= 500) return false;
   return true;
 }
 
@@ -508,6 +585,7 @@ function answeredWrong(e) {
 function providerName(config, role) {
   return PROVIDER_NAMES[config?.connections?.[role?.connection]?.provider] || "your provider";
 }
+const relative = (p) => path.relative(filesDir(), p);
 const progress = new Map(); // job -> { state, pct, totalBytes } while a run is waiting or under way
 const queued = new Map(); // job -> promise
 function start(job) {
@@ -546,11 +624,14 @@ async function run(job) {
   const wanted = [...quant.files.map((f, i) => ({ ...f, dest: place.files[i] }))];
   if (job === "vision" && model.projector) wanted.push({ ...model.projector, dest: place.projector });
   const totalBytes = wanted.reduce((n, f) => n + f.size, 0);
-  const key = shared ? policy.openKey(shared.apiKey) : crypto.randomBytes(24).toString("hex");
-  const paths = [...wanted.map(f => f.dest), place.template];
   const before = runners.get(id);
   const beforeSpec = before?.spec;
+  // The key the running runner already has, so a check never fails on it.
+  const key = before?.key || (shared ? policy.openKey(shared.apiKey) : crypto.randomBytes(24).toString("hex"));
+  const paths = [...wanted.map(f => f.dest), place.template];
   hold(paths);
+  activeRunners.add(id);
+  let outcome = "failed";
   try {
     let done = 0;
     for (const f of wanted) {
@@ -561,7 +642,7 @@ async function run(job) {
           break;
         } catch (e) {
           if (attempt >= 3 || e.checksum) throw e;
-          await new Promise(r => setTimeout(r, attempt * 5000));
+          await wait(attempt * 5000);
         }
       }
       done += f.size;
@@ -572,46 +653,52 @@ async function run(job) {
     const trial = structuredClone(config0);
     trial.connections[id] = { provider: "here", here };
     trial.roles[job] = { ...role, connection: id };
-    const port = runners.get(id)?.port || (shared ? Number(new URL(shared.baseUrl).port) : 0) || await freePort();
+    const port = before?.port || (shared ? Number(new URL(shared.baseUrl).port) : 0) || await freePort();
     const spec = specOf(trial, id, place, role.model);
     if (!before || before.spec.ctx < spec.ctx || (spec.projector && !before.spec.projector)) await startRunner(id, spec, { key, port, supervised: !!shared });
     const conn = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: key, capabilities: { reasoning: "here" } };
     try {
       await checkJob(job, conn, role.model);
     } catch (e) {
-      if (answeredWrong(e)) await markTried(triedKey(job, role.model, quant.label));
+      if (answeredWrong(e)) { outcome = "wrong"; await markTried(triedKey(job, role.model, quant.label)); }
       throw e;
     }
     const timings = await timeIt(port, key, job);
     console.log(`[run-here] ${job}: read ${Math.round(Number(timings.prompt_per_second) || 0)} tokens a second, wrote ${Math.round(Number(timings.predicted_per_second) || 0)}`);
     if (!fit.keepsPromise(job, timings)) {
+      outcome = "slow";
       await markTried(triedKey(job, role.model, quant.label));
-      await putBack(id, shared, beforeSpec, key);
-      release(paths);
-      removeUnused(settings);
-      return say(job, `It ran slower on ${HOME} than promised, so it stays with ${provider}.`);
+      throw Object.assign(new Error("slower than promised"), { slow: true });
     }
-    settings = await readSettings();
-    const config = structuredClone(settings.model_config);
-    const current = config.roles?.[job];
-    if (!current || current.model !== role.model || current.connection !== role.connection) throw new Error("the models changed while this was set up");
-    config.connections[id] = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: policy.sealKey(key), here };
-    config.roles[job] = {
-      connection: id, model: role.model, here: true,
-      capabilities: { tools: job === "chat" ? true : current.capabilities?.tools ?? null, vision: job === "vision", video: false, videoLinks: false, contextWindow: here.ctx, reasoning: "here" },
-      fallback: { connection: current.connection, model: current.model, capabilities: current.capabilities },
-    };
-    await saveConfig(settings, config);
+    await editConfig(async () => {
+      settings = await readSettings();
+      const config = structuredClone(settings.model_config);
+      const current = config.roles?.[job];
+      if (!current || current.model !== role.model || current.connection !== role.connection) throw new Error("the models changed while this was set up");
+      config.connections[id] = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: policy.sealKey(key), here };
+      config.roles[job] = {
+        connection: id, model: role.model, here: true,
+        capabilities: { tools: job === "chat" ? true : current.capabilities?.tools ?? null, vision: job === "vision", video: false, videoLinks: false, contextWindow: here.ctx, reasoning: "here" },
+        fallback: { connection: current.connection, model: current.model, capabilities: current.capabilities },
+      };
+      await saveConfig(settings, config);
+    });
     const held = runners.get(id);
     if (held) held.supervised = true;
-    release(paths);
+    outcome = "switched";
   } catch (e) {
-    console.error(`[run-here] ${job}: ${e.message}`);
+    if (!e.slow) console.error(`[run-here] ${job}: ${e.message}`);
     await putBack(id, shared, beforeSpec, key).catch(() => {});
+    // A download that's verified but couldn't be used for a reason that may
+    // pass (the runner didn't start, a timeout) is kept for a day for the next click.
+    if (outcome === "failed") await writeState(s => ({ ...s, keep: { ...(s.keep || {}), ...Object.fromEntries(paths.filter(p => fs.existsSync(p)).map(p => [relative(p), Date.now() + DAY])) } })).catch(() => {});
+  } finally {
+    activeRunners.delete(id);
     release(paths);
-    removeUnused(await readSettings().catch(() => settings));
-    return say(job, `It couldn't be set up on ${HOME}, so it stays with ${provider}.`);
   }
+  if (outcome === "switched") return;
+  await removeUnused(await readSettings().catch(() => settings));
+  return say(job, outcome === "slow" ? `It ran slower on ${HOME} than promised, so it stays with ${provider}.` : `It couldn't be set up on ${HOME}, so it stays with ${provider}.`);
 }
 
 // After a try that didn't switch: a new runner goes; one other jobs already
@@ -622,43 +709,52 @@ async function putBack(id, shared, beforeSpec, key) {
   if (beforeSpec && now && now.spec !== beforeSpec) await startRunner(id, beforeSpec, { key, port: now.port, supervised: true });
 }
 
-// Back to the provider, and the download goes.
-function undo(job) {
-  return exclusive(async () => {
+// Back to the provider, and the download goes. Never waits behind another
+// job's download.
+async function undo(job) {
+  const done = await editConfig(async () => {
     const settings = await readSettings();
     const config = structuredClone(settings.model_config || {});
     const role = config.roles?.[job];
     if (!role?.here || !role.fallback) return false;
     config.roles[job] = role.fallback;
-    const saved = await saveConfig(settings, config);
-    await tidy(saved);
+    await saveConfig(settings, config);
     return true;
   });
+  if (done) await tidy();
+  return done;
 }
-// Connections and files no job uses any more (a job switched back, or the
-// models were saved again from Settings) go, with their runner.
-async function tidy(settings) {
-  const config = settings.model_config;
-  if (!config) { removeUnused(settings); return settings; }
-  const used = new Set(JOB_NAMES.map(j => config.roles?.[j]?.connection));
-  const unused = hereConnections(config).filter(([id]) => !used.has(id)).map(([id]) => id);
-  for (const id of runners.keys()) if (!used.has(id)) await stopRunner(id);
-  if (unused.length) {
+// Connections, runners and files no job uses any more (a job switched back,
+// or the models were saved from elsewhere) go; what a run in progress uses stays.
+async function tidy() {
+  const settings = await editConfig(async () => {
+    const settings = await readSettings();
+    const config = settings.model_config;
+    if (!config) return settings;
+    const used = new Set(JOB_NAMES.map(j => config.roles?.[j]?.connection));
+    const unused = hereConnections(config).filter(([id]) => !used.has(id) && !activeRunners.has(id)).map(([id]) => id);
+    if (!unused.length) return settings;
     const next = structuredClone(config);
     for (const id of unused) delete next.connections[id];
-    settings = await saveConfig(settings, next);
-  }
-  removeUnused(settings);
+    return saveConfig(settings, next);
+  });
+  const used = new Set(JOB_NAMES.map(j => settings.model_config?.roles?.[j]?.connection));
+  for (const id of [...runners.keys()]) if (!used.has(id) && !activeRunners.has(id)) await stopRunner(id);
+  await removeUnused(settings);
   return settings;
 }
-function removeUnused(settings) {
+async function removeUnused(settings) {
   const keep = new Set();
-  for (const [, c] of hereConnections(settings.model_config)) {
+  for (const [, c] of hereConnections(settings?.model_config)) {
     try {
       const place = placeOf(c.here);
       [...place.files, place.template, ...(place.projector ? [place.projector] : [])].forEach(f => keep.add(f));
     } catch (_) { /* a refused record keeps nothing */ }
   }
+  const state = await readState().catch(() => ({}));
+  const kept = Object.entries(state.keep || {}).filter(([, until]) => until > Date.now());
+  for (const [rel] of kept) { try { keep.add(inside(rel)); } catch (_) {} }
+  if (kept.length !== Object.keys(state.keep || {}).length) await writeState(s => ({ ...s, keep: Object.fromEntries(kept) })).catch(() => {});
   const walk = (dir) => {
     let entries = [];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
@@ -695,9 +791,7 @@ function carryOver(before, after) {
   }
   return next;
 }
-function reconcile() {
-  return exclusive(async () => tidy(await readSettings()));
-}
+const reconcile = () => tidy();
 
 // At start: each runner comes back. A job whose files are gone returns to
 // its provider, and the person is told once.
@@ -709,7 +803,8 @@ function resume() {
     try { settings = await readSettings(); } catch (_) { return; }
     const config = settings.model_config;
     if (!config?.roles) return;
-    let next = null;
+    // What changes, applied to the settings as they are when it's saved.
+    const reverted = {}, dropped = [], moved = {};
     for (const [id, conn] of hereConnections(config)) {
       const jobs = JOB_NAMES.filter(j => config.roles[j]?.connection === id);
       if (!jobs.length) continue;
@@ -723,24 +818,29 @@ function resume() {
         await stopRunner(id);
         runners.set(id, held);
         launch(id, held);
-        // The provider answers while it loads; the runner is supervised from here.
-        waitUntilUp(held).then(() => { held.state = "running"; }).catch(() => { held.child?.kill("SIGKILL"); });
-        if (!conn.baseUrl.endsWith(`:${port}/v1`)) {
-          next = next || structuredClone(config);
-          next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${port}/v1` };
-        }
+        // The provider answers while it loads; supervised from here on.
+        watchUp(held);
+        if (!conn.baseUrl.endsWith(`:${port}/v1`)) moved[id] = `http://127.0.0.1:${port}/v1`;
       } catch (e) {
         console.error(`[run-here] could not start again: ${e.message}`);
-        next = next || structuredClone(config);
         for (const job of jobs) {
-          next.roles[job] = config.roles[job].fallback;
-          await say(job, `It couldn't start on ${HOME}, so it's back with ${providerName(next, next.roles[job])}.`);
+          reverted[job] = config.roles[job].fallback;
+          await say(job, `It couldn't start on ${HOME}, so it's back with ${providerName(config, reverted[job])}.`);
         }
-        delete next.connections[id];
+        dropped.push(id);
       }
     }
-    if (next) settings = await saveConfig(settings, next).catch(() => settings);
-    removeUnused(settings);
+    if (Object.keys(reverted).length || dropped.length || Object.keys(moved).length) {
+      settings = await editConfig(async () => {
+        const now = await readSettings();
+        const next = structuredClone(now.model_config);
+        for (const [job, fallback] of Object.entries(reverted)) if (next.roles?.[job]?.here) next.roles[job] = fallback;
+        for (const id of dropped) delete next.connections[id];
+        for (const [id, baseUrl] of Object.entries(moved)) if (next.connections[id]) next.connections[id] = { ...next.connections[id], baseUrl };
+        return saveConfig(now, next);
+      }).catch(() => settings);
+    }
+    await removeUnused(settings);
   });
 }
 
@@ -762,8 +862,20 @@ async function status() {
   if (Object.keys(notes).length) await writeState(s => ({ ...s, notes: {} })).catch(() => {});
   return { available: available(), offers: await offers(settings).catch(() => ({})), jobs, notes };
 }
+// Any other writer of the model settings (Settings' save, switching to
+// Closedhand Managed Models or the default) may leave a runner no job uses:
+// it goes, with its files.
+let watching = false;
+function watchSettings() {
+  if (watching) return;
+  watching = true;
+  require("./settings-patch").onChange(({ keys, by }) => {
+    if (by !== "run-here" && keys.includes("model_config")) reconcile().catch(e => console.error("[run-here] tidy after a model change:", e.message));
+  });
+}
 function install(app, { supabase, getAdminUserId, authorize }) {
   configure({ supabase, getAdminUserId });
+  watchSettings();
   const route = fn => async (req, res) => {
     try { if (!(await authorize(req, res))) return; await fn(req, res); }
     catch (e) { res.status(400).json({ error: e.message || "Could not do that." }); }
@@ -779,4 +891,4 @@ function install(app, { supabase, getAdminUserId, authorize }) {
   app.post("/api/run-here/undo", route(async (req, res) => res.json({ undone: await undo(String(req.body?.job || "")) })));
 }
 
-module.exports = { install, configure, resume, reconcile, carryOver, start, undo, offers, status, repoFor, describe, download, stopAll };
+module.exports = { install, configure, watchSettings, resume, reconcile, carryOver, start, undo, offers, status, repoFor, describe, download, stopAll };

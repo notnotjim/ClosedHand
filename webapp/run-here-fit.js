@@ -161,10 +161,12 @@ function judge(jobName, quant, shape, hw, projector = null) {
   return { ok: !reasons.length, reasons, estimate: { memoryBytes, downloadBytes, tokensPerSecond, firstSeconds, prefillPerSecond: prefill } };
 }
 // The best version that passes: the most bits that still fit and stay fast.
-function pick(jobName, quants, shape, hw, projector = null) {
+// reservedFor(version) is what LLMs already running there take, apart from
+// the runner that version would share.
+function pick(jobName, quants, shape, hw, projector = null, reservedFor = null) {
   let first = null;
   for (const q of quants) {
-    const verdict = judge(jobName, q, shape, hw, projector);
+    const verdict = judge(jobName, q, shape, reservedFor ? { ...hw, reservedBytes: reservedFor(q) } : hw, projector);
     if (verdict.ok) return { quant: q, ...verdict };
     if (!first) first = verdict;
   }

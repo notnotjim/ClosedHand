@@ -251,7 +251,7 @@ function install(app, deps) {
     // Only the model keys that change are written (settings-patch.js). A job
     // run on the computer running Closedhand stays there when its provider
     // pick is unchanged (run-here.js carryOver); a runner nothing uses any
-    // more goes, with its files.
+    // more goes, with its files, after the save (run-here.js watchSettings).
     const { diff, patchSettings } = require("./settings-patch");
     const runHere = require("./run-here");
     try {
@@ -259,7 +259,6 @@ function install(app, deps) {
     } catch (_) {
       throw new Error("Could not save the models. Your previous setup is still active.");
     }
-    runHere.reconcile().catch((e) => console.error("[run-here] tidy after save:", e.message));
     receipts.delete(req.body.ticket);
     res.json({ success: true });
   }));

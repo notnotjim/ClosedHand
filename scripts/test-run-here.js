@@ -102,6 +102,9 @@ test("the most bits that still pass are picked, and a measured run must keep the
   assert.equal(fit.pick("background", quants, shape, big(64, "Apple M4 Max")).quant.label, "Q8_0");
   assert.equal(fit.pick("background", quants, shape, { ...big(64, "Apple M4 Max"), freeDiskBytes: 3 * GB }).quant.label, "Q4_K_M", "Q8 would take more than half the free disk");
   assert.equal(fit.pick("background", quants, shape, big(8, "Apple M2")).ok, false);
+  // Each version is judged beside what already runs, apart from the runner it would share.
+  const reservedFor = (q) => (q.label === "Q8_0" ? 28 * GB : 0);
+  assert.equal(fit.pick("background", quants, shape, big(64, "Apple M4 Max"), null, reservedFor).quant.label, "Q4_K_M");
   assert.equal(fit.keepsPromise("background", { prompt_per_second: 1500, predicted_per_second: 60 }), true);
   assert.equal(fit.keepsPromise("background", { prompt_per_second: 500, predicted_per_second: 60 }), false, "15,000 tokens in 30 seconds");
   assert.equal(fit.keepsPromise("chat", { prompt_per_second: 5000, predicted_per_second: 30 }), false, "chat writes at 40 or more");
@@ -120,6 +123,7 @@ test("a provider's model is traced to its published weights, from its makers or 
   assert.equal(await runHere.repoFor({ provider: "deepinfra", baseUrl: "https://api.deepinfra.com/v1/openai" }, "examplelab/Example-1.5B"), "examplelab/Example-1.5B");
   assert.equal(await runHere.repoFor({ provider: "deepinfra", baseUrl: "https://api.deepinfra.com/v1/openai" }, "examplelab/../etc"), null, "not a repository name");
   assert.equal(await runHere.repoFor({ provider: "custom", baseUrl: "http://localhost:11434/v1" }, "examplelab/Example-1.5B"), null, "already on that computer");
+  assert.equal(await runHere.repoFor({ provider: "custom", baseUrl: "https://llm.example.com/v1" }, "acme/internal-model"), null, "a custom provider's names may be private: never looked up");
   assert.equal(await runHere.repoFor({ provider: "ollama", baseUrl: "http://localhost:11434/v1" }, "example:30b"), null);
   const model = await runHere.describe("examplelab/Example-1.5B");
   assert.equal(model.gguf.repo, "examplelab/Example-1.5B-GGUF", "the makers' own version, though a stranger's has more downloads");
@@ -275,8 +279,11 @@ test("the runner stays on that computer, behind its own key, sandboxed and never
   assert.match(src, /LLAMA_API_KEY: key/, "the key goes in its environment, not its arguments");
   assert.doesNotMatch(src, /"--api-key"/);
   assert.match(src, /\(deny network\*\)/);
+  assert.match(src, /\(deny process-fork\)\n\(deny process-exec\*\)\n\(allow process-exec \(literal \(param "BIN"\)\)\)/);
+  assert.match(src, /\(deny mach-lookup \(global-name "com\.apple\.coreservices\.launchservicesd"\) \(global-name "com\.apple\.coreservices\.appleevents"\) \(global-name-prefix "com\.apple\.pasteboard"\)\)/);
+  assert.match(src, /if \(!fs\.existsSync\(sandbox\)\) throw new Error\("the runner can't be sandboxed on this computer, so it wasn't started"\);/);
   assert.match(src, /\(deny file-read\* \(subpath "\/Users"\) \(subpath "\/Volumes"\)\)/);
-  assert.match(src, /"\/usr\/bin\/sandbox-exec", \["-D", `MODELS=/);
+  assert.match(src, /const sandbox = deps\.sandboxExec \|\| "\/usr\/bin\/sandbox-exec";/);
   assert.match(src, /const QUANTIZERS = \["ggml-org", "unsloth", "bartowski", "lmstudio-community"\];/);
   const build = read("desktop/build.sh");
   assert.match(build, /LLAMA_BUILD="b11476"/);
@@ -311,9 +318,9 @@ test("the words people see", () => {
   assert.match(src, /`It ran slower on \$\{HOME\} than promised, so it stays with \$\{provider\}\.`/);
   assert.match(src, /`It couldn't be set up on \$\{HOME\}, so it stays with \$\{provider\}\.`/);
   assert.match(src, /`It no longer fits on \$\{HOME\}, so it stays with \$\{provider\}\.`/);
-  assert.match(src, /`It couldn't start on \$\{HOME\}, so it's back with \$\{providerName\(next, next\.roles\[job\]\)\}\.`/);
+  assert.match(src, /`It couldn't start on \$\{HOME\}, so it's back with \$\{providerName\(config, (?:reverted\[job\]|config\.roles\[job\])\)\}\.`/);
   assert.match(src, /`This LLM isn't offered to run on \$\{HOME\}\.`/);
   for (const page of ["webapp/views/privacy.html", "closedhand-com/views/privacy.html"]) {
-    assert.match(read(page), /In the Mac app, when the LLM chosen for a job has its weights published on Hugging Face, Settings looks it up there, at most once a day, to see whether it could run on the computer running Closedhand; for an OpenRouter model it first reads OpenRouter's public list of models\. Hugging Face sees that computer's internet address and the model's name\. If you choose to run it there, it is downloaded from Hugging Face, and your LLM provider still answers whenever it isn't running, such as while it starts up\./, page);
+    assert.match(read(page), /In the Mac app, when the LLM chosen for a job comes through OpenRouter and OpenRouter's public list of models links it to Hugging Face, or comes through DeepInfra, which names its models by their Hugging Face repository, Settings looks it up on Hugging Face to see whether it could run on the computer running Closedhand\. Hugging Face sees that computer's internet address and the model's name\. If you choose to run it there, it is downloaded from Hugging Face, and your LLM provider still answers whenever it isn't running, such as while it starts up\./, page);
   }
 });

@@ -131,7 +131,9 @@
       var data;
       try { var r = await fetch("/api/run-here", { cache: "no-store" }); data = r.ok ? await r.json() : null; } catch (_) { data = null; }
       if (!data || !data.available || !list.isConnected) return;
-      var busy = false;
+      // Asked again every 2 s while something is being set up or starting,
+      // every 15 s while a runner restarts, and not at all otherwise.
+      var busy = false, slow = false;
       list.querySelectorAll("dt").forEach(function (term) {
         var job = JOBS[term.dataset.role], dd = term.nextElementSibling;
         if (!job || !dd) return;
@@ -140,9 +142,10 @@
         var line = document.createElement("p");
         var state = data.jobs && data.jobs[job], offer = data.offers && data.offers[job], note = data.notes && data.notes[job];
         if (state && state.state === "here") {
-          if (state.runner !== "running") {
+          if (state.runner === "loading" || state.runner === "restarting") {
             line.textContent = "Starting on the computer running Closedhand. " + state.provider + " answers until it's ready.";
-            box.append(line); busy = true;
+            box.append(line);
+            if (state.runner === "loading") busy = true; else slow = true;
           }
           var back = document.createElement("button"); back.type = "button"; back.className = "model-link";
           back.textContent = "Use " + state.provider + " again";
@@ -175,9 +178,9 @@
         } else return;
         dd.append(box);
       });
-      if (busy) runHereTimer = setTimeout(function () { runHere(list); }, 2000);
+      if (busy || slow) runHereTimer = setTimeout(function () { runHere(list); }, busy ? 2000 : 15000);
       else if (list.dataset.runHereBusy) initialize();
-      list.dataset.runHereBusy = busy ? "1" : "";
+      list.dataset.runHereBusy = busy || slow ? "1" : "";
     }
     function value(key) { return field(key).value.trim(); }
     function modelName(model, provider) {

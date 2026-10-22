@@ -31,6 +31,8 @@ function setup(roles, { force = false } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "run-here-flow-"));
   const bin = path.join(dir, "llama-server");
   fs.writeFileSync(bin, "");
+  const sandbox = path.join(dir, "sandbox-exec");
+  fs.writeFileSync(sandbox, "");
   const env = { ...process.env };
   Object.assign(process.env, { MODELS_DIR: path.join(dir, "models"), LLAMA_SERVER_BIN: bin, CLOSEDHAND_DESKTOP: "1" });
   if (force) process.env.RUN_HERE_FORCE = "1"; else delete process.env.RUN_HERE_FORCE;
@@ -42,9 +44,9 @@ function setup(roles, { force = false } = {}) {
   const h = hub();
   runHere.configure({ fetch: h.impl, spawn: farm.spawn, supabase: store.supabase, getAdminUserId: () => "u", platform: "darwin", arch: "arm64",
     hardware: () => ({ chip: fit.chipOf("Apple M4 Max"), memoryBytes: 64e9, freeDiskBytes: 900e9 }),
-    state: { read: async () => state, write: async (s) => { state = s; } }, restartDelays: [50] });
+    state: { read: async () => state, write: async (s) => { state = s; } }, restartDelays: [50], sandboxExec: sandbox, retryMs: 10 });
   const files = () => { const out = []; const walk = (d) => { try { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); e.isDirectory() ? walk(p) : out.push(path.relative(path.join(dir, "models", "llm"), p)); } } catch (_) {} }; walk(path.join(dir, "models", "llm")); return out.sort(); };
-  return { dir, store, farm, hub: h, state: () => state, files, settings: () => store.db.settings,
+  return { dir, bin, sandbox, store, farm, hub: h, state: () => state, files, settings: () => store.db.settings,
     done: () => { runHere.stopAll(); fs.rmSync(dir, { recursive: true, force: true }); process.env = env; } };
 }
 // A stand-in for the provider, so a fallback can be seen.
@@ -84,6 +86,12 @@ test("one click: download, the makers' template, a checked and timed runner, the
     assert.equal(fs.readFileSync(path.join(dir, "chat-template.jinja"), "utf8"), SMALL.template.toString());
     assert.equal(sha256(fs.readFileSync(path.join(dir, "Example-1.5B-Q4_K_M.gguf"))), sha256(SMALL.ggufs[1].files[0].body));
     const run = t.farm.live()[0];
+    assert.equal(run.file, t.sandbox, "started inside the sandbox");
+    const real = fs.realpathSync(t.bin);
+    assert.ok(run.argv.includes(`BIN=${real}`) && run.argv.includes(real));
+    const profile = run.arg("-p");
+    for (const rule of ["(deny process-fork)", "(deny process-exec*)", '(allow process-exec (literal (param "BIN")))', '(global-name "com.apple.coreservices.launchservicesd")',
+      '(global-name "com.apple.coreservices.appleevents")', '(global-name-prefix "com.apple.pasteboard")', "(deny network*)"]) assert.ok(profile.includes(rule), rule);
     assert.equal(run.arg("--host"), "127.0.0.1");
     assert.equal(run.arg("-c"), "32768");
     assert.equal(run.arg("--chat-template-file"), path.join(dir, "chat-template.jinja"));
@@ -191,7 +199,7 @@ test("saving the models keeps a job there when its pick is the same, and tidies 
     assert.deepEqual(t.files(), []);
     assert.deepEqual(Object.keys(t.settings().model_config.connections), ["primary"]);
     assert.match(require("node:fs").readFileSync(path.join(__dirname, "..", "webapp/model-config.js"), "utf8"),
-      /withConfig\(settings, runHere\.carryOver\(settings\.model_config, entry\.config\)\)[\s\S]*runHere\.reconcile\(\)/, "the save route keeps and tidies");
+      /withConfig\(settings, runHere\.carryOver\(settings\.model_config, entry\.config\)\)/, "the save route keeps; settings-patch's listener tidies");
   } finally { t.done(); }
 });
 
@@ -232,4 +240,104 @@ test("a job whose files are gone, or whose record reaches outside the models fol
     assert.ok(fs.existsSync(outside), "nothing outside the models folder is touched");
     assert.equal(t.farm.live().length, 0);
   } finally { t.done(); }
+});
+
+test("any other change to the model settings tidies away a runner nothing uses", async () => {
+  const t = setup({ background: pick() });
+  try {
+    runHere.watchSettings();
+    await runHere.start("background");
+    assert.equal(t.farm.live().length, 1);
+    // As switching to Closedhand Managed Models does (included-ai-setup.js): a whole new model_config.
+    const managed = { version: 1, included: true, connections: { primary: t.settings().model_config.connections.primary }, roles: { chat: pick(), background: pick(), vision: null } };
+    await require("../webapp/settings-patch").patchSettings(t.store.supabase, "u", { set: { model_config: managed } });
+    await until(async () => t.farm.live().length === 0 && t.files().length === 0);
+    assert.deepEqual(Object.keys(t.settings().model_config.connections), ["primary"]);
+    assert.match(fs.readFileSync(path.join(__dirname, "..", "webapp/included-ai-setup.js"), "utf8"), /patchSettings\(supabase, getAdminUserId\(\), diff\(now, modelConfig\.withConfig\(now, config\)\)\)/, "Managed Models save through settings-patch");
+  } finally { t.done(); }
+});
+
+test("a runner that keeps failing is let go, and its job goes back to the provider once", async () => {
+  const t = setup({ background: pick() });
+  try {
+    await runHere.start("background");
+    t.farm.behaviour.crashOnStart = true;
+    t.farm.live()[0].child.crash();
+    await until(async () => t.settings().model_config.roles.background.connection === "primary", 8000);
+    assert.equal(t.farm.spawned.length, 1 + 4, "four tries to start it again, then no more");
+    assert.match((await runHere.status()).notes.background, /^It couldn't start on the computer running Closedhand, so it's back with OpenRouter\.$/);
+    await wait(300);
+    assert.equal(t.farm.spawned.length, 5);
+    assert.deepEqual(t.files(), []);
+  } finally { t.done(); }
+});
+
+test("without a sandbox the runner isn't started, and the job stays with the provider", async () => {
+  const t = setup({ background: pick() });
+  const logged = [];
+  const error = console.error;
+  console.error = (...a) => logged.push(a.join(" "));
+  try {
+    fs.rmSync(t.sandbox);
+    await runHere.start("background");
+    assert.equal(t.farm.spawned.length, 0);
+    assert.equal(t.settings().model_config.roles.background.connection, "primary");
+    assert.ok(logged.some(l => l.includes("the runner can't be sandboxed on this computer, so it wasn't started")));
+    assert.match((await runHere.status()).notes.background, /couldn't be set up/);
+  } finally { console.error = error; t.done(); }
+});
+
+test("going back never waits behind another job's download", async () => {
+  const t = setup({ chat: pick(), background: pick("examplelab/example-1.5b"), vision: pick() });
+  try {
+    await runHere.start("background");
+    t.hub.slow.ms = 1500;
+    fs.rmSync(path.join(process.env.MODELS_DIR, "llm", "examplelab"), { recursive: true, force: true });
+    const vision = runHere.start("vision");
+    await until(async () => (await runHere.status()).jobs.vision?.state === "downloading");
+    const began = Date.now();
+    assert.equal(await runHere.undo("background"), true);
+    assert.ok(Date.now() - began < 1000, "undone at once");
+    await vision;
+    assert.equal(t.settings().model_config.roles.vision.here, true, "the other job finished setting up");
+  } finally { t.done(); }
+});
+
+test("a refused key or a passing server error doesn't mark the model; a server error twice does", async () => {
+  let t = setup({ chat: pick() });
+  try {
+    t.farm.behaviour.unauthorized = true;
+    await runHere.start("chat");
+    assert.equal(t.state().tried, undefined, "401: not the model's fault");
+    assert.ok(Object.keys(t.state().keep || {}).length > 0, "the verified download is kept for the next try");
+    t.hub.calls.length = 0;
+    t.farm.behaviour.unauthorized = false;
+    await runHere.start("chat");
+    assert.equal(t.settings().model_config.roles.chat.here, true);
+    assert.ok(!t.hub.calls.some(u => u.includes("/resolve/") && u.endsWith(".gguf")), "and isn't downloaded again");
+  } finally { t.done(); }
+  t = setup({ chat: pick() });
+  try {
+    t.farm.behaviour.serverError = true;
+    await runHere.start("chat");
+    assert.deepEqual(t.state().tried, ["chat|examplelab/example-1.5b|Q4_K_M"]);
+  } finally { t.done(); }
+});
+
+test("a runner whose port was taken while it was down starts on another and says where", async () => {
+  const t = setup({ background: pick() });
+  const squatter = http.createServer();
+  try {
+    await runHere.start("background");
+    const id = t.settings().model_config.roles.background.connection;
+    const port = Number(new URL(t.settings().model_config.connections[id].baseUrl).port);
+    t.farm.live()[0].child.crash();
+    await until(async () => (await runHere.status()).jobs.background.runner === "restarting");
+    await new Promise(r => squatter.listen(port, "127.0.0.1", r));
+    await until(async () => (await runHere.status()).jobs.background.runner === "running");
+    const moved = Number(new URL(t.settings().model_config.connections[id].baseUrl).port);
+    assert.notEqual(moved, port);
+    assert.equal(Number(t.farm.live()[0].arg("--port")), moved);
+    assert.equal(await ask(t.settings(), "background"), "ready");
+  } finally { squatter.close(); t.done(); }
 });
