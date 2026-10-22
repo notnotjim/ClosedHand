@@ -56,6 +56,7 @@ function auth(req, res, next) {
   next();
 }
 app.use("/exec", auth);
+app.use("/browse", auth);
 app.use("/files", auth);
 app.use("/packages", auth);
 
@@ -221,7 +222,7 @@ async function parkIdleTab() {
 setInterval(() => { parkIdleTab().catch(() => {}); }, 60 * 1000).unref();
 
 // The browser was started by this agent; it goes when the agent goes.
-for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } process.exit(0); });
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { if (browserPid) { try { process.kill(browserPid); } catch {} } try { browseChild && browseChild.kill(); } catch {} process.exit(0); });
 
 // --- Health ---
 app.get("/health", (_req, res) => {
@@ -347,9 +348,10 @@ let shape = LAPTOP, shapeTimer = null;
 function onScreen(cmd, args) {
   return new Promise((resolve, reject) => execFile(cmd, args, { timeout: 8000, env: { ...process.env, DISPLAY: ":99" } }, (e) => (e ? reject(e) : resolve())));
 }
-// No shell between: pgrep would find the shell's own command line.
+// Closedhand is browsing while a step runs, and for a moment after, while its
+// LLM decides the next one.
 function botBrowsing() {
-  try { require("child_process").execFileSync("pgrep", ["-f", "browser_helper"], { timeout: 2000 }); return true; } catch { return false; }
+  return browseBusy > 0 || Date.now() - lastBrowseAt < 20000;
 }
 async function setShape(next) {
   const laptop = next.width === LAPTOP.width && next.height === LAPTOP.height;
@@ -634,6 +636,76 @@ app.post("/exec", (req, res) => {
       duration_ms,
     });
   });
+});
+
+// --- Closedhand's browsing ---
+// One Python process holds one connection to Chrome for as long as it is used
+// (browser_helper.py serve). Starting Python and attaching Playwright cost
+// seconds, and every step used to pay both, so a ten-step job spent most of
+// its time connecting. Steps queue and run one at a time on Closedhand's tab;
+// a step that hangs past its time takes the process with it, and the next
+// step starts a fresh one.
+let browseChild = null, browseBuf = "", browseSeq = 0, browseQueue = Promise.resolve();
+let browseBusy = 0, lastBrowseAt = 0;
+const browseWaiting = new Map(); // id -> { resolve, reject, timer }
+function browseProcess() {
+  if (browseChild && browseChild.exitCode === null && !browseChild.killed) return browseChild;
+  let cmd = PYTHON, args = ["-u", "-m", "browser_helper", "serve"];
+  if (SANDBOX_PROFILE) { args = ["-f", SANDBOX_PROFILE, cmd, ...args]; cmd = "/usr/bin/sandbox-exec"; }
+  const child = spawn(cmd, args, { cwd: WORKSPACE, env: execEnv(), stdio: ["pipe", "pipe", "pipe"] });
+  browseBuf = "";
+  child.stdout.on("data", (d) => {
+    browseBuf += d.toString();
+    let nl;
+    while ((nl = browseBuf.indexOf("\n")) >= 0) {
+      const line = browseBuf.slice(0, nl); browseBuf = browseBuf.slice(nl + 1);
+      let msg; try { msg = JSON.parse(line); } catch { continue; }
+      const waiting = browseWaiting.get(msg.id);
+      if (!waiting) continue;
+      browseWaiting.delete(msg.id); clearTimeout(waiting.timer); waiting.resolve(msg.result);
+    }
+  });
+  child.stderr.on("data", (d) => { const t = d.toString().trim(); if (t) console.error("[browse]", truncate(t, 400)); });
+  const fail = (why) => { for (const [id, w] of browseWaiting) { clearTimeout(w.timer); w.reject(new Error(why)); browseWaiting.delete(id); } };
+  child.on("exit", () => { if (browseChild === child) browseChild = null; fail("The browser helper stopped. Try the step again."); });
+  child.on("error", (e) => { if (browseChild === child) browseChild = null; fail(e.message); });
+  browseChild = child;
+  return child;
+}
+function browseRequest(body, timeout) {
+  const run = () => new Promise((resolve, reject) => {
+    const id = ++browseSeq;
+    const timer = setTimeout(() => {
+      browseWaiting.delete(id);
+      try { browseChild && browseChild.kill("SIGKILL"); } catch {}
+      reject(new Error(`The browser step was still running after ${Math.round(timeout / 1000)} seconds and was stopped.`));
+    }, timeout);
+    browseWaiting.set(id, { resolve, reject, timer });
+    browseProcess().stdin.write(JSON.stringify({ id, ...body }) + "\n");
+  });
+  const next = browseQueue.then(run, run);
+  browseQueue = next.catch(() => {});
+  return next;
+}
+app.post("/browse", async (req, res) => {
+  lastExecAt = Date.now(); parked = false;
+  if (pythonState !== "ready") {
+    return res.json({ error: pythonState === "installing" || pythonState === "checking"
+      ? "Python is still being set up on this Mac (a one-time download). Try again in a minute or two."
+      : `Python is not available here: ${pythonError || pythonState}.` });
+  }
+  const { op, step, steps, url, timeout_ms } = req.body || {};
+  if (op !== "batch" && op !== "step") return res.status(400).json({ error: "op must be step or batch" });
+  const timeout = Math.min(timeout_ms || 60000, MAX_TIMEOUT);
+  browseBusy++;
+  try {
+    const result = await browseRequest(op === "batch" ? { op, steps, url } : { op, step }, timeout);
+    res.json({ result });
+  } catch (e) {
+    res.json({ error: e.message });
+  } finally {
+    browseBusy--; lastBrowseAt = Date.now();
+  }
 });
 
 // --- File operations ---

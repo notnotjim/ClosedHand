@@ -68,7 +68,7 @@ test("full screen on a phone, the sandbox computer's screen takes the phone's sh
   assert.match(agent, /const SCREEN = \{ width: 1280, height: 1280 \}, LAPTOP = \{ width: 1280, height: 800 \}, NARROWEST = 508;/);
   assert.match(agent, /app\.post\("\/desktop\/shape", auth,/);
   assert.match(agent, /if \(phone && botBrowsing\(\)\) return res\.json\(\{ \.\.\.\(await queueShape\(LAPTOP\)\), busy: true \}\);/, "never reshaped under Closedhand's own browsing");
-  assert.match(agent, /execFileSync\("pgrep", \["-f", "browser_helper"\]/, "no shell, whose own command line pgrep would find");
+  assert.match(agent, /function botBrowsing\(\) \{\n\s*return browseBusy > 0 \|\| Date\.now\(\) - lastBrowseAt < 20000;/, "Closedhand is browsing while a step runs and just after, not whenever its lasting helper exists");
   assert.match(agent, /shapeTimer = setTimeout\(\(\) => queueShape\(LAPTOP\)/, "back to laptop by itself when the phone stops asking");
   assert.match(agent, /const run = shaping\.then\(\(\) => setShape\(next\)\);/, "one change of shape at a time");
   assert.match(agent, /"-remote", `clip:\$\{width\}x\$\{height\}\+\$\{left\}\+\$\{top\}`/, "the page only: below Chrome's bars, inside its frame");

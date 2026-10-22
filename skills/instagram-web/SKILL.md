@@ -31,8 +31,8 @@ script: (() => {
   return { username: fromNav, user_id: m ? m[1] : null, url: location.href };
 })()
 ```
-Run it with `url: "https://www.instagram.com/"`. If `username` is null, screenshot
-the page: the user may be signed out, in which case say so and stop rather than
+Run it with `url: "https://www.instagram.com/"`. If `username` is null, read the
+page with `outline`: the user may be signed out, in which case say so and stop rather than
 guessing a username. Never assume which account: a user can have more than one, so
 confirm the username you found before acting on it.
 
@@ -60,17 +60,17 @@ steps: [
   {"action":"goto","url":"https://www.instagram.com/p/<shortcode>/"},
   {"action":"scrape_text"},
   {"action":"fill","selector":"textarea[aria-label*=\"comment\" i]","text":"<your comment>","submit":true,"dismiss_popup":true},
-  {"action":"screenshot"}
+  {"action":"scrape_text"}
 ]
 ```
 
 Read the post before writing about it: a caption written blind is worse than no
-caption. If the fill step fails, the comment box label varies by build, so use
-the `candidates` it returns, or `div[contenteditable="true"]`. Retry that one
+caption. If the fill step fails, the comment box label varies by build, so fill
+the comment box by its [number] in the outline the failed step returns. Retry that one
 post, not the whole task.
 
 Some builds need the Post control rather than Enter. If `submit` does not post
-it, screenshot and click the visible Post control.
+it, click the Post button by its [number] in the outline.
 
 Instagram specifics worth knowing: `@` opens the tagging panel, so leave it out
 unless the user asked for a tag; commenting twice on one photo is public and
@@ -80,8 +80,8 @@ step 2, each commented once.
 ## Cookie and consent banners
 
 If a consent dialog blocks the page, it is a real element with a real label:
-`screenshot` or use the `candidates` from a failed click, then click the actual
-button. Do not guess `button:has-text("Allow all cookies")`.
+read the `outline` and click the actual button by its [number]. Do not guess
+`button:has-text("Allow all cookies")`.
 
 ## What to tell the user
 

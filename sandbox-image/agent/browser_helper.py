@@ -4,9 +4,14 @@ Attaches to the ALREADY-RUNNING Chrome (the one visible over VNC) via CDP
 on localhost:9222. One browser, one profile: the bot shares the user's
 logins and the user watches bot actions live on the VNC desktop.
 
-Reading and acting both go through CSS selectors on the live page. There is no
-screenshot-and-coordinates control here: screenshots are for the model to SEE
-the page, selectors are how it acts on one.
+Reading and acting both go through the live page itself, never screenshots and
+coordinates. outline() lists what is on the page with a number on everything a
+person could act on, and a step acts on a number (ref) or a CSS selector.
+Screenshots are only for when the model needs to see how a page looks.
+
+The sandbox agent runs this as one lasting process (python -m browser_helper
+serve) that keeps its connection to Chrome between steps; imported on its own,
+each call connects and disconnects as before.
 
 Usage:
     from browser_helper import screenshot, scrape_text, extract_data
@@ -26,16 +31,47 @@ import os
 # The container's Chrome listens on 9222; the desktop app says where its own is.
 CDP_URL = os.environ.get("CDP_URL", "http://localhost:9222")
 
-# Every call from the bot is a separate Python process, so a Playwright page
-# object cannot be held between them. Chrome is the thing that persists, so the
-# bot's tab is marked in the page itself. window.name survives navigation within
+# The bot's tab is marked in the page itself, so it is found again whether the
+# connection was kept (serve) or made fresh for a one-off call. window.name survives navigation within
 # a tab, which makes it the one piece of state that outlives both the process
 # and a page load.
 TAB_MARKER = "closedhand-bot"
 
 
+# Set by serve(): the connection is kept between requests instead of closed.
+_PERSIST = False
+_conn = None
+
+
+def _drop():
+    """Forget the kept connection; the next request makes a fresh one."""
+    global _conn
+    if _conn:
+        pw, browser = _conn
+        try:
+            browser.close()
+        except Exception:
+            pass
+        try:
+            pw.stop()
+        except Exception:
+            pass
+    _conn = None
+
+
+def _release(pw, browser):
+    """A one-off call disconnects; the serving process keeps the connection."""
+    if _PERSIST:
+        return
+    browser.close()
+    pw.stop()
+
+
 def _get_browser():
     """Connect to the running Chrome over CDP. Returns (playwright, browser, context).
+
+    While serving, the connection made the first time is reused for as long as
+    Chrome keeps it open, with the context picked afresh each time.
 
     Context choice matters: the whole point of attaching over CDP is to inherit
     the user's logged-in session. browser.new_context() would create a fresh,
@@ -44,6 +80,16 @@ def _get_browser():
     (the real window the user is using) and never silently fall back to an
     empty one.
     """
+    global _conn
+    if _PERSIST and _conn:
+        pw, browser = _conn
+        try:
+            contexts = list(browser.contexts) if browser.is_connected() else []
+            if contexts:
+                return pw, browser, max(contexts, key=lambda c: len(c.pages))
+        except Exception:
+            pass
+        _drop()
     from playwright.sync_api import sync_playwright
     pw = sync_playwright().start()
     last_err = None
@@ -57,6 +103,8 @@ def _get_browser():
                     "no logged-in session to use. The browser may still be starting."
                 )
             context = max(contexts, key=lambda c: len(c.pages))
+            if _PERSIST:
+                _conn = (pw, browser)
             return pw, browser, context
         except Exception as e:
             last_err = e
@@ -157,42 +205,87 @@ def _where(page, context=None):
     return out
 
 
-_CANDIDATE_JS = """
-() => {
-  const out = [];
-  const q = 'button, a[href], input, textarea, select, [role=button], [role=link], [contenteditable=true]';
-  for (const el of document.querySelectorAll(q)) {
+_OUTLINE_JS = r"""
+(limit) => {
+  // Everything a person could act on, numbered in page order, with the
+  // headings between them: the page as a short list, and a step acts on a
+  // number. The numbers are written onto the elements (data-ch-ref) and the
+  // next outline replaces them.
+  for (const el of document.querySelectorAll('[data-ch-ref]')) el.removeAttribute('data-ch-ref');
+  const ACT = 'a[href], button, input:not([type=hidden]), textarea, select, summary, [contenteditable=""], [contenteditable="true"], [role=button], [role=link], [role=tab], [role=menuitem], [role=checkbox], [role=radio], [role=switch], [role=option], [role=textbox], [role=combobox], [role=searchbox]';
+  const shown = (el) => {
     const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) continue;              // invisible, not clickable
-    const label = (el.innerText || el.getAttribute('aria-label') ||
-                   el.getAttribute('placeholder') || el.value || '').trim().slice(0, 70);
+    if (!r.width || !r.height) return false;
+    const st = getComputedStyle(el);
+    return st.visibility !== 'hidden' && st.display !== 'none' && st.opacity !== '0';
+  };
+  const words = (t, n) => (t || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const kind = (el) => {
+    const role = el.getAttribute('role');
+    if (role) return role;
     const tag = el.tagName.toLowerCase();
-    let sel = tag;
-    if (el.id) sel = tag + '#' + CSS.escape(el.id);
-    else if (el.getAttribute('aria-label')) sel = tag + '[aria-label=' + JSON.stringify(el.getAttribute('aria-label')) + ']';
-    else if (el.getAttribute('name')) sel = tag + '[name=' + JSON.stringify(el.getAttribute('name')) + ']';
-    else if (el.getAttribute('placeholder')) sel = tag + '[placeholder=' + JSON.stringify(el.getAttribute('placeholder')) + ']';
-    else if (el.getAttribute('href')) sel = tag + '[href=' + JSON.stringify(el.getAttribute('href')) + ']';
-    else if (el.getAttribute('role')) sel = '[role=' + JSON.stringify(el.getAttribute('role')) + ']';
-    out.push({ selector: sel, text: label });
-    if (out.length >= 30) break;
+    if (tag === 'a') return 'link';
+    if (tag === 'input') {
+      const t = (el.type || 'text').toLowerCase();
+      if (t === 'submit' || t === 'button' || t === 'image') return 'button';
+      return ['checkbox', 'radio', 'file', 'range', 'date', 'password'].includes(t) ? t : 'textbox';
+    }
+    if (tag === 'textarea' || el.isContentEditable) return 'textbox';
+    if (tag === 'select') return 'combobox';
+    return tag;
+  };
+  const name = (el) => {
+    const img = el.querySelector && el.querySelector('img[alt]');
+    return words(el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText ||
+      el.getAttribute('placeholder') || el.getAttribute('alt') || (img ? img.getAttribute('alt') : ''), 80);
+  };
+  const lines = [];
+  let n = 0, more = 0;
+  for (const el of document.body ? document.body.querySelectorAll('h1, h2, h3, ' + ACT) : []) {
+    if (!shown(el)) continue;
+    if (/^H[1-3]$/.test(el.tagName) && !el.matches(ACT)) {
+      const t = words(el.innerText, 100);
+      if (t) lines.push('#'.repeat(Number(el.tagName[1])) + ' ' + t);
+      continue;
+    }
+    if (n >= limit) { more++; continue; }
+    n++;
+    el.setAttribute('data-ch-ref', String(n));
+    const k = kind(el);
+    let line = '[' + n + '] ' + k;
+    const label = name(el);
+    if (label) line += ' "' + label + '"';
+    const href = el.tagName === 'A' ? el.getAttribute('href') : null;
+    if (href && !href.startsWith('javascript:')) line += ' -> ' + href.slice(0, 80);
+    if (k === 'password') { if (el.value) line += ' (filled)'; }
+    else if (k === 'textbox' && el.value) line += ' = "' + words(el.value, 60) + '"';
+    if (el.checked) line += ' (checked)';
+    if (el.disabled) line += ' (disabled)';
+    lines.push(line);
   }
-  return out;
+  if (more) lines.push('... and ' + more + ' more further on; scroll, or read a part with scrape_text');
+  return lines.join('\n');
 }
 """
 
+OUTLINE_CHARS = 6000
 
-def _candidates(page):
-    """The interactive elements actually on the page, with usable selectors.
 
-    A missed selector used to return nothing but "not found", so the model's only
-    move was to guess again, at fifteen seconds a go. Handing back what is really
-    there turns the next attempt into a choice rather than another guess.
+def _outline(page, limit=150):
+    """What is on the page, as a numbered list (see _OUTLINE_JS).
+
+    Acting on a number is what replaces guessing CSS selectors: a missed
+    selector used to cost a failed step and another guess, and a screenshot
+    costs an image every LLM has to read. A password field says only that it
+    is filled.
     """
     try:
-        return page.evaluate(_CANDIDATE_JS)
-    except Exception:
-        return []
+        text = page.evaluate(_OUTLINE_JS, limit)
+    except Exception as e:
+        return f"(no outline: {type(e).__name__})"
+    if len(text) > OUTLINE_CHARS:
+        text = text[:OUTLINE_CHARS] + "\n... (cut short)"
+    return text
 
 
 def session_report(domain):
@@ -214,8 +307,7 @@ def session_report(domain):
             "cookie_names": sorted({c.get("name") for c in matching})[:15],
         }
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def screenshot(url=None, full_page=False):
@@ -236,8 +328,7 @@ def screenshot(url=None, full_page=False):
         out.update(_where(page, context))
         return out
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def scrape_text(url=None, selector=None):
@@ -250,8 +341,7 @@ def scrape_text(url=None, selector=None):
             return "\n\n".join(el.inner_text() for el in elements)
         return page.inner_text("body")
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def extract_data(url=None, selectors=None):
@@ -266,8 +356,7 @@ def extract_data(url=None, selectors=None):
             result[name] = texts if len(texts) != 1 else texts[0]
         return result
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def _do(page, context, step):
@@ -276,11 +365,16 @@ def _do(page, context, step):
     "click" means."""
     action = step.get("action")
     selector = step.get("selector")
+    # A number from the outline names its element exactly.
+    if step.get("ref") not in (None, ""):
+        selector = '[data-ch-ref="%d"]' % int(step["ref"])
     timeout = int(step.get("timeout") or 6000)
 
     if action == "goto":
         _goto(page, step["url"])
         return dict({"went_to": step["url"]}, **_where(page, context))
+    if action == "outline":
+        return dict({"outline": _outline(page)}, **_where(page, context))
     if action == "screenshot":
         img = page.screenshot(full_page=bool(step.get("full_page")))
         return dict({"image": base64.b64encode(img).decode("utf-8")}, **_where(page, context))
@@ -329,8 +423,8 @@ def _do(page, context, step):
             key = "clicked" if action == "click" else "filled"
             return dict({key: False,
                          "error": f"No visible element matched {selector!r} within {timeout}ms.",
-                         "hint": "Do not guess again. Pick one of the selectors in candidates, or screenshot the page.",
-                         "candidates": _candidates(page)}, **_where(page, context))
+                         "hint": "Do not guess again. Act on a [number] from this outline with ref.",
+                         "outline": _outline(page)}, **_where(page, context))
 
         if action == "click":
             index = int(step.get("index") or 0)
@@ -338,7 +432,7 @@ def _do(page, context, step):
             if index >= len(elements):
                 return dict({"clicked": False,
                              "error": f"Selector {selector!r} matched {len(elements)} elements, no index {index}.",
-                             "candidates": _candidates(page)}, **_where(page, context))
+                             "outline": _outline(page)}, **_where(page, context))
             elements[index].scroll_into_view_if_needed()
             elements[index].click()
             page.wait_for_timeout(600)
@@ -347,6 +441,9 @@ def _do(page, context, step):
                          "matches": len(elements)}, **_where(page, context))
 
         page.click(selector)
+        # Whatever the box held goes first: typing after it added to it, so a
+        # name filled twice came out as both names.
+        page.fill(selector, "")
         # Character by character: rich editors listen for real key events and
         # ignore a value that simply appears.
         page.type(selector, step.get("text") or "", delay=25)
@@ -364,15 +461,26 @@ def _do(page, context, step):
     return {"error": f"Unknown action {action!r}"}
 
 
+# After these the page has usually changed, so the step brings back its
+# outline: the next step can act on a number without a separate look.
+_CHANGES_PAGE = ("goto", "click", "press")
+
+
+def _with_outline(page, res, step):
+    acted = step.get("action") in _CHANGES_PAGE or (step.get("action") == "fill" and step.get("submit"))
+    if acted and not res.get("error") and "outline" not in res:
+        res["outline"] = _outline(page)
+    return res
+
+
 def _one(step):
-    """Connect, run a single step, disconnect."""
+    """Run a single step on Closedhand's tab."""
     pw, browser, context = _get_browser()
     try:
         page = _page(context, step.get("url"))
-        return _do(page, context, step)
+        return _with_outline(page, _do(page, context, step), step)
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def batch(steps, url=None):
@@ -402,11 +510,13 @@ def batch(steps, url=None):
             results.append(res)
             failed = res.get("error") or res.get("clicked") is False or res.get("filled") is False
             if failed:
-                return {"completed": i, "of": len(steps), "stopped_early": True, "results": results}
-        return {"completed": len(results), "of": len(steps), "stopped_early": False, "results": results}
+                return {"completed": i, "of": len(steps), "stopped_early": True, "results": results,
+                        "outline": res.get("outline") or _outline(page)}
+        # Where the batch left the page, once, for the next step.
+        return {"completed": len(results), "of": len(steps), "stopped_early": False, "results": results,
+                "outline": _outline(page)}
     finally:
-        browser.close()
-        pw.stop()
+        _release(pw, browser)
 
 
 def wait_for(selector, url=None, timeout=15000, state="visible"):
@@ -430,3 +540,43 @@ def press(key, selector=None, url=None):
 
 def eval_js(script, url=None):
     return _one({"action": "eval_js", "script": script, "url": url})
+
+
+def outline(url=None):
+    return _one({"action": "outline", "url": url})
+
+
+def serve():
+    """Answer the sandbox agent's requests on one lasting connection to Chrome.
+
+    One JSON line in ({"id", "op": "step" or "batch", ...}), one JSON line out
+    ({"id", "result"}). A request that fails drops the connection, so a Chrome
+    that restarted is attached afresh on the next one.
+    """
+    global _PERSIST
+    _PERSIST = True
+    import sys
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+        except ValueError:
+            continue
+        try:
+            if req.get("op") == "batch":
+                out = batch(req.get("steps") or [], url=req.get("url"))
+            else:
+                out = _one(req.get("step") or {})
+        except Exception as e:
+            out = {"error": f"{type(e).__name__}: {e}"}
+            _drop()
+        sys.stdout.write(json.dumps({"id": req.get("id"), "result": out}, default=str) + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["serve"]:
+        serve()
