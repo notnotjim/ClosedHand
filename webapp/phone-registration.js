@@ -135,7 +135,9 @@ async function connection({ recheck = false } = {}) {
     return saved;
   }
   let data;
-  try { data = await call('connection'); }
+  // closedhand.com keeps no copy of the key once this computer has it, so
+  // without a saved one it is asked to fetch the key again (lost=1).
+  try { data = await call(saved ? 'connection' : 'connection?lost=1'); }
   catch (error) {
     if (!saved) throw error;
     registrationState = 'active';
@@ -144,6 +146,7 @@ async function connection({ recheck = false } = {}) {
   registrationState = ['unconfirmed', 'pending', 'provisioning', 'connecting', 'active', 'error'].includes(data.state) ? data.state : null;
   if (data.state === 'unconfirmed' && saved) await forget();
   if (!['active','connecting'].includes(data.state)) return null;
+  if (data.state === 'active' && data.token === undefined && saved && data.url === saved.url) return saved;
   if (!validAddress(data.url) || typeof data.token !== 'string' || data.token.length < 30) throw new Error('Your personal URL could not be verified.');
   // A connecting credential may start the tunnel, but is not a verified link yet.
   if (data.state === 'active') await setConf({ PHONE_PERMANENT_URL: data.url, PHONE_TUNNEL_TOKEN: encrypted(data.token) });

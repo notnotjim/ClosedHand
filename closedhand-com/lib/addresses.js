@@ -489,6 +489,17 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     if (!found) return res.json({ state: 'unconfirmed' });
     const { row } = found;
     if (!['connecting', 'active'].includes(row.state)) return res.json({ state: shown(row) });
+    // The key that opens the route is kept here only until its computer
+    // proves it is connected (connected, below); after that the computer's
+    // saved one is the only copy. A computer that has lost it (lost=1) has
+    // the route built again, which fetches the key from Cloudflare once more.
+    if (row.state === 'active' && !row.tunnel_token) {
+      if (req.query.lost !== '1') return res.json({ state: 'active', url: 'https://' + row.hostname });
+      const again = (await db.query(
+        "UPDATE addresses SET state = 'pending', lease_until = NULL, updated_at = now() WHERE id = $1 AND state = 'active' AND tunnel_token IS NULL RETURNING *",
+        [row.id])).rows[0];
+      return res.json({ state: shown(again || row) });
+    }
     const token = decryptString(row.tunnel_token);
     if (!token || token.length < 30) throw new Error('Missing connection');
     res.json({ state: row.state, url: 'https://' + row.hostname, token });
@@ -509,7 +520,7 @@ function register(app, { db, sessions, secret, baseUrl, env = process.env, reque
     const expected = crypto.createHmac('sha256', copy.secret).update('closedhand-address:' + nonce).digest('hex');
     if (!equal(proof, expected)) return res.status(409).json({ error: 'Waiting for this computer to connect. Please try again shortly.' });
     const updated = await db.query(
-      "UPDATE addresses SET state = 'active', activated_at = COALESCE(activated_at, now()), last_seen_at = now(), updated_at = now() WHERE id = $1 AND secret_hash = $2 AND state IN ('connecting', 'active') RETURNING id",
+      "UPDATE addresses SET state = 'active', tunnel_token = NULL, activated_at = COALESCE(activated_at, now()), last_seen_at = now(), updated_at = now() WHERE id = $1 AND secret_hash = $2 AND state IN ('connecting', 'active') RETURNING id",
       [row.id, row.secret_hash]);
     if (!updated.rowCount) throw new Error('Address changed while connecting');
     res.json({ state: 'active' });

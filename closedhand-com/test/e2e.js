@@ -222,6 +222,16 @@ test('personal URL: request, confirm, type the code, build, connect, and every r
   assert.equal((await json('POST', '/api/phone-enrollment/connected', {}, copy.auth)).status, 409, 'a wrong answer to the challenge does not activate');
   challengeSecret = copy.secret;
   assert.deepEqual(await (await json('POST', '/api/phone-enrollment/connected', {}, copy.auth)).json(), { state: 'active' });
+  const keptKey = async () => (await db.query('SELECT tunnel_token FROM addresses WHERE id = $1', [job.id])).rows[0].tunnel_token;
+  assert.equal(await keptKey(), null, 'once the computer is connected, its saved key is the only copy');
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection', { headers: copy.auth })).json(), { state: 'active', url: 'https://alex.closedhand.ai' }, 'asked again, closedhand.com confirms the address without a key');
+  // A computer that lost its saved key has the route built again, which fetches the key once more.
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection?lost=1', { headers: copy.auth })).json(), { state: 'pending' });
+  const fetchedAgain = await build(tunnelId, dnsId);
+  assert.equal(fetchedAgain.job.id, job.id); assert.equal(fetchedAgain.job.tunnelId, tunnelId);
+  assert.deepEqual(await (await fetch(base + '/api/phone-enrollment/connection?lost=1', { headers: copy.auth })).json(), { state: 'connecting', url: 'https://alex.closedhand.ai', token: fetchedAgain.token });
+  assert.deepEqual(await (await json('POST', '/api/phone-enrollment/connected', {}, copy.auth)).json(), { state: 'active' });
+  assert.equal(await keptKey(), null);
   assert.equal((await account(owner.cookie)).url, 'https://alex.closedhand.ai');
   assert.equal((await account(rival.cookie)).url, null);
   assert.equal((await (await json('POST', '/api/phone-enrollment/details', { ticket }, { cookie: rival.cookie })).json()).state, 'unconfirmed', 'progress only for its owner');

@@ -141,8 +141,8 @@ test('closedhand.com counts as available only when reached and giving out person
 test('a saved address that stops working is checked again, and forgotten only when closedhand.com no longer knows it', async () => {
   const saved = { PHONE_PERMANENT_URL: 'https://amber-fox-42.closedhand.ai', PHONE_TUNNEL_TOKEN: 'enc:v1:fixture-per-install-token-1234567890', PHONE_ADDRESS_NAME: 'amber-fox-42', PHONE_ENROLLMENT: '2',
     PHONE_INSTALL_ID: '11111111-1111-4111-8111-111111111111', PHONE_INSTALL_SECRET: 'enc:v1:' + 'a'.repeat(64) };
-  let calls = 0;
-  const ask = answer => async () => { calls++; if (answer instanceof Error) throw answer; return { ok: true, json: async () => answer }; };
+  let calls = 0, asked = null;
+  const ask = answer => async (url) => { calls++; asked = url; if (answer instanceof Error) throw answer; return { ok: true, json: async () => answer }; };
   // Working: the saved one is used without asking.
   let values = { ...saved };
   assert.equal((await registration(values, ask({ state: 'unconfirmed' })).connection()).url, saved.PHONE_PERMANENT_URL);
@@ -155,6 +155,16 @@ test('a saved address that stops working is checked again, and forgotten only wh
   values = { ...saved };
   const still = await registration(values, ask({ state: 'active', url: saved.PHONE_PERMANENT_URL, token: 'fixture-per-install-token-1234567890' })).connection({ recheck: true });
   assert.equal(still.url, saved.PHONE_PERMANENT_URL);
+  // closedhand.com keeps no copy of the key once connected: the saved one carries on.
+  values = { ...saved };
+  const kept = await registration(values, ask({ state: 'active', url: saved.PHONE_PERMANENT_URL })).connection({ recheck: true });
+  assert.deepEqual([kept.url, kept.token], [saved.PHONE_PERMANENT_URL, 'fixture-per-install-token-1234567890']);
+  assert.doesNotMatch(asked, /lost=1/, 'a computer holding its key does not ask for it');
+  assert.equal(values.PHONE_TUNNEL_TOKEN, saved.PHONE_TUNNEL_TOKEN);
+  // Lost here: closedhand.com is asked to fetch the key again, and the computer waits for it.
+  values = { ...saved, PHONE_TUNNEL_TOKEN: null };
+  assert.equal(await registration(values, ask({ state: 'pending' })).connection(), null);
+  assert.match(asked, /\/connection\?lost=1$/);
   // Gone there (account deleted, unused, or moved to another computer): forgotten here too.
   values = { ...saved };
   const client = registration(values, ask({ state: 'unconfirmed' }));
