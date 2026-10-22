@@ -140,6 +140,10 @@
         var line = document.createElement("p");
         var state = data.jobs && data.jobs[job], offer = data.offers && data.offers[job], note = data.notes && data.notes[job];
         if (state && state.state === "here") {
+          if (state.runner !== "running") {
+            line.textContent = "Starting on the computer running Closedhand. " + state.provider + " answers until it's ready.";
+            box.append(line); busy = true;
+          }
           var back = document.createElement("button"); back.type = "button"; back.className = "model-link";
           back.textContent = "Use " + state.provider + " again";
           back.onclick = async function () {
@@ -148,16 +152,17 @@
             initialize();
           };
           box.append(back);
-        } else if (state && ["downloading", "checking", "starting"].includes(state.state)) {
+        } else if (state && ["waiting", "starting", "downloading", "checking"].includes(state.state)) {
           busy = true;
-          line.textContent = state.state === "downloading" ? "Downloading it to this computer: " + (state.pct || 0) + "% of " + size(state.totalBytes) + "."
-            : "Checking it runs fast enough here.";
+          line.textContent = state.state === "waiting" ? "Waiting for another LLM to finish setting up."
+            : state.state === "downloading" ? "Downloading it to the computer running Closedhand: " + (state.pct || 0) + "% of " + size(state.totalBytes) + "."
+            : "Checking it runs fast enough there.";
           box.append(line);
         } else if (note) {
           line.textContent = note; box.append(line);
         } else if (offer) {
-          line.textContent = "This LLM can also run on this computer for free, and nothing it reads would leave it. It needs " + size(offer.bytes) + " of space.";
-          var go = document.createElement("button"); go.type = "button"; go.textContent = "Run it here";
+          line.textContent = "This LLM can also run on the computer running Closedhand, for free, with what it reads staying on that computer. While it starts up, or if it stops, " + offer.provider + " answers instead. It needs " + size(offer.bytes) + " of space.";
+          var go = document.createElement("button"); go.type = "button"; go.textContent = "Run it there";
           go.onclick = async function () {
             go.disabled = true;
             try {

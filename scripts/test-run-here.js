@@ -26,6 +26,9 @@ test("the hardware table knows Apple's chips by name and nothing else", () => {
   assert.equal(fit.chipOf("Apple M2").bandwidth, 100 * GB);
   assert.equal(fit.chipOf("Apple M4 Max").bandwidth, 410 * GB, "the smaller of the Max's two figures");
   assert.equal(fit.chipOf("Apple M3 Ultra").compute, 25.6e12);
+  assert.equal(fit.chipOf("Apple M5").bandwidth, 153 * GB, "Apple's published M5 figures");
+  assert.equal(fit.chipOf("Apple M5 Pro").bandwidth, 307 * GB);
+  assert.equal(fit.chipOf("Apple M5 Max").bandwidth, 460 * GB, "the 32-core Max");
   assert.equal(fit.chipOf("Apple M9 Pro"), null, "a chip not listed gets no offer");
   assert.equal(fit.chipOf("Intel(R) Core(TM) i7"), null);
 });
@@ -52,7 +55,14 @@ test("a mixture of experts counts only the weights each word uses", () => {
   assert.ok(Math.abs(shape.activeParams - 3.3e9) < 0.1e9, `active ${shape.activeParams}`);
   assert.equal(shape.kvPerToken, 2 * 48 * 4 * 128 * 2);
   assert.equal(shape.maxContext, 262144);
-  assert.equal(fit.shapeOf({ num_hidden_layers: 4, num_experts: 8 }, 1e9).activeParams, 1e9, "unknown expert shape counts every weight");
+  assert.equal(fit.shapeOf(MOE_CONFIG, MOE_TOTAL, 8192).maxContext, 8192, "the smaller of the GGUF's and the config's lengths");
+  const { moe_intermediate_size, ...noWidth } = MOE_CONFIG;
+  assert.equal(fit.shapeOf(noWidth, MOE_TOTAL).unknown, true, "without its expert width a mixture of experts is declined");
+  assert.equal(fit.shapeOf({ ...MOE_CONFIG, interleave_moe_layer_step: 2 }, MOE_TOTAL).unknown, true, "so is one with experts only in some layers");
+  assert.equal(fit.shapeOf({ ...MOE_CONFIG, decoder_sparse_step: 2 }, MOE_TOTAL).unknown, true);
+  assert.equal(fit.shapeOf(SMALL_CONFIG, SMALL_TOTAL).unknown, false);
+  assert.ok(fit.judge("background", { label: "Q4_K_M", bits: 4, rank: 3, bytes: GB }, fit.shapeOf(noWidth, MOE_TOTAL), big(192, "Apple M3 Ultra"))
+    .reasons.includes("the model's size or shape isn't published"));
   assert.equal(fit.shapeOf({ text_config: MOE_CONFIG }, MOE_TOTAL).kvPerToken, shape.kvPerToken, "a model with an image part keeps its text shape inside");
 });
 
@@ -77,6 +87,8 @@ test("the offer needs room to spare and speed, judged against the job", () => {
   assert.ok(fit.judge("vision", smallQ4, small, big(64, "Apple M4 Max")).reasons.includes("no image part to run it with"));
   assert.ok(fit.judge("chat", smallQ4, small, big(64, "Apple M4 Max")).reasons.includes("the model can't take a long enough prompt for this job"), "chat needs 65,536 tokens");
   assert.ok(fit.judge("background", smallQ4, small, big(64, "Apple M9")).reasons.includes("this computer's chip isn't one Closedhand can judge"));
+  assert.ok(fit.judge("background", smallQ4, small, { ...big(64, "Apple M4 Max"), reservedBytes: 28 * GB }).reasons
+    .includes("it would take more than half of this computer's memory"), "LLMs already running there count against the half");
   // The run measured on an 8 GB M2 (0.5B model, 15,001 tokens): read in 19.3 s
   // and wrote 44 a second. The estimate must not promise more than that.
   const measured = fit.judge("background", { label: "Q4_0", bits: 4, rank: 9, bytes: 0.429 * GB },
@@ -96,96 +108,64 @@ test("the most bits that still pass are picked, and a measured run must keep the
   assert.equal(fit.keepsPromise("chat", {}), false);
 });
 
-// Hugging Face and OpenRouter, answered from invented data.
-function hub({ gated = false } = {}) {
-  const calls = [];
-  const json = (body) => ({ ok: true, status: 200, json: async () => body });
-  const impl = async (url) => {
-    calls.push(String(url));
-    const u = new URL(url);
-    if (u.hostname === "openrouter.ai") return json({ data: [{ id: "examplelab/example-30b-a3b", hugging_face_id: "examplelab/Example-30B-A3B" },
-      { id: "examplelab/example-1.5b", hugging_face_id: "examplelab/Example-1.5B" }, { id: "closedco/secret-model", hugging_face_id: "" }] });
-    if (u.pathname === "/api/models/examplelab/Example-1.5B") return json({ id: "examplelab/Example-1.5B", sha: "f".repeat(40), gated: false, safetensors: { total: SMALL_TOTAL } });
-    if (u.pathname === `/examplelab/Example-1.5B/resolve/${"f".repeat(40)}/config.json`) return json(SMALL_CONFIG);
-    if (u.pathname === "/api/models" && u.searchParams.getAll("filter").includes("base_model:quantized:examplelab/Example-1.5B")) return json([{ id: "quantfolk/Example-1.5B-GGUF" }]);
-    if (u.pathname === "/api/models/quantfolk/Example-1.5B-GGUF") return json({ id: "quantfolk/Example-1.5B-GGUF", sha: "9".repeat(40), gated: false });
-    if (u.pathname === `/api/models/quantfolk/Example-1.5B-GGUF/tree/${"9".repeat(40)}`) return json([
-      { type: "file", path: "Example-1.5B-Q4_K_M.gguf", size: 1.1 * GB, lfs: { oid: "8".repeat(64) } },
-      { type: "file", path: "Example-1.5B-Q8_0.gguf", size: 1.65 * GB, lfs: { oid: "7".repeat(64) } },
-    ]);
-    if (u.pathname === "/api/models/examplelab/Example-30B-A3B") return json({ id: "examplelab/Example-30B-A3B", sha: "a".repeat(40), gated, safetensors: { total: MOE_TOTAL } });
-    if (u.pathname === `/examplelab/Example-30B-A3B/resolve/${"a".repeat(40)}/config.json`) return json(MOE_CONFIG);
-    if (u.pathname === "/api/models" && u.searchParams.getAll("filter").includes("base_model:quantized:examplelab/Example-30B-A3B")) return json([{ id: "lockedfolk/Example-GGUF" }, { id: "quantfolk/Example-30B-A3B-GGUF" }]);
-    if (u.pathname === "/api/models/lockedfolk/Example-GGUF") return json({ id: "lockedfolk/Example-GGUF", sha: "b".repeat(40), gated: "manual" });
-    if (u.pathname === "/api/models/quantfolk/Example-30B-A3B-GGUF") return json({ id: "quantfolk/Example-30B-A3B-GGUF", sha: "c".repeat(40), gated: false, gguf: { total: MOE_TOTAL, context_length: 262144 } });
-    if (u.pathname === `/api/models/quantfolk/Example-30B-A3B-GGUF/tree/${"c".repeat(40)}`) return json([
-      { type: "file", path: "Example-30B-A3B-Q4_K_M.gguf", size: 18.6 * GB, lfs: { oid: "d".repeat(64) } },
-      { type: "file", path: "Example-30B-A3B-Q3_K_M.gguf", size: 14 * GB, lfs: { oid: "e".repeat(64) } },
-      { type: "file", path: "README.md", size: 900 },
-    ]);
-    return { ok: false, status: 404, json: async () => ({}) };
-  };
-  return { impl, calls };
-}
+const fixtures = require("./run-here-fixtures");
 
-test("a provider's model is traced to its published weights, or isn't offered at all", async () => {
+test("a provider's model is traced to its published weights, from its makers or a known quantizer only", async () => {
   const runHere = require("../webapp/run-here");
-  const { impl, calls } = hub();
+  const { impl, calls } = fixtures.hub();
   runHere.configure({ fetch: impl });
-  assert.equal(await runHere.repoFor({ provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" }, "examplelab/example-30b-a3b:free"), "examplelab/Example-30B-A3B");
+  assert.equal(await runHere.repoFor({ provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" }, "examplelab/example-1.5b:free"), "examplelab/Example-1.5B");
   assert.equal(await runHere.repoFor({ provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" }, "closedco/secret-model"), null, "no published weights");
   assert.equal(await runHere.repoFor({ provider: "anthropic", baseUrl: "https://api.anthropic.com/v1" }, "claude-example"), null);
-  assert.equal(await runHere.repoFor({ provider: "deepinfra", baseUrl: "https://api.deepinfra.com/v1/openai" }, "examplelab/Example-30B-A3B"), "examplelab/Example-30B-A3B");
-  assert.equal(await runHere.repoFor({ provider: "custom", baseUrl: "http://localhost:11434/v1" }, "examplelab/Example-30B-A3B"), null, "already on this computer");
+  assert.equal(await runHere.repoFor({ provider: "deepinfra", baseUrl: "https://api.deepinfra.com/v1/openai" }, "examplelab/Example-1.5B"), "examplelab/Example-1.5B");
+  assert.equal(await runHere.repoFor({ provider: "deepinfra", baseUrl: "https://api.deepinfra.com/v1/openai" }, "examplelab/../etc"), null, "not a repository name");
+  assert.equal(await runHere.repoFor({ provider: "custom", baseUrl: "http://localhost:11434/v1" }, "examplelab/Example-1.5B"), null, "already on that computer");
   assert.equal(await runHere.repoFor({ provider: "ollama", baseUrl: "http://localhost:11434/v1" }, "example:30b"), null);
-  const model = await runHere.describe("examplelab/Example-30B-A3B");
-  assert.equal(model.gguf.repo, "quantfolk/Example-30B-A3B-GGUF", "a gated version is passed over");
-  assert.deepEqual(model.quants.map(q => q.label), ["Q4_K_M"], "3-bit is left out");
-  assert.equal(model.quants[0].files[0].sha256, "d".repeat(64));
-  assert.ok(Math.abs(model.shape.activeParams - 3.3e9) < 0.1e9);
+  const model = await runHere.describe("examplelab/Example-1.5B");
+  assert.equal(model.gguf.repo, "examplelab/Example-1.5B-GGUF", "the makers' own version, though a stranger's has more downloads");
+  assert.deepEqual(model.quants.map(q => q.label), ["Q4_K_M"], "a file named to climb out of its folder is left out");
+  assert.equal(model.projector.path, "mmproj-Example-1.5B-f16.gguf");
+  assert.equal(model.template.file, "chat_template.jinja");
+  assert.equal(model.template.size, fixtures.SMALL.template.length);
   assert.ok(calls.every(u => /^https:\/\/(huggingface\.co|openrouter\.ai)\//.test(u)), "only Hugging Face and OpenRouter are asked");
-  runHere.configure({ fetch: hub({ gated: true }).impl });
-  assert.match((await runHere.describe("examplelab/Example-30B-A3B")).none, /Hugging Face account/);
+  const strangersOnly = { ...fixtures.SMALL, ggufs: [fixtures.SMALL.ggufs[0]] };
+  runHere.configure({ fetch: fixtures.hub([strangersOnly]).impl });
+  assert.match((await runHere.describe("examplelab/Example-1.5B")).none, /established quantizer/);
+  const noTemplate = { ...fixtures.SMALL, repo: "examplelab/Example-Base", template: Buffer.alloc(0) };
+  const quiet = fixtures.hub([noTemplate]);
+  runHere.configure({ fetch: async (url, opts) => /\/tree\//.test(url) && url.includes("Example-Base") ? { ok: true, status: 200, json: async () => [] } : quiet.impl(url, opts) });
+  assert.match((await runHere.describe("examplelab/Example-Base")).none, /no chat template/);
 });
 
-function profileStore(settings) {
-  const db = { settings };
-  return {
-    db,
-    supabase: {
-      from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { settings: db.settings }, error: null }) }) }) }),
-      rpc: async (_name, { p_set }) => { db.settings = { ...db.settings, ...p_set }; return { data: db.settings, error: null }; },
-    },
-  };
-}
-
-test("offers appear only in the Mac app, for a job whose model fits, once per tried version", async () => {
+test("offers appear only in the Mac app, for a job whose model fits beside what already runs there, once per tried version", async () => {
   const runHere = require("../webapp/run-here");
   const bin = path.join(os.tmpdir(), "run-here-test-llama-server");
   fs.writeFileSync(bin, "");
   const settings = { model_config: { version: 1, connections: { primary: { provider: "openrouter", backend: "custom", baseUrl: "https://openrouter.ai/api/v1", apiKey: "enc:v1:x" } },
-    roles: { chat: { connection: "primary", model: "examplelab/example-30b-a3b" }, background: { connection: "primary", model: "examplelab/example-1.5b" }, vision: null } } };
+    roles: { chat: { connection: "primary", model: "examplelab/example-1.5b" }, background: { connection: "primary", model: "examplelab/example-1.5b" }, vision: null } } };
   let state = {};
-  const { supabase } = profileStore(settings);
+  const { supabase } = fixtures.profileStore(settings);
   const env = { ...process.env };
   try {
     process.env.LLAMA_SERVER_BIN = bin; process.env.CLOSEDHAND_DESKTOP = "1"; delete process.env.RUN_HERE_FORCE;
-    runHere.configure({ fetch: hub().impl, supabase, getAdminUserId: () => "u", platform: "darwin", arch: "arm64",
+    runHere.configure({ fetch: fixtures.hub().impl, supabase, getAdminUserId: () => "u", platform: "darwin", arch: "arm64",
       hardware: () => big(64, "Apple M4 Max"), state: { read: async () => state, write: async (s) => { state = s; } } });
     const offered = await runHere.offers(settings);
-    assert.deepEqual(Object.keys(offered), ["background"], "the 30B chat model is too slow to start here; no image role");
-    assert.equal(offered.background.quant, "Q8_0");
-    assert.equal(offered.background.bytes, 1.65 * GB);
+    assert.deepEqual(Object.keys(offered), ["chat", "background"], "no image role");
+    assert.deepEqual([offered.background.quant, offered.background.bytes, offered.background.provider], ["Q4_K_M", 4096, "OpenRouter"]);
     runHere.configure({ hardware: () => big(8, "Apple M2") });
     assert.deepEqual(await runHere.offers(settings), {}, "an 8 GB M2 never qualifies");
     runHere.configure({ hardware: () => big(48, "Apple M4 Pro") });
-    assert.deepEqual(await runHere.offers(settings), {}, "a Pro reads 15,000 tokens too slowly by this count");
+    assert.deepEqual(await runHere.offers(settings), {}, "a Pro reads both jobs' prompts too slowly by this count");
     runHere.configure({ hardware: () => big(64, "Apple M4 Max"), platform: "linux" });
     assert.deepEqual(await runHere.offers(settings), {}, "Docker and Linux: not yet");
     runHere.configure({ platform: "darwin" });
     assert.deepEqual(await runHere.offers({ model_config: { ...settings.model_config, included: true } }), {}, "Managed Models stay as Closedhand picks them");
-    state = { tried: ["background|examplelab/example-1.5b|Q8_0"] };
-    assert.deepEqual(await runHere.offers(settings), {}, "a version that ran too slowly here isn't offered again");
+    const busy = structuredClone(settings);
+    busy.model_config.connections["here-0000000000"] = { provider: "here", baseUrl: "http://127.0.0.1:1/v1", here: { memoryBytes: 28e9 } };
+    assert.deepEqual(await runHere.offers(busy), {}, "an LLM already running there takes its share of the half");
+    state = { tried: ["background|examplelab/example-1.5b|Q4_K_M"] };
+    assert.deepEqual(Object.keys(await runHere.offers(settings)), ["chat"], "a version that failed there for a job isn't offered for it again");
   } finally {
     process.env = env;
     fs.rmSync(bin, { force: true });
@@ -242,61 +222,98 @@ test("a request goes to the provider whenever the runner on this computer isn't 
   assert.match(read("lib/llm.js"), /fallback: opts\.fallback \|\| null,/, "every client built from a role carries it");
 });
 
-test("the download is resumable and kept only when its checksum matches", async () => {
+test("the download resumes, checks the file on disk, and fails cleanly", async () => {
   const runHere = require("../webapp/run-here");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "run-here-dl-"));
   const body = Buffer.from("an invented model file, nothing more ".repeat(50));
   const sha = require("node:crypto").createHash("sha256").update(body).digest("hex");
-  const ranges = [];
+  let asked = [];
+  let mode = "ok";
   runHere.configure({ fetch: async (url, opts = {}) => {
     const range = opts.headers?.Range;
-    ranges.push(range || null);
+    asked.push(range || null);
+    if (mode === "stall") return { ok: true, status: 200, body: (async function* () { yield body.subarray(0, 10); await new Promise((r, j) => opts.signal.addEventListener("abort", () => j(opts.signal.reason))); })() };
     const from = range ? Number(/bytes=(\d+)-/.exec(range)[1]) : 0;
+    if (from >= body.length) return { ok: false, status: 416 };
     const part = body.subarray(from);
     return { ok: true, status: range ? 206 : 200, body: (async function* () { yield part.subarray(0, 100); yield part.subarray(100); })() };
   } });
+  const get = (name, digest = sha, idle) => runHere.download(`https://huggingface.co/x/resolve/y/${name}`, path.join(dir, name), body.length, digest, () => {}, idle);
   try {
-    const dest = path.join(dir, "m.gguf");
-    fs.writeFileSync(dest + ".part", body.subarray(0, 700));
-    let last = 0;
-    await runHere.download("https://huggingface.co/x/resolve/y/m.gguf", dest, body.length, sha, (n) => { last = n; });
-    assert.deepEqual(ranges, ["bytes=700-"]);
-    assert.equal(last, body.length);
-    assert.ok(fs.readFileSync(dest).equals(body));
-    await assert.rejects(runHere.download("https://huggingface.co/x/resolve/y/n.gguf", path.join(dir, "n.gguf"), body.length, "0".repeat(64), () => {}), /checksum/);
-    assert.equal(fs.existsSync(path.join(dir, "n.gguf")), false);
-    assert.equal(fs.existsSync(path.join(dir, "n.gguf.part")), false);
+    fs.writeFileSync(path.join(dir, "a.gguf.part"), body.subarray(0, 700));
+    await get("a.gguf");
+    assert.deepEqual(asked, ["bytes=700-"], "continued from where it stopped");
+    assert.ok(fs.readFileSync(path.join(dir, "a.gguf")).equals(body));
+    asked = [];
+    fs.writeFileSync(path.join(dir, "b.gguf.part"), body);
+    await get("b.gguf");
+    assert.deepEqual(asked, [], "a part already whole is checked and kept without asking again");
+    fs.writeFileSync(path.join(dir, "c.gguf.part"), Buffer.alloc(body.length, "x"));
+    await assert.rejects(get("c.gguf"), /checksum/, "a whole part that doesn't match goes");
+    assert.equal(fs.existsSync(path.join(dir, "c.gguf.part")), false);
+    asked = [];
+    await assert.rejects(get("d.gguf", "0".repeat(64)), /checksum/);
+    assert.equal(fs.existsSync(path.join(dir, "d.gguf")) || fs.existsSync(path.join(dir, "d.gguf.part")), false);
+    mode = "stall";
+    await assert.rejects(get("e.gguf", sha, 50), /stalled/, "a download that sends nothing is stopped");
+    mode = "ok";
+    fs.mkdirSync(path.join(dir, "f.gguf.part"));
+    await assert.rejects(get("f.gguf"), /EISDIR|illegal operation/, "a disk that can't take the file rejects, never crashes");
+    const src = read("webapp/run-here.js");
+    assert.match(src, /await pipeline\(source, async function\* \(chunks\)/);
+    assert.match(src, /if \(res\.status === 416\)/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("the runner stays on this computer, behind its own key, never online", () => {
+test("the runner stays on that computer, behind its own key, sandboxed and never online", () => {
   const src = read("webapp/run-here.js");
-  assert.match(src, /if \(e\.failedCheck\) await writeState\(s => \(\{ \.\.\.s, tried:/, "a model that failed its job's check isn't offered again");
   assert.match(src, /"--host", "127\.0\.0\.1"/);
   assert.match(src, /"--offline"/);
+  assert.match(src, /"--chat-template-file", spec\.template/, "the makers' chat template, not the GGUF's");
   assert.match(src, /LLAMA_API_KEY: key/, "the key goes in its environment, not its arguments");
   assert.doesNotMatch(src, /"--api-key"/);
+  assert.match(src, /\(deny network\*\)/);
+  assert.match(src, /\(deny file-read\* \(subpath "\/Users"\) \(subpath "\/Volumes"\)\)/);
+  assert.match(src, /"\/usr\/bin\/sandbox-exec", \["-D", `MODELS=/);
+  assert.match(src, /const QUANTIZERS = \["ggml-org", "unsloth", "bartowski", "lmstudio-community"\];/);
   const build = read("desktop/build.sh");
   assert.match(build, /LLAMA_BUILD="b11476"/);
   assert.match(build, /arm64\) LLAMA_SHA=577634a1b8a59e8dabe02ba10de1e610be0574dfaf1cf3020e6dd42853ed877e ;;/);
   assert.match(build, /shasum -a 256 -c -/);
+  assert.match(build, /# The LLM runner needs none of the runtime's exceptions: hardened runtime only\.\nsign_code "\$APP\/Contents\/Resources\/llama\/llama-server"/);
   assert.match(read("desktop/Sources/ClosedHand/Supervisor.swift"), /env\["LLAMA_SERVER_BIN"\] = resources\.appendingPathComponent\("llama\/llama-server"\)\.path/);
+});
+
+test("fast jobs ask the runner's model not to think, and other parts name it plainly", () => {
+  const policy = require("../lib/model-policy");
+  const cap = policy.capabilities({ provider: "here", backend: "custom", baseUrl: "http://127.0.0.1:41001/v1" }, "examplelab/example-1.5b");
+  assert.equal(cap.reasoning, "here");
+  assert.deepEqual(policy.effortOptions(cap, "fast"), { chat_template_kwargs: { enable_thinking: false } });
+  assert.deepEqual(policy.effortOptions(cap, "default"), {});
+  assert.match(read("lib/engine.js"), /if \(pick\?\.provider === "here"\) return `\$\{pick\.model\} on the computer running Closedhand`;/);
+  assert.match(read("lib/web-search.js"), /if \(conn\?\.provider === "here"\) conn = conn\.fallback \|\| null;/);
+  assert.match(read("webapp/model-summary.js"), /provider: "On the computer running Closedhand"/);
 });
 
 test("the words people see", () => {
   const ui = read("webapp/public/model-settings.js");
-  assert.match(ui, /"This LLM can also run on this computer for free, and nothing it reads would leave it\. It needs " \+ size\(offer\.bytes\) \+ " of space\."/);
-  assert.match(ui, /go\.textContent = "Run it here";/);
-  assert.match(ui, /"Downloading it to this computer: " \+ \(state\.pct \|\| 0\) \+ "% of " \+ size\(state\.totalBytes\) \+ "\."/);
-  assert.match(ui, /"Checking it runs fast enough here\."/);
+  assert.match(ui, /"This LLM can also run on the computer running Closedhand, for free, with what it reads staying on that computer\. While it starts up, or if it stops, " \+ offer\.provider \+ " answers instead\. It needs " \+ size\(offer\.bytes\) \+ " of space\."/);
+  assert.match(ui, /go\.textContent = "Run it there";/);
+  assert.match(ui, /"Waiting for another LLM to finish setting up\."/);
+  assert.match(ui, /"Downloading it to the computer running Closedhand: " \+ \(state\.pct \|\| 0\) \+ "% of " \+ size\(state\.totalBytes\) \+ "\."/);
+  assert.match(ui, /"Checking it runs fast enough there\."/);
+  assert.match(ui, /"Starting on the computer running Closedhand\. " \+ state\.provider \+ " answers until it's ready\."/);
   assert.match(ui, /back\.textContent = "Use " \+ state\.provider \+ " again";/);
   const src = read("webapp/run-here.js");
-  assert.match(src, /`It ran slower on this computer than promised, so it stays with \$\{provider\}\.`/);
-  assert.match(src, /`It couldn't be set up on this computer, so it stays with \$\{provider\}\.`/);
-  assert.match(src, /`It couldn't start on this computer, so it's back with \$\{provider\}\.`/);
+  assert.match(src, /const HOME = "the computer running Closedhand";/);
+  assert.match(src, /`It ran slower on \$\{HOME\} than promised, so it stays with \$\{provider\}\.`/);
+  assert.match(src, /`It couldn't be set up on \$\{HOME\}, so it stays with \$\{provider\}\.`/);
+  assert.match(src, /`It no longer fits on \$\{HOME\}, so it stays with \$\{provider\}\.`/);
+  assert.match(src, /`It couldn't start on \$\{HOME\}, so it's back with \$\{providerName\(next, next\.roles\[job\]\)\}\.`/);
+  assert.match(src, /`This LLM isn't offered to run on \$\{HOME\}\.`/);
   for (const page of ["webapp/views/privacy.html", "closedhand-com/views/privacy.html"]) {
-    assert.match(read(page), /When you choose to run an LLM on the computer running Closedhand, it is downloaded from Hugging Face, which sees that computer's internet address and the model's name\./, page);
+    assert.match(read(page), /In the Mac app, when the LLM chosen for a job has its weights published on Hugging Face, Settings looks it up there, at most once a day, to see whether it could run on the computer running Closedhand; for an OpenRouter model it first reads OpenRouter's public list of models\. Hugging Face sees that computer's internet address and the model's name\. If you choose to run it there, it is downloaded from Hugging Face, and your LLM provider still answers whenever it isn't running, such as while it starts up\./, page);
   }
 });

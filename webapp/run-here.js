@@ -1,12 +1,16 @@
 // "Run it here": an LLM someone picked for a job (chat, support work,
-// images) can run on this computer instead, when it plainly fits and will be
-// fast (run-here-fit.js decides). One click does the rest: the model is
-// downloaded from Hugging Face and checked against its published checksum,
-// the bundled llama.cpp runner starts on this computer only, a real prompt of
-// the job's size is timed, and only if it keeps the promise does the job
-// switch. Otherwise the job stays with the person's provider and they are
-// told once. A job run here keeps its provider as a fallback: whenever the
-// runner isn't answering, model-wire.js sends that request to the provider.
+// images) can run on the computer running Closedhand instead, when it plainly
+// fits and will be fast (run-here-fit.js decides). One click does the rest:
+// the model is downloaded from Hugging Face and checked against its
+// published checksum, the bundled llama.cpp runner starts on that computer
+// only, the job's own check passes, a real prompt of the job's size is timed,
+// and only if it keeps the promise does the job switch. Otherwise the job
+// stays with the person's provider and they are told once.
+//
+// A job run there keeps its provider as a fallback: whenever the runner
+// isn't answering (starting up, restarting after a crash), model-wire.js
+// sends the request to the provider, and Settings says so. A runner that
+// stops is started again, sooner at first and then every five minutes.
 //
 // Mac app only for now (Metal). Docker on a Mac can't reach the GPU, and
 // Linux with an NVIDIA card is a later step.
@@ -15,6 +19,8 @@ const os = require("os");
 const path = require("path");
 const net = require("net");
 const crypto = require("crypto");
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
 const { spawn, execFileSync } = require("child_process");
 const fit = require("./run-here-fit");
 const policy = require("./model-policy");
@@ -25,6 +31,12 @@ const DAY = 24 * 3600 * 1000;
 const JOB_NAMES = ["chat", "background", "vision"];
 const PROVIDER_NAMES = { anthropic: "Anthropic", deepinfra: "DeepInfra", deepseek: "DeepSeek", gemini: "Google Gemini", groq: "Groq",
   moonshot: "Moonshot", openai: "OpenAI", openrouter: "OpenRouter", xai: "xAI", ollama: "Ollama", custom: "your provider" };
+// Where a GGUF may come from: the model's makers, or quantizers whose
+// versions the llama.cpp community relies on. Anyone can publish one, and
+// its file runs with access to the person's mail, so nobody else's is used.
+const QUANTIZERS = ["ggml-org", "unsloth", "bartowski", "lmstudio-community"];
+const RESTART_DELAYS = [5000, 15000, 60000, 300000];
+const HOME = "the computer running Closedhand";
 
 let deps = {};
 function configure(next) { deps = { ...deps, ...next }; }
@@ -44,7 +56,6 @@ function available() {
   if (forced()) return true;
   return process.env.CLOSEDHAND_DESKTOP === "1" && (deps.platform || process.platform) === "darwin" && (deps.arch || process.arch) === "arm64";
 }
-
 function hardware() {
   if (deps.hardware) return deps.hardware();
   let brand = "";
@@ -56,6 +67,33 @@ function hardware() {
     freeDiskBytes = s.bavail * s.bsize;
   } catch (_) {}
   return { chip: fit.chipOf(brand), brand, memoryBytes: os.totalmem(), freeDiskBytes };
+}
+
+// --- Names and paths that come from Hugging Face ------------------------------
+
+// A repository, a commit and a file path are used in addresses and on disk
+// only when they have these shapes, and every path stays inside filesDir().
+const REPO = /^[\w.-]+\/[\w.-]+$/;
+const SHA = /^[0-9a-f]{40}$/;
+const SEGMENT = /^[\w.+@-]+$/;
+const safeRepo = (r) => REPO.test(String(r)) && !String(r).split("/").some(s => s === "." || s === "..");
+const safeFile = (p) => { const parts = String(p).split("/"); return parts.length <= 4 && parts.every(s => SEGMENT.test(s) && s !== "." && s !== ".."); };
+function inside(...parts) {
+  const root = path.resolve(filesDir());
+  const full = path.resolve(root, ...parts);
+  if (!full.startsWith(root + path.sep)) throw new Error("a model file outside the models folder was refused");
+  return full;
+}
+const encoded = (p) => String(p).split("/").map(encodeURIComponent).join("/");
+const fileUrl = (repo, sha, file) => `${HF}/${encoded(repo)}/resolve/${sha}/${encoded(file)}`;
+// Where a connection's files live, after checking every name it holds.
+function placeOf(here) {
+  if (!here || !safeRepo(here.gguf?.repo) || !SHA.test(String(here.gguf?.sha)) || !Array.isArray(here.files) || !here.files.length
+    || !here.files.every(safeFile) || (here.projector && !safeFile(here.projector))) throw new Error("its record was refused");
+  const dir = inside(here.gguf.repo, here.gguf.sha);
+  return { dir, files: here.files.map(f => inside(here.gguf.repo, here.gguf.sha, f)),
+    projector: here.projector ? inside(here.gguf.repo, here.gguf.sha, here.projector) : null,
+    template: inside(here.gguf.repo, here.gguf.sha, "chat-template.jinja") };
 }
 
 // --- Which model on Hugging Face, and its downloadable versions -------------
@@ -70,7 +108,10 @@ async function openRouterRepo(model) {
   if (!routerList || routerList.at < Date.now() - DAY) routerList = { at: Date.now(), data: (await getJson(OPENROUTER_MODELS)).data || [] };
   const id = String(model).replace(/:[a-z]+$/, "");
   const found = routerList.data.find(m => m.id === model) || routerList.data.find(m => m.id === id);
-  return found?.hugging_face_id || null;
+  return safeRepo(found?.hugging_face_id) ? found.hugging_face_id : null;
+}
+function isLocal(baseUrl) {
+  try { return ["localhost", "127.0.0.1", "[::1]", "host.docker.internal"].includes(new URL(baseUrl).hostname); } catch (_) { return false; }
 }
 // The model's Hugging Face repository, when its weights are published there.
 // Providers that don't name models by repository (and closed models) have
@@ -79,32 +120,57 @@ async function repoFor(conn, model) {
   if (!conn || !model || conn.provider === "here" || conn.provider === "ollama") return null;
   if (isLocal(conn.baseUrl)) return null;
   if (conn.provider === "openrouter") return openRouterRepo(model);
-  if (["deepinfra", "custom"].includes(conn.provider) && /^[\w.-]+\/[\w.-]+$/.test(model)) return model;
+  if (["deepinfra", "custom"].includes(conn.provider) && safeRepo(model)) return model;
   return null;
 }
-function isLocal(baseUrl) {
-  try { return ["localhost", "127.0.0.1", "[::1]", "host.docker.internal"].includes(new URL(baseUrl).hostname); } catch (_) { return false; }
+// The chat template the model's makers publish, read at their pinned
+// commit, so a quantizer's GGUF never decides how prompts are wrapped.
+async function templateOf(repo, sha) {
+  const tree = await getJson(`${HF}/api/models/${encoded(repo)}/tree/${sha}`).catch(() => []);
+  for (const name of ["chat_template.jinja", "tokenizer_config.json"]) {
+    const entry = tree.find(f => f.type === "file" && f.path === name && f.size > 0 && f.size < 2e6);
+    if (entry) return { file: name, size: entry.size };
+  }
+  return null;
+}
+async function fetchTemplate(repo, sha, template) {
+  const res = await fetchImpl(fileUrl(repo, sha, template.file), { redirect: "follow", signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`the chat template didn't download (${res.status})`);
+  const body = Buffer.from(await res.arrayBuffer());
+  if (body.length !== template.size) throw new Error("the chat template wasn't the size its makers list");
+  if (template.file === "chat_template.jinja") return body.toString("utf8");
+  const config = JSON.parse(body.toString("utf8"));
+  const chosen = Array.isArray(config.chat_template)
+    ? (config.chat_template.find(t => t.name === "default") || config.chat_template[0])?.template : config.chat_template;
+  if (typeof chosen !== "string" || !chosen.trim()) throw new Error("the model publishes no chat template");
+  return chosen;
 }
 // Everything run-here-fit needs about a model: its shape, its 4-bit-or-better
-// GGUF files with sizes and checksums, and its image part.
+// GGUF files with sizes and checksums, its image part and its chat template.
 async function describe(repo) {
-  const info = await getJson(`${HF}/api/models/${repo}`);
-  if (info.gated || info.private || info.disabled) return { none: "its download needs a Hugging Face account" };
-  const config = await getJson(`${HF}/${repo}/resolve/${info.sha}/config.json`).catch(() => null);
-  const found = await getJson(`${HF}/api/models?filter=base_model:quantized:${encodeURIComponent(repo)}&filter=gguf&sort=downloads&direction=-1&limit=6`).catch(() => []);
-  for (const candidate of found) {
-    const gguf = await getJson(`${HF}/api/models/${candidate.id}`).catch(() => null);
-    if (!gguf || gguf.gated || gguf.private || gguf.disabled) continue;
-    const tree = await getJson(`${HF}/api/models/${candidate.id}/tree/${gguf.sha}?recursive=true`).catch(() => []);
-    const files = tree.filter(f => f.type === "file" && /\.gguf$/i.test(f.path) && f.lfs?.oid && f.size > 0)
+  if (!safeRepo(repo)) return { none: "not a repository name" };
+  const info = await getJson(`${HF}/api/models/${encoded(repo)}`);
+  if (info.gated || info.private || info.disabled || !SHA.test(String(info.sha))) return { none: "its download needs a Hugging Face account" };
+  const template = await templateOf(repo, info.sha);
+  if (!template) return { none: "its makers publish no chat template" };
+  const config = await getJson(fileUrl(repo, info.sha, "config.json")).catch(() => null);
+  const makers = repo.split("/")[0];
+  const found = await getJson(`${HF}/api/models?filter=base_model:quantized:${encodeURIComponent(repo)}&filter=gguf&sort=downloads&direction=-1&limit=50`).catch(() => []);
+  const trusted = found.map(m => m.id).filter(id => safeRepo(id) && [makers, ...QUANTIZERS].includes(id.split("/")[0]))
+    .sort((a, b) => (a.split("/")[0] === makers ? 0 : 1) - (b.split("/")[0] === makers ? 0 : 1));
+  for (const id of trusted) {
+    const gguf = await getJson(`${HF}/api/models/${encoded(id)}`).catch(() => null);
+    if (!gguf || gguf.gated || gguf.private || gguf.disabled || !SHA.test(String(gguf.sha))) continue;
+    const tree = await getJson(`${HF}/api/models/${encoded(id)}/tree/${gguf.sha}?recursive=true`).catch(() => []);
+    const files = tree.filter(f => f.type === "file" && /\.gguf$/i.test(f.path) && safeFile(f.path) && /^[0-9a-f]{64}$/.test(String(f.lfs?.oid)) && f.size > 0)
       .map(f => ({ path: f.path, size: f.size, sha256: f.lfs.oid }));
     const quants = fit.quantizations(files);
     if (!quants.length) continue;
     const total = Number(info.safetensors?.total) || Number(gguf.gguf?.total) || null;
     const shape = fit.shapeOf(config, total, Number(gguf.gguf?.context_length) || null);
-    return { repo, gguf: { repo: candidate.id, sha: gguf.sha }, quants, projector: fit.projectorOf(files), shape };
+    return { repo, sha: info.sha, template, gguf: { repo: id, sha: gguf.sha }, quants, projector: fit.projectorOf(files), shape };
   }
-  return { none: "no 4-bit or better version is published" };
+  return { none: "no 4-bit or better version from its makers or an established quantizer" };
 }
 const described = new Map();
 async function cachedDescribe(repo) {
@@ -115,9 +181,9 @@ async function cachedDescribe(repo) {
   return value;
 }
 
-// --- The state kept between runs ----------------------------------------------
+// --- State kept between runs --------------------------------------------------
 
-// self_host_config RUN_HERE: { attempts: { job: { state, pct, ... } }, notes: { job: text }, tried: [key] }
+// self_host_config RUN_HERE: { notes: { job: text }, tried: [key] }
 async function readState() {
   if (deps.state) return deps.state.read();
   const { getConf } = require("./config");
@@ -129,7 +195,9 @@ async function writeState(change) {
   else await require("./config").setConf({ RUN_HERE: next });
   return next;
 }
-const progress = new Map(); // job -> { state, pct, bytes, totalBytes } while a run is under way
+const say = (job, text) => writeState(s => ({ ...s, notes: { ...(s.notes || {}), [job]: text } })).catch(() => {});
+const triedKey = (job, model, quant) => [job, model, quant].join("|");
+const markTried = (key) => writeState(s => ({ ...s, tried: [...new Set([...(s.tried || []), key])] })).catch(() => {});
 
 async function readSettings() {
   const { data, error } = await deps.supabase.from("profiles").select("settings").eq("id", deps.getAdminUserId()).single();
@@ -141,9 +209,30 @@ async function saveConfig(settings, config) {
   return { ...settings, model_config: config };
 }
 
+// One thing at a time: setting a job up, undoing one, starting again after
+// a restart and tidying up never overlap, so they never share a half-written
+// file or stop each other's runner.
+let chain = Promise.resolve();
+function exclusive(fn) {
+  const next = chain.then(fn, fn);
+  chain = next.catch(() => {});
+  return next;
+}
+
 // --- Offers -------------------------------------------------------------------
 
-const triedKey = (job, model, quant) => [job, model, quant].join("|");
+const hereConnections = (config) => Object.entries(config?.connections || {}).filter(([, c]) => c?.provider === "here");
+// What runners already there take, apart from the one a job would share.
+function reserved(config, except) {
+  return hereConnections(config).filter(([id]) => id !== except).reduce((n, [, c]) => n + (Number(c.here?.memoryBytes) || 0), 0);
+}
+const connectionId = (gguf, quant) => "here-" + crypto.createHash("sha256").update(gguf.repo + "|" + quant.label).digest("hex").slice(0, 10);
+function choose(job, model, hw, config) {
+  if (forced()) return forcedChoice(job, model, hw);
+  const first = fit.pick(job, model.quants, model.shape, { ...hw, reservedBytes: 0 }, model.projector);
+  if (!first.ok) return first;
+  return fit.pick(job, model.quants, model.shape, { ...hw, reservedBytes: reserved(config, connectionId(model.gguf, first.quant)) }, model.projector);
+}
 async function offers(settings) {
   const result = {};
   const config = settings.model_config;
@@ -158,64 +247,72 @@ async function offers(settings) {
     if (!repo) continue;
     const model = await cachedDescribe(repo);
     if (model.none) continue;
-    const choice = forced() ? forcedChoice(job, model, hw) : fit.pick(job, model.quants, model.shape, hw, model.projector);
+    const choice = choose(job, model, hw, config);
     if (!choice.ok || (state.tried || []).includes(triedKey(job, role.model, choice.quant.label))) continue;
-    result[job] = { bytes: choice.estimate.downloadBytes, quant: choice.quant.label,
-      estimate: { firstSeconds: round(choice.estimate.firstSeconds), tokensPerSecond: Math.round(choice.estimate.tokensPerSecond) } };
+    result[job] = { bytes: choice.estimate.downloadBytes, quant: choice.quant.label, provider: PROVIDER_NAMES[conn?.provider] || "your provider" };
   }
   return result;
 }
-const round = (n) => Math.round(n * 10) / 10;
 // Testing only: the smallest 4-bit-or-better version, whatever the computer.
 function forcedChoice(job, model, hw) {
   const quant = [...model.quants].sort((a, b) => a.bytes - b.bytes)[0];
   const verdict = fit.judge(job, quant, model.shape, { ...hw, chip: hw.chip || fit.chipOf("Apple M1") });
-  return { ok: !!quant, quant, estimate: verdict.estimate || { downloadBytes: quant.bytes, firstSeconds: 0, tokensPerSecond: 0 } };
+  const downloadBytes = quant.bytes + (job === "vision" && model.projector ? model.projector.size : 0);
+  return { ok: !!quant, quant, estimate: { downloadBytes, memoryBytes: verdict.estimate?.memoryBytes || downloadBytes } };
 }
 
 // --- Downloading ----------------------------------------------------------------
 
-// Resumable: a part already on disk is hashed and continued. Kept only when
-// the whole file matches the checksum Hugging Face publishes for it.
-async function download(url, dest, size, sha256, onBytes) {
+async function sha256Of(file) {
+  const hash = crypto.createHash("sha256");
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest("hex");
+}
+// Resumable: a part already on disk is continued. Kept only when the file
+// on disk matches the checksum Hugging Face publishes for it. A download
+// that sends nothing for a minute is stopped, to be tried again.
+async function download(url, dest, size, sha256, onBytes, idleMs = 60000) {
   if (fs.existsSync(dest) && fs.statSync(dest).size === size) return;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const part = dest + ".part";
-  let have = 0, hash = crypto.createHash("sha256");
-  if (fs.existsSync(part)) {
-    have = fs.statSync(part).size;
-    if (have > size) { fs.rmSync(part, { force: true }); have = 0; }
-    else for await (const chunk of fs.createReadStream(part)) hash.update(chunk);
-  }
-  const res = await fetchImpl(url, { headers: have ? { Range: `bytes=${have}-` } : {}, redirect: "follow" });
-  if (have && res.status !== 206) { have = 0; hash = crypto.createHash("sha256"); }
-  if (!res.ok || !res.body) throw new Error(`the download stopped (${res.status})`);
-  const out = fs.createWriteStream(part, { flags: have ? "a" : "w" });
-  try {
-    for await (const chunk of res.body) {
-      hash.update(chunk);
-      have += chunk.length;
-      if (!out.write(chunk)) await new Promise(r => out.once("drain", r));
-      onBytes(have);
+  let have = fs.existsSync(part) ? fs.statSync(part).size : 0;
+  if (have > size) { fs.rmSync(part, { force: true }); have = 0; }
+  if (have < size) {
+    const abort = new AbortController();
+    let idle = null;
+    const touch = () => { clearTimeout(idle); idle = setTimeout(() => abort.abort(new Error("the download stalled")), idleMs); };
+    touch();
+    try {
+      let res = await fetchImpl(url, { headers: have ? { Range: `bytes=${have}-` } : {}, redirect: "follow", signal: abort.signal });
+      if (res.status === 416) {
+        fs.rmSync(part, { force: true }); have = 0;
+        res = await fetchImpl(url, { redirect: "follow", signal: abort.signal });
+      }
+      if (have && res.status !== 206) have = 0;
+      if (!res.ok || !res.body) throw new Error(`the download stopped (${res.status})`);
+      const source = typeof res.body.getReader === "function" ? Readable.fromWeb(res.body) : Readable.from(res.body);
+      let count = have;
+      await pipeline(source, async function* (chunks) {
+        for await (const chunk of chunks) { count += chunk.length; touch(); onBytes(count); yield chunk; }
+      }, fs.createWriteStream(part, { flags: have ? "a" : "w" }));
+    } finally {
+      clearTimeout(idle);
     }
-    await new Promise((resolve, reject) => out.end(e => (e ? reject(e) : resolve())));
-  } catch (e) {
-    out.destroy();
-    throw e;
   }
-  if (have !== size || hash.digest("hex") !== sha256) {
+  if (fs.statSync(part).size !== size || (await sha256Of(part)) !== sha256) {
     fs.rmSync(part, { force: true });
-    throw new Error("the download didn't match its published checksum, so it was not kept");
+    throw Object.assign(new Error("the download didn't match its published checksum, so it was not kept"), { checksum: true });
   }
   fs.renameSync(part, dest);
 }
-const localPath = (gguf, file) => path.join(filesDir(), gguf.repo, gguf.sha, file.path);
+const inFlight = new Map(); // file -> how many runs are using it
+const hold = (files) => files.forEach(f => inFlight.set(f, (inFlight.get(f) || 0) + 1));
+const release = (files) => files.forEach(f => { const n = (inFlight.get(f) || 1) - 1; if (n > 0) inFlight.set(f, n); else inFlight.delete(f); });
 
 // --- The runner -----------------------------------------------------------------
 
-const runners = new Map(); // connection id -> { child, port, ctx }
-const inFlight = new Set(); // files a run in progress is downloading or loading
-const pendingRunners = new Set(); // runners a run in progress has started
+// connection id -> { child, port, key, spec, state: loading|running|restarting, supervised, stopping, restarts, timer }
+const runners = new Map();
 function freePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -236,42 +333,129 @@ async function health(port, key, ms = 3000) {
     return res.ok;
   } catch (_) { return false; }
 }
+// On macOS the runner is sandboxed: it reads its own program and the models
+// folder, writes only temporary files, listens on this computer only and
+// can reach no network at all.
+const SANDBOX = `(version 1)
+(allow default)
+(deny network*)
+(allow network-bind (local ip "localhost:*"))
+(allow network-inbound (local ip "localhost:*"))
+(deny file-write*)
+(allow file-write* (subpath "/private/var/folders") (subpath "/private/tmp") (literal "/dev/null"))
+(deny file-read* (subpath "/Users") (subpath "/Volumes"))
+(allow file-read* (subpath (param "MODELS")) (subpath (param "RUNNER")))`;
+function command(bin, args) {
+  if ((deps.platform || process.platform) !== "darwin" || !fs.existsSync("/usr/bin/sandbox-exec") || deps.spawn) return [bin, args];
+  return ["/usr/bin/sandbox-exec", ["-D", `MODELS=${path.resolve(modelsDir())}`, "-D", `RUNNER=${path.dirname(path.resolve(bin))}`, "-p", SANDBOX, bin, ...args]];
+}
 // llama-server on this computer only, behind its own key, with every layer
 // on the GPU, never reaching the network, one request at a time with the
-// whole context, and a modest cache of earlier prompts.
-async function startRunner(id, { model, ctx, key, port, alias }) {
-  await stopRunner(id);
-  const bin = runnerBinary();
-  if (!bin) throw new Error("the runner isn't part of this Closedhand");
-  const args = ["-m", model.file, "--host", "127.0.0.1", "--port", String(port), "-c", String(ctx), "-np", "1",
-    "-ngl", "999", "--alias", alias, "--no-webui", "--offline", "-cram", "1024", "--jinja"];
-  if (model.projector) args.push("--mmproj", model.projector);
+// whole context, the makers' chat template, and a modest prompt cache.
+function launch(id, held) {
+  const { spec, port, key } = held;
+  const args = ["-m", spec.file, "--host", "127.0.0.1", "--port", String(port), "-c", String(spec.ctx), "-np", "1",
+    "-ngl", "999", "--alias", spec.alias, "--no-webui", "--offline", "-cram", "1024", "--jinja", "--chat-template-file", spec.template];
+  if (spec.projector) args.push("--mmproj", spec.projector);
   const env = { PATH: process.env.PATH || "/usr/bin:/bin", HOME: process.env.HOME || os.homedir(), TMPDIR: process.env.TMPDIR || os.tmpdir(), LLAMA_API_KEY: key };
-  const child = (deps.spawn || spawn)(bin, args, { env, stdio: ["ignore", "ignore", "pipe"] });
-  try { fs.mkdirSync(filesDir(), { recursive: true }); fs.writeFileSync(path.join(filesDir(), `runner-${id}.pid`), String(child.pid)); } catch (_) {}
-  let tail = "";
-  child.stderr?.on("data", d => { tail = (tail + d).slice(-2000); });
-  runners.set(id, { child, port, ctx });
-  child.on("exit", () => { if (runners.get(id)?.child === child) runners.delete(id); });
-  const until = Date.now() + 180000;
+  const [file, argv] = command(runnerBinary(), args);
+  const child = (deps.spawn || spawn)(file, argv, { env, stdio: ["ignore", "ignore", "pipe"] });
+  held.child = child;
+  held.tail = "";
+  child.stderr?.on("data", d => { held.tail = (held.tail + d).slice(-2000); });
+  const ended = () => {
+    if (held.child !== child || held.ended) return;
+    held.ended = true;
+    if (held.stopping || runners.get(id) !== held) return;
+    if (!held.supervised) return;
+    // A runner that stops on its own is started again; until then the
+    // provider answers.
+    held.state = "restarting";
+    const delays = deps.restartDelays || RESTART_DELAYS;
+    const delay = delays[Math.min(held.restarts, delays.length - 1)];
+    held.restarts += 1;
+    console.error(`[run-here] the runner stopped; starting it again in ${delay / 1000} s`);
+    held.timer = setTimeout(() => {
+      if (held.stopping || runners.get(id) !== held) return;
+      held.ended = false;
+      launch(id, held);
+      waitUntilUp(held).then(() => { held.state = "running"; held.restarts = 0; }).catch(() => { held.child?.kill("SIGKILL"); ended(); });
+    }, delay);
+    held.timer.unref?.();
+  };
+  child.on("exit", ended);
+  child.on("error", (e) => { held.tail += `\n${e.message}`; ended(); });
+  try { fs.mkdirSync(filesDir(), { recursive: true }); fs.writeFileSync(path.join(filesDir(), `runner-${id}.pid`), String(child.pid || "")); } catch (_) {}
+}
+async function waitUntilUp(held, ms = 180000) {
+  const until = Date.now() + ms;
   while (Date.now() < until) {
-    if (child.exitCode !== null) throw new Error("the runner stopped while loading: " + tail.split("\n").filter(Boolean).slice(-2).join(" ").slice(0, 200));
-    if (await health(port, key)) return;
+    if (held.ended || held.child.exitCode !== null || held.child.signalCode !== null) {
+      throw new Error("the runner stopped while loading: " + String(held.tail || "").split("\n").filter(Boolean).slice(-2).join(" ").slice(0, 200));
+    }
+    if (await health(held.port, held.key)) return;
     await new Promise(r => setTimeout(r, 1000));
   }
-  await stopRunner(id);
   throw new Error("the runner didn't finish loading");
+}
+async function startRunner(id, spec, { key, port, supervised }) {
+  await stopRunner(id);
+  if (!runnerBinary()) throw new Error("the runner isn't part of this Closedhand");
+  const held = { spec, key, port, state: "loading", supervised, stopping: false, restarts: 0, ended: false };
+  runners.set(id, held);
+  launch(id, held);
+  try {
+    await waitUntilUp(held);
+  } catch (e) {
+    await stopRunner(id);
+    throw e;
+  }
+  held.state = "running";
+  return held;
 }
 async function stopRunner(id) {
   fs.rmSync(path.join(filesDir(), `runner-${id}.pid`), { force: true });
   const held = runners.get(id);
   if (!held) return;
   runners.delete(id);
-  held.child.kill("SIGTERM");
-  await new Promise(r => { const t = setTimeout(() => { held.child.kill("SIGKILL"); r(); }, 5000); held.child.once("exit", () => { clearTimeout(t); r(); }); });
+  held.stopping = true;
+  clearTimeout(held.timer);
+  const child = held.child;
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  child.kill("SIGTERM");
+  await new Promise(r => { const t = setTimeout(() => { child.kill("SIGKILL"); r(); }, 5000); child.once("exit", () => { clearTimeout(t); r(); }); });
 }
-function stopAll() { for (const held of runners.values()) held.child.kill("SIGTERM"); runners.clear(); }
+function stopAll() {
+  for (const held of runners.values()) { held.stopping = true; clearTimeout(held.timer); held.child?.kill("SIGTERM"); }
+  runners.clear();
+}
 process.once("exit", stopAll);
+// A runner left behind when the app was stopped hard still holds its
+// memory; it goes before anything starts again.
+function stopLeftBehind() {
+  let names = [];
+  try { names = fs.readdirSync(filesDir()).filter(n => /^runner-here-[0-9a-f]{10}\.pid$/.test(n)); } catch (_) { return; }
+  for (const name of names) {
+    const file = path.join(filesDir(), name);
+    const pid = Number(fs.readFileSync(file, "utf8"));
+    if (pid > 1 && !deps.spawn) {
+      try {
+        const command = execFileSync("ps", ["-p", String(pid), "-o", "comm="], { encoding: "utf8", timeout: 3000 }).trim();
+        if (/(llama-server|sandbox-exec)$/.test(command)) process.kill(pid, "SIGTERM");
+      } catch (_) { /* not running */ }
+    }
+    fs.rmSync(file, { force: true });
+  }
+}
+// What a connection's runner needs: the biggest context any job on it
+// wants, and the image part if any job on it has one.
+function specOf(config, id, place, alias) {
+  const jobs = JOB_NAMES.filter(j => config.roles?.[j]?.connection === id);
+  const here = config.connections[id].here;
+  return { file: place.files[0], template: place.template, alias,
+    ctx: Math.max(Number(here.ctx) || 0, ...jobs.map(j => fit.JOBS[j].context)),
+    projector: here.projector ? place.projector : null };
+}
 
 // --- Checking and timing ----------------------------------------------------------
 
@@ -300,232 +484,279 @@ async function timeIt(port, key, job) {
 // chat, a plain answer for support work, a picture for images.
 async function checkJob(job, conn, model) {
   const config = require("./model-config");
+  const wire = require("./model-wire");
   if (job === "vision") {
-    const reply = await require("./model-wire").request({ ...conn, capabilities: { vision: true } }, { model, effort: "fast", max_tokens: 256,
+    const reply = await wire.request({ ...conn, capabilities: { vision: true } }, { model, effort: "fast", max_tokens: 256,
       messages: [{ role: "user", content: [{ type: "text", text: "What is the main colour in this image? Answer in one word." },
         { type: "image", source: { type: "base64", media_type: "image/png", data: config.RED_IMAGE } }] }] }, { signal: AbortSignal.timeout(120000) });
-    if (!/\bred\b/i.test(require("./model-wire").responseText(reply))) throw new Error("it didn't pass the image check here");
+    if (!/\bred\b/i.test(wire.responseText(reply))) throw new Error("it didn't pass the image check there");
     return;
   }
   await config.checkModel(conn, model, job === "chat" ? "chat" : "support", []);
 }
+// Only a model that answered and got it wrong is remembered as failing; a
+// timeout or a dropped connection may go better next time.
+function answeredWrong(e) {
+  const code = e?.cause?.code || e?.code;
+  if (["TimeoutError", "AbortError"].includes(e?.name) || /fetch failed|timed? ?out|aborted/i.test(String(e?.message))) return false;
+  if (["ECONNREFUSED", "ECONNRESET", "UND_ERR_SOCKET", "UND_ERR_CLOSED"].includes(code) || Number(e?.status) >= 500) return false;
+  return true;
+}
 
 // --- One click ----------------------------------------------------------------------
 
-const connectionId = (gguf, quant) => "here-" + crypto.createHash("sha256").update(gguf.repo + "|" + quant.label).digest("hex").slice(0, 10);
-function providerName(settings, role) {
-  const conn = settings.model_config?.connections?.[role?.connection];
-  return PROVIDER_NAMES[conn?.provider] || "your provider";
+function providerName(config, role) {
+  return PROVIDER_NAMES[config?.connections?.[role?.connection]?.provider] || "your provider";
 }
-const running = new Map(); // job -> promise
+const progress = new Map(); // job -> { state, pct, totalBytes } while a run is waiting or under way
+const queued = new Map(); // job -> promise
 function start(job) {
   if (!JOB_NAMES.includes(job)) throw new Error("Unknown job.");
-  if (running.has(job)) return running.get(job);
-  const work = run(job).finally(() => { running.delete(job); progress.delete(job); });
-  running.set(job, work);
-  work.catch(() => {});
+  if (queued.has(job)) return queued.get(job);
+  progress.set(job, { state: "waiting" });
+  const work = exclusive(() => run(job)).catch(e => console.error(`[run-here] ${job}: ${e.message}`))
+    .finally(() => { queued.delete(job); progress.delete(job); });
+  queued.set(job, work);
   return work;
 }
 async function run(job) {
+  progress.set(job, { state: "starting" });
   let settings = await readSettings();
-  const role = settings.model_config?.roles?.[job];
-  const conn = settings.model_config?.connections?.[role?.connection];
-  const provider = providerName(settings, role);
-  const say = (text) => writeState(s => ({ ...s, notes: { ...(s.notes || {}), [job]: text } }));
-  const repo = await repoFor(conn, role?.model);
+  const config0 = settings.model_config;
+  const role = config0?.roles?.[job];
+  const conn = config0?.connections?.[role?.connection];
+  const provider = providerName(config0, role);
+  if (!role || role.here) return;
+  const repo = await repoFor(conn, role.model).catch(() => null);
   const model = repo ? await cachedDescribe(repo) : { none: "not published" };
-  if (!role || model.none) return say(`It couldn't be set up on this computer, so it stays with ${provider}.`);
-  const hw = hardware();
-  const choice = forced() ? forcedChoice(job, model, hw) : fit.pick(job, model.quants, model.shape, hw, model.projector);
-  if (!choice.ok) return say(`It no longer fits on this computer, so it stays with ${provider}.`);
+  if (model.none) return say(job, `It couldn't be set up on ${HOME}, so it stays with ${provider}.`);
+  const choice = choose(job, model, hardware(), config0);
+  if (!choice.ok) return say(job, `It no longer fits on ${HOME}, so it stays with ${provider}.`);
   const quant = choice.quant;
   const id = connectionId(model.gguf, quant);
-  const files = quant.files.map(f => ({ ...f, dest: localPath(model.gguf, f) }));
-  const projector = job === "vision" && model.projector ? { ...model.projector, dest: localPath(model.gguf, model.projector) } : null;
-  const all = projector ? [...files, projector] : files;
-  const totalBytes = all.reduce((n, f) => n + f.size, 0);
-  // Another job already running this model here shares its runner and key.
-  const shared = settings.model_config.connections?.[id];
+  const shared = config0.connections?.[id];
+  const here = {
+    repo: model.repo, gguf: model.gguf, quant: quant.label,
+    files: quant.files.map(f => f.path),
+    projector: (job === "vision" && model.projector?.path) || shared?.here?.projector || null,
+    ctx: Math.max(fit.JOBS[job].context, Number(shared?.here?.ctx) || 0),
+    memoryBytes: Math.max(choice.estimate.memoryBytes, Number(shared?.here?.memoryBytes) || 0),
+  };
+  const place = placeOf(here);
+  const wanted = [...quant.files.map((f, i) => ({ ...f, dest: place.files[i] }))];
+  if (job === "vision" && model.projector) wanted.push({ ...model.projector, dest: place.projector });
+  const totalBytes = wanted.reduce((n, f) => n + f.size, 0);
   const key = shared ? policy.openKey(shared.apiKey) : crypto.randomBytes(24).toString("hex");
-  for (const f of all) inFlight.add(f.dest);
-  pendingRunners.add(id);
+  const paths = [...wanted.map(f => f.dest), place.template];
+  const before = runners.get(id);
+  const beforeSpec = before?.spec;
+  hold(paths);
   try {
     let done = 0;
-    for (const f of all) {
-      const url = `${HF}/${model.gguf.repo}/resolve/${model.gguf.sha}/${f.path}`;
+    for (const f of wanted) {
+      const url = fileUrl(model.gguf.repo, model.gguf.sha, f.path);
       for (let attempt = 1; ; attempt++) {
         try {
-          await download(url, f.dest, f.size, f.sha256,
-            (bytes) => progress.set(job, { state: "downloading", pct: Math.floor(((done + bytes) / totalBytes) * 100), totalBytes }));
+          await download(url, f.dest, f.size, f.sha256, (bytes) => progress.set(job, { state: "downloading", pct: Math.floor(((done + bytes) / totalBytes) * 100), totalBytes }));
           break;
         } catch (e) {
-          if (attempt >= 3 || /checksum/.test(e.message)) throw e;
+          if (attempt >= 3 || e.checksum) throw e;
           await new Promise(r => setTimeout(r, attempt * 5000));
         }
       }
       done += f.size;
     }
+    fs.writeFileSync(place.template, await fetchTemplate(model.repo, model.sha, model.template));
     progress.set(job, { state: "checking", totalBytes });
-    const ctx = Math.max(fit.JOBS[job].context, ...JOB_NAMES.filter(j => settings.model_config.roles?.[j]?.connection === id).map(j => fit.JOBS[j].context));
+    // The runner as it will be: every job on it counted, this one included.
+    const trial = structuredClone(config0);
+    trial.connections[id] = { provider: "here", here };
+    trial.roles[job] = { ...role, connection: id };
     const port = runners.get(id)?.port || (shared ? Number(new URL(shared.baseUrl).port) : 0) || await freePort();
-    await startRunner(id, { model: { file: files[0].dest, projector: projector?.dest }, ctx, key, port, alias: role.model });
-    const here = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: key };
-    // A model that fails its job's check here won't pass next time either.
-    await checkJob(job, here, role.model).catch(e => { throw Object.assign(e, { failedCheck: true }); });
+    const spec = specOf(trial, id, place, role.model);
+    if (!before || before.spec.ctx < spec.ctx || (spec.projector && !before.spec.projector)) await startRunner(id, spec, { key, port, supervised: !!shared });
+    const conn = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: key, capabilities: { reasoning: "here" } };
+    try {
+      await checkJob(job, conn, role.model);
+    } catch (e) {
+      if (answeredWrong(e)) await markTried(triedKey(job, role.model, quant.label));
+      throw e;
+    }
     const timings = await timeIt(port, key, job);
+    console.log(`[run-here] ${job}: read ${Math.round(Number(timings.prompt_per_second) || 0)} tokens a second, wrote ${Math.round(Number(timings.predicted_per_second) || 0)}`);
     if (!fit.keepsPromise(job, timings)) {
-      if (!shared) await stopRunner(id);
-      for (const f of all) inFlight.delete(f.dest);
-      pendingRunners.delete(id);
-      await writeState(s => ({ ...s, tried: [...new Set([...(s.tried || []), triedKey(job, role.model, quant.label)])], last: { job, timings: brief(timings) } }));
+      await markTried(triedKey(job, role.model, quant.label));
+      await putBack(id, shared, beforeSpec, key);
+      release(paths);
       removeUnused(settings);
-      return say(`It ran slower on this computer than promised, so it stays with ${provider}.`);
+      return say(job, `It ran slower on ${HOME} than promised, so it stays with ${provider}.`);
     }
     settings = await readSettings();
     const config = structuredClone(settings.model_config);
-    const current = config.roles[job];
+    const current = config.roles?.[job];
     if (!current || current.model !== role.model || current.connection !== role.connection) throw new Error("the models changed while this was set up");
-    config.connections[id] = { ...here, apiKey: policy.sealKey(key) };
+    config.connections[id] = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: policy.sealKey(key), here };
     config.roles[job] = {
-      connection: id, model: role.model,
-      capabilities: { tools: job === "chat" ? true : current.capabilities?.tools ?? null, vision: job === "vision", video: false, videoLinks: false, contextWindow: ctx, reasoning: null },
+      connection: id, model: role.model, here: true,
+      capabilities: { tools: job === "chat" ? true : current.capabilities?.tools ?? null, vision: job === "vision", video: false, videoLinks: false, contextWindow: here.ctx, reasoning: "here" },
       fallback: { connection: current.connection, model: current.model, capabilities: current.capabilities },
-      here: { repo: model.repo, gguf: model.gguf, quant: quant.label, files: files.map(f => f.path), projector: projector?.path || null, bytes: totalBytes, ctx },
     };
-    // Every job on this model shares one runner and its key.
-    for (const j of JOB_NAMES) if (j !== job && config.roles[j]?.connection === id) config.connections[id] = { ...here, apiKey: policy.sealKey(key) };
     await saveConfig(settings, config);
-    await writeState(s => ({ ...s, last: { job, timings: brief(timings) } }));
-    for (const f of all) inFlight.delete(f.dest);
-    pendingRunners.delete(id);
+    const held = runners.get(id);
+    if (held) held.supervised = true;
+    release(paths);
   } catch (e) {
     console.error(`[run-here] ${job}: ${e.message}`);
-    if (e.failedCheck) await writeState(s => ({ ...s, tried: [...new Set([...(s.tried || []), triedKey(job, role.model, quant.label)])] })).catch(() => {});
-    if (!shared) await stopRunner(id).catch(() => {});
-    for (const f of all) inFlight.delete(f.dest);
-    pendingRunners.delete(id);
+    await putBack(id, shared, beforeSpec, key).catch(() => {});
+    release(paths);
     removeUnused(await readSettings().catch(() => settings));
-    return say(`It couldn't be set up on this computer, so it stays with ${provider}.`);
+    return say(job, `It couldn't be set up on ${HOME}, so it stays with ${provider}.`);
   }
 }
-const brief = (t) => ({ promptPerSecond: Math.round(Number(t.prompt_per_second) || 0), writePerSecond: Math.round(Number(t.predicted_per_second) || 0), promptTokens: t.prompt_n || null });
+
+// After a try that didn't switch: a new runner goes; one other jobs already
+// use goes back to how it was, so it never points at files about to go.
+async function putBack(id, shared, beforeSpec, key) {
+  const now = runners.get(id);
+  if (!shared) return stopRunner(id);
+  if (beforeSpec && now && now.spec !== beforeSpec) await startRunner(id, beforeSpec, { key, port: now.port, supervised: true });
+}
 
 // Back to the provider, and the download goes.
-async function undo(job) {
-  const settings = await readSettings();
-  const config = structuredClone(settings.model_config || {});
-  const role = config.roles?.[job];
-  if (!role?.here || !role.fallback) return false;
-  config.roles[job] = role.fallback;
-  if (!JOB_NAMES.some(j => config.roles[j]?.connection === role.connection)) {
-    delete config.connections[role.connection];
-    await stopRunner(role.connection);
-  }
-  const saved = await saveConfig(settings, config);
-  removeUnused(saved);
-  return true;
+function undo(job) {
+  return exclusive(async () => {
+    const settings = await readSettings();
+    const config = structuredClone(settings.model_config || {});
+    const role = config.roles?.[job];
+    if (!role?.here || !role.fallback) return false;
+    config.roles[job] = role.fallback;
+    const saved = await saveConfig(settings, config);
+    await tidy(saved);
+    return true;
+  });
 }
-// Files no job uses any more (a job switched back, or the models were
-// saved again from Settings) are deleted, and their runner stopped.
+// Connections and files no job uses any more (a job switched back, or the
+// models were saved again from Settings) go, with their runner.
+async function tidy(settings) {
+  const config = settings.model_config;
+  if (!config) { removeUnused(settings); return settings; }
+  const used = new Set(JOB_NAMES.map(j => config.roles?.[j]?.connection));
+  const unused = hereConnections(config).filter(([id]) => !used.has(id)).map(([id]) => id);
+  for (const id of runners.keys()) if (!used.has(id)) await stopRunner(id);
+  if (unused.length) {
+    const next = structuredClone(config);
+    for (const id of unused) delete next.connections[id];
+    settings = await saveConfig(settings, next);
+  }
+  removeUnused(settings);
+  return settings;
+}
 function removeUnused(settings) {
   const keep = new Set();
-  for (const j of JOB_NAMES) {
-    const here = settings.model_config?.roles?.[j]?.here;
-    if (!here) continue;
-    for (const f of here.files) keep.add(path.join(filesDir(), here.gguf.repo, here.gguf.sha, f));
-    if (here.projector) keep.add(path.join(filesDir(), here.gguf.repo, here.gguf.sha, here.projector));
+  for (const [, c] of hereConnections(settings.model_config)) {
+    try {
+      const place = placeOf(c.here);
+      [...place.files, place.template, ...(place.projector ? [place.projector] : [])].forEach(f => keep.add(f));
+    } catch (_) { /* a refused record keeps nothing */ }
   }
-  const used = new Set(JOB_NAMES.map(j => settings.model_config?.roles?.[j]?.connection));
-  for (const id of runners.keys()) if (!used.has(id) && !pendingRunners.has(id)) stopRunner(id).catch(() => {});
   const walk = (dir) => {
     let entries = [];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
     for (const e of entries) {
       const p = path.join(dir, e.name);
-      if (e.isDirectory()) { walk(p); try { fs.rmdirSync(p); } catch (_) {} }
-      else if (keep.has(p) || inFlight.has(p) || inFlight.has(p.replace(/\.part$/, ""))) continue;
+      if (e.isSymbolicLink()) { fs.rmSync(p, { force: true }); continue; }
+      if (e.isDirectory()) { walk(p); try { fs.rmdirSync(p); } catch (_) {} continue; }
+      if (keep.has(p) || inFlight.has(p) || inFlight.has(p.replace(/\.part$/, ""))) continue;
+      if (/^runner-here-[0-9a-f]{10}\.pid$/.test(e.name) && dir === filesDir()) continue;
       // A download cut short (the app quit) is continued by the next click,
       // for a week; after that it is let go.
-      else if (p.endsWith(".part") && fs.statSync(p).mtimeMs > Date.now() - 7 * DAY) continue;
-      else if (path.basename(p).startsWith("runner-") && p.endsWith(".pid")) continue;
-      else fs.rmSync(p, { force: true });
+      if (p.endsWith(".part") && fs.statSync(p).mtimeMs > Date.now() - 7 * DAY) continue;
+      fs.rmSync(p, { force: true });
     }
   };
   walk(filesDir());
 }
-
-// A runner left behind when the app was stopped hard still holds its
-// memory; it goes before anything starts again.
-function stopLeftBehind() {
-  let names = [];
-  try { names = fs.readdirSync(filesDir()).filter(n => /^runner-.+\.pid$/.test(n)); } catch (_) { return; }
-  for (const name of names) {
-    const file = path.join(filesDir(), name);
-    const pid = Number(fs.readFileSync(file, "utf8"));
-    try {
-      const command = execFileSync("ps", ["-p", String(pid), "-o", "comm="], { encoding: "utf8", timeout: 3000 }).trim();
-      if (/llama-server$/.test(command)) process.kill(pid, "SIGTERM");
-    } catch (_) { /* not running */ }
-    fs.rmSync(file, { force: true });
+// Saving the models from Settings keeps a job run on the computer running
+// Closedhand when its provider pick is the same as before; otherwise the job
+// takes the new pick and its runner goes (tidy, after the save).
+function carryOver(before, after) {
+  if (!before?.roles || !after?.roles) return after;
+  const next = structuredClone(after);
+  const same = (a, b) => a && b && a.provider === b.provider && a.baseUrl === b.baseUrl;
+  for (const job of JOB_NAMES) {
+    const old = before.roles[job], now = after.roles[job];
+    if (!old?.here || !old.fallback || !now) continue;
+    if (old.fallback.model !== now.model || !same(before.connections?.[old.fallback.connection], after.connections?.[now.connection])) continue;
+    const conn = before.connections?.[old.connection];
+    if (!conn) continue;
+    // Keys here are as the user's config holds them before sealing (model-config withConfig seals them).
+    next.connections[old.connection] = { ...conn, apiKey: policy.openKey(conn.apiKey) };
+    next.roles[job] = { ...old, fallback: { connection: now.connection, model: now.model, capabilities: now.capabilities } };
   }
+  return next;
+}
+function reconcile() {
+  return exclusive(async () => tidy(await readSettings()));
 }
 
-// At start: each job run here gets its runner back. One whose files are gone
-// returns to its provider, and the person is told once.
-async function resume() {
-  if (!deps.supabase) return;
-  stopLeftBehind();
-  let settings;
-  try { settings = await readSettings(); } catch (_) { return; }
-  const config = settings.model_config;
-  if (!config?.roles) return;
-  const groups = new Map();
-  for (const job of JOB_NAMES) {
-    const role = config.roles[job];
-    if (role?.here) groups.set(role.connection, [...(groups.get(role.connection) || []), job]);
-  }
-  let next = null;
-  for (const [id, jobs] of groups) {
-    const here = config.roles[jobs[0]].here;
-    const conn = config.connections[id];
-    const file = path.join(filesDir(), here.gguf.repo, here.gguf.sha, here.files[0]);
-    const projector = here.projector ? path.join(filesDir(), here.gguf.repo, here.gguf.sha, here.projector) : null;
-    try {
-      if (!available() || !here.files.every(f => fs.existsSync(path.join(filesDir(), here.gguf.repo, here.gguf.sha, f)))) throw new Error("its files are missing");
-      const key = policy.openKey(conn.apiKey);
-      let port = Number(new URL(conn.baseUrl).port);
-      if (!(await portFree(port))) port = await freePort();
-      await startRunner(id, { model: { file, projector }, ctx: here.ctx, key, port, alias: config.roles[jobs[0]].model });
-      if (!conn.baseUrl.endsWith(`:${port}/v1`)) {
+// At start: each runner comes back. A job whose files are gone returns to
+// its provider, and the person is told once.
+function resume() {
+  return exclusive(async () => {
+    if (!deps.supabase) return;
+    stopLeftBehind();
+    let settings;
+    try { settings = await readSettings(); } catch (_) { return; }
+    const config = settings.model_config;
+    if (!config?.roles) return;
+    let next = null;
+    for (const [id, conn] of hereConnections(config)) {
+      const jobs = JOB_NAMES.filter(j => config.roles[j]?.connection === id);
+      if (!jobs.length) continue;
+      try {
+        if (!available()) throw new Error("this computer can't run it");
+        const place = placeOf(conn.here);
+        if (![...place.files, place.template].every(f => fs.existsSync(f)) || (conn.here.projector && !fs.existsSync(place.projector))) throw new Error("its files are missing");
+        let port = Number(new URL(conn.baseUrl).port);
+        if (!(await portFree(port))) port = await freePort();
+        const held = { spec: specOf(config, id, place, config.roles[jobs[0]].model), key: policy.openKey(conn.apiKey), port, state: "loading", supervised: true, stopping: false, restarts: 0, ended: false };
+        await stopRunner(id);
+        runners.set(id, held);
+        launch(id, held);
+        // The provider answers while it loads; the runner is supervised from here.
+        waitUntilUp(held).then(() => { held.state = "running"; }).catch(() => { held.child?.kill("SIGKILL"); });
+        if (!conn.baseUrl.endsWith(`:${port}/v1`)) {
+          next = next || structuredClone(config);
+          next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${port}/v1` };
+        }
+      } catch (e) {
+        console.error(`[run-here] could not start again: ${e.message}`);
         next = next || structuredClone(config);
-        next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${port}/v1` };
+        for (const job of jobs) {
+          next.roles[job] = config.roles[job].fallback;
+          await say(job, `It couldn't start on ${HOME}, so it's back with ${providerName(next, next.roles[job])}.`);
+        }
+        delete next.connections[id];
       }
-    } catch (e) {
-      console.error(`[run-here] could not start again: ${e.message}`);
-      next = next || structuredClone(config);
-      for (const job of jobs) {
-        next.roles[job] = config.roles[job].fallback;
-        const provider = PROVIDER_NAMES[next.connections[next.roles[job]?.connection]?.provider] || "your provider";
-        await writeState(s => ({ ...s, notes: { ...(s.notes || {}), [job]: `It couldn't start on this computer, so it's back with ${provider}.` } })).catch(() => {});
-      }
-      delete next.connections[id];
     }
-  }
-  if (next) settings = await saveConfig(settings, next).catch(() => settings);
-  removeUnused(settings);
+    if (next) settings = await saveConfig(settings, next).catch(() => settings);
+    removeUnused(settings);
+  });
 }
 
 // --- Settings ---------------------------------------------------------------------------
 
 async function status() {
   const settings = await readSettings();
+  const config = settings.model_config;
   const state = await readState();
   const jobs = {};
   for (const job of JOB_NAMES) {
-    const role = settings.model_config?.roles?.[job];
-    if (role?.here) jobs[job] = { state: "here", provider: PROVIDER_NAMES[settings.model_config.connections?.[role.fallback?.connection]?.provider] || "your provider" };
-    else if (progress.has(job)) jobs[job] = progress.get(job);
-    else if (running.has(job)) jobs[job] = { state: "starting" };
+    const role = config?.roles?.[job];
+    if (role?.here) {
+      const held = runners.get(role.connection);
+      jobs[job] = { state: "here", runner: held ? held.state : "stopped", provider: providerName(config, role.fallback) };
+    } else if (progress.has(job)) jobs[job] = progress.get(job);
   }
   const notes = state.notes || {};
   if (Object.keys(notes).length) await writeState(s => ({ ...s, notes: {} })).catch(() => {});
@@ -539,14 +770,13 @@ function install(app, { supabase, getAdminUserId, authorize }) {
   };
   app.get("/api/run-here", route(async (req, res) => res.set("Cache-Control", "no-store").json(available() ? await status() : { available: false })));
   app.post("/api/run-here/start", route(async (req, res) => {
-    if (!available()) return res.status(400).json({ error: "This computer can't run models itself." });
+    if (!available()) return res.status(400).json({ error: `${HOME[0].toUpperCase()}${HOME.slice(1)} can't run LLMs itself.` });
     const job = String(req.body?.job || "");
-    const settings = await readSettings();
-    if (!(await offers(settings))[job]) return res.status(400).json({ error: "This model isn't offered to run here." });
+    if (!queued.has(job) && !(await offers(await readSettings()))[job]) return res.status(400).json({ error: `This LLM isn't offered to run on ${HOME}.` });
     start(job);
     res.status(202).json({ started: true });
   }));
   app.post("/api/run-here/undo", route(async (req, res) => res.json({ undone: await undo(String(req.body?.job || "")) })));
 }
 
-module.exports = { install, configure, resume, start, undo, offers, status, repoFor, describe, download, available, removeUnused, stopAll, _runners: runners };
+module.exports = { install, configure, resume, reconcile, carryOver, start, undo, offers, status, repoFor, describe, download, stopAll };

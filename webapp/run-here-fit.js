@@ -7,16 +7,19 @@
 
 const GB = 1e9;
 
-// Apple chips: memory bandwidth (GB/s) and GPU compute (TFLOPS). Apple's
-// published figures, and for a chip sold with fewer GPU cores the smaller
-// one. A chip not listed (a newer one, or an Intel Mac) gets no offer.
-// Linux with an NVIDIA card is a later step: Closedhand doesn't ship a
-// runner there yet, and Docker on a Mac can't reach the GPU at all.
+// Apple chips: memory bandwidth (GB/s, as Apple publishes it) and GPU
+// compute (TFLOPS, from the GPU's core count at that generation's measured
+// rate per core; Apple doesn't publish it). For a chip sold with fewer GPU
+// cores, the smaller figures. The M5's Neural Accelerators aren't counted.
+// A chip not listed (a newer one, or an Intel Mac) gets no offer. Linux
+// with an NVIDIA card is a later step: Closedhand doesn't ship a runner
+// there yet, and Docker on a Mac can't reach the GPU at all.
 const CHIPS = {
   "M1": [68, 2.3], "M1 Pro": [200, 4.5], "M1 Max": [400, 7.8], "M1 Ultra": [800, 15.9],
   "M2": [100, 2.9], "M2 Pro": [200, 5.7], "M2 Max": [400, 10.7], "M2 Ultra": [800, 21.4],
   "M3": [100, 3.3], "M3 Pro": [150, 5.6], "M3 Max": [300, 14.2], "M3 Ultra": [819, 25.6],
   "M4": [120, 3.4], "M4 Pro": [273, 7.4], "M4 Max": [410, 14.7],
+  "M5": [153, 3.8], "M5 Pro": [307, 6.9], "M5 Max": [460, 13.8],
 };
 function chipOf(brand) {
   const m = /Apple (M\d)(?: (Pro|Max|Ultra))?\b/.exec(String(brand || ""));
@@ -32,9 +35,9 @@ function chipOf(brand) {
 // waits on chat and images, so their first words must come within seconds;
 // support work runs in the background and is allowed longer.
 const JOBS = {
-  chat: { context: 65536, fresh: 4096, firstSeconds: 4, tokensPerSecond: 40, needs: "tools" },
-  background: { context: 32768, fresh: 15000, firstSeconds: 20, tokensPerSecond: 25, needs: "text" },
-  vision: { context: 8192, fresh: 1500, firstSeconds: 4, tokensPerSecond: 25, needs: "images" },
+  chat: { context: 65536, fresh: 4096, firstSeconds: 4, tokensPerSecond: 40 },
+  background: { context: 32768, fresh: 15000, firstSeconds: 20, tokensPerSecond: 25 },
+  vision: { context: 8192, fresh: 1500, firstSeconds: 4, tokensPerSecond: 25 },
 };
 
 // Closedhand's own parts while a model runs: its database, the two services,
@@ -96,8 +99,9 @@ function projectorOf(files) {
 }
 
 // The shape that decides speed and memory, from the model's config.json.
-// Anything missing makes the estimate worse, never better: an unknown
-// mixture of experts counts as if every weight were used for every word.
+// A mixture of experts is judged only when its expert width is published
+// and every layer has experts; any other design is declined, since its share
+// of weights per word can't be worked out from the config.
 function shapeOf(config, totalParams, contextLength) {
   const c = config?.text_config || config?.language_config || config || {};
   const layers = Number(c.num_hidden_layers || c.n_layer || c.num_layers) || null;
@@ -109,8 +113,11 @@ function shapeOf(config, totalParams, contextLength) {
   const perToken = Number(c.num_experts_per_tok || c.moe_topk || c.num_experts_per_token) || 0;
   const expertWidth = Number(c.moe_intermediate_size || c.expert_intermediate_size || c.intermediate_size) || 0;
   const dense = Number(c.first_k_dense_replace) || 0;
-  let active = totalParams;
-  if (experts > 1 && perToken > 0 && perToken < experts && layers && hidden && expertWidth) {
+  let active = totalParams, unknown = false;
+  const interleaved = Number(c.interleave_moe_layer_step) > 1 || Number(c.decoder_sparse_step) > 1
+    || (Array.isArray(c.mlp_only_layers) && c.mlp_only_layers.length > 0) || Number(c.moe_layer_freq) > 1;
+  if (experts > 1 && (!c.moe_intermediate_size && !c.expert_intermediate_size || interleaved || !(perToken > 0))) unknown = true;
+  else if (experts > 1 && perToken < experts && layers && hidden && expertWidth) {
     const moeLayers = Math.max(0, layers - dense);
     const perExpert = 3 * hidden * expertWidth;
     const allExperts = moeLayers * experts * perExpert;
@@ -118,21 +125,24 @@ function shapeOf(config, totalParams, contextLength) {
     if (estimate > 0 && estimate < totalParams) active = estimate;
   }
   const kvPerToken = layers && kvHeads && headDim ? 2 * layers * kvHeads * headDim * 2 : null;
-  const maxContext = Number(contextLength || c.max_position_embeddings || c.max_sequence_length || c.seq_length) || null;
+  // The smaller of what the GGUF and the config say the model can take.
+  const lengths = [contextLength, c.max_position_embeddings || c.max_sequence_length || c.seq_length].map(Number).filter(n => n > 0);
+  const maxContext = lengths.length ? Math.min(...lengths) : null;
   // Reading a long prompt also costs attention over everything before each
   // token, which grows with the prompt and matters most for small models.
   const attnWidth = heads && headDim ? heads * headDim : null;
-  return { totalParams, activeParams: active, kvPerToken, maxContext, layers, attnWidth };
+  return { totalParams, activeParams: active, kvPerToken, maxContext, layers, attnWidth, unknown };
 }
 
 // The estimate for one job with one file on this computer, and every reason
-// it falls short. ok only when there are none.
+// it falls short. ok only when there are none. hw.reservedBytes is what LLMs
+// already running there take: they and this one share the half.
 function judge(jobName, quant, shape, hw, projector = null) {
   const job = JOBS[jobName];
   const reasons = [];
   if (!job) return { ok: false, reasons: ["unknown job"] };
   if (!hw?.chip) reasons.push("this computer's chip isn't one Closedhand can judge");
-  if (!shape?.totalParams || !shape.kvPerToken || !shape.attnWidth) reasons.push("the model's size or shape isn't published");
+  if (!shape?.totalParams || !shape.kvPerToken || !shape.attnWidth || shape.unknown) reasons.push("the model's size or shape isn't published");
   if (!shape?.maxContext || shape.maxContext < job.context) reasons.push("the model can't take a long enough prompt for this job");
   if (quant.bits < 4) reasons.push("only versions below 4 bits");
   if (jobName === "vision" && !projector) reasons.push("no image part to run it with");
@@ -144,7 +154,7 @@ function judge(jobName, quant, shape, hw, projector = null) {
   const tokensPerSecond = DECODE_SHARE * hw.chip.bandwidth / decodeBytes;
   const prefill = PREFILL_SHARE * hw.chip.compute / (2 * shape.activeParams + 2 * shape.layers * shape.attnWidth * job.fresh);
   const firstSeconds = job.fresh / prefill;
-  if (memoryBytes > MEMORY_SHARE * hw.memoryBytes) reasons.push("it would take more than half of this computer's memory");
+  if (memoryBytes + (hw.reservedBytes || 0) > MEMORY_SHARE * hw.memoryBytes) reasons.push("it would take more than half of this computer's memory");
   if (downloadBytes > DISK_SHARE * hw.freeDiskBytes) reasons.push("it would take more than half of the free disk space");
   if (tokensPerSecond < job.tokensPerSecond) reasons.push("it would write too slowly");
   if (firstSeconds > job.firstSeconds) reasons.push("it would take too long to read the prompt");
