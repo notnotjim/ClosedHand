@@ -191,6 +191,8 @@ find "$APP/Contents/Resources" -type f -perm +111 ! -name "*.dylib" ! -name "*.n
       if file -b "$exe" | grep -q "Mach-O"; then sign_code --entitlements "$HERE/Runtime.entitlements" "$exe"; fi
     done
 sign_code --entitlements "$HERE/WorkspaceVM.entitlements" "$APP/Contents/Resources/bin/WorkspaceVM"
+# The LLM runner needs none of the runtime's exceptions: hardened runtime only.
+sign_code "$APP/Contents/Resources/llama/llama-server"
 sign_code --entitlements "$HERE/ClosedHand.entitlements" "$APP"
 codesign --verify --deep --strict "$APP" && say "Signed OK"
 du -sh "$APP"
