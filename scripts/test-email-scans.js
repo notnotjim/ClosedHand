@@ -72,3 +72,12 @@ test("both scanners skip mail already read, count it read only after an answer, 
   assert.match(handlers, /const newFlights = await scanEmailsForFlights\(userId, \{ force: true \}\);/);
   assert.match(read("migrations/064_email_scans.sql"), /CREATE TABLE IF NOT EXISTS email_scans \(/);
 });
+
+test("bookings are read ten emails at a time, so no answer is cut off and each batch counts on its own", () => {
+  const bookings = read("lib/bookings.js");
+  assert.match(bookings, /const EMAILS_PER_READ = 10;/);
+  assert.match(bookings, /const batch = emails\.slice\(at, at \+ EMAILS_PER_READ\)\.map\(\(e, i\) => \(\{ \.\.\.e, emailIndex: i \}\)\);/);
+  assert.match(bookings, /parsed\.push\(b && Number\.isInteger\(idx\) \? \{ \.\.\.b, emailIndex: idx \+ at \} : b\);/, "each answer points back at the right email");
+  assert.match(bookings, /await scans\.markRead\(supabase, userId, "bookings", BOOKING_SCAN_VERSION, batch\);/, "only a batch that was answered counts as read");
+  assert.match(bookings, /if \(failure && !parsed\.length\) return \{ scanned: emails\.length, found: 0, new: 0, error: failure \};/);
+});
