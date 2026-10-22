@@ -39,22 +39,36 @@ function fakeDb({ failReads = false } = {}) {
 
 const mail = (id, body = "Your stay at Lantern House, 3 to 5 March, ref QX7P") => ({ emailIndex: 0, id, subject: "Booking confirmed", from: "stays@example.com", date: "2026-02-01", body });
 
-test("an email is sent at most twice, and again when its text or the instructions change", async () => {
+// The fixture mail was sent on 1 February: the next day it has just arrived;
+// by March it is old mail, like the year read back at setup.
+const ARRIVED = Date.parse("2026-02-02T09:00:00Z"), MONTH_ON = Date.parse("2026-03-01T09:00:00Z");
+
+test("mail read as it arrives is sent twice at most, and again when its text or the instructions change", async () => {
   const db = fakeDb();
   const one = [mail("m1")];
-  assert.equal((await scans.unread(db, "u1", "bookings", 1, one)).length, 1, "new");
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, one, ARRIVED)).length, 1, "new");
   await scans.markRead(db, "u1", "bookings", 1, one);
-  assert.equal((await scans.unread(db, "u1", "bookings", 1, one)).length, 1, "a second chance");
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, one, ARRIVED)).length, 1, "a second chance");
   await scans.markRead(db, "u1", "bookings", 1, one);
-  assert.equal((await scans.unread(db, "u1", "bookings", 1, one)).length, 0, "read twice: not sent again");
-  assert.equal((await scans.unread(db, "u1", "bookings", 1, [mail("m1", "Your stay moved to 4 to 6 March, ref QX7P")])).length, 1, "changed text is read again");
-  assert.equal((await scans.unread(db, "u1", "bookings", 2, one)).length, 1, "new instructions read everything again");
-  assert.equal((await scans.unread(db, "u1", "flights", 1, one)).length, 1, "each scanner keeps its own record");
-  assert.equal((await scans.unread(db, "u2", "bookings", 1, one)).length, 1, "and each person their own");
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, one, ARRIVED)).length, 0, "read twice: not sent again");
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, [mail("m1", "Your stay moved to 4 to 6 March, ref QX7P")], ARRIVED)).length, 1, "changed text is read again");
+  assert.equal((await scans.unread(db, "u1", "bookings", 2, one, ARRIVED)).length, 1, "new instructions read everything again");
+  assert.equal((await scans.unread(db, "u1", "flights", 1, one, ARRIVED)).length, 1, "each scanner keeps its own record");
+  assert.equal((await scans.unread(db, "u2", "bookings", 1, one, ARRIVED)).length, 1, "and each person their own");
   const changed = [mail("m1", "Your stay moved to 4 to 6 March, ref QX7P")];
   await scans.markRead(db, "u1", "bookings", 1, changed);
   assert.equal(db.rows.get("u1|bookings|m1").reads, 1, "a changed email starts counting again");
   assert.doesNotMatch(JSON.stringify([...db.rows.values()]), /Lantern|QX7P/, "only a hash of the text is kept");
+});
+
+test("mail over a week old, like the year read back at setup, is read once", async () => {
+  const db = fakeDb();
+  const one = [mail("m1")];
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, one, MONTH_ON)).length, 1, "not read yet");
+  await scans.markRead(db, "u1", "bookings", 1, one);
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, one, MONTH_ON)).length, 0, "read once: done");
+  assert.equal((await scans.unread(db, "u1", "bookings", 1, [mail("m1", "Your stay moved to 4 to 6 March, ref QX7P")], MONTH_ON)).length, 1, "a changed one is still read again");
+  assert.equal(scans.readsFor({ date: "not a date" }, MONTH_ON), 2, "a date that can't be read counts as new mail");
 });
 
 test("when the record can't be read, every email is sent, as before", async () => {
