@@ -370,7 +370,8 @@ async function run(job) {
     const port = runners.get(id)?.port || (shared ? Number(new URL(shared.baseUrl).port) : 0) || await freePort();
     await startRunner(id, { model: { file: files[0].dest, projector: projector?.dest }, ctx, key, port, alias: role.model });
     const here = { provider: "here", backend: "custom", baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: key };
-    await checkJob(job, here, role.model);
+    // A model that fails its job's check here won't pass next time either.
+    await checkJob(job, here, role.model).catch(e => { throw Object.assign(e, { failedCheck: true }); });
     const timings = await timeIt(port, key, job);
     if (!fit.keepsPromise(job, timings)) {
       if (!shared) await stopRunner(id);
@@ -399,6 +400,7 @@ async function run(job) {
     pendingRunners.delete(id);
   } catch (e) {
     console.error(`[run-here] ${job}: ${e.message}`);
+    if (e.failedCheck) await writeState(s => ({ ...s, tried: [...new Set([...(s.tried || []), triedKey(job, role.model, quant.label)])] })).catch(() => {});
     if (!shared) await stopRunner(id).catch(() => {});
     for (const f of all) inFlight.delete(f.dest);
     pendingRunners.delete(id);

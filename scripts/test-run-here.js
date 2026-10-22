@@ -273,6 +273,7 @@ test("the download is resumable and kept only when its checksum matches", async 
 
 test("the runner stays on this computer, behind its own key, never online", () => {
   const src = read("webapp/run-here.js");
+  assert.match(src, /if \(e\.failedCheck\) await writeState\(s => \(\{ \.\.\.s, tried:/, "a model that failed its job's check isn't offered again");
   assert.match(src, /"--host", "127\.0\.0\.1"/);
   assert.match(src, /"--offline"/);
   assert.match(src, /LLAMA_API_KEY: key/, "the key goes in its environment, not its arguments");
