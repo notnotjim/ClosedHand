@@ -28,3 +28,15 @@ test("each call counts towards its job, with the cached share, and the hour's li
   assert.match(line, /^\[usage\] last hour by job: machinery \S+ 2 calls, 2000 in \(90% cached\), 100 out$/);
   assert.equal(usage.logJobs(), "", "nothing new, nothing said");
 });
+
+test("with USAGE_EACH_CALL=1 each call is said as it happens", () => {
+  const said = [];
+  const log = console.log;
+  console.log = (line) => said.push(line);
+  try {
+    usage.recordJob("machinery", "pulse", { input_tokens: 4000, cache_read_input_tokens: 3000, output_tokens: 20 }, { USAGE_EACH_CALL: "1" });
+    usage.recordJob("machinery", "pulse", { input_tokens: 4000, output_tokens: 20 }, {});
+  } finally { console.log = log; }
+  assert.deepEqual(said, ["[usage] machinery pulse: 4000 in (75% cached), 20 out"]);
+  usage.logJobs();
+});
