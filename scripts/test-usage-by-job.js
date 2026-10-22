@@ -17,6 +17,7 @@ test("the job is the first file outside the LLM plumbing", () => {
   assert.equal(usage.jobOf(stack), "pulse");
   assert.equal(usage.jobOf("Error\n    at x (/app/lib/services/usi.js:1:1)\n    at y (/app/lib/services/wa-digest.js:2:2)"), "services/wa-digest");
   assert.equal(usage.jobOf("Error\n    at x (node:internal/timers:1:1)"), "other");
+  assert.equal(usage.jobOf("Error\n    at x (/app/lib/model-jobs.js:9:9)\n    at y (/app/lib/pulse-triage.js:36:3)"), "pulse-triage", "the job runner is plumbing too");
 });
 
 test("each call counts towards its job, with the cached share, and the hour's line clears", async () => {
