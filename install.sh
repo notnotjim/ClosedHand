@@ -684,9 +684,13 @@ if [ -n "${SSH_CONNECTION:-}" ]; then
   say "Keep that terminal open, then open $DASH_URL on your computer."
   say "Setup gives Closedhand its personal URL; Settings > Personal URL manages it."
 elif [ "$OPENED" = "1" ]; then
-  say "Opening the setup page in your browser: $DASH_URL"
-else
+  # A re-run is an update: setup was done the first time.
+  if [ "$FIRST_INSTALL" = "1" ]; then say "Opening the setup page in your browser: $DASH_URL"
+  else say "Opening Closedhand in your browser: $DASH_URL"; fi
+elif [ "$FIRST_INSTALL" = "1" ]; then
   say "Open $DASH_URL in a browser to reach the setup page."
+else
+  say "Open $DASH_URL in a browser to reach Closedhand."
 fi
 case "$AUTOSTART" in
   set)

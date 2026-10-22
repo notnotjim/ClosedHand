@@ -63,6 +63,7 @@ test("the step is the installer line for Docker and a download for the Mac app",
   assert.match(releases.howToUpdate("mac"), /download the new Closedhand from closedhand\.com and drag it into Applications/);
   assert.equal(releases.howToUpdate(null), "");
   assert.match(read("install.sh"), /a plain re-run already upgrades and keeps your data/, "running the line again is an update");
+  assert.match(read("install.sh"), /else say "Opening Closedhand in your browser: \$DASH_URL"; fi/, "an update opens Closedhand, not the setup page");
 });
 
 test("both privacy pages say what the daily check sends", () => {
