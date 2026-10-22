@@ -5,7 +5,7 @@
   "release-check": "944e83657ae976ba",
   "storage-driver-pg": "f1293382e9d4f0f5",
   "name-guess": "9c9ce5f951b5cf0a",
-  "settings-patch": "a20d7d9ac1d43a0d",
+  "settings-patch": "24df37c05f4c3d4b",
   "config": "2d1b617e01caba04",
   "required-secrets": "27dc62b0a9877604",
   "db-driver-pg": "c35d45afe385d2c8",
