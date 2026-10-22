@@ -66,6 +66,24 @@ if [ ! -x "$CLOUDFLARED_DIR/cloudflared" ]; then
   chmod +x "$CLOUDFLARED_DIR/cloudflared"
 fi
 
+# llama.cpp's server, for jobs whose LLM runs on this Mac (webapp/run-here.js).
+# Only the server and the libraries it loads ship; the release's other tools don't.
+LLAMA_BUILD="b11476"
+LLAMA_DIR="$CACHE/llama-$LLAMA_BUILD-$ARCH"
+if [ ! -x "$LLAMA_DIR/llama-server" ]; then
+  case "$ARCH" in
+    arm64) LLAMA_SHA=577634a1b8a59e8dabe02ba10de1e610be0574dfaf1cf3020e6dd42853ed877e ;;
+    *) echo "The LLM runner is only bundled for Apple Silicon"; exit 1 ;;
+  esac
+  say "Fetching the LLM runner"
+  curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_BUILD/llama-$LLAMA_BUILD-bin-macos-arm64.tar.gz" -o "$CACHE/llama.tgz"
+  printf '%s  %s\n' "$LLAMA_SHA" "$CACHE/llama.tgz" | shasum -a 256 -c -
+  rm -rf "$CACHE/llama-unpack" && mkdir -p "$CACHE/llama-unpack" "$LLAMA_DIR"
+  tar xzf "$CACHE/llama.tgz" -C "$CACHE/llama-unpack"
+  (cd "$CACHE/llama-unpack/llama-$LLAMA_BUILD" && cp -P llama-server LICENSE libggml*.dylib libllama.*dylib libllama.dylib libllama-common*.dylib libmtmd*.dylib libllama-server-impl.dylib "$LLAMA_DIR/")
+  rm -rf "$CACHE/llama-unpack" "$CACHE/llama.tgz"
+fi
+
 APP_SRC="$CACHE/app"
 if [ "${REUSE_APP:-0}" != "1" ] || [ ! -d "$APP_SRC/node_modules" ]; then
   say "Staging the app at $SHA"
@@ -142,6 +160,7 @@ mkdir -p "$APP/Contents/Resources/workspace" "$APP/Contents/Resources/bin"
 cp "$HERE/workspace/host.js" "$HERE/workspace/runtime.js" "$HERE/workspace/migrate.js" "$HERE/workspace/manifest.json" "$APP/Contents/Resources/workspace/"
 cp "$(dirname "$BIN")/WorkspaceVM" "$APP/Contents/Resources/bin/WorkspaceVM"
 mkdir -p "$APP/Contents/Resources/bin" && cp "$CLOUDFLARED_DIR/cloudflared" "$APP/Contents/Resources/bin/"
+cp -RP "$LLAMA_DIR" "$APP/Contents/Resources/llama"
 cp -R "$APP_SRC" "$APP/Contents/Resources/app"
 rm -rf "$APP/Contents/Resources/app/node_modules/mammoth/test" "$APP/Contents/Resources/app/webapp/node_modules/mammoth/test"
 

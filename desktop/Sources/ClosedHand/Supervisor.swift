@@ -259,6 +259,7 @@ final class Supervisor: ObservableObject {
         env["CLOSEDHAND_DESKTOP"] = "1"
         env["WORKSPACE_VM"] = "1"
         env["CLOUDFLARED_BIN"] = resources.appendingPathComponent("bin/cloudflared").path
+        env["LLAMA_SERVER_BIN"] = resources.appendingPathComponent("llama/llama-server").path
         env["DB_DRIVER"] = "pg"
         env["DATABASE_URL"] = "postgres://postgres:\(config["POSTGRES_PASSWORD"]!)@127.0.0.1:\(pgPort)/closedhand"
         env["STORAGE_DIR"] = storageDir.path
