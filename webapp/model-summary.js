@@ -17,6 +17,7 @@ function modelSummary(settings, read = key => process.env[key], local = false) {
   const add = (label, model, baseUrl) => rows.push({ label, model: model || "Not enabled", provider: model ? location(model, baseUrl) : "" });
   const configured = (label, role) => {
     const pick = policy.getRole(settings, role);
+    if (pick?.provider === "here") return rows.push({ label, model: pick.model, provider: "On the computer running Closedhand" });
     add(label, pick?.model, pick?.baseUrl);
   };
   if (config) {
