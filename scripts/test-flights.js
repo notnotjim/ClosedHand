@@ -93,7 +93,8 @@ function loadFlights(state, modelResponse, extra = {}) {
     './services/google': { isGoogleConnected: () => false }, './services/microsoft': { isMicrosoftConnected: () => false },
     './services/imap-mail': { isImapConnected: () => false }, './services/data-access': {},
     './mail-attachments': { bodyForScan: async (_,e,n) => (e.summary || e.body).slice(0,n), withWholeBodies: async (_,es) => es },
-    './flight-time': clock, './flight-bookings': require('../lib/flight-bookings'), ...extra };
+    './flight-time': clock, './flight-bookings': require('../lib/flight-bookings'),
+    './email-scans': { unread: async (_db, _u, _s, _v, es) => es, markRead: async () => {} }, '../user-store': { supabase: {} }, ...extra };
   class FixedDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const sandbox = { module: { exports: {} }, Date: FixedDate, console, process: { env: { FLIGHTAWARE_API_KEY: 'fixture' } }, require: name => { if (!(name in dependencies)) throw Error(name); return dependencies[name]; } };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'lib/flights.js'), 'utf8'), sandbox);
