@@ -52,7 +52,8 @@ function runnerBinary() {
   return bin && fs.existsSync(bin) ? bin : null;
 }
 function available() {
-  if (!runnerBinary()) return false;
+  // Without the sandbox the runner never starts, so nothing is offered.
+  if (!runnerBinary() || !fs.existsSync(deps.sandboxExec || "/usr/bin/sandbox-exec")) return false;
   if (forced()) return true;
   return process.env.CLOSEDHAND_DESKTOP === "1" && (deps.platform || process.platform) === "darwin" && (deps.arch || process.arch) === "arm64";
 }
@@ -415,17 +416,25 @@ function stopped(id, held, child) {
 }
 async function relaunch(id, held) {
   if (held.stopping || runners.get(id) !== held) return;
-  // Something else may have taken its port meanwhile.
+  // Something else may have taken its port meanwhile. A new port that can't
+  // be saved is no use to the jobs: the old one stays, and this counts as a
+  // failed start.
   if (!(await portFree(held.port))) {
-    held.port = await freePort();
-    await editConfig(async () => {
+    const port = await freePort();
+    const saved = await editConfig(async () => {
       const settings = await readSettings();
       const conn = settings.model_config?.connections?.[id];
       if (!conn) return;
       const next = structuredClone(settings.model_config);
-      next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${held.port}/v1` };
+      next.connections[id] = { ...conn, baseUrl: `http://127.0.0.1:${port}/v1` };
       await saveConfig(settings, next);
-    }).catch(() => {});
+    }).then(() => true, () => false);
+    if (!saved) {
+      held.ended = false;
+      held.child = { exitCode: 1, signalCode: null, kill() {} };
+      return stopped(id, held, held.child);
+    }
+    held.port = port;
   }
   if (held.stopping || runners.get(id) !== held) return;
   launch(id, held);
@@ -697,7 +706,8 @@ async function run(job) {
     release(paths);
   }
   if (outcome === "switched") return;
-  await removeUnused(await readSettings().catch(() => settings));
+  // Also lets go of a shared runner another job's undo left with nothing to do.
+  await tidy().catch(() => {});
   return say(job, outcome === "slow" ? `It ran slower on ${HOME} than promised, so it stays with ${provider}.` : `It couldn't be set up on ${HOME}, so it stays with ${provider}.`);
 }
 
@@ -766,7 +776,9 @@ async function removeUnused(settings) {
       if (/^runner-here-[0-9a-f]{10}\.pid$/.test(e.name) && dir === filesDir()) continue;
       // A download cut short (the app quit) is continued by the next click,
       // for a week; after that it is let go.
-      if (p.endsWith(".part") && fs.statSync(p).mtimeMs > Date.now() - 7 * DAY) continue;
+      try {
+        if (p.endsWith(".part") && fs.statSync(p).mtimeMs > Date.now() - 7 * DAY) continue;
+      } catch (_) { continue; /* already gone */ }
       fs.rmSync(p, { force: true });
     }
   };
@@ -840,7 +852,7 @@ function resume() {
         return saveConfig(now, next);
       }).catch(() => settings);
     }
-    await removeUnused(settings);
+    await tidy().catch(() => removeUnused(settings));
   });
 }
 
@@ -870,6 +882,8 @@ function watchSettings() {
   if (watching) return;
   watching = true;
   require("./settings-patch").onChange(({ keys, by }) => {
+    // Nothing to tidy where no runner can run and none is running (closedhand.com, Docker).
+    if (!available() && !runners.size) return;
     if (by !== "run-here" && keys.includes("model_config")) reconcile().catch(e => console.error("[run-here] tidy after a model change:", e.message));
   });
 }
@@ -891,4 +905,4 @@ function install(app, { supabase, getAdminUserId, authorize }) {
   app.post("/api/run-here/undo", route(async (req, res) => res.json({ undone: await undo(String(req.body?.job || "")) })));
 }
 
-module.exports = { install, configure, watchSettings, resume, reconcile, carryOver, start, undo, offers, status, repoFor, describe, download, stopAll };
+module.exports = { install, configure, watchSettings, editConfig, resume, reconcile, carryOver, start, undo, offers, status, repoFor, describe, download, stopAll };

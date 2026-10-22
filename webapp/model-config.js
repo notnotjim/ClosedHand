@@ -241,24 +241,28 @@ function install(app, deps) {
   app.post("/api/model-config/save", route(async (req, res, id) => {
     const entry = receipts.get(req.body.ticket);
     if (!entry || entry.id !== id || entry.expires < Date.now()) throw new Error("Check the models again before saving.");
-    let settings = await profile(id);
-    if (entry.previous !== JSON.stringify(settings.model_config || null)) throw new Error("The models changed in another session. Check again before saving.");
-    if (ensureMemory) {
-      await ensureMemory();
-      settings = await profile(id);
-      if (entry.previous !== JSON.stringify(settings.model_config || null)) throw new Error("The models changed in another session. Check again before saving.");
-    }
-    // Only the model keys that change are written (settings-patch.js). A job
-    // run on the computer running Closedhand stays there when its provider
-    // pick is unchanged (run-here.js carryOver); a runner nothing uses any
-    // more goes, with its files, after the save (run-here.js watchSettings).
-    const { diff, patchSettings } = require("./settings-patch");
+    // Compared and written under run-here's lock on the model settings, so
+    // neither save can overwrite the other (a runner moving port, say).
     const runHere = require("./run-here");
-    try {
-      await patchSettings(supabase, id, diff(settings, withConfig(settings, runHere.carryOver(settings.model_config, entry.config))));
-    } catch (_) {
-      throw new Error("Could not save the models. Your previous setup is still active.");
-    }
+    await runHere.editConfig(async () => {
+      let settings = await profile(id);
+      if (entry.previous !== JSON.stringify(settings.model_config || null)) throw new Error("The models changed in another session. Check again before saving.");
+      if (ensureMemory) {
+        await ensureMemory();
+        settings = await profile(id);
+        if (entry.previous !== JSON.stringify(settings.model_config || null)) throw new Error("The models changed in another session. Check again before saving.");
+      }
+      // Only the model keys that change are written (settings-patch.js). A job
+      // run on the computer running Closedhand stays there when its provider
+      // pick is unchanged (run-here.js carryOver); a runner nothing uses any
+      // more goes, with its files, after the save (run-here.js watchSettings).
+      const { diff, patchSettings } = require("./settings-patch");
+      try {
+        await patchSettings(supabase, id, diff(settings, withConfig(settings, runHere.carryOver(settings.model_config, entry.config))));
+      } catch (_) {
+        throw new Error("Could not save the models. Your previous setup is still active.");
+      }
+    });
     receipts.delete(req.body.ticket);
     res.json({ success: true });
   }));

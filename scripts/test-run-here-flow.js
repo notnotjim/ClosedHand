@@ -279,6 +279,7 @@ test("without a sandbox the runner isn't started, and the job stays with the pro
   console.error = (...a) => logged.push(a.join(" "));
   try {
     fs.rmSync(t.sandbox);
+    assert.deepEqual(await runHere.offers(t.settings()), {}, "nothing is offered that could never run");
     await runHere.start("background");
     assert.equal(t.farm.spawned.length, 0);
     assert.equal(t.settings().model_config.roles.background.connection, "primary");
@@ -340,4 +341,47 @@ test("a runner whose port was taken while it was down starts on another and says
     assert.equal(Number(t.farm.live()[0].arg("--port")), moved);
     assert.equal(await ask(t.settings(), "background"), "ready");
   } finally { squatter.close(); t.done(); }
+});
+
+test("a shared runner left with nothing to do by an undo during another job's try is let go when that try fails", async () => {
+  const t = setup({ chat: pick(), background: pick() });
+  try {
+    await runHere.start("chat");
+    t.farm.behaviour.serverError = true;
+    runHere.configure({ retryMs: 400 });
+    const trying = runHere.start("background");
+    await until(async () => (await runHere.status()).jobs.background?.state === "checking");
+    assert.equal(await runHere.undo("chat"), true);
+    assert.equal(t.farm.live().length, 1, "kept while the other job's try uses it");
+    await trying;
+    assert.equal(t.farm.live().length, 0);
+    assert.deepEqual(t.files(), []);
+    assert.deepEqual(Object.keys(t.settings().model_config.connections), ["primary"]);
+  } finally { runHere.configure({ retryMs: 10 }); t.done(); }
+});
+
+test("a new port that can't be saved keeps the old one and counts as a failed start", async () => {
+  const t = setup({ background: pick() });
+  const squatter = http.createServer();
+  try {
+    await runHere.start("background");
+    const id = t.settings().model_config.roles.background.connection;
+    const before = t.settings().model_config.connections[id].baseUrl;
+    const port = Number(new URL(before).port);
+    runHere.configure({ restartDelays: [300] });
+    t.farm.live()[0].child.crash();
+    await until(async () => (await runHere.status()).jobs.background.runner === "restarting");
+    await new Promise((r, j) => { squatter.once("error", j); squatter.listen(port, "127.0.0.1", r); });
+    t.store.supabase.rpc = async () => ({ data: null, error: { message: "the database is away" } });
+    await wait(800);
+    assert.equal(t.farm.spawned.length, 1, "not started on a port the jobs don't know");
+    assert.equal(t.settings().model_config.connections[id].baseUrl, before);
+  } finally { runHere.configure({ restartDelays: [50] }); squatter.close(); t.done(); }
+});
+
+test("the Settings save compares and writes under run-here's lock on the model settings", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "webapp/model-config.js"), "utf8");
+  const save = src.slice(src.indexOf('app.post("/api/model-config/save"'));
+  assert.match(save, /await runHere\.editConfig\(async \(\) => \{\n\s*let settings = await profile\(id\);\n\s*if \(entry\.previous !== JSON\.stringify/);
+  assert.ok(save.indexOf("patchSettings(supabase, id") < save.indexOf("receipts.delete"), "written inside the lock, before the ticket goes");
 });
