@@ -1974,6 +1974,8 @@
   .mon-tile { cursor:default; }
   .mon-row { cursor:default; }
   .mon-crumb-row { display:flex; align-items:center; gap:6px; padding:5px 10px; min-height:40px; }
+  .mon-files-note { margin:0; padding:0 12px 6px; font-size:12px; line-height:1.45; color:var(--muted); }
+  #monFileControlsRow[style*="display: none"] + .mon-files-note { display:none; }
   /* Sites to sign in to on the sandbox browser, attached to the top of it:
      what each sign-in lets Closedhand do, and a tick once it's done. */
   .mon-signins { display:flex; align-items:center; gap:12px; padding:6px 12px; min-height:40px; background:rgba(var(--raised-rgb),0.95); border-bottom:1px solid rgba(var(--fg-rgb),0.06); flex-shrink:0; }
@@ -2582,6 +2584,7 @@
             </div>
           </div>
           <div class="mon-crumb-row" id="monFileControlsRow"><div class="mon-crumb" id="monCrumb"></div><div id="monFileControls" style="display:inline-flex;align-items:center;gap:4px;margin-left:auto;"><div class="mon-view-toggle"><button class="mon-view-btn active" id="monGridBtn" title="Grid"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button><button class="mon-view-btn" id="monListBtn" title="List"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button></div><button class="mon-btn" onclick="monNewFolder()" title="New folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button><button class="mon-btn" onclick="monUpload()" title="Upload" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button></div><div class="mon-search-wrap"><input class="mon-search" id="monCloudSearch" placeholder="Search files…" oninput="monFilterFiles('cloud',this.value)" onfocus="monShowScope('cloud')" onblur="monHideScopeSoon('cloud')"><div class="mon-search-scope" id="monCloudScope"><button type="button" class="active" data-scope="current" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','current')">This folder</button><button type="button" data-scope="all" onmousedown="event.preventDefault()" onclick="monSetScope('cloud','all')">All of the sandbox computer</button></div></div></div>
+          <p class="mon-files-note" id="monFilesNote">Closedhand's working files, cleared after 30 days unused. What you upload goes in Yours and stays.</p>
           <div class="mon-screen" id="monCloudScreen"
             ondragover="event.preventDefault();if(!window._monDragOrigin)document.getElementById('monCloudDrop').classList.add('active')"
             ondragleave="if(!this.contains(event.relatedTarget))document.getElementById('monCloudDrop').classList.remove('active')"
@@ -6430,7 +6433,7 @@ function jsq(s) {
   function monUpload(){document.getElementById('monUploadInput').click();}
   async function monHandleUpload(files){
     if(!files||!files.length)return;
-    for(var i=0;i<files.length;i++){var f=files[i],form=new FormData();form.append('file',f);form.append('path',_monCloudPath.replace(/\/$/,'')+'/'+f.name);try{var r=await fetch('/api/sandbox/upload',{method:'POST',body:form});if(!r.ok){var d=await r.json().catch(function(){return {};});console.error('Upload failed:',r.status);if(d.error&&r.status===415)monCopyNotice(d.error);}}catch(e){}}document.getElementById('monUploadInput').value='';monDropFeedback();monLoadCloud();monLoadStorage();
+    for(var i=0;i<files.length;i++){var f=files[i],form=new FormData();form.append('file',f);form.append('path',_monCloudPath.replace(/\/$/,'')+'/'+f.name);try{var r=await fetch('/api/sandbox/upload',{method:'POST',body:form});if(!r.ok){var d=await r.json().catch(function(){return {};});console.error('Upload failed:',r.status);if(d.error&&r.status===415)monCopyNotice(d.error);}}catch(e){}}document.getElementById('monUploadInput').value='';monDropFeedback();_monCloudPath='/workspace/Yours';monLoadCloud();monLoadStorage();
   }
   // A file the sandbox computer doesn't take is refused by the server
   // (upload-types.js); say so here, naming it, instead of leaving it missing.
@@ -6557,7 +6560,7 @@ function jsq(s) {
         await monLoadSyncList();
       } else {var errData=await resp.json().catch(function(){return {};});console.error('[CopyToCloud] failed:',errData.error||resp.status);if(resp.status===415&&errData.error)monCopyNotice(errData.error);}
     }catch(e){copyDone=true;console.error('[CopyToCloud] error:',e);}
-    monLoadLocal();monLoadCloud();}
+    monLoadLocal();_monCloudPath='/workspace/Yours';monLoadCloud();}
 
   // Move or copy files into a folder (handles both intra-panel and cross-panel)
   async function monMoveToFolder(event, folderPath, side) {
@@ -6594,6 +6597,7 @@ function jsq(s) {
           .then(function(r){return r.json().then(function(d){if(r.status===415&&d.error)monCopyNotice(d.error);else monLeftOutNotice(d.leftOut);});}).catch(function(){});
       }
       monDropFeedback();
+      _monCloudPath = '/workspace/Yours';
       setTimeout(monLoadCloud, 2000);
     } else if (src === 'cloud' && side === 'local') {
       // Cloud → specific local folder: copy each file into this folder

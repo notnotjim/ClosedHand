@@ -8197,6 +8197,16 @@ app.get("/api/sandbox/files", async (req, res) => {
   }
 });
 
+// What the person adds to the sandbox computer goes in its Yours folder,
+// which is never cleared; the rest is Closedhand's working files, cleared
+// after 30 days unused (sandbox-image/agent/workspace-cleanup.js).
+const SANDBOX_YOURS = "/workspace/Yours";
+function intoYours(p) {
+  const clean = String(p || "");
+  if (clean === SANDBOX_YOURS || clean.startsWith(SANDBOX_YOURS + "/")) return clean;
+  return SANDBOX_YOURS + "/" + path.posix.basename(clean);
+}
+
 // POST /api/sandbox/upload (multipart)
 app.post("/api/sandbox/upload", _sandboxUpload.single("file"), async (req, res) => {
   const userId = getUserIdFromRequest(req);
@@ -8205,7 +8215,7 @@ app.post("/api/sandbox/upload", _sandboxUpload.single("file"), async (req, res) 
     const info = await getSandboxInfo(userId);
     if (!info) return res.status(404).json({ error: "Sandbox computer not enabled" });
     if (!req.file) return res.status(400).json({ error: "No file" });
-    const filePath = req.body.path || ("/workspace/" + (req.file.originalname || "upload"));
+    const filePath = intoYours(req.body.path || req.file.originalname || "upload");
     const found = uploadTypes.checkWorkspaceFile(req.file.buffer, filePath);
     if (!found.ok) return res.status(415).json({ error: found.reason });
     const content = req.file.buffer.toString("base64");
@@ -8531,8 +8541,9 @@ app.post("/api/sandbox/copy-from-local", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
   try {
-    const { sourcePath, destPath } = req.body;
-    if (!sourcePath || !destPath) return res.status(400).json({ error: "sourcePath and destPath required" });
+    const { sourcePath } = req.body;
+    if (!sourcePath || !req.body.destPath) return res.status(400).json({ error: "sourcePath and destPath required" });
+    const destPath = intoYours(req.body.destPath);
     const cleanPath = macHomePath(sourcePath);
 
     // Check if path is a directory via direct Bridge WebSocket

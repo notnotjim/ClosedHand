@@ -953,3 +953,13 @@ app.listen(PORT, () => {
   console.log(`Workspace: ${WORKSPACE}`);
   console.log(`Auth: ${SANDBOX_TOKEN ? "enabled" : process.env.SANDBOX_DEV === "1" ? "disabled (SANDBOX_DEV=1)" : "no token, so every request is refused"}`);
 });
+
+// Working files nothing has changed for 30 days go; Yours stays (workspace-cleanup.js).
+function clearOldWork() {
+  try {
+    const cleared = require("./workspace-cleanup").clearOldWork(WORKSPACE);
+    if (cleared.length) console.log(`Workspace: cleared ${cleared.length} working file(s) unused for 30 days`);
+  } catch (e) { console.error("Workspace cleanup:", e.message); }
+}
+clearOldWork();
+setInterval(clearOldWork, 24 * 60 * 60 * 1000).unref();
