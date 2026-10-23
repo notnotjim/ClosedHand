@@ -298,7 +298,7 @@ test("the pass after a turn: a project message updates that project only; any ot
 test("the engine, tools and claims check use projects", () => {
   const engine = read("lib/engine.js");
   assert.match(engine, /const marked = projects\.markReply\(userId, finalText\);\n\s*finalText = marked\.text;\n\s*conversation\.push\(\{ role: "assistant", content: finalText \}\);/);
-  assert.match(engine, /const project = await projects\.openTurn\(userId, userMessage\)[\s\S]{0,600}return await ask\(userId, userMessage, fileData, chatId, false, \{ \.\.\.opts, platform \}\);\n\s*\} finally \{\n\s*if \(project\) await project\.close\(\)/);
+  assert.match(engine, /const project = await projects\.openTurn\(userId, userMessage, \{ projectId: opts\.project \|\| null \}\)[\s\S]{0,600}return await ask\(userId, userMessage, fileData, chatId, false, \{ \.\.\.opts, platform \}\);\n\s*\} finally \{\n\s*if \(project\) await project\.close\(\)/);
   assert.match(engine, /const filedId = marked\.projectId;/);
   assert.match(engine, /if \(attachmentId && filed && filed\.how !== "offer"\) \{\n\s*const many = imageSet && imageSet\.length > 1;\n\s*projects\.addFiles\(userId, filed\.id,/);
   assert.match(engine, /if \(tool\.coreWithProjects\) return projects\.hasProjects\(ctx\.activeUserId\);/);
@@ -312,11 +312,11 @@ test("the engine, tools and claims check use projects", () => {
   assert.match(read("lib/tools/handlers.js"), /case "project_create": \{[\s\S]{0,900}closedhandLink\(toolInput\._platform \|\| ctx\.activePlatform \|\| "web", `\/page\/project\/\$\{p\.id\}`\)/);
   // A project's conversation never becomes the open one, nor shows as a thread.
   assert.match(read("user-store.js"), /\.eq\("user_id", userId\)\n\s*\.is\("project_id", null\)\n\s*\.order\("updated_at", \{ ascending: false \}\)\n\s*\.limit\(1\)/);
-  assert.match(read("lib/conversation.js"), /\.eq\("archived", false\)\n\s*\.is\("project_id", null\)/);
-  assert.match(read("lib/conversation.js"), /\.eq\("id", threadId\)\n\s*\.is\("project_id", null\)\n\s*\.single\(\);/);
+  // Threads are not listed, switched or archived by hand any more: the web
+  // chat lists Chat and the projects (webapp/projects.js /api/conversations).
   const server = read("webapp/server.js");
-  assert.equal((server.match(/\.eq\("archived", false\)\n\s*\.is\("project_id", null\)/g) || []).length, 2, "the web chat's list and search");
-  assert.match(server, /select\("id"\)\.eq\("id", req\.params\.id\)\.eq\("user_id", userId\)\.is\("project_id", null\)/, "and it cannot be opened as one");
+  assert.doesNotMatch(server, /\/api\/threads|\/api\/chat\/activity/);
+  assert.doesNotMatch(read("lib/conversation.js"), /function (archiveThread|switchThread|getThreadList|deleteThread|shouldNudgeNewThread)\(/);
   assert.match(read("migrations/068_projects.sql"), /ALTER TABLE conversation_threads ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES projects\(id\) ON DELETE CASCADE;/);
   assert.match(read("lib/claims-check.js"), /const open = await require\("\.\/projects"\)\.live\(userId\);/);
   assert.match(read("lib/attachments.js"), /if \(await adoptStored\(attachmentId\)\) return loadAttachment\(attachmentId\);/);
@@ -377,7 +377,49 @@ test("the dashboard has a Projects tab, Context Brain has no Ongoing, and each p
   assert.match(projectHtml(wedding({ summary: "" })), /Nothing here yet\. Start a message with 💍 in any chat to begin its conversation\./);
   assert.match(projectHtml(wedding({ status: "archived", archived_at: "2026-10-20T00:00:00Z" })), /This project is archived\. Start a message with 💍 in any chat to bring it back\./);
   const tab = read("webapp/public/projects.js");
-  assert.match(tab, /`Delete \$\{p\.emoji\} \$\{p\.name\}\? This deletes its goal, record, notes and conversation\. Files and Context Notes stay in Context Brain, and nothing in your email or calendar is touched\.`/);
+  assert.match(tab, /`Delete \$\{p\.emoji\} \$\{p\.name\}\? This deletes its goal, record, notes and conversation\. Its routines carry on without it, files and Context Notes stay in Context Brain, and nothing in your email or calendar is touched\.`/);
   assert.match(tab, /fetch\("\/emoji-list\.json"\)/);
   assert.match(tab, /field\("What it's about", about, "A sentence or two on what it is\.", true\),\n\s*field\("Instructions", instructions, "How Closedhand should handle anything in this project, one a line\.", true\)/, "only the name and emoji are needed");
+});
+
+test("a message sent with a project open in the web chat is in it, unless it starts with another project's emoji", async () => {
+  const { projects } = loadProjects([move(), wedding()]);
+  await projects.warm("u1");
+  const open = await projects.fileTurn("u1", "what is left to do?", { projectId: "aaaa1111-move" });
+  assert.equal(open.how, "open");
+  assert.match(projects.getProjectsBlock("u1"), /THIS MESSAGE IS IN THE PROJECT 📦 House move \(it was sent with the project open\)/);
+  assert.equal(projects.markReply("u1", "Two things.").text, "📦 Two things.");
+  assert.equal((await projects.fileTurn("u1", "💍 and the venue?", { projectId: "aaaa1111-move" })).project.name, "Wedding", "an emoji says which project");
+  assert.match(read("lib/engine.js"), /projects\.openTurn\(userId, userMessage, \{ projectId: opts\.project \|\| null \}\)/);
+});
+
+test("threads are gone: no commands for them in any chat app", () => {
+  assert.doesNotMatch(read("lib/engine.js"), /CONVERSATION THREADING|\/threads/);
+  for (const f of ["telegram", "slack-handler", "line", "discord", "whatsapp", "whatsapp-linked"]) {
+    const src = read(`lib/platforms/${f}.js`);
+    assert.doesNotMatch(src, /archiveThread|switchThread|getThreadList|pendingThreadSelect|"\/threads"|"\/new"/, f);
+  }
+  assert.match(read("lib/platforms/whatsapp-linked.js"), /"Start a message with a project's emoji to talk in that project", "\/bug  report a problem"\]/);
+});
+
+test("a routine can belong to a project: it runs with the project and reports in it", () => {
+  const defs = read("lib/tools/definitions.js");
+  assert.match(defs, /project: \{ type: "string", description: "The project it belongs to \(emoji, short id or name\), when it is for one\. A routine made in a project's conversation belongs to that project unless you say otherwise\./);
+  const handlers = read("lib/tools/handlers.js");
+  assert.match(handlers, /const turn = projects\.turnOf\(userId\);\n\s*if \(turn && turn\.how !== "offer"\) project = \(await projects\.warm\(userId\)\)\.find\(\(p\) => p\.id === turn\.id && p\.status === "active"\) \|\| null;/);
+  assert.match(handlers, /\.\.\.\(project \? \{ project_id: project\.id \} : \{\}\),/);
+  assert.match(read("lib/automations.js"), /THIS ROUTINE IS PART OF THE PROJECT \$\{p\.emoji\} \$\{p\.name\}\. Follow its instructions for anything in it; its record:\\n\$\{projects\.renderFull\(p, await projects\.fileTexts\(p\)/);
+  const delivery = read("lib/task-delivery.js");
+  assert.match(delivery, /const marked = project && message && !message\.trimStart\(\)\.startsWith\(project\.emoji\) \? `\$\{project\.emoji\} \$\{message\.trimStart\(\)\}` : message;/);
+  assert.match(delivery, /if \(sentText && project\) await require\("\.\/projects"\)\.said\(row\.user_id, project, sentText\);\n\s*else if \(sentText\)/, "kept in the project's conversation, not the general one");
+  assert.match(read("migrations/069_routines_in_projects.sql"), /ALTER TABLE automations ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES projects\(id\) ON DELETE SET NULL;/);
+  const server = read("webapp/server.js");
+  assert.match(server, /async function routineProject\(userId, id\) \{[\s\S]{0,300}\.eq\("status", "active"\)\.maybeSingle\(\);/);
+  assert.match(server, /project_id: project,\n\s*\.\.\.watch\.fields,/);
+  const dash = read("webapp/views/dashboard.html");
+  assert.match(dash, /<select id="auto-project-select"[^>]*><option value="">None<\/option><\/select>/);
+  assert.match(dash, /project_id: document\.getElementById\('auto-project-select'\)\.value \|\| null,/);
+  const { projectHtml } = require("../webapp/projects");
+  const html = projectHtml(move(), Date.parse("2026-11-01T12:00:00Z"), [], null, [{ name: "van-reminder", status: "active", trigger_type: "scheduled", trigger_human_schedule: "Every Friday at 9am" }]);
+  assert.match(html, /<h2>Routines<span class="count">1<\/span><\/h2><ul class="routines"><li><span class="r-name">Van reminder<\/span><span class="r-when">Every Friday at 9am<\/span><\/li><\/ul>/);
 });

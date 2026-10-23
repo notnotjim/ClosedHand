@@ -199,7 +199,6 @@ test("Closedhand sets goals up the researched way and records progress from the 
 test("a goal is on its project's card, added in the project's form, and opened from Upcoming", () => {
   const dashboard = read("webapp/views/dashboard.html");
   assert.doesNotMatch(dashboard, /data-tab="goals"|id="tab-goals"/, "no Goals tab: goals are on their projects");
-  assert.match(dashboard, /h === 'goals' \? 'projects'/, "links to #goals open Projects");
   const tab = read("webapp/public/goals.js");
   for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "Closedhand"}`']) assert.ok(tab.includes(label), label);
   assert.match(tab, /document\.querySelectorAll\("\[data-goal-for\]"\)\.forEach\(\(slot\) => \{/, "each project card's slot holds its goal");

@@ -867,6 +867,11 @@
     color: rgba(var(--fg-rgb),0.55);
   }
   .activity-item-icon svg { display: block; width: 100%; height: 100%; }
+  /* Chat and the projects' conversations (openConversation). */
+  .activity-item-icon.conv-emoji { width: auto; height: auto; margin-top: 0; font-size: 14px; line-height: 1.2; color: inherit; }
+  .conv-heading { padding: 14px 18px 6px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(var(--fg-rgb),0.55); }
+  .conv-new { display: block; padding: 8px 18px 12px 27px; font-size: 12px; color: var(--accent-link); text-decoration: none; }
+  .conv-new:hover { text-decoration: underline; text-underline-offset: 3px; }
   .activity-item-text {
     font-size: 13px;
     color: var(--muted);
@@ -2397,8 +2402,7 @@
       <button type="button" class="talk-btn" id="talkBtn" aria-label="Talk to Closedhand"><img src="/fist.png" alt=""></button>
       <p class="talk-hint" id="talkHint" role="status" aria-live="polite"></p>
     </div>
-    <!-- Sending from here carries on the open conversation only while it is
-         recent, and says so; after a few quiet hours it starts a new one. -->
+    <!-- Sending from here carries on Chat, or the project that is open. -->
 
     <div class="input-box-wrap" id="heroInputWrap">
       <div class="input-box" id="heroInputBox">
@@ -2476,12 +2480,10 @@
         Back to home
       </a>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;">
+    <!-- Chat, the one general conversation, and each project's own
+         (webapp/projects.js /api/conversations). -->
+    <div style="padding:12px 18px 8px;">
       <div class="activity-sidebar-header" style="margin:0;padding:0;">Conversations</div>
-      <button onclick="startNewThread()" style="padding:4px 12px;background:var(--accent-strong);color:var(--on-accent);border:none;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;">+ New</button>
-    </div>
-    <div style="padding:0 18px 8px;">
-      <input type="text" id="threadSearchInput" placeholder="Search conversations…" style="width:100%;background:rgba(var(--fg-rgb),0.04);border:1px solid rgba(var(--fg-rgb),0.06);border-radius:6px;padding:6px 10px;color:var(--muted);font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="searchThreads(this.value)">
     </div>
     <div class="activity-sidebar-list" id="activityList">
       <div style="font-size:12px;color:rgba(var(--fg-rgb),0.6);padding:12px;">Loading…</div>
@@ -3617,6 +3619,7 @@
   function composerPlaceholder() {
     return pendingFiles.length > 1 ? 'Ask about these files or just send'
       : pendingFiles.length === 1 ? 'Ask about this file or just send'
+      : _openProject && document.body.classList.contains('chat-active') ? 'Message ' + _openProject.emoji + ' ' + _openProject.name
       : window.talkFirst && window.talkFirst() ? (document.body.classList.contains('chat-active') ? 'Type a message' : 'Or type here')
       : 'Ask anything or drop any type of file…';
   }
@@ -3912,13 +3915,6 @@
     var text = input.value.trim();
     if (!text && pendingFiles.length === 0) return;
 
-    // Handle /new - start new conversation thread
-    if (text === '/new') {
-      input.value = '';
-      startNewThread();
-      return;
-    }
-
     // Handle /clear - delete ALL conversation threads
     if (text === '/clear') {
       input.value = '';
@@ -3937,10 +3933,6 @@
     }
 
     lastUserMessage = text;
-    var fromHome = !hasMessages;
-    // A message from the home page starts a new conversation. An older one is
-    // carried on by picking it under the box ("Pick up where you left off").
-    var startFresh = fromHome;
     enterChatMode();
     addMessage(displayText, 'user', pendingFiles.length > 0 ? pendingFiles : null);
 
@@ -3955,14 +3947,11 @@
 
     showTyping();
 
-    // Prepend reply context if set
     var sendText = text;
-    if (window._replyContext) {
-      sendText = '[Following up on: "' + window._replyContext.text.substring(0, 100) + '"]\n\n' + text;
-      clearReplyContext();
-    }
 
     var payload = { type: 'chat', text: sendText };
+    // In a project's conversation, the message is in that project.
+    if (_openProject) payload.project = _openProject.id;
     if (pendingFiles.length > 0) {
       payload.files = pendingFiles.slice();
       pendingFiles = [];
@@ -3978,47 +3967,9 @@
         connectChat();
       }
     };
-    if (startFresh) {
-      fetch('/api/threads/new', { method: 'POST' })
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(d) { if (d && d.thread_id) _activeThreadId = d.thread_id; })
-        .catch(function() {})
-        .then(function() { deliver(); loadActivityFeed(); });
-    } else {
-      deliver();
-    }
+    deliver();
     _awaitingReply = true;
     armResponseWatchdog();
-  }
-
-  function renderHistoryMsg(msg) {
-    var content = msg.content;
-    var role = msg.direction === 'inbound' ? 'user' : 'bot';
-    // Check for canvas marker: [canvas:UUID:filename]
-    var canvasMatch = content.match(/^\[canvas:([a-f0-9-]+):(.+)\]$/);
-    if (canvasMatch) {
-      var cId = canvasMatch[1];
-      var cName = canvasMatch[2];
-      addCanvasHistoryMessage(cId, cName);
-      return;
-    }
-    addMessage(content, role);
-  }
-
-  function addCanvasHistoryMessage(canvasId, filename) {
-    var div = document.createElement('div');
-    div.className = 'message bot canvas-msg';
-    div.innerHTML = '<span style="color:var(--accent);">&#9654;</span> ' + filename.replace(/</g, '&lt;');
-    div.onclick = function() {
-      // Fetch canvas content from server and open panel
-      fetch('/api/canvas/' + canvasId).then(function(r) { return r.json(); }).then(function(data) {
-        if (data && data.content) openCanvas(data.id, data.filename, data.mime_type, data.content);
-      }).catch(function() {
-        // Fallback: open in new tab
-        window.open('/canvas/' + canvasId, '_blank');
-      });
-    };
-    messagesEl.insertBefore(div, typingEl);
   }
 
   function addFileMessage(msg) {
@@ -4430,157 +4381,64 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Thread search (searches titles + message content via API)
-  var _searchDebounce = null;
-  window.searchThreads = function(query) {
-    clearTimeout(_searchDebounce);
-    var q = (query || '').trim();
-    if (!q) {
-      // Empty query: reload full list
-      loadActivityFeed();
-      return;
-    }
-    _searchDebounce = setTimeout(function() {
-      fetch('/api/threads/search?q=' + encodeURIComponent(q)).then(function(r) { return r.json(); }).then(function(threads) {
-        var list = document.getElementById('activityList');
-        if (!list) return;
-        if (!threads.length) {
-          list.innerHTML = '<div style="font-size:12px;color:rgba(var(--fg-rgb),0.5);padding:16px 18px;">No matching conversations</div>';
-          return;
-        }
-        list.innerHTML = threads.map(function(t) {
-          var ago = timeAgo(t.updated_at);
-          var title = t.display_title || t.title || 'New conversation';
-          var activeStyle = t.is_active ? 'border-left:3px solid var(--accent);background:rgba(var(--accent-rgb),0.06);' : 'border-left:3px solid transparent;';
-          return '<div class="activity-item" style="' + activeStyle + 'border-radius:0;padding-left:12px;">' +
-            '<div onclick="switchToThread(\'' + t.id + '\')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' +
-              '<span class="activity-item-icon">&#x1F4AC;</span>' +
-              '<div style="flex:1;min-width:0;">' +
-                '<div class="activity-item-text" style="color:' + (t.is_active ? 'var(--fg)' : 'var(--fg)') + ';">' + title.replace(/</g, '&lt;') + '</div>' +
-                '<div class="activity-item-time">' + ago + '</div>' +
-              '</div>' +
-            '</div>' +
-            '<button onclick="deleteThread(\'' + t.id + '\',this)" class="activity-delete" title="Delete">&times;</button>' +
-          '</div>';
-        }).join('');
-      }).catch(function() {});
-    }, 300);
-  };
+  // Chat and each project's conversation, in the sidebar. Chat is the one
+  // general conversation; a project's has the project's emoji and is where a
+  // message goes while that project is open (lib/projects.js).
+  var _openProject = null;
+  var _conversations = null;
 
-  var _activeThreadId = null;
+  function conversationRow(c) {
+    var open = c.id ? !!(_openProject && _openProject.id === c.id) : !_openProject;
+    var count = c.message_count || 0;
+    var icon = c.id ? '<span class="activity-item-icon conv-emoji">' + escapeHtml(c.emoji) + '</span>'
+      : '<span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>';
+    return '<div class="activity-item' + (open ? ' conv-open' : '') + '" style="border-radius:0;padding-left:12px;border-left:3px solid ' + (open ? 'var(--accent)' : 'transparent') + ';' + (open ? 'background:rgba(var(--accent-rgb),0.06);' : '') + '">' +
+      '<div onclick="openConversation(' + (c.id ? '\'' + c.id + '\'' : 'null') + ')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' + icon +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="activity-item-text" style="color:var(--fg);">' + escapeHtml(c.id ? c.name : 'Chat') + '</div>' +
+          '<div class="activity-item-time">' + (c.updated_at && count ? timeAgo(c.updated_at) + ' · ' + count + (count === 1 ? ' message' : ' messages') : c.id ? 'Nothing yet' : 'Everything else') + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
 
   function loadActivityFeed() {
-    // Load threads instead of old activity feed
-    fetch('/api/threads').then(function(r) { return r.json(); }).then(function(threads) {
+    fetch('/api/conversations').then(function(r) { return r.json(); }).then(function(data) {
       var list = document.getElementById('activityList');
-      if (!list) return;
-      if (!threads || !threads.length) {
-        list.innerHTML = '<div style="font-size:12px;color:rgba(var(--fg-rgb),0.6);padding:16px 18px;">No conversations yet. Start chatting!</div>';
-        return;
-      }
-      // Track active thread
-      var active = threads.find(function(t) { return t.is_active; });
-      if (active) _activeThreadId = active.id;
-
-      list.innerHTML = threads.map(function(t) {
-        var ago = timeAgo(t.updated_at);
-        var title = t.display_title || t.title || 'New conversation';
-        var isActive = t.is_active;
-        var msgCount = t.message_count || 0;
-        var activeStyle = isActive ? 'border-left:3px solid var(--accent);background:rgba(var(--accent-rgb),0.06);' : 'border-left:3px solid transparent;';
-        var titleColor = isActive ? 'var(--fg)' : 'rgba(var(--fg-rgb),0.9)';
-
-        return '<div class="activity-item" style="' + activeStyle + 'border-radius:0;padding-left:12px;">' +
-          '<div onclick="switchToThread(\'' + t.id + '\')" style="display:flex;align-items:flex-start;gap:8px;flex:1;cursor:pointer;">' +
-            '<span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div class="activity-item-text" style="color:' + titleColor + ';">' + title.replace(/</g, '&lt;') + '</div>' +
-              '<div class="activity-item-time">' + ago + (msgCount > 0 ? ' · ' + msgCount + ' msgs' : '') + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<button onclick="deleteThread(\'' + t.id + '\',this)" class="activity-delete" title="Delete">&times;</button>' +
-        '</div>';
-      }).join('');
-      renderArchivedSection(list);
-    }).catch(function() {
-      // Fallback to old activity feed if threads API fails
-      fetch('/api/chat/activity').then(function(r) { return r.json(); }).then(function(data) {
-        var list = document.getElementById('activityList');
-        if (!list || !data.activities) return;
-        list.innerHTML = data.activities.map(function(a) {
-          var ago = timeAgo(a.time);
-          return '<div class="activity-item"><div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><div><div class="activity-item-text">' + (a.text || '').replace(/</g, '&lt;') + '</div><div class="activity-item-time">' + ago + '</div></div></div></div>';
-        }).join('');
-      }).catch(function() {});
-    });
+      if (!list || !data || !data.chat) return;
+      _conversations = data;
+      var html = conversationRow({ id: null, updated_at: data.chat.updated_at, message_count: data.chat.message_count });
+      html += '<div class="conv-heading">Projects</div>';
+      html += (data.projects || []).map(conversationRow).join('');
+      html += '<a class="conv-new" href="#" onclick="event.preventDefault();if(window.openDashSlide)window.openDashSlide(\'#projects\')">' + ((data.projects || []).length ? '+ New project' : 'Start a project on the dashboard') + '</a>';
+      list.innerHTML = html;
+    }).catch(function() {});
   }
 
-  window.startNewThread = function() {
-    // Optimistic UI: clear chat and update sidebar instantly
+  // Opens Chat (null) or a project's conversation in the pane. What is typed
+  // next goes there.
+  window.openConversation = function(projectId) {
+    var found = projectId && _conversations ? (_conversations.projects || []).find(function(p) { return p.id === projectId; }) : null;
+    if (projectId && !found && _conversations) return;
+    enterChatMode();
     messagesEl.querySelectorAll('.message').forEach(function(m) { m.remove(); });
     window._chatHistory = null;
-    _activeThreadId = null;
-    // Update sidebar immediately: mark all as inactive, add placeholder
-    var list = document.getElementById('activityList');
-    if (list) {
-      var items = list.querySelectorAll('.activity-item');
-      items.forEach(function(el) { el.style.borderLeftColor = 'transparent'; el.querySelector('.activity-item-text').style.color = 'rgba(var(--fg-rgb),0.9)'; });
-      var placeholder = document.createElement('div');
-      placeholder.className = 'activity-item';
-      placeholder.style.cssText = 'border-left:3px solid var(--accent-strong);background:rgba(var(--accent-rgb),0.06);border-radius:0;padding-left:12px;';
-      placeholder.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;"><span class="activity-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><div><div class="activity-item-text" style="color:var(--fg);">New conversation</div><div class="activity-item-time">just now</div></div></div>';
-      list.insertBefore(placeholder, list.firstChild);
-    }
-    // Background: create the thread on the server
-    fetch('/api/threads/new', { method: 'POST' })
+    _openProject = found ? { id: found.id, emoji: found.emoji, name: found.name } : null;
+    input.setAttribute('placeholder', composerPlaceholder());
+    loadActivityFeed();
+    fetch('/api/conversation' + (projectId ? '?project=' + encodeURIComponent(projectId) : ''))
       .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
-        if (data && data.thread_id) _activeThreadId = data.thread_id;
-        loadActivityFeed(); // Refresh with real data
-      })
-      .catch(function(e) { console.error('[Threads] New thread error:', e); });
-  }
-
-  window.switchToThread = function(threadId) {
-    if (threadId === _activeThreadId) return;
-    // Optimistic UI: clear chat and highlight the clicked thread instantly
-    messagesEl.querySelectorAll('.message').forEach(function(m) { m.remove(); });
-    window._chatHistory = null;
-    var prevId = _activeThreadId;
-    _activeThreadId = threadId;
-    var list = document.getElementById('activityList');
-    if (list) {
-      list.querySelectorAll('.activity-item').forEach(function(el) {
-        el.style.borderLeftColor = 'transparent';
-        el.style.background = 'transparent';
-        var txt = el.querySelector('.activity-item-text');
-        if (txt) txt.style.color = 'rgba(var(--fg-rgb),0.9)';
-      });
-      // Find and highlight the clicked one by matching the onclick
-      list.querySelectorAll('.activity-item').forEach(function(el) {
-        if (el.innerHTML.indexOf(threadId) !== -1) {
-          el.style.borderLeftColor = 'var(--accent)';
-          el.style.background = 'rgba(var(--accent-rgb),0.06)';
-          var txt = el.querySelector('.activity-item-text');
-          if (txt) txt.style.color = 'var(--fg)';
-        }
-      });
-    }
-    // Background: activate on server and load messages in parallel
-    fetch('/api/threads/' + threadId + '/activate', { method: 'POST' }).catch(function() {});
-    fetch('/api/threads/' + threadId)
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(thread) {
-        if (thread && thread.messages && thread.messages.length > 0) {
-          shownInThread(thread.messages).forEach(function(msg) {
+      .then(function(conv) {
+        if (conv && conv.project) { _openProject = conv.project; input.setAttribute('placeholder', composerPlaceholder()); }
+        if (conv && conv.messages) {
+          shownInThread(conv.messages).forEach(function(msg) {
             addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
           });
-          scrollToBottom();
         }
-        loadActivityFeed();
+        [300, 600, 1000].forEach(function(ms) { setTimeout(scrollToBottom, ms); });
       })
-      .catch(function(e) { console.error('[Threads] load error:', e); loadActivityFeed(); });
-  }
+      .catch(function() {});
+  };
 
   // Background work shows as one live line under the conversation, updated
   // in place ("Checking prices on Booking.com · 8 min"), gone when the result
@@ -4633,80 +4491,6 @@
     return out;
   }
 
-  // Two different intents share this X. Archive is the tidy-up: the thread
-  // stops being listed but Closedhand keeps everything it learned. Delete is
-  // the promise: gone from the list, gone from memory.
-  window.deleteThread = async function(threadId, btn) {
-    if (!btn) return;
-    var answer = await askFirst(btn, { text: 'Archive keeps this conversation. Delete forever erases it and everything Closedhand learned from it.', yes: 'Delete forever', other: 'Archive' });
-    if (!answer) return;
-    if (answer.other) archiveThread(threadId, btn);
-    else confirmDeleteThread(threadId, btn);
-  };
-
-  // A collapsed "Archived (n)" row under the live threads. Restore is the only
-  // action: an archived thread is kept, not gone, and this is where that
-  // promise is visible.
-  var _archivedOpen = false;
-  function renderArchivedSection(list) {
-    fetch('/api/threads/archived').then(function(r) { return r.json(); }).then(function(rows) {
-      if (!rows || !rows.length) return;
-      var html = '<div style="padding:8px 18px 4px;font-size:11px;color:rgba(var(--fg-rgb),0.6);cursor:pointer;user-select:none;" onclick="window._toggleArchived()">'
-        + (_archivedOpen ? '\u25be' : '\u25b8') + ' Archived (' + rows.length + ')</div>';
-      if (_archivedOpen) {
-        html += rows.map(function(t) {
-          return '<div class="activity-item" style="opacity:0.55;border-radius:0;padding-left:12px;">' +
-            '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">' +
-              '<span class="activity-item-icon">\uD83D\uDCE6</span>' +
-              '<div style="flex:1;min-width:0;">' +
-                '<div class="activity-item-text">' + (t.title || '').replace(/</g, '&lt;') + '</div>' +
-                '<div class="activity-item-time">' + timeAgo(t.updated_at) + (t.message_count ? ' \u00b7 ' + t.message_count + ' msgs' : '') + '</div>' +
-              '</div>' +
-              '<button onclick="event.stopPropagation();window._unarchiveThread(\'' + t.id + '\')" style="padding:2px 10px;background:transparent;border:1px solid rgba(var(--fg-rgb),0.16);color:var(--accent-strong);border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;flex-shrink:0;">Restore</button>' +
-            '</div></div>';
-        }).join('');
-      }
-      list.insertAdjacentHTML('beforeend', html);
-    }).catch(function() {});
-  }
-  window._toggleArchived = function() { _archivedOpen = !_archivedOpen; loadActivityFeed(); };
-  window._unarchiveThread = function(id) {
-    fetch('/api/threads/' + id + '/unarchive', { method: 'POST' }).then(function() { loadActivityFeed(); });
-  };
-
-  window.archiveThread = function(threadId, btn) {
-    var item = btn.closest('.activity-item');
-    if (item) { item.style.opacity = '0.3'; item.style.pointerEvents = 'none'; }
-    fetch('/api/threads/' + threadId + '/archive', { method: 'POST' }).then(function(r) { return r.json(); }).then(function() {
-      // Archiving the open thread: the server has made a fresh active one, so
-      // clear the pane the same way delete does. The messages still exist.
-      if (threadId === _activeThreadId) {
-        messagesEl.querySelectorAll('.message').forEach(function(m) { m.remove(); });
-        window._chatHistory = null;
-        _activeThreadId = null;
-      }
-      loadActivityFeed();
-    }).catch(function() {
-      if (item) { item.style.opacity = '1'; item.style.pointerEvents = ''; }
-    });
-  }
-
-  window.confirmDeleteThread = function(threadId, btn) {
-    var item = btn.closest('.activity-item');
-    if (item) { item.style.opacity = '0.3'; item.style.pointerEvents = 'none'; }
-    fetch('/api/threads/' + threadId, { method: 'DELETE' }).then(function(r) { return r.json(); }).then(function() {
-      // Deleting the open thread: clear the chat pane (server creates a fresh active thread)
-      if (threadId === _activeThreadId) {
-        messagesEl.querySelectorAll('.message').forEach(function(m) { m.remove(); });
-        window._chatHistory = null;
-        _activeThreadId = null;
-      }
-      loadActivityFeed();
-    }).catch(function() {
-      if (item) { item.style.opacity = '1'; item.style.pointerEvents = ''; }
-    });
-  };
-
   // Sidebar resize drag
   (function() {
     var handle = document.getElementById('sidebarResizeHandle');
@@ -4739,84 +4523,6 @@
       document.body.style.userSelect = '';
     });
   })();
-
-  window._replyContext = null;
-
-  window.continueActivity = function(text, type) {
-    var decoded = decodeURIComponent(text);
-
-    // Enter chat mode if not already
-    enterChatMode();
-
-    // Load history if needed, then scroll to the message
-    if (window._chatHistory) {
-      scrollToMessage(decoded);
-    } else {
-      fetch('/api/chat/history').then(function(r) { return r.json(); }).then(function(hist) {
-        if (hist.messages && hist.messages.length > 0) {
-          window._chatHistory = hist.messages;
-          // Clear and reload messages
-          var msgs = messagesEl.querySelectorAll('.message');
-          msgs.forEach(function(m) { m.remove(); });
-          hist.messages.forEach(function(msg) {
-            renderHistoryMsg(msg);
-          });
-          setTimeout(function() { scrollToMessage(decoded); }, 100);
-        }
-      });
-    }
-
-    // Set reply context
-    setReplyContext(decoded, type);
-    input.focus();
-  };
-
-  function scrollToMessage(text) {
-    var messages = messagesEl.querySelectorAll('.message');
-    var target = null;
-    // Find closest matching message (search from bottom for most recent match)
-    for (var i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].textContent.indexOf(text.substring(0, 40)) !== -1) {
-        target = messages[i];
-        break;
-      }
-    }
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.style.transition = 'box-shadow 0.3s ease';
-      target.style.boxShadow = '0 0 0 2px rgba(var(--accent-strong-rgb),0.5), 0 0 20px rgba(var(--accent-strong-rgb),0.15)';
-      target.style.borderRadius = '12px';
-      setTimeout(function() {
-        target.style.boxShadow = '';
-      }, 3000);
-    }
-  }
-
-  function setReplyContext(text, type) {
-    var preview = text.length > 60 ? text.substring(0, 60) + '...' : text;
-    window._replyContext = { text: text, type: type };
-
-    // Show context tag above input
-    var existing = document.getElementById('replyContextTag');
-    if (existing) existing.remove();
-
-    var tag = document.createElement('div');
-    tag.id = 'replyContextTag';
-    tag.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;margin:0 auto 4px;max-width:1000px;background:rgba(var(--accent-strong-rgb),0.08);border:1px solid rgba(var(--accent-strong-rgb),0.2);border-radius:8px;font-size:13px;color:var(--muted);';
-    tag.innerHTML = '<span style="color:rgba(var(--accent-strong-rgb),0.7);">Replying to:</span> <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + preview.replace(/</g, '&lt;') + '</span>' +
-      '<span onclick="clearReplyContext()" style="cursor:pointer;color:rgba(var(--fg-rgb),0.5);font-size:16px;padding:0 4px;" title="Clear">&times;</span>';
-
-    var dockedEl = document.getElementById('dockedInput');
-    if (dockedEl) {
-      dockedEl.insertBefore(tag, dockedEl.firstChild);
-    }
-  }
-
-  window.clearReplyContext = function() {
-    window._replyContext = null;
-    var tag = document.getElementById('replyContextTag');
-    if (tag) tag.remove();
-  };
 
   function timeAgo(dateStr) {
     var now = Date.now();
@@ -5151,34 +4857,35 @@
         connectChat();
         if (typeof loadRAGModeState === 'function') loadRAGModeState();
         if (typeof window.monLoadCloud === 'function') window.monLoadCloud();
-        // Past conversations: a few rows under the box, from the same list
-        // the sidebar shows. One on a phone, three on a desk. Nothing at all
-        // for someone with no history.
-        fetch('/api/threads').then(function(r) { return r.json(); }).then(function(threads) {
-          if (!Array.isArray(threads)) return;
-          var withMsgs = threads.filter(function(t) { return t.resumable !== undefined ? t.resumable : (t.message_count || 0) > 0; });
+        // Where to pick up: the most recent of Chat and the projects' own
+        // conversations, a few rows under the box. One on a phone, three on a
+        // desk. Nothing at all for someone with no history.
+        fetch('/api/conversations').then(function(r) { return r.json(); }).then(function(data) {
+          if (!data || !data.chat) return;
+          _conversations = data;
+          var withMsgs = [{ id: null, name: 'Chat', updated_at: data.chat.updated_at, message_count: data.chat.message_count }].concat(data.projects || [])
+            .filter(function(c) { return (c.message_count || 0) > 0; })
+            .sort(function(a, b) { return String(b.updated_at).localeCompare(String(a.updated_at)); });
           if (!withMsgs.length) return;
           var esc = function(x) { return String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
           var rows = withMsgs.slice(0, 3);
           var list = document.getElementById('heroRecentList');
           var wrap = document.getElementById('heroRecent');
           if (!list || !wrap) return;
-          list.innerHTML = rows.map(function(t) {
-            var count = t.message_count ? ' \u00b7 ' + t.message_count + (t.message_count === 1 ? ' message' : ' messages') : '';
+          list.innerHTML = rows.map(function(c) {
+            var count = ' · ' + c.message_count + (c.message_count === 1 ? ' message' : ' messages');
             // The name, with when it was last used under it: one item, at
             // any width, rather than a name and a time a screen apart.
-            return '<a class="hero-recent-row" href="#" data-thread="' + esc(t.id) + '">' +
-              '<span class="text"><span class="title">' + esc(t.display_title || t.title || 'New conversation') + '</span>' +
-              '<span class="meta">' + esc(timeAgo(t.updated_at)) + count + '</span></span>' +
+            return '<a class="hero-recent-row" href="#" data-conv="' + esc(c.id || '') + '">' +
+              '<span class="text"><span class="title">' + (c.id ? esc(c.emoji) + ' ' : '') + esc(c.name) + '</span>' +
+              '<span class="meta">' + esc(timeAgo(c.updated_at)) + count + '</span></span>' +
               '<span class="arrow" aria-hidden="true">&#8250;</span></a>';
-          }).join('') + (withMsgs.length > rows.length
-            ? '<a class="hero-recent-row hero-recent-more" href="#" data-all="1"><span class="title">+' + (withMsgs.length - rows.length) + ' more</span><span class="arrow" aria-hidden="true">&#8250;</span></a>'
-            : '');
+          }).join('');
           var rowsHtml = list.innerHTML;
           var onRow = function(e) {
             var a = e.target.closest('.hero-recent-row'); if (!a) return;
             e.preventDefault();
-            openRecentThread(a.getAttribute('data-all') ? rows[0].id : a.getAttribute('data-thread'));
+            openConversation(a.getAttribute('data-conv') || null);
           };
           list.addEventListener('click', onRow);
           wrap.hidden = false;
@@ -5223,27 +4930,6 @@
     }).catch(function() {});
   }
 
-  // Open a past conversation from the home page: into chat mode, that
-  // thread made active, its messages drawn, scrolled to the end.
-  function openRecentThread(threadId) {
-    enterChatMode();
-    _activeThreadId = threadId;
-    fetch('/api/threads/' + threadId + '/activate', { method: 'POST' }).catch(function() {});
-    fetch('/api/threads/' + threadId)
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(thread) {
-        if (thread && thread.messages) {
-          shownInThread(thread.messages).forEach(function(msg) {
-            addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', null, msg.ts || null);
-          });
-        }
-        [300, 600, 1000, 1500].forEach(function(ms) { setTimeout(scrollToBottom, ms); });
-        loadActivityFeed();
-      })
-      .catch(function() { loadActivityFeed(); });
-  }
-
-
   init();
 
   // Show login error if present in URL
@@ -5263,17 +4949,7 @@
     var chatCheckInterval = setInterval(function() {
       if (isAuthenticated) {
         clearInterval(chatCheckInterval);
-        fetch('/api/chat/history').then(function(r) { return r.json(); }).then(function(hist) {
-          if (hist.messages && hist.messages.length > 0) {
-            window._chatHistory = hist.messages;
-            enterChatMode();
-            hist.messages.forEach(function(msg) {
-              renderHistoryMsg(msg);
-            });
-            setTimeout(scrollToBottom, 300);
-            setTimeout(scrollToBottom, 600);
-          }
-        });
+        openConversation(null);
         // Clean URL
         window.history.replaceState({}, '', '/');
       }

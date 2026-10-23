@@ -35,6 +35,6 @@ test("with a file attached, the words fit and Send lights up", () => {
 });
 
 test("a recent conversation shows its name with when it was used right under it", () => {
-  assert.match(chat, /'<span class="text"><span class="title">' \+ esc\(t\.display_title \|\| t\.title \|\| 'New conversation'\) \+ '<\/span>' \+\n\s*'<span class="meta">' \+ esc\(timeAgo\(t\.updated_at\)\) \+ count \+ '<\/span><\/span>'/);
-  assert.match(chat, /\(t\.message_count === 1 \? ' message' : ' messages'\)/, "the count says what it counts");
+  assert.match(chat, /'<span class="text"><span class="title">' \+ \(c\.id \? esc\(c\.emoji\) \+ ' ' : ''\) \+ esc\(c\.name\) \+ '<\/span>' \+\n\s*'<span class="meta">' \+ esc\(timeAgo\(c\.updated_at\)\) \+ count \+ '<\/span><\/span>'/);
+  assert.match(chat, /\(c\.message_count === 1 \? ' message' : ' messages'\)/, "the count says what it counts");
 });

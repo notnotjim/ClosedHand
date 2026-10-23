@@ -95,7 +95,7 @@ test("a reopened conversation shows what was said, not Closedhand's bookkeeping"
     { role: "assistant", content: "OK, cancelled." },
   ]);
   assert.deepEqual([...shown].map((m) => m.content), ["Just to confirm: send email?", "no, just pin the address here", "Harbour House, 14 Quay Street"]);
-  assert.equal((page.match(/shownInThread\(thread\.messages\)\.forEach/g) || []).length, 2, "both ways of opening a conversation");
+  assert.equal((page.match(/shownInThread\(conv\.messages\)\.forEach/g) || []).length, 1, "one way of opening a conversation, Chat or a project's");
   assert.doesNotMatch(page, /thread\.messages\.forEach/, "nothing draws a thread unfiltered");
 });
 

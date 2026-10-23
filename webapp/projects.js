@@ -60,6 +60,39 @@ function register(app, { db, userId: who, withAppearance }) {
     return { ...g, this_week: (ticks || []).length, check_in_text: g.check_in ? goalsTime.describeCheckIn(g.check_in) : null };
   };
 
+  // The web chat's conversations: Chat, the person's one general
+  // conversation, and each project's own, newest first. A project's
+  // conversation is a thread of its own that is never the open one
+  // (lib/projects.js), so the web chat picks it by the project.
+  const generalThread = async (userId) => {
+    const { data } = await db.from("conversation_threads").select("id, messages, updated_at").eq("user_id", userId).eq("is_active", true).is("project_id", null).order("updated_at", { ascending: false }).limit(1);
+    return (data && data[0]) || null;
+  };
+  app.get("/api/conversations", async (req, res) => {
+    const userId = owner(req, res); if (!userId) return;
+    try {
+      const general = await generalThread(userId);
+      const projects = (await mine(userId)).filter((p) => p.status === "active");
+      const { data: threads } = projects.length ? await db.from("conversation_threads").select("project_id, messages, updated_at").eq("user_id", userId).in("project_id", projects.map((p) => p.id)) : { data: [] };
+      const list = projects.map((p) => {
+        const t = (threads || []).find((x) => x.project_id === p.id);
+        return { id: p.id, emoji: p.emoji, name: p.name, updated_at: (t && t.updated_at) || p.last_touched, message_count: t && Array.isArray(t.messages) ? t.messages.length : 0 };
+      }).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+      res.json({ chat: { updated_at: general ? general.updated_at : null, message_count: general && Array.isArray(general.messages) ? general.messages.length : 0 }, projects: list });
+    } catch (e) { fail(res, e); }
+  });
+  app.get("/api/conversation", async (req, res) => {
+    const userId = owner(req, res); if (!userId) return;
+    try {
+      const projectId = String(req.query.project || "");
+      if (!projectId) { const t = await generalThread(userId); return res.json({ messages: (t && t.messages) || [] }); }
+      const p = (await mine(userId)).find((x) => x.id === projectId);
+      if (!p) return fail(res, new Error("That project is not here any more."), 404);
+      const { data } = await db.from("conversation_threads").select("messages").eq("user_id", userId).eq("project_id", p.id).limit(1);
+      res.json({ project: { id: p.id, emoji: p.emoji, name: p.name }, messages: (data && data[0] && data[0].messages) || [] });
+    } catch (e) { fail(res, e); }
+  });
+
   app.get("/api/projects", async (req, res) => {
     const userId = owner(req, res); if (!userId) return;
     try { res.json({ projects: await mine(userId) }); } catch (e) { fail(res, e); }
@@ -197,7 +230,9 @@ function register(app, { db, userId: who, withAppearance }) {
       const p = data && data[0];
       if (!p || !["active", "archived"].includes(p.status)) return res.status(404).send(withAppearance(missingHtml()));
       const { data: threads } = await db.from("conversation_threads").select("messages").eq("user_id", userId).eq("project_id", p.id).limit(1);
-      res.send(withAppearance(projectHtml(p, Date.now(), (threads && threads[0] && threads[0].messages) || [], await goalOf(userId, p.id))));
+      const { data: routines } = await db.from("automations").select("name, status, trigger_type, trigger_human_schedule, trigger_event_source, trigger_event_condition, trigger_when, trigger_offset_minutes")
+        .eq("user_id", userId).eq("project_id", p.id).order("created_at", { ascending: true });
+      res.send(withAppearance(projectHtml(p, Date.now(), (threads && threads[0] && threads[0].messages) || [], await goalOf(userId, p.id), routines || [])));
     } catch (e) {
       console.error("Project page error:", e.message);
       res.status(500).send("Could not show this project.");
@@ -314,9 +349,21 @@ function goalHtml(g) {
   return `<section class="goal"><h2>Goal</h2><div class="goal-card"><p class="goal-title">${esc(g.title)}${tag}</p>${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""}${steps}</div></section>`;
 }
 
+// A routine as the dashboard names it: its name in words and when it runs.
+const routineName = (n) => { const t = String(n || "").replace(/[-_]+/g, " ").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
+function routineWhen(r) {
+  const off = r.status === "paused" ? " (paused)" : "";
+  if (r.trigger_type === "scheduled") return (r.trigger_human_schedule || "On a schedule") + off;
+  if (r.trigger_type === "event") {
+    const kinds = require("./watch-kinds");
+    return (r.trigger_when && r.trigger_when !== "arrives" ? "Runs " : "On ") + kinds.describe(r.trigger_event_source, r.trigger_when, r.trigger_offset_minutes) + off;
+  }
+  return "When you ask" + off;
+}
+
 const section = (label, count, body) => `<section><h2>${label}${count ? `<span class="count">${count}</span>` : ""}</h2>${body}</section>`;
 
-function projectHtml(p, now = Date.now(), messages = [], goal = null) {
+function projectHtml(p, now = Date.now(), messages = [], goal = null, routines = []) {
   const s = p.state || {};
   const open = (s.open || []).filter(Boolean), decided = (s.decisions || []).filter(Boolean);
   const people = (s.people || []).filter((x) => x && x.name), facts = (s.facts || []).filter(Boolean);
@@ -333,6 +380,7 @@ function projectHtml(p, now = Date.now(), messages = [], goal = null) {
     side.push(section("People", people.length, `<ul class="people">${people.map((x) => `<li><span class="avatar t${tint(x.name)}" aria-hidden="true">${esc(initials(x.name))}</span><span class="who"><span class="name">${esc(x.name)}${x.position ? ` <span class="stance ${stance(x.position)}">${esc(x.position)}</span>` : ""}</span>${x.said ? `<span class="said">${page.inline(x.said)}</span>` : ""}</span></li>`).join("")}</ul>`));
   }
   if (facts.length) side.push(section("Worth knowing", 0, `<ul class="facts">${facts.map((t) => `<li>${page.inline(t)}</li>`).join("")}</ul>`));
+  if (routines.length) side.push(section("Routines", routines.length, `<ul class="routines">${routines.map((r) => `<li><span class="r-name">${esc(routineName(r.name))}</span><span class="r-when">${esc(routineWhen(r))}</span></li>`).join("")}</ul>`));
   const rules = String(p.instructions || "").split(/\n+/).filter(Boolean);
   if (rules.length) side.unshift(section("Instructions", 0, `<ul class="rules">${rules.map((t) => `<li>${page.inline(t)}</li>`).join("")}</ul>`));
   const empty = !main.length && !side.length && !p.summary && !p.about && !goal && !(messages || []).length;
@@ -429,6 +477,10 @@ a.ctx:hover, a.ctx:focus-visible { border-color: rgba(var(--accent-rgb),0.5); tr
 .stance.no { background: rgba(var(--accent-rgb),0.14); color: var(--accent); }
 .stance.maybe { background: rgba(var(--warn-rgb),0.16); color: var(--warn); }
 .said { font-size: 14px; color: var(--muted); }
+.routines li { display: grid; padding: 8px 0; border-bottom: 1px solid rgba(var(--fg-rgb),0.08); }
+.routines li:last-child { border-bottom: 0; }
+.r-name { font-weight: 500; }
+.r-when { font-size: 13.5px; color: var(--muted); }
 .facts li { position: relative; padding: 6px 0 6px 16px; font-size: 15px; }
 .facts li::before { content: ""; position: absolute; left: 0; top: 15px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .7; }
 .goal { margin: 0 0 32px; }

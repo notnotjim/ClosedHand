@@ -60,7 +60,7 @@ test("the Schedules tab holds what is about time; what Closedhand made is on Pag
   const pages = dashboard.slice(dashboard.indexOf('id="tab-pages"'), dashboard.indexOf('id="tab-settings"'));
   assert.match(pages, /id="files-section"[\s\S]*<div class="mc-subsection-label">Files<\/div>[\s\S]*id="datasets-section"[\s\S]*<div class="mc-subsection-label">Tables<\/div>/, "files and tables sit under Pages");
   assert.match(dashboard, /if \(tabName === 'pages'\) \{\n\s*if \(typeof loadFiles === 'function'\) loadFiles\(\);\n\s*if \(typeof loadDatasets === 'function'\) loadDatasets\(\);/);
-  assert.match(dashboard, /const resolved = \(h === 'workers' \|\| h === 'agents' \|\| h === 'schedules' \|\| h === 'schedule'\) \? 'automations' : h === 'goals' \? 'projects' : h;/, "old #agents links still open it");
+  assert.match(dashboard, /const resolved = \(h === 'workers' \|\| h === 'agents' \|\| h === 'schedules' \|\| h === 'schedule'\) \? 'automations' : h;/, "old #agents links still open it");
   assert.match(read("lib/dashboard-links.js"), /async function dashboardUrl\(platform, section = "schedules"\)/);
 });
 

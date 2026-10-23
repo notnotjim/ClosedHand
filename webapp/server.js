@@ -3857,11 +3857,6 @@ app.get("/api/chat/stream", (req, res) => {
   });
 });
 
-// ============================================================================
-// CONVERSATION THREADS API
-// ============================================================================
-
-// GET /api/threads - list all threads
 // --- Here: where the person is, and their weather ---------------------------
 // The home page's "Orientate" asks the browser where it is, on request only.
 // That sets Closedhand's local time (reminders, briefings) and lets the page
@@ -4071,264 +4066,6 @@ app.post("/api/here/unit", async (req, res) => {
   }
 });
 
-// One name for a thread everywhere: its title, or until it has one, the start
-// of the first thing the person asked. One list said "Untitled" and the other
-// "New conversation" for the same thread.
-function threadDisplayTitle(title, messages) {
-  if (title) return title;
-  const text = (m) => typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((c) => c.text || "").join(" ") : "";
-  const first = (messages || []).find((m) => m.role === "user" && text(m).trim());
-  const plain = first ? text(first).replace(/^\s*\[[^\]]*\]\s*/g, "").replace(/\s+/g, " ").trim() : "";
-  if (!plain) return "New conversation";
-  return plain.length > 60 ? plain.slice(0, 57).replace(/\s+\S*$/, "") + "…" : plain;
-}
-
-app.get("/api/threads", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data } = await supabase.from("conversation_threads")
-      .select("id, title, is_active, created_at, updated_at, messages")
-      .eq("user_id", userId)
-      .eq("archived", false)
-      .is("project_id", null)
-      .order("updated_at", { ascending: false })
-      .limit(50);
-    const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
-    const intro = prof?.settings?.intro || null;
-    const text = (m) => typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((c) => c.text || "").join(" ") : "";
-    const threads = (data || []).map(t => {
-      const messages = t.messages || [];
-      // Something to pick up: a title, or a real request after introductions,
-      // not a chat that was only hello, names and "yep".
-      const after = intro && intro.thread === t.id ? messages.slice(intro.messages || 0) : messages;
-      const resumable = !!t.title || after.some((m) => m.role === "user" && text(m).trim().length >= 12);
-      return { id: t.id, title: t.title, display_title: threadDisplayTitle(t.title, messages), is_active: t.is_active,
-        created_at: t.created_at, updated_at: t.updated_at,
-        message_count: messages.length, resumable };
-    });
-    res.json(threads);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/threads/search?q=... - search through conversation content
-app.get("/api/threads/search", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  const q = (req.query.q || "").toLowerCase().trim();
-  if (!q || q.length < 2) return res.json([]);
-  try {
-    const { data } = await supabase.from("conversation_threads")
-      .select("id, title, is_active, updated_at, messages")
-      .eq("user_id", userId)
-      .eq("archived", false)
-      .is("project_id", null)
-      .order("updated_at", { ascending: false })
-      .limit(50);
-    const results = (data || []).filter(t => {
-      if ((t.title || "").toLowerCase().includes(q)) return true;
-      // Search message content
-      for (const msg of (t.messages || [])) {
-        const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content || "");
-        if (text.toLowerCase().includes(q)) return true;
-      }
-      return false;
-    }).map(t => ({
-      id: t.id, title: t.title, is_active: t.is_active, updated_at: t.updated_at,
-      message_count: (t.messages || []).length,
-    }));
-    res.json(results);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// GET /api/threads/:id - get thread messages
-app.get("/api/threads/:id", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data: rows } = await supabase.from("conversation_threads")
-      .select("id, title, messages, summary, is_active, created_at, updated_at")
-      .eq("id", req.params.id).eq("user_id", userId).limit(1);
-    var data = rows && rows.length > 0 ? rows[0] : null;
-    if (!data) return res.status(404).json({ error: "Thread not found" });
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/threads/new - archive current, create new
-app.post("/api/threads/new", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    // Find current active thread (maybeSingle avoids error if none/multiple exist)
-    const { data: activeRows } = await supabase.from("conversation_threads")
-      .select("id, messages").eq("user_id", userId).eq("is_active", true).limit(1);
-    const active = activeRows && activeRows.length > 0 ? activeRows[0] : null;
-
-    if (active) {
-      // Auto-title from first substantial message
-      let title = null;
-      for (const msg of (active.messages || [])) {
-        if (msg.role === "user" && typeof msg.content === "string" && msg.content.length > 10) {
-          title = msg.content.substring(0, 50);
-          break;
-        }
-      }
-      if (!title) title = "Chat, " + new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-      await supabase.from("conversation_threads")
-        .update({ is_active: false, title, updated_at: new Date().toISOString() })
-        .eq("id", active.id).eq("user_id", userId);
-    }
-
-    // Create new
-    const { data: newThread } = await supabase.from("conversation_threads")
-      .insert({ user_id: userId, is_active: true, platform: "web" })
-      .select("id").single();
-    res.json({ success: true, thread_id: newThread?.id });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/threads/:id/activate - switch to this thread
-app.post("/api/threads/:id/activate", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    // A project's conversation is never the open one (lib/projects.js).
-    const { data: target } = await supabase.from("conversation_threads")
-      .select("id").eq("id", req.params.id).eq("user_id", userId).is("project_id", null).limit(1);
-    if (!target || !target.length) return res.status(404).json({ error: "That conversation is not here any more." });
-    // Deactivate all for this user
-    await supabase.from("conversation_threads")
-      .update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
-    // Activate target (don't update updated_at - only messages should change ordering)
-    await supabase.from("conversation_threads")
-      .update({ is_active: true })
-      .eq("id", req.params.id).eq("user_id", userId);
-
-    // Get the thread for response
-    const { data: threadRows } = await supabase.from("conversation_threads")
-      .select("id, title, messages").eq("id", req.params.id).eq("user_id", userId).limit(1);
-    var thread = threadRows && threadRows.length > 0 ? threadRows[0] : null;
-    res.json({ success: true, title: thread?.title, message_count: (thread?.messages || []).length });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// DELETE /api/threads/:id - delete one thread
-// POST /api/threads/:id/archive — tidy the sidebar, keep the memory. The
-// thread row and its messages stay, its distilled summaries stay, it just
-// stops being listed until restored. Delete remains the full purge.
-app.post("/api/threads/:id/archive", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data } = await supabase.from("conversation_threads")
-      .update({ archived: true }).eq("id", req.params.id).eq("user_id", userId).select();
-    if (!data || data.length === 0) return res.status(404).json({ error: "Thread not found" });
-    if (data[0].is_active) {
-      await supabase.from("conversation_threads")
-        .insert({ user_id: userId, is_active: true, platform: "web" });
-    }
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// POST /api/threads/:id/unarchive — bring it back to the list, and to
-// /threads switching, exactly as it was.
-app.post("/api/threads/:id/unarchive", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data } = await supabase.from("conversation_threads")
-      .update({ archived: false }).eq("id", req.params.id).eq("user_id", userId).select("id");
-    if (!data || data.length === 0) return res.status(404).json({ error: "Thread not found" });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/threads/archived — what has been put away, for the sidebar's
-// Archived section. Restoring is the only action offered there.
-app.get("/api/threads/archived", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data, error } = await supabase.from("conversation_threads")
-      .select("id, title, updated_at, messages")
-      .eq("user_id", userId).eq("archived", true)
-      .order("updated_at", { ascending: false }).limit(50);
-    if (error) throw error;
-    res.json((data || []).map(t => ({
-      id: t.id,
-      title: threadDisplayTitle(t.title, t.messages),
-      updated_at: t.updated_at,
-      message_count: Array.isArray(t.messages) ? t.messages.length : 0,
-    })));
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.delete("/api/threads/:id", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    const { data } = await supabase.from("conversation_threads")
-      .delete().eq("id", req.params.id).eq("user_id", userId).select();
-    if (!data || data.length === 0) return res.status(404).json({ error: "Thread not found" });
-
-    // Delete means delete, on every surface. The bot's deleteThread purges the
-    // thread's distilled memory; this endpoint is the webapp's own copy of
-    // that behaviour (services share the database, never code), or the
-    // sidebar X would be the one delete that quietly keeps a summary.
-    await supabase.from("data_vectors").delete()
-      .eq("user_id", userId).eq("service", "memory")
-      .eq("external_id", `thread_${req.params.id}`);
-    await mustWrite("could not clear that conversation's memory", supabase.from("data_vectors").delete()
-      .eq("user_id", userId).eq("service", "memory")
-      .in("item_type", ["conversation_summary", "thread_summary"])
-      .eq("source_metadata->>thread_id", req.params.id));
-
-    // If it was active, create new
-    if (data[0].is_active) {
-      await supabase.from("conversation_threads")
-        .insert({ user_id: userId, is_active: true, platform: "web" });
-    }
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// DELETE /api/threads - delete ALL threads
-app.delete("/api/threads", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  try {
-    await mustWrite("could not delete those conversations", supabase.from("conversation_threads").delete().eq("user_id", userId));
-    // Every thread is going, so every distilled conversation memory goes with
-    // it. Scoped by item_type so fact mirrors sharing the service survive.
-    await supabase.from("data_vectors").delete()
-      .eq("user_id", userId).eq("service", "memory")
-      .in("item_type", ["conversation_summary", "thread_summary"]);
-    await supabase.from("conversation_threads")
-      .insert({ user_id: userId, is_active: true, platform: "web" });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // Chat history
 // POST /api/chat/clear - clear web chat history
 app.post("/api/chat/clear", async (req, res) => {
@@ -4371,101 +4108,6 @@ app.get("/api/chat/history", async (req, res) => {
   }
 
   res.json({ messages: data || [] });
-});
-
-// Activity feed for sidebar timeline
-app.get("/api/chat/activity", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.json({ activities: [] });
-
-  try {
-    const activities = [];
-
-    // Recent inbound messages (user's questions) - group by time gaps
-    const { data: messages } = await supabase
-      .from("web_messages")
-      .select("content, created_at")
-      .eq("user_id", userId)
-      .eq("direction", "inbound")
-      .order("created_at", { ascending: false })
-      .limit(30);
-
-    if (messages) {
-      let lastTime = null;
-      for (const m of messages) {
-        const t = new Date(m.created_at).getTime();
-        // Only show messages that are 30+ min apart (session breaks)
-        if (!lastTime || lastTime - t > 30 * 60 * 1000) {
-          const preview = m.content.length > 60 ? m.content.substring(0, 57) + "..." : m.content;
-          activities.push({ type: "chat", text: preview, time: m.created_at });
-        }
-        lastTime = t;
-      }
-    }
-
-    // Recent memory vectors (conversation summaries, facts)
-    const { data: memVectors } = await supabase
-      .from("data_vectors")
-      .select("content, item_type, source_metadata, updated_at")
-      .eq("user_id", userId)
-      .eq("service", "memory")
-      .order("updated_at", { ascending: false })
-      .limit(20);
-
-    if (memVectors) {
-      for (const v of memVectors.slice(0, 5)) {
-        const label = v.source_metadata?.title || (v.content || "").substring(0, 50);
-        activities.push({ type: "brain", text: label, time: v.updated_at });
-      }
-      // Check for pulse-related vectors
-      const pulseVectors = memVectors.filter(v => {
-        const content = (v.content || "").toLowerCase();
-        return content.includes("pulse") || content.includes("briefing");
-      });
-      if (pulseVectors.length > 0) {
-        const latestPulse = pulseVectors[0];
-        activities.push({
-          type: "pulse",
-          text: pulseVectors.length === 1
-            ? "1 pulse check"
-            : pulseVectors.length + " pulse checks",
-          time: latestPulse.updated_at,
-          count: pulseVectors.length,
-        });
-      }
-    }
-
-    // Sort all by time, most recent first
-    activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-    res.json({ activities: activities.slice(0, 15) });
-  } catch (e) {
-    console.error("[Chat] Activity error:", e.message);
-    res.json({ activities: [] });
-  }
-});
-
-// Delete an activity item
-app.post("/api/chat/activity/delete", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not authenticated" });
-
-  const { type, text } = req.body;
-  if (!type || !text) return res.status(400).json({ error: "type and text required" });
-
-  try {
-    if (type === "brain") {
-      await mustWrite("could not forget that memory", supabase.from("data_vectors").delete().eq("user_id", userId).eq("service", "memory").ilike("content", text.substring(0, 50) + "%"));
-    } else if (type === "team") {
-    } else if (type === "chat") {
-      // Delete web messages matching this preview text
-      await supabase.from("web_messages").delete().eq("user_id", userId).eq("direction", "inbound").ilike("content", text.replace("...", "%"));
-    }
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("[Chat] Activity delete error:", e.message);
-    res.status(500).json({ error: "Delete failed" });
-  }
 });
 
 // Short-lived chat token; the browser connects through this webapp.
@@ -5667,7 +5309,7 @@ app.get("/api/automations", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     const { data, error } = await supabase
       .from("automations")
-      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, trigger_when, trigger_offset_minutes, run_once, watch_words, expires_at, fired_at, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, created_at, updated_at")
+      .select("id, name, description, status, trigger_type, trigger_cron, trigger_human_schedule, trigger_event_source, trigger_event_condition, trigger_when, trigger_offset_minutes, run_once, watch_words, expires_at, fired_at, task_model, task_use_cloud, output_urgent, output_destinations, chain_target_id, project_id, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
@@ -5689,6 +5331,10 @@ app.get("/api/automations", async (req, res) => {
       }
     }
 
+    // The project a routine belongs to, by its emoji and name.
+    const projectIds = [...new Set(autos.map((a) => a.project_id).filter(Boolean))];
+    const { data: projects } = projectIds.length ? await supabase.from("projects").select("id, emoji, name").eq("user_id", userId).in("id", projectIds) : { data: [] };
+    for (const a of autos) { const p = (projects || []).find((x) => x.id === a.project_id); if (p) a.project = { emoji: p.emoji, name: p.name }; }
     // A watch's trigger in words, from the same list the bot runs it by.
     res.json(autos.map((a) => (a.trigger_type === "event" ? { ...a, watch_text: watchKinds.describe(a.trigger_event_source, a.trigger_when, a.trigger_offset_minutes) } : a)));
   } catch (e) {
@@ -5803,6 +5449,14 @@ app.get("/api/watch-kinds", (req, res) => {
 });
 
 // Create saved automation
+// The project a routine is saved into: one of the person's active projects,
+// or none (null). False when the one named is not theirs or not there.
+async function routineProject(userId, id) {
+  if (!id) return null;
+  const { data } = await supabase.from("projects").select("id").eq("user_id", userId).eq("id", String(id)).eq("status", "active").maybeSingle();
+  return data ? data.id : false;
+}
+
 app.post("/api/automations", async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -5812,6 +5466,8 @@ app.post("/api/automations", async (req, res) => {
       task_use_cloud, output_destinations, output_urgent, chain_target_id } = req.body;
 
     if (!name || !task_prompt) return res.status(400).json({ error: "Name and task prompt required" });
+    const project = await routineProject(userId, req.body.project_id);
+    if (project === false) return res.status(400).json({ error: "That project is not here any more." });
     const watch = watchFields(req.body);
     if (!watch.ok) return res.status(400).json({ error: watch.error });
 
@@ -5837,6 +5493,7 @@ app.post("/api/automations", async (req, res) => {
         output_urgent: output_urgent || false,
         chain_target_id: chain_target_id || null,
         platform: "dashboard", chat_id: null,
+        project_id: project,
         ...watch.fields,
       })
       .select()
@@ -5866,6 +5523,10 @@ app.put("/api/automations/:id", async (req, res) => {
       const watch = watchFields(changes);
       if (!watch.ok) return res.status(400).json({ error: watch.error });
       Object.assign(changes, watch.fields);
+    }
+    if (changes.project_id !== undefined) {
+      changes.project_id = await routineProject(userId, changes.project_id);
+      if (changes.project_id === false) return res.status(400).json({ error: "That project is not here any more." });
     }
     const { data, error } = await supabase
       .from("automations")

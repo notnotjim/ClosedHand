@@ -7136,7 +7136,7 @@
 
       return '<div class="auto-card" id="auto-' + a.id + '" onclick="toggleAutoCard(this)">' +
         '<div class="auto-card-header">' +
-          '<div class="auto-card-name">' + esc(a.name) + '</div>' +
+          '<div class="auto-card-name">' + (a.project ? '<span class="auto-project" title="' + esc(a.project.name) + '">' + esc(a.project.emoji) + '</span> ' : '') + esc(a.name) + '</div>' +
           '<span class="auto-status-pill ' + statusClass + '">' + sentenceCase(displayStatus) + '</span>' +
           actionsHtml +
           '<span class="auto-chevron"><span class="chevron-down"></span></span>' +
@@ -7245,6 +7245,7 @@
           document.getElementById('auto-event-words').value = (a.watch_words || []).join(', ');
           document.getElementById('auto-event-once').checked = a.run_once !== false;
         }
+        loadRoutineProjects(a.project_id || '');
         // Mark as editing so save updates instead of creates
         document.getElementById('auto-create-modal').dataset.editId = id;
       });
@@ -7414,11 +7415,21 @@
       selectTrigger('manual');
       selectModel('sonnet');
       selectDest('chat_platforms');
+      loadRoutineProjects('');
       renderSkillsPicker();
       document.getElementById('auto-advanced').style.display = 'none';
       document.getElementById('auto-advanced-toggle').innerHTML = 'Advanced settings <span class="chevron-down" style="margin-left:4px;"></span>';
       document.getElementById('auto-create-modal').classList.add('visible');
       setTimeout(function() { document.getElementById('auto-name-input').focus(); }, 100);
+    }
+
+    // The person's projects, for the routine form's Project choice.
+    async function loadRoutineProjects(selected) {
+      var sel = document.getElementById('auto-project-select');
+      var list = [];
+      try { var r = await fetch('/api/projects'); if (r.ok) list = ((await r.json()).projects || []).filter(function (p) { return p.status === 'active'; }); } catch (e) {}
+      sel.innerHTML = '<option value="">None</option>' + list.map(function (p) { return '<option value="' + escHtml(p.id) + '">' + escHtml(p.emoji + ' ' + p.name) + '</option>'; }).join('');
+      sel.value = list.some(function (p) { return p.id === selected; }) ? selected : '';
     }
 
     function closeCreateAutomationModal() {
@@ -7520,6 +7531,7 @@
             task_use_cloud: true,
             output_destinations: [_selectedDest],
             output_urgent: document.getElementById('auto-urgent-check')?.checked || false,
+            project_id: document.getElementById('auto-project-select').value || null,
           })
         });
         var data = await res.json();
@@ -8856,8 +8868,7 @@
     // messages already sent and in anyone's bookmarks.
     function resolveAndSwitchFromHash() {
       const h = window.location.hash.replace('#', '');
-      // #goals is in messages already sent: goals are on their projects now.
-      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h === 'goals' ? 'projects' : h;
+      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h;
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
@@ -8925,6 +8936,11 @@
       <input type="text" id="auto-name-input" placeholder="e.g. oil-monitor" autocomplete="off" style="margin-bottom:10px;">
       </div>
       </div>
+
+      <!-- A routine in a project runs inside it (lib/automations.js). -->
+      <label for="auto-project-select">Project <span class="project-optional">Optional</span></label>
+      <select id="auto-project-select" style="width:100%;margin-bottom:4px;"><option value="">None</option></select>
+      <p class="auto-project-hint" style="margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.45;">In a project, it runs with the project's instructions and files, and its results come in the project's conversation.</p>
 
       <label for="auto-prompt-input">What should it do?</label>
       <textarea id="auto-prompt-input" rows="2" style="width:100%;background:var(--raised);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;padding:10px;color:var(--fg);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-bottom:10px;" placeholder="Describe what the agent should do…"></textarea>

@@ -262,7 +262,7 @@
     }
     const del = btn("goal-small goal-quiet project-delete", "Delete project", () => {
       const ask = el("div", "project-confirm");
-      ask.append(el("span", "", `Delete ${p.emoji} ${p.name}? This deletes its goal, record, notes and conversation. Files and Context Notes stay in Context Brain, and nothing in your email or calendar is touched.`));
+      ask.append(el("span", "", `Delete ${p.emoji} ${p.name}? This deletes its goal, record, notes and conversation. Its routines carry on without it, files and Context Notes stay in Context Brain, and nothing in your email or calendar is touched.`));
       ask.append(
         btn("goal-small", "Delete", async () => { try { await api(`/api/projects/${p.id}`, { method: "DELETE" }); state.editing = null; await load(); } catch (e) { showError(e.message); } }),
         btn("goal-small goal-quiet", "Keep it", () => ask.replaceWith(del)));
