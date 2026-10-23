@@ -59,8 +59,10 @@ test('a query sent as a POST body is a lookup; content, identifiers and files ar
   // A request in a script that also reads a file it saved is not sending that file.
   assert.equal(guard.outboundIntent('sandbox_exec', { code: 'import requests, json\nr = requests.post("https://new.example.net/search", json={"q": "cafes"})\nopen("/workspace/r.json", "w").write(r.text)\nprint(json.load(open("/workspace/r.json"))["total"])' }, store), null);
 });
-test('the list keeps only sends, deletes, changes and disconnects', () => {
-  assert.ok(!ACTIONS_NEEDING_CONFIRMATION.includes('api_request'));
-  assert.ok(!ACTIONS_NEEDING_CONFIRMATION.includes('sandbox_gateway'));
-  for (const name of ['gmail_send', 'gcal_delete_event', 'gcal_update_event', 'disconnect_service']) assert.ok(ACTIONS_NEEDING_CONFIRMATION.includes(name), name);
+// The API tools were once left off, so a raw write to a connected service ran
+// without asking: two emails went out straight from Gmail drafts that way.
+// Their writes are asked about, as their descriptions say; reads are not
+// (engine.js lets GETs and read-only GraphQL through).
+test('the list holds sends, deletes, changes and disconnects, and writes through the API tools', () => {
+  for (const name of ['gmail_send', 'gmail_send_draft', 'gcal_delete_event', 'gcal_update_event', 'disconnect_service', 'api_request', 'sandbox_gateway']) assert.ok(ACTIONS_NEEDING_CONFIRMATION.includes(name), name);
 });
