@@ -157,7 +157,8 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
   app.get('/railway/return', (req, res) => {
     let back = null;
     try { back = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString('utf8')).b; } catch (_) {}
-    if (!railwayReturn(back)) return res.status(400).type('text').send("That link doesn't lead back to a Closedhand.");
+    // Opened any other way, it is a page like any missing one.
+    if (!railwayReturn(back)) return res.status(404).set('Cache-Control', 'no-cache').type('html').send(render('not-found.html'));
     const next = new URL('/api/move/railway/return', back);
     for (const key of ['code', 'state', 'error']) if (typeof req.query[key] === 'string') next.searchParams.set(key, req.query[key]);
     res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(next.href);

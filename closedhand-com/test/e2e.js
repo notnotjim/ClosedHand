@@ -930,7 +930,8 @@ test("Railway's sign-in for Go always-on goes straight back to the Closedhand th
   assert.equal(new URL(cancelled.headers.get('location')).searchParams.get('error'), 'access_denied');
   for (const back of ['https://evil.example', 'http://quiet-isle-53.closedhand.ai', 'https://quiet-isle-53.closedhand.ai/elsewhere', 'javascript:alert(1)', '']) {
     const r = await fetch(`${base}/railway/return?code=abc&state=${state(back)}`, { redirect: 'manual' });
-    assert.equal(r.status, 400, back || 'empty');
+    assert.equal(r.status, 404, back || 'empty');
+    assert.match(await r.text(), /Nothing here/, 'the site\'s own page, as for anything missing');
   }
-  assert.equal((await fetch(`${base}/railway/return?code=abc&state=not-json`, { redirect: 'manual' })).status, 400);
+  assert.equal((await fetch(`${base}/railway/return`, { redirect: 'manual' })).status, 404);
 });
