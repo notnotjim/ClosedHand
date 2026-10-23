@@ -8,6 +8,8 @@ require("dotenv").config();
 // still work through process.env, each one is logged, and programs started
 // from here inherit none of them (crypto-tokens.js, guardEnvironment).
 require("./crypto-tokens").guardEnvironment();
+// A copy of the log in the storage folder, which updates do not wipe (lib/log-file.js).
+require("./lib/log-file").keepLog("bot");
 
 // Stop at boot without a valid encryption key or with a missing or placeholder
 // shared secret, rather than store sign-ins unencrypted or accept forged
