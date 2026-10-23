@@ -38,12 +38,12 @@ test("every address that sends mail is known, and nothing else is", () => {
 
 test("a raw send through the API is refused in the chat and in background tasks", () => {
   const engine = read("lib/engine.js");
-  const refuse = engine.indexOf('require("./mail-send-url").isMailSendUrl(block.input?.url)');
+  const refuse = engine.indexOf('require("./send-gate").isMailSendUrl(block.input?.url)');
   assert.ok(refuse > 0 && refuse < engine.indexOf("let needsConfirmation = (ACTIONS_NEEDING_CONFIRMATION.includes(block.name)"), "refused before anything else");
   const agents = read("lib/agents.js");
-  assert.match(agents, /const \{ isMailSendUrl \} = require\("\.\/mail-send-url"\);/);
+  assert.match(agents, /sendGate\.isMailSendUrl\(block\.input\?\.url\)\) \{\n\s*toolResults\.push\(\{ type: "tool_result", tool_use_id: block\.id, content: JSON\.stringify\(\{ error: sendGate\.RAW_SEND_REFUSAL \}\) \}\);/);
   assert.doesNotMatch(agents, /function isMailSendUrl/, "one definition");
-  assert.match(agents, /const AGENT_CONFIRM_SENDS = new Set\(\["gmail_send", "gmail_reply", "gmail_send_draft",/);
+  assert.deepEqual([...require("../lib/send-gate").MAIL_SEND_TOOLS], ["gmail_send", "gmail_reply", "gmail_send_draft", "outlook_send", "outlook_reply", "send_mail", "reply_to_mail"]);
 });
 
 test("sending a draft is asked about with what Gmail holds now, the person's edits included", async () => {
