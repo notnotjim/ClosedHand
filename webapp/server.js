@@ -1879,27 +1879,34 @@ app.use(async (req, res, next) => {
   }
 });
 
-// --- Moving this Closedhand to another computer (move.js) -----------------
-// Settings starts it with the new Closedhand's address and setup code, then
-// follows it here.
-app.post("/api/move/start", async (req, res) => {
-  try {
-    const status = move.startMove({ address: (req.body || {}).address, code: (req.body || {}).code }, {
-      pool: supabase._pool,
-      storageDir: moveStorage() === "pg" ? null : moveStorage(),
-      marker: moveMarker,
-      restartBot,
-      botMoveState,
-      stopTunnel: () => phoneAccess.shutdown(),
-      personalUrl: async () => (await getRuntimeConf("PHONE_PERMANENT_URL")) || null,
-      exitSoon,
-    });
-    res.json(status);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
+// --- Moving this Closedhand to Railway (railway-move.js, move.js) ----------
+// Settings' one button sends the browser to Railway's sign-in. Railway sends
+// it back here, through closedhand.com, and Closedhand sets itself up there
+// and moves across; Settings follows it.
+const railwayMove = require("./railway-move");
+const outboundDeps = () => ({
+  pool: supabase._pool,
+  storageDir: moveStorage() === "pg" ? null : moveStorage(),
+  marker: moveMarker,
+  restartBot,
+  botMoveState,
+  stopTunnel: () => phoneAccess.shutdown(),
+  personalUrl: async () => (await getRuntimeConf("PHONE_PERMANENT_URL")) || null,
+  exitSoon,
 });
-app.get("/api/move/status", (req, res) => res.json(move.outboundStatus()));
+app.post("/api/move/railway", (req, res) => {
+  if (!["idle", "failed"].includes(move.outboundStatus().step)) return res.status(400).json({ error: "A move is already under way." });
+  try { res.json({ url: railwayMove.begin(req.get("origin")) }); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get("/api/move/railway/return", (req, res) => {
+  railwayMove.finish({ code: req.query.code, state: req.query.state, error: req.query.error },
+    { startMove: (to) => move.startMove(to, outboundDeps()) });
+  res.redirect("/?dash=%23settings");
+});
+app.get("/api/move/status", (req, res) => {
+  const out = move.outboundStatus();
+  res.json(out.step === "idle" && railwayMove.status() ? railwayMove.status() : out);
+});
 // Settings says when a newer Closedhand is out, and the one step that gets it
 // here (release-check.js).
 app.get("/api/update", async (req, res) => {
@@ -4327,7 +4334,7 @@ app.get("/api/status", async (req, res) => {
       availableServices: getAvailableServices(),
       // Settings offers to move to Railway where a move can start: not on a
       // host already (SETUP_CODE), and with a storage folder to mark it in.
-      canGoAlwaysOn: !setupCode.enabled && moveMarker.available(),
+      canGoAlwaysOn: !setupCode.enabled && moveMarker.available() && railwayMove.available(),
     });
   } catch (err) {
     console.error("Status error:", err.message);

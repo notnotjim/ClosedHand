@@ -7,6 +7,16 @@ const express = require('express');
 const { createSessions, equal } = require('./lib/session');
 
 const PUBLIC = path.join(__dirname, 'public');
+// Where Railway's sign-in may be sent back to: a personal URL, or the
+// computer running Closedhand, at its root.
+function railwayReturn(value) {
+  let u;
+  try { u = new URL(String(value || '')); } catch (_) { return false; }
+  if (u.username || u.password || u.pathname !== '/' || u.search || u.hash) return false;
+  if (u.protocol === 'https:') return require('./public/entry-navigation').registeredAddress(u.origin);
+  return u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname);
+}
+
 // Pages name their stylesheets, scripts and images with a fingerprint of the
 // file (?v=...). A changed file gets a new address, so no copy of the old one,
 // in a browser or at Cloudflare, can ever be paired with a new page. That
@@ -138,6 +148,20 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
   catch (e) { console.error('[assistant email] The mail worker did not start:', e.message); }
   require('./lib/assistant-mail-relay').createRelay({ db: mailDb, owner: req => sessions.owner(req), secret, env, baseUrl, ready: () => !!mailWorker }).register(app);
   app.get('/assistant-email/confirm', (req, res) => { res.set('Cache-Control', 'no-store').type('html').send(render('assistant-email-confirm.html')); });
+
+  // Railway's sign-in for Go always-on comes back to this one address, the
+  // only one Railway knows, and goes straight on to the Closedhand that asked
+  // (webapp/railway-move.js): at its personal URL, or on its own computer.
+  // Nothing is kept here, and the code is no use without the verifier that
+  // stays on that computer.
+  app.get('/railway/return', (req, res) => {
+    let back = null;
+    try { back = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString('utf8')).b; } catch (_) {}
+    if (!railwayReturn(back)) return res.status(400).type('text').send("That link doesn't lead back to a Closedhand.");
+    const next = new URL('/api/move/railway/return', back);
+    for (const key of ['code', 'state', 'error']) if (typeof req.query[key] === 'string') next.searchParams.set(key, req.query[key]);
+    res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(next.href);
+  });
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
   app.use((req, res) => res.status(404).set('Cache-Control', 'no-cache').type('html').send(render('not-found.html')));

@@ -914,3 +914,23 @@ test('Closedhand+: checkout, a signed webhook, the computer collects its key, ca
     assert.equal((await db.query('SELECT 1 FROM plus_subscriptions WHERE owner_id = $1', [ownerId])).rowCount, 0);
   } finally { other.close(); }
 });
+
+test("Railway's sign-in for Go always-on goes straight back to the Closedhand that asked, and nowhere else", async () => {
+  const state = (b) => Buffer.from(JSON.stringify({ b, s: 'nonce' })).toString('base64url');
+  for (const back of ['https://quiet-isle-53.closedhand.ai', 'http://localhost:3000', 'http://127.0.0.1:4100']) {
+    const r = await fetch(`${base}/railway/return?code=abc&state=${state(back)}`, { redirect: 'manual' });
+    assert.equal(r.status, 302, back);
+    const to = new URL(r.headers.get('location'));
+    assert.equal(to.origin + to.pathname, back + '/api/move/railway/return');
+    assert.equal(to.searchParams.get('code'), 'abc');
+    assert.equal(to.searchParams.get('state'), state(back));
+    assert.equal(r.headers.get('referrer-policy'), 'no-referrer');
+  }
+  const cancelled = await fetch(`${base}/railway/return?error=access_denied&state=${state('http://localhost:3000')}`, { redirect: 'manual' });
+  assert.equal(new URL(cancelled.headers.get('location')).searchParams.get('error'), 'access_denied');
+  for (const back of ['https://evil.example', 'http://quiet-isle-53.closedhand.ai', 'https://quiet-isle-53.closedhand.ai/elsewhere', 'javascript:alert(1)', '']) {
+    const r = await fetch(`${base}/railway/return?code=abc&state=${state(back)}`, { redirect: 'manual' });
+    assert.equal(r.status, 400, back || 'empty');
+  }
+  assert.equal((await fetch(`${base}/railway/return?code=abc&state=not-json`, { redirect: 'manual' })).status, 400);
+});

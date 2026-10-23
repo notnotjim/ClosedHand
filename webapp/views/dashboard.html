@@ -2139,15 +2139,7 @@
           .furl-handle.always-on-handle:focus-visible { border-radius:4px; outline-offset:2px; }
           .always-on-body { max-width:60ch; padding:4px 0 0; font-size:13px; line-height:1.55; color:var(--muted); }
           .always-on-body p { margin:0 0 10px; }
-          .always-on-body a.always-on-deploy { display:inline-block; border:1px solid rgba(var(--fg-rgb),0.16); border-radius:6px; padding:4px 10px; color:var(--accent); font-size:12px; text-decoration:none; }
-          .always-on-body a.always-on-deploy:hover { border-color:var(--accent); }
-          .always-on-body a.always-on-deploy[hidden] { display:none; }
-          .always-on-move { margin-top:16px; }
-          .always-on-move[hidden] { display:none; }
-          .always-on-move label { display:block; margin:10px 0 4px; font-size:12px; }
-          .always-on-move input { display:block; width:100%; max-width:420px; box-sizing:border-box; padding:8px 12px; border:1px solid rgba(var(--fg-rgb),0.16); border-radius:8px; background:var(--raised); color:var(--fg); font:inherit; font-size:14px; }
-          .always-on-move input:focus-visible { outline:2px solid var(--accent-strong); outline-offset:2px; }
-          .always-on-move button { margin-top:12px; }
+          .always-on-body #move-go[hidden] { display:none; }
           .always-on-status { margin-top:12px; color:var(--fg); }
           .always-on-status[hidden] { display:none; }
           .always-on-status a { color:var(--accent); }
@@ -2810,21 +2802,15 @@
           </div>
 
           <!-- Always-on: Closedhand moves to Railway, in the person's own
-               Railway account, for whoever's computer sleeps (move.js).
+               Railway account, for whoever's computer sleeps: one button
+               (railway-move.js), then the move itself (move.js).
                Shown where a move can start (canGoAlwaysOn in /api/status). -->
           <div class="always-on" id="always-on" hidden>
             <button type="button" class="furl-handle always-on-handle" aria-expanded="false" aria-controls="always-on-body" onclick="toggleAlwaysOn()">Go always-on <svg class="furl-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
             <div class="always-on-body" id="always-on-body" hidden>
               <p>Railway runs Closedhand for you in Amsterdam, on all the time. It keeps your data and bills you directly, about $10 to $20 a month. Everything moves across, and this computer stops running Closedhand.</p>
-              <a class="always-on-deploy" href="https://railway.com/deploy/ob3IfQ" target="_blank" rel="noopener">Set it up on Railway</a>
-              <form class="always-on-move" id="always-on-move" onsubmit="startMove(event)">
-                <p>Then paste what Railway shows for it:</p>
-                <label for="move-address">Its web address</label>
-                <input id="move-address" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="name.up.railway.app">
-                <label for="move-code">Its setup code</label>
-                <input id="move-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SETUP_CODE in the webapp service's Variables">
-                <button type="submit" class="account-action-btn" id="move-go">Move to Railway</button>
-              </form>
+              <p>Railway asks you to sign in or make an account and let Closedhand set itself up there.</p>
+              <button type="button" class="account-action-btn" id="move-go" onclick="startRailwayMove()">Move to Railway</button>
               <p class="always-on-status" id="move-status" role="status" hidden></p>
             </div>
           </div>
@@ -5156,13 +5142,12 @@
       }
     }
     function showMove(st) {
-      var form = document.getElementById('always-on-move');
-      var busy = ['checking', 'pausing', 'sending', 'importing', 'handing-over'].indexOf(st.step) >= 0;
-      form.hidden = busy || st.step === 'done';
-      document.querySelector('.always-on-deploy').hidden = busy || st.step === 'done';
+      var busy = ['setting-up', 'checking', 'pausing', 'sending', 'importing', 'handing-over'].indexOf(st.step) >= 0;
+      document.getElementById('move-go').hidden = busy || st.step === 'done';
       document.getElementById('move-go').disabled = busy;
       if (st.url) _moveUrl = st.url;
-      if (st.step === 'sending') moveLine('Moving everything across, ' + st.sentMb + ' MB so far.');
+      if (st.step === 'setting-up') moveLine('Setting Closedhand up on Railway. This takes a few minutes.');
+      else if (st.step === 'sending') moveLine('Moving everything across, ' + st.sentMb + ' MB so far.');
       else if (st.step === 'importing' || st.step === 'handing-over') moveLine('Almost done.');
       else if (busy) moveLine('Starting the move.');
       else if (st.step === 'done') moveLine('Done. Closedhand now runs on Railway, at', st.url || _moveUrl);
@@ -5182,16 +5167,17 @@
         else _movePoll = setTimeout(followMove, 3000);
       }
     }
-    async function startMove(ev) {
-      ev.preventDefault();
-      document.getElementById('move-go').disabled = true;
+    // Off to Railway's sign-in; it comes back to Settings, which follows the rest.
+    async function startRailwayMove() {
+      var go = document.getElementById('move-go');
+      go.disabled = true;
       try {
-        var r = await fetch('/api/move/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: document.getElementById('move-address').value, code: document.getElementById('move-code').value }) });
+        var r = await fetch('/api/move/railway', { method: 'POST' });
         var j = await r.json().catch(function () { return {}; });
-        if (!r.ok) { document.getElementById('move-go').disabled = false; return moveLine(j.error || 'The move could not start.'); }
-        showMove(j);
+        if (!r.ok || !j.url) { go.disabled = false; return moveLine(j.error || 'The move could not start.'); }
+        window.top.location.href = j.url;
       } catch (e) {
-        document.getElementById('move-go').disabled = false;
+        go.disabled = false;
         moveLine('Could not reach Closedhand. Try again.');
       }
     }
