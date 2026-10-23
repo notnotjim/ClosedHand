@@ -392,25 +392,24 @@
       border-color: var(--muted);
     }
 
-    /* Shopify uses the browser's modal focus and Escape handling. */
-    #shopify-modal { margin: auto; color: inherit; padding: 28px; }
-    #shopify-modal::backdrop { background: rgba(var(--bg-rgb),0.65); }
-    #shopify-modal input { font-size: 16px; min-height: 44px; }
-    #shopify-modal .modal-desc { color: var(--muted); line-height: 1.55; margin: 16px 0; }
-    #shopify-modal label { margin-top: 18px; color: var(--fg); }
+    /* Shopify's box is a <dialog>, for the browser's own focus and Escape
+       handling. Everything else about it is the shared box below. */
+    #shopify-modal { margin: auto; color: inherit; }
+    #shopify-modal input + label, #shopify-modal details label { margin-top: 10px; }
     #shopify-modal a { color: var(--accent); }
-    #shopify-modal summary { cursor: pointer; margin-top: 20px; }
-    #shopify-modal .modal-actions { flex-wrap: wrap; gap: 12px; }
-    #shopify-modal .btn-modal { min-height: 44px; }
+    #shopify-modal summary { cursor: pointer; margin-top: 12px; font-size: 13px; color: var(--muted); }
 
     /* Shared modal styles */
+    .modal-overlay, dialog.modal::backdrop {
+      background: rgba(var(--bg-rgb),0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
     .modal-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(var(--bg-rgb),0.6);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
       z-index: 100;
       align-items: center;
       justify-content: center;
@@ -436,8 +435,9 @@
     #apple-modal .mac-code-input { width:96px; padding:7px 10px; background:var(--raised); border:1px solid rgba(var(--fg-rgb),0.16); border-radius:8px; color:var(--fg); font-size:14px; font-family:ui-monospace,monospace; letter-spacing:2px; text-transform:uppercase; text-align:center; outline:none; }
     #apple-modal .mac-code-input:focus { border-color:var(--accent); }
     #apple-modal .mac-step-note { flex-basis:100%; margin-left:32px; font-size:13px; color:var(--muted); line-height:1.5; }
+    /* Solid, so nothing behind the box shows through its words. */
     .modal {
-      background: rgba(var(--fg-rgb),0.1);
+      background: color-mix(in srgb, var(--fg) 10%, var(--bg));
       border: 1px solid rgba(var(--fg-rgb),0.16);
       border-radius: 14px;
       width: 90%;
@@ -500,6 +500,12 @@
     .modal input:focus {
       outline: none;
       border-color: rgba(var(--fg-rgb),0.4);
+    }
+
+    /* Phones zoom the page into a field set under 16px, so every box's
+       fields are 16px on a touch screen. */
+    @media (pointer: coarse) {
+      .modal :is(input, select, textarea) { font-size: 16px; }
     }
 
     /* The New Agent box holds every field at once, so it is set tighter than
@@ -9125,12 +9131,11 @@
         </div>
       </div>
       <div id="shopify-own-app" hidden>
-        <p class="modal-desc">Use an app installed on your own store. Find its Client ID and Client secret in <a href="https://dev.shopify.com/dashboard" target="_blank" rel="noopener noreferrer">Shopify's Dev Dashboard</a>, under Settings.</p>
+        <p class="modal-desc">Make an app in <a href="https://dev.shopify.com/dashboard" target="_blank" rel="noopener noreferrer">Shopify's Dev Dashboard</a>, choose what it can access and install it on your store. Its Client ID and Client secret are under Settings. The app and store must belong to the same Shopify organization.</p>
         <label for="shopify-client-id">Client ID</label>
         <input id="shopify-client-id" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
         <label for="shopify-client-secret">Client secret</label>
         <input id="shopify-client-secret" type="password" autocomplete="off">
-        <p class="modal-desc">The app and store must belong to the same Shopify organization. Choose the app's permissions in Shopify before connecting.</p>
         <details>
           <summary>Use an existing access token instead</summary>
           <label for="shopify-token">Admin API access token</label>
