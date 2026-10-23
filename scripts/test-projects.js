@@ -334,7 +334,7 @@ test("the dashboard has a Projects tab, Context Brain has no Ongoing, and each p
   assert.match(server, /require\("\.\/projects"\)\.register\(app, \{ db: supabase, userId: getUserIdFromRequest, withAppearance: assets\.withAppearance \}\);/);
   assert.doesNotMatch(server, /from\("matters"\)/);
   const web = read("webapp/projects.js");
-  assert.match(dash, /<p class="goals-intro">Things you're working on over days or weeks, like a goal, trip or project at work\.<br>Each has its own emoji\. Start any message with it and Closedhand brings in that project's history, status and files\.<\/p>/);
+  assert.match(dash, /<p class="goals-intro">Things you're working on over days or weeks, like a goal, trip or project at work\.<br>Each has its own emoji\. Start any message with it and Closedhand answers using that project's history, status and files\.<\/p>/);
   for (const route of ['app.get("/api/projects/find"', 'app.get("/api/projects"', 'app.post("/api/projects"', 'app.patch("/api/projects/:id"', 'app.post("/api/projects/:id/merge"', 'app.delete("/api/projects/:id"', 'app.post("/api/projects/:id/files"', 'app.get("/page/project/:id"']) assert.ok(web.includes(route), route);
   assert.ok(JSON.parse(read("closedhand-com/workers/edge/direct-routes.json")).includes("/page/*"), "the page reaches the computer through the tunnel");
   const { projectHtml } = require("../webapp/projects");
