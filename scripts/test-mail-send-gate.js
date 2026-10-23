@@ -57,10 +57,11 @@ test("sending a draft is asked about with what Gmail holds now, the person's edi
   const live = { id: "r-draft-1", message: { id: "msg-77", payload: { mimeType: "multipart/alternative",
     headers: [{ name: "To", value: "editor@harbourpost.example" }, { name: "Subject", value: "Racquets for the shoot" }],
     parts: [{ mimeType: "text/plain", body: { data: Buffer.from("Hi Mara,\nTwo racquets land Monday.").toString("base64url") } }, { mimeType: "text/html", body: { data: "" } }] } } };
-  const describe = new Function("draftAccountFor", "googleReqFor", "liveGmailDraft", src("describeGmailDraft") + "\nreturn describeGmailDraft;")(
+  const plain = new Function(handlers.slice(handlers.indexOf("function gmailPlainText("), handlers.indexOf("\n}\n", handlers.indexOf("function gmailPlainText(")) + 2) + "\nreturn gmailPlainText;")();
+  const describe = new Function("draftAccountFor", "googleReqFor", "liveGmailDraft", "gmailPlainText", src("describeGmailDraft") + "\nreturn describeGmailDraft;")(
     async () => "hi@kestrelpadel.example",
     () => async () => live,
-    async (api, id) => ({ draftId: "r-draft-1", draft: await api("GET", id) }));
+    async (api, id) => ({ draftId: "r-draft-1", draft: await api("GET", id) }), plain);
   assert.deepEqual(await describe({ draft_id: "msg-77" }), { draft_id: "r-draft-1", to: "editor@harbourpost.example", subject: "Racquets for the shoot",
     body: "Hi Mara,\nTwo racquets land Monday.", account: "hi@kestrelpadel.example" });
 });
