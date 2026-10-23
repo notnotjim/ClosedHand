@@ -54,5 +54,6 @@ test('older cached records are brought to the shape, Outlook from its next list'
   assert.match(sync, /await upgradeCachedEmails\(userId, "gmail", gmailLink\)/);
   assert.match(sync, /await upgradeCachedEmails\(userId, "gmail_" \+ acct\.slug, gmailLink\)/);
   assert.match(sync, /await upgradeCachedEmails\(userId, "imap"\)/);
-  assert.match(sync, /const newItems = items\.filter\(i => !cachedIds\.has\(i\.external_id\) \|\| stale\.has\(i\.external_id\)\);/);
+  // Drafts are rewritten every sync too: they change, the rest of the mail does not.
+  assert.match(sync, /const newItems = items\.filter\(i => !cachedIds\.has\(i\.external_id\) \|\| stale\.has\(i\.external_id\) \|\| draftIds\.has\(i\.external_id\)\);/);
 });

@@ -43,14 +43,14 @@ test("a raw send through the API is refused in the chat and in background tasks"
   const agents = read("lib/agents.js");
   assert.match(agents, /sendGate\.isMailSendUrl\(block\.input\?\.url\)\) \{\n\s*toolResults\.push\(\{ type: "tool_result", tool_use_id: block\.id, content: JSON\.stringify\(\{ error: sendGate\.RAW_SEND_REFUSAL \}\) \}\);/);
   assert.doesNotMatch(agents, /function isMailSendUrl/, "one definition");
-  assert.deepEqual([...require("../lib/send-gate").MAIL_SEND_TOOLS], ["gmail_send", "gmail_reply", "gmail_send_draft", "outlook_send", "outlook_reply", "send_mail", "reply_to_mail"]);
+  assert.deepEqual([...require("../lib/send-gate").MAIL_SEND_TOOLS], ["gmail_send", "gmail_reply", "outlook_send", "outlook_reply", "send_mail", "reply_to_mail", "gmail_send_draft", "outlook_send_draft", "send_mail_draft"]);
 });
 
 test("sending a draft is asked about with what Gmail holds now, the person's edits included", async () => {
   const engine = read("lib/engine.js");
-  assert.match(engine, /if \(needsConfirmation && block\.name === "gmail_send_draft"\) \{\n\s*try \{ Object\.assign\(block\.input, await require\("\.\/tools\/handlers"\)\.describeGmailDraft\(block\.input\)\); \}/);
+  assert.match(engine, /if \(needsConfirmation && require\("\.\/send-gate"\)\.DRAFT_SEND_TOOLS\.has\(block\.name\)\) \{\n\s*try \{ Object\.assign\(block\.input, await require\("\.\/tools\/handlers"\)\.describeDraft\(block\.name, block\.input\)\); \}/);
   assert.match(engine, /gmail_send_draft: "Send this draft \(Gmail\)",/);
-  assert.match(engine, /\(gmail_send\|gmail_reply\|gmail_send_draft\|outlook_send/, "it is a send: the bulk-sender switch and the claims check treat it as one");
+  assert.equal((engine.match(/require\("\.\/send-gate"\)\.MAIL_SEND_TOOLS\.has\(block\.name\)/g) || []).length, 2, "it is a send: the bulk-sender switch and the claims check treat it as one");
   // The card's facts come from the live draft.
   const handlers = read("lib/tools/handlers.js");
   const src = (name) => { const a = handlers.indexOf(`async function ${name}(`); return handlers.slice(a, handlers.indexOf("\n}\n", a) + 2); };
@@ -68,5 +68,5 @@ test("sending a draft is asked about with what Gmail holds now, the person's edi
 
 test("the tool tells the model it is only for when the person says to send", () => {
   const defs = read("lib/tools/definitions.js");
-  assert.match(defs, /name: "gmail_send_draft",\n\s*description: "Send a Gmail draft as it now stands in Gmail, with any changes the person made to it there\. Use it when they say to send a draft, never on your own judgement: they are always asked first/);
+  assert.match(defs, /name: "gmail_send_draft",\n\s*groups: \["gmail"\],\n\s*description: "Send a Gmail draft as it now stands in Gmail, with any changes the person made to it there\. Use it when they say to send a draft, never on your own judgement: they are always asked first/);
 });

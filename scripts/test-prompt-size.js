@@ -102,7 +102,7 @@ test("every on-demand tool is still named in the prompt's list", () => {
   const sent = new Set(engine.getAllTools().map((t) => t.name));
   for (const t of INTERNAL_TOOLS) {
     if (t.agentOnly || sent.has(t.name) || t.needs) continue;
-    if (/^(outlook|onedrive|send_mail|reply_to_mail|create_mail_draft|caldav|bank)_?/.test(t.name)) continue; // not connected here
+    if (["outlook", "onedrive", "imap_mail", "caldav", "bank"].includes(t.groups?.[0])) continue; // not connected here
     assert.ok(new RegExp(`\\b${t.name}\\b`).test(list), t.name);
   }
 });

@@ -63,7 +63,7 @@ test('the time comes last, so each check starts with the same prompt and provide
 // change goes back to them, to ask for in chat.
 test('Pulse can only look things up: nothing that sends, changes, deletes or fetches an address', () => {
   const scope = pulseToolScope(all, appReadOnly);
-  const changes = ['gmail_send', 'gmail_reply', 'send_mail', 'gmail_create_draft', 'gmail_draft_update', 'gmail_send_draft', 'gcal_create_event', 'gcal_update_event',
+  const changes = ['gmail_send', 'gmail_reply', 'send_mail', 'gmail_create_draft', 'gmail_draft_update', 'gmail_send_draft', 'outlook_create_draft', 'outlook_draft_update', 'outlook_send_draft', 'update_mail_draft', 'send_mail_draft', 'gcal_create_event', 'gcal_update_event',
     'gcal_delete_event', 'calendar_delete_event', 'outlook_send', 'drive_send_file', 'update_settings', 'delete_fact', 'api_request',
     'sandbox_exec', 'sandbox_browse', 'bridge_shell_run', 'bridge_files_write', 'automation_create', 'booking_update', 'web_fetch', 'shopify_create_refund'];
   for (const name of changes) {
