@@ -113,9 +113,9 @@ test("every runner uses the gate: chat, background tasks, schedules and automati
   assert.match(engine, /\} else if \(browserSendAt\) \{\n\s*confirmSummary = require\("\.\/send-gate"\)\.browserSendCard\(browserSendAt\);/);
   assert.match(engine, /usedCloudBrowser && \/\^bridge_\(browser\|input\)_\/\.test\(block\.name\) && !browserSendAt/, "the switch-machines question never hides a send");
   const agents = read("lib/agents.js");
-  assert.match(agents, /sendGate\.MAIL_SEND_TOOLS\.has\(block\.name\) && sendConfirmRequired\(userStore\)/);
+  assert.match(agents, /sendGate\.sendsToOthers\(block\.name, block\.input\) && sendConfirmRequired\(userStore\)/);
   assert.match(agents, /userMcp\.isUserMcpTool\(block\.name\) && userMcp\.needsMcpConfirmation\(userId, block\.name\) \? userMcp\.mcpQuestion\(/);
-  assert.match(agents, /sendGate\.mailSendQuestion\(pendingSend\.name, pendingSend\.input\)/);
+  assert.match(agents, /sendGate\.sendQuestion\(pendingSend\.name, pendingSend\.input\)/);
   for (const [file, store] of [["lib/automations.js", "freshStore"], ["lib/scheduling.js", "ctx.activeUserStore"]]) {
     const src = read(file);
     const at = src.indexOf(`const held = await sendGate.unattended(block.name, block.input, userId, ${store});`);

@@ -65,6 +65,8 @@ test("an event time without an offset is where the user is, never the calendar's
   assert.equal(tz.eventInstant("2026-01-15T09:00:00", "Europe/London").toISOString(), "2026-01-15T09:00:00.000Z");
   const handlers = read("lib/tools/handlers.js");
   assert.equal((handlers.match(/googleEventTime\(toolInput\.(start|end), tz\)/g) || []).length, 4, "Google create and update");
-  assert.equal((handlers.match(/eventInstant\(toolInput\.(start|end)/g) || []).length, 4, "Outlook create and update");
+  // Outlook's create and update share one conversion (outlookEventFields).
+  assert.match(handlers, /function outlookEventFields\(input\) \{[\s\S]*?const zone = tz\.getUserTimezone\(ctx\.store\);\n\s*const at = \(t\) => \(\{ dateTime: tz\.eventInstant\(t, zone\)/, "Outlook create and update");
+  assert.equal((handlers.match(/outlookEventFields\(toolInput\)/g) || []).length, 2);
   assert.doesNotMatch(handlers, /new Date\(toolInput\.(start|end)\)\.toISOString\(\)/, "no event time read by the server's clock");
 });

@@ -102,7 +102,7 @@ test('an Outlook draft edited since Closedhand last saw it is handed back, not o
   const msApi = async (method, url, body) => { if (method === 'PATCH') { patches.push(body); return { changeKey: 'ck-3' }; } return live; };
   const run = new Function('ctx', 'require', 'draftLastSeen', 'changedDraft', 'isMicrosoftConnected', 'draftAccountFor', 'microsoftReqFor', 'liveOutlookMessage', 'outlookWording', 'outlookRecipients',
     fnSrc('draftSeenVersions') + '\nreturn async (toolInput) => { switch ("outlook_draft_update") {\n' + caseSrc + '\n} };')(
-    { activeUserId: 'u1' }, (m) => (m === 'cheerio' ? require('cheerio') : { supabase }), lastSeen, changedDraft, () => true, async () => 'ops@kestrelpadel.example', () => msApi,
+    { activeUserId: 'u1' }, (m) => (m === 'cheerio' ? require('cheerio') : m === '../gmail-draft' ? require('../lib/gmail-draft') : { supabase }), lastSeen, changedDraft, () => true, async () => 'ops@kestrelpadel.example', () => msApi,
     (api, id) => api('GET', id),
     new Function('require', plainSrc('outlookWording') + '\nreturn outlookWording;')((m) => require(m)),
     (text) => String(text).split(',').map((address) => ({ emailAddress: { address: address.trim() } })));
@@ -115,7 +115,7 @@ test('an Outlook draft edited since Closedhand last saw it is handed back, not o
   assert.equal(patches.length, 0, 'nothing overwritten');
   const done = await run({ draft_id: 'AAMk-1', body: 'Hi Mara,\nTwo racquets, a pavilion banner and balls.' });
   assert.equal(done.success, true);
-  assert.deepEqual(patches[0], { body: { contentType: 'Text', content: 'Hi Mara,\nTwo racquets, a pavilion banner and balls.' } }, 'only the wording changes');
+  assert.deepEqual(patches[0], { body: { contentType: 'HTML', content: '<div>Hi Mara,</div>\n<div>Two racquets, a pavilion banner and balls.</div>' } }, 'only the wording changes, and an HTML draft stays HTML');
   assert.equal(lastSeen.get('AAMk-1'), 'ck-3', 'its own write is what it saw');
 
   lastSeen.clear(); cached = [{ external_id: 'AAMk-1', version: 'ck-1' }];
