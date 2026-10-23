@@ -76,3 +76,36 @@ test("the card before a send says who it is from as the recipient sees it", asyn
   assert.match(mailSendQuestion("gmail_send_draft", { to: "mara@harbourpost.example", ...shown }), /From: "Ana Ruiz" <ana@harbour\.test>/, "background sends too");
   assert.match(mailSendQuestion("gmail_send", { to: "mara@harbourpost.example", account: "office@harbour.test" }), /From: office@harbour\.test/);
 });
+
+// Outlook takes a From too, from the addresses Microsoft lists for the
+// account. Tried against a stand-in only: no Microsoft account here.
+const plainSrc = (name) => { const a = handlers.indexOf(`function ${name}(`); return handlers.slice(a, handlers.indexOf("\n}\n", a) + 2); };
+const ME = { displayName: "Ana Ruiz", mail: "ana@kestrel.test", userPrincipalName: "ana@kestrel.test", proxyAddresses: ["SMTP:ana@kestrel.test", "smtp:bookings@kestrel.test", "X500:/o=ExchangeLabs/cn=ana"] };
+const outlookFrom = new Function(fnSrc("outlookFrom") + "\nreturn outlookFrom;")();
+
+test("Outlook: from is one of the account's own addresses, and the draft keeps its version", async () => {
+  const msApi = async (method, url) => { if (url.includes("/me?$select=")) return ME; throw new Error(`unexpected ${method} ${url}`); };
+  assert.deepEqual(await outlookFrom(msApi, "Bookings <BOOKINGS@kestrel.test>"), { emailAddress: { address: "bookings@kestrel.test", name: "Ana Ruiz" } });
+  await assert.rejects(outlookFrom(msApi, "boss@elsewhere.example"), /not one of this mailbox's addresses \(ana@kestrel\.test, bookings@kestrel\.test\)/);
+
+  const calls = [];
+  const api = async (method, url, body) => {
+    calls.push([method, url.replace("https://graph.microsoft.com/v1.0/", ""), body]);
+    if (url.includes("/me?$select=")) return ME;
+    if (method === "POST") return { id: "AAMk-9", changeKey: "ck-1" };
+    if (method === "PATCH") return { changeKey: "ck-2" };
+    throw new Error(`unexpected ${method} ${url}`);
+  };
+  const create = new Function("microsoftReqFor", "resolveOutgoingAttachments", "outlookRecipients", "outlookFrom", "deleteOutlookDraft", "addOutlookAttachments", "liveOutlookMessage",
+    fnSrc("createOutlookDraft") + "\nreturn createOutlookDraft;")(() => api, async () => ({ attachments: [], missing: [] }), (t) => [{ emailAddress: { address: t } }], outlookFrom, async () => {}, null, null);
+  const made = await create({ to: "mara@harbourpost.example", subject: "Racquets", body: "Two land Tuesday.", from: "bookings@kestrel.test" });
+  assert.deepEqual(made, { draftId: "AAMk-9", changeKey: "ck-2" }, "the version after the From is set, so it is not mistaken for the person's edit");
+  assert.deepEqual(calls.at(-1)[2], { from: { emailAddress: { address: "bookings@kestrel.test", name: "Ana Ruiz" } } });
+
+  const update = block("outlook_draft_update");
+  assert.match(update, /\.\.\.\(toolInput\.from \? \{ from: await outlookFrom\(msApi, toolInput\.from\) \} : \{\}\),/);
+  assert.match(update, /const seen = rewording \? await draftSeenVersions\(live\.id\) : null;/, "a change to the headers alone keeps the wording as it stands");
+  assert.match(update, /\.\.\.\(body \? \{ body \} : \{\}\),/);
+  assert.match(plainSrc("liveOutlookMessage"), /\$select=id,isDraft,changeKey,subject,from,/);
+  assert.match(fnSrc("describeOutlookDraft"), /if \(m\.from\?\.emailAddress\?\.address\) out\.from = /, "its card shows who it is from");
+});

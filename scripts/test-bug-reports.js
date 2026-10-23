@@ -48,7 +48,7 @@ test("/bug on its own sends the conversation, and a yes sends it to Closedhand's
   const ask = await r.api.fileBugReport({ userId: "alice", text: "/bug", fileData: shot, platform: "web" });
   assert.equal(ask, "This sends the last 5 messages of this chat and your screenshot to Closedhand, so the problem can be found and fixed. Send it? Reply yes or no.");
   const sent = await r.api.handleBugSendReply("alice", "yes");
-  assert.equal(sent, "Sent to Closedhand. I'll tell you when it's fixed.");
+  assert.equal(sent, "Sent to Closedhand as report 5d1e0c2a. I'll tell you when it's fixed.", "a reference, for someone who sends several");
   assert.equal(r.calls.length, 1);
   assert.equal(r.calls[0].url, "https://closedhand.com/api/bug-intake");
   const body = r.calls[0].body;
@@ -88,7 +88,7 @@ test("Closedhand says once when a report it sent is fixed, with the fix in plain
   await r.api.handleBugSendReply("alice", "yes");
   assert.equal(await r.api.checkOutcomes("alice"), 1);
   assert.equal(r.told.length, 1);
-  assert.match(r.told[0], /^Fixed: the problem you reported on \d{1,2} [A-Z][a-z]{2} \("the time is wrong on the dentist reminder for Thursday afternoon, it says 3 not…"\)\. Fixed in the next update\.$/);
+  assert.match(r.told[0], /^Fixed: report 5d1e0c2a, the problem you reported on \d{1,2} [A-Z][a-z]{2} \("the time is wrong on the dentist reminder for Thursday afternoon, it says 3 not…"\)\. Fixed in the next update\.$/);
   assert.equal(r.calls.at(-1).body.receipt, "a".repeat(64), "the receipt is opened only to ask");
   assert.equal(await r.api.checkOutcomes("alice"), 0, "told once");
   assert.equal(r.told.length, 1);

@@ -35,20 +35,29 @@ test('a yes to a lapsed question does nothing and the task is marked dropped', a
   assert.equal(c.ctx.pendingConfirmations.u1, undefined);
   assert.deepEqual(c.dropped, [['t1', 'lapsed']]);
 });
-test('moving on marks the task dropped and forgets the held action', async () => {
+// A message that is not a yes or no drops the held action, so a later "yes"
+// to something else cannot fire it. Nothing is written as said: an "OK,
+// cancelled." once stood in the conversation that the person never saw.
+// The reply to their message is told instead, and asks afresh if needed.
+test('moving on marks the task dropped and tells the reply, not the record', async () => {
   const c = loadConfirmation({ u1: { isAgent: true, taskId: 't1', pausedAt: Date.now() - 60000 } });
-  assert.equal(await c.handleConfirmation('u1', 'chat', 'what is the weather'), false);
+  assert.equal(await c.handleConfirmation('u1', 'chat', 'is it from my other address?'), false);
   assert.equal(c.dropped.length, 0, 'a non-answer alone decides nothing');
-  await c.dropPending('u1', 'moved_on');
+  const note = await c.dropPending('u1', 'moved_on');
   assert.equal(c.ctx.pendingConfirmations.u1, undefined);
   assert.deepEqual(c.dropped, [['t1', 'moved_on']]);
-  assert.equal(c.conversation.at(-1).content, 'OK, cancelled.');
-  await c.dropPending('u1', 'moved_on');
-  assert.equal(c.dropped.length, 1, 'dropping twice is harmless');
+  assert.equal(c.conversation.length, 0, 'nothing written as if said');
+  assert.match(note, /not done, and they have not been told[\s\S]*call the tool again so they get a fresh question/);
+  assert.equal(await c.dropPending('u1', 'moved_on'), null, 'dropping twice is harmless');
+  assert.equal(c.dropped.length, 1);
 });
-test('a chat-only held action drops without touching any task', async () => {
+test('a lapsed question: a new message drops it the same way, a late yes is told it lapsed', async () => {
   const c = loadConfirmation({ u1: { toolName: 'gmail_send', askedAt: Date.now() - 2 * DAY } });
   assert.equal(await c.handleConfirmation('u1', 'chat', 'hello'), false);
+  assert.match(await c.dropPending('u1', 'moved_on'), /HELD ACTION NOT DONE/);
   assert.equal(c.ctx.pendingConfirmations.u1, undefined);
   assert.equal(c.dropped.length, 0);
+  const late = loadConfirmation({ u1: { toolName: 'gmail_send', askedAt: Date.now() - 2 * DAY } });
+  assert.match(await late.handleConfirmation('u1', 'chat', 'yes'), /lapsed, so nothing was done/);
+  assert.deepEqual(late.conversation.map((m) => m.content), ['yes', 'That question is from more than a day ago and has lapsed, so nothing was done. Ask again if you still want it.'], 'what was said, as said');
 });

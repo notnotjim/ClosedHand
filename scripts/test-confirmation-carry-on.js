@@ -70,12 +70,17 @@ test("the chat's loop takes the turn up where it stopped", () => {
   assert.doesNotMatch(conf, /The user confirmed one action, not this one/, "no loop of its own refusing the next step");
   assert.doesNotMatch(conf, /llm\.messages\.create/);
   const engine = read("lib/engine.js");
-  assert.match(engine, /const confirmResult = await handleConfirmation\(userId, chatId \|\| userId, String\(userMessage\), \{ \.\.\.opts, platform \}\);/);
+  assert.match(engine, /const turnOpts = \{ \.\.\.opts, platform, fromPerson: true \};/);
+  assert.match(engine, /const confirmResult = await handleConfirmation\(userId, chatId \|\| userId, String\(userMessage\), turnOpts\);/);
   assert.match(engine, /conversation\.push\(\{ role: "user", content: opts\.resume \? opts\.resume\.said : userMessage \}\);/, "the conversation records the answer");
   assert.match(engine, /messages\.push\(\.\.\.\(opts\.resume \? opts\.resume\.messages : conversation\)\);/, "the turn as it stood");
   assert.match(engine, /const isLight = !fileData && !opts\.resume && /);
   assert.match(engine, /const isQuick = !fileData && !isLight && !opts\.resume && /);
   assert.match(engine, /for \(const m of opts\.resume\?\.messages \|\| \[\]\) \{[\s\S]{0,300}unlockedInternalTools\.add\(b\.name\);\n\s*unlockedMcpTools\.add\(b\.name\);/, "tools unlocked before the question stay unlocked");
+  // Anything but a yes or no drops the question, and the reply hears so.
+  assert.match(engine, /turnOpts\.heldNote = await dropPending\(userId, "moved_on"\);/);
+  assert.match(engine, /macHowTo\(userMessage, conversation\) \+ \(opts\.heldNote \? "\\n\\n" \+ opts\.heldNote : ""\)/);
+  assert.match(read("lib/assistant-email.js"), /heldNote = await confirmations\.dropPending\(account\.user_id, 'moved_on'\);[\s\S]*_noHandover: true, heldNote \}\);/, "in email too");
   const gate = engine.indexOf("ctx.pendingConfirmations[userId] = {");
   assert.match(engine.slice(gate, gate + 900), /request: userMessage,/, "a held call remembers the request");
 });

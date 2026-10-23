@@ -168,9 +168,7 @@ test("a draft read live through the API tools counts as seen", () => {
 test("Outlook's tools take what Google's take, but for what is Google's own", () => {
   const { INTERNAL_TOOLS } = require("../lib/tools/definitions");
   const props = (n) => Object.keys(INTERNAL_TOOLS.find((t) => t.name === n).input_schema.properties);
-  // Outlook finds the thread itself; OneDrive has its own id; Gmail lists a
-  // mailbox's send-as addresses to check a From against, Microsoft does not.
-  const inherent = new Set(["thread_id", "drive_file_id", "from"]);
+  const inherent = new Set(["thread_id", "drive_file_id"]); // Outlook finds the thread itself; OneDrive has its own id
   for (const [g, o] of [["gmail_send", "outlook_send"], ["gmail_reply", "outlook_reply"], ["gmail_create_draft", "outlook_create_draft"], ["gmail_draft_update", "outlook_draft_update"],
     ["gmail_send_draft", "outlook_send_draft"], ["gcal_create_event", "outlook_cal_create_event"], ["gcal_update_event", "outlook_cal_update_event"], ["gcal_delete_event", "outlook_cal_delete_event"]])
     assert.deepEqual(props(g).filter((p) => !props(o).includes(p) && !inherent.has(p)), [], `${o} lacks what ${g} takes`);
