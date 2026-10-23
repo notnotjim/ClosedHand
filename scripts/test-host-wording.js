@@ -45,3 +45,12 @@ test("what scripts write follows the host too", () => {
     assert.match(read(page), /If you move Closedhand to Railway with Go always-on, it runs in your own Railway account instead, and “your computer” in this policy means that Railway account\./, page);
   }
 });
+
+test("the setup code is found where the host keeps it, and only Railway is named on Railway", () => {
+  const lede = (html) => visible(html.match(/<p class="lede">[\s\S]*?<\/p>/)[0]).replace(/\s+/g, " ").trim();
+  const page = read("webapp/views/setup-code.html");
+  assert.match(lede(forHost(page, false)), /from where you created it\. It's saved there as SETUP_CODE\.$/);
+  assert.doesNotMatch(lede(forHost(page, false)), /Railway/, "another host is not told to look on Railway");
+  assert.match(lede(forHost(page, true)), /On Railway it's in your project, under the webapp service's Variables, as SETUP_CODE\.$/);
+  assert.match(read("webapp/views/login.html"), /document\.documentElement\.dataset\.host === "railway"\n\s+\? "On Railway it's under the webapp service's Variables, as SETUP_CODE\."\n\s+: "It's saved as SETUP_CODE where you created this Closedhand\."/);
+});
