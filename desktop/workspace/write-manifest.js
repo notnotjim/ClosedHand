@@ -11,7 +11,7 @@ async function digest(name) {
   const files = await Promise.all(['kernel', 'initrd', 'root.ext4.gz'].map(digest));
   const root = await digest('root.ext4');
   const version = root.sha256.slice(0, 16);
-  for (const file of files) file.url = `https://github.com/notnotjim/ClosedHand/releases/download/workspace-${version}/${file.file}`;
+  for (const file of files) file.url = `https://github.com/notnotjim/Closedhand/releases/download/workspace-${version}/${file.file}`;
   const result = { version, arch: 'arm64', files, root };
   fs.writeFileSync(path.join(directory, 'manifest.json'), JSON.stringify(result, null, 2) + '\n');
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

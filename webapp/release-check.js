@@ -6,7 +6,7 @@
 // passes its checks; the Mac app gets a new release now and then. A Closedhand
 // on a host (SETUP_CODE) takes new images by itself overnight, and a build
 // from source (no CLOSEDHAND_SHA) has nothing to compare, so neither asks.
-const REPO = "notnotjim/ClosedHand";
+const REPO = "notnotjim/Closedhand";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 60 * 60 * 1000;
 const INSTALL_LINE = "curl -fsSL https://closedhand.com/install | sh";

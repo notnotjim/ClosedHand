@@ -6,19 +6,19 @@
       "file": "kernel",
       "bytes": 37660608,
       "sha256": "9c37ace54ef7e1919411fd912e9f34d6982ddd7f4c8ef3c8aee56f4c4d70db67",
-      "url": "https://github.com/notnotjim/ClosedHand/releases/download/workspace-950b0128d45a52fb/kernel"
+      "url": "https://github.com/notnotjim/Closedhand/releases/download/workspace-950b0128d45a52fb/kernel"
     },
     {
       "file": "initrd",
       "bytes": 37441247,
       "sha256": "8c6e3b85371b4e9007cd881238cb66e969cca3b7cf8cac1d7b7f4f235a736438",
-      "url": "https://github.com/notnotjim/ClosedHand/releases/download/workspace-950b0128d45a52fb/initrd"
+      "url": "https://github.com/notnotjim/Closedhand/releases/download/workspace-950b0128d45a52fb/initrd"
     },
     {
       "file": "root.ext4.gz",
       "bytes": 724371889,
       "sha256": "6ddf55dbb950796bac380b42b3cdea17124b762d8bdd3bfa977310d07ce15274",
-      "url": "https://github.com/notnotjim/ClosedHand/releases/download/workspace-950b0128d45a52fb/root.ext4.gz"
+      "url": "https://github.com/notnotjim/Closedhand/releases/download/workspace-950b0128d45a52fb/root.ext4.gz"
     }
   ],
   "root": {

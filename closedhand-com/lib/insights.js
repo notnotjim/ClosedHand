@@ -4,7 +4,7 @@
 // of it is shown. Anyone not signed in with an email in OPERATOR_EMAILS that
 // Google has verified gets the ordinary not-found page, so the page doesn't
 // show that it exists.
-const REPO = 'notnotjim/ClosedHand';
+const REPO = 'notnotjim/Closedhand';
 const INSTALL_SCRIPT = `https://raw.githubusercontent.com/${REPO}/main/install.sh`;
 // The route-building Worker stops making personal URLs at this many DNS
 // records (see alerts.js).

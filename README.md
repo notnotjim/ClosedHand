@@ -13,7 +13,7 @@ It is strictly single-tenant. Each Closedhand serves one person, and the first a
 
 ## Quickstart
 
-**Download the Closedhand app for Mac** from the [latest release](https://github.com/notnotjim/ClosedHand/releases/latest), drag it to Applications and open it. The current download is for Apple Silicon Macs with macOS 14 or later. It runs Closedhand from the menu bar and opens the setup page on first launch. Access to that Mac’s files and apps is built in; choose what to allow from the menu bar. Your data lives in `~/Library/Application Support/ClosedHand`. The app is signed and notarised; source is in [`desktop/`](desktop/).
+**Download the Closedhand app for Mac** from the [latest release](https://github.com/notnotjim/Closedhand/releases/latest), drag it to Applications and open it. The current download is for Apple Silicon Macs with macOS 14 or later. It runs Closedhand from the menu bar and opens the setup page on first launch. Access to that Mac’s files and apps is built in; choose what to allow from the menu bar. Your data lives in `~/Library/Application Support/ClosedHand`. The app is signed and notarised; source is in [`desktop/`](desktop/).
 
 **Or install with Docker** on Mac, Windows or Linux, including a rented server (VPS). Docker is software that runs each part of Closedhand (the assistant, the dashboard, its database and the sandbox computer) in its own sealed-off container, so nothing else needs installing. On a Mac or Windows PC that means installing [Docker Desktop](https://www.docker.com/products/docker-desktop/), free for personal use; on Linux, [Docker Engine](https://docs.docker.com/engine/install/). A Mac can use either installation method. With Docker installed, run:
 
@@ -24,7 +24,7 @@ curl -fsSL https://closedhand.com/install | sh
 Or, if piping strangers' scripts into your shell is exactly what you self-host to avoid, download it, read it (it is short), then run it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/notnotjim/Closedhand/main/install.sh -o install.sh
 less install.sh
 sh install.sh
 ```
@@ -32,7 +32,7 @@ sh install.sh
 Either way it checks for Docker, clones the repo, writes a `.env` with generated secrets, downloads pre-built images (nothing compiles on your machine), and starts the stack. The same steps by hand:
 
 ```sh
-git clone https://github.com/notnotjim/ClosedHand.git closedhand
+git clone https://github.com/notnotjim/Closedhand.git closedhand
 cd closedhand
 cp .env.example .env
 docker compose up -d

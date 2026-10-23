@@ -35,8 +35,8 @@ const request = async (url, opts) => {
     return new Response(JSON.stringify({ id_token: idToken({ ...nextClaims, nonce }) }));
   }
   if (url.startsWith('https://email.ap-southeast-2.amazonaws.com/')) { mails.push(JSON.parse(opts.body)); return new Response('{}'); }
-  if (url === 'https://api.github.com/repos/notnotjim/ClosedHand') return new Response(JSON.stringify({ stargazers_count: 7, forks_count: 2 }));
-  if (url.startsWith('https://api.github.com/repos/notnotjim/ClosedHand/releases')) {
+  if (url === 'https://api.github.com/repos/notnotjim/Closedhand') return new Response(JSON.stringify({ stargazers_count: 7, forks_count: 2 }));
+  if (url.startsWith('https://api.github.com/repos/notnotjim/Closedhand/releases')) {
     return new Response(JSON.stringify([
       { tag_name: 'v2.1.0', draft: false, assets: [{ name: 'Closedhand-2.1.0-arm64.dmg', download_count: 5 }, { name: 'checksums.txt', download_count: 40 }] },
       { tag_name: 'v2.0.9', draft: false, assets: [{ name: 'Closedhand-2.0.9-arm64.dmg', download_count: 3 }] },
@@ -694,7 +694,7 @@ test('the insights page shows everything closedhand.com holds, and only to a Goo
   const before = Number((await db.query('SELECT coalesce(sum(fetches), 0) AS n FROM install_fetches')).rows[0].n);
   const install = await fetch(base + '/install', { redirect: 'manual' });
   assert.equal(install.status, 302);
-  assert.equal(install.headers.get('location'), 'https://raw.githubusercontent.com/notnotjim/ClosedHand/main/install.sh');
+  assert.equal(install.headers.get('location'), 'https://raw.githubusercontent.com/notnotjim/Closedhand/main/install.sh');
   await fetch(base + '/install', { redirect: 'manual' });
 
   const { cookie } = await signIn('google', google('insights-operator', 'operator@example.com'));

@@ -27,8 +27,8 @@ Rules for working on this codebase, for anyone doing it, human or agent.
 - The bot is "Closedhand". "Your assistant" only stands in for it to avoid saying Closedhand twice
   in a row ("Closedhand Bridge gives your assistant access…"), never as its first mention.
 - The name is written "Closedhand", one capital, wherever people read it (the logo's capitals
-  are the logo). Only machinery keeps "ClosedHand": code identifiers, the GitHub repo address,
-  the Mac app's executable, Swift package and data folder (Application Support/ClosedHand),
+  are the logo). Only machinery keeps "ClosedHand": code identifiers, the Mac app's
+  executable, Swift package and data folder (Application Support/ClosedHand),
   closedhand.com's DNS-record labels and the X-ClosedHand-Edge header.
 - Naming the thing running on the person's computer. On the website (closedhand.com), where
   "Closedhand" could also mean the site, the first mention of it in a page's text is "your

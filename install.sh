@@ -19,7 +19,7 @@
 
 set -eu
 
-REPO="${CLOSEDHAND_REPO:-https://github.com/notnotjim/ClosedHand.git}"
+REPO="${CLOSEDHAND_REPO:-https://github.com/notnotjim/Closedhand.git}"
 DIR="${CLOSEDHAND_DIR:-closedhand}"
 _tmp="${TMPDIR:-/tmp}"
 LOG="${_tmp%/}/closedhand-install.log"
