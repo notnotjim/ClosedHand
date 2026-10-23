@@ -267,7 +267,6 @@ final class Supervisor: ObservableObject {
         for key in ["WS_AUTH_SECRET", "SANDBOX_TOKEN", "COOKIE_SECRET", "TOKEN_ENCRYPTION_KEY", "BRIDGE_TOKEN"] { env[key] = config[key] }
         env["BASE_URL"] = "http://localhost:\(webPort)"
         env["BOT_INTERNAL_URL"] = "http://127.0.0.1:\(botPort)"
-        env["BOT_WS_URL"] = "http://127.0.0.1:\(botPort)"
         env["SANDBOX_URL"] = "http://127.0.0.1:\(agentPort)"
         if let sha = Bundle.main.object(forInfoDictionaryKey: "ClosedHandSHA") as? String { env["CLOSEDHAND_SHA"] = sha }
         // Closedhand's own Google app, stamped in by the release build (empty otherwise).

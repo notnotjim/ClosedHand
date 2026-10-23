@@ -9909,7 +9909,7 @@ server.on("upgrade", (req, socket, head) => {
         return socket.destroy();
       }
       require("./chat-proxy").proxyChatUpgrade(req, socket, head, {
-        upstream: process.env.BOT_INTERNAL_URL || process.env.BOT_WS_URL,
+        upstream: BOT_INTERNAL_URL,
         secret: process.env.WS_AUTH_SECRET,
       });
     })().catch(() => socket.destroy());

@@ -108,8 +108,15 @@ x11vnc_supervisor() {
 x11vnc_supervisor &
 sleep 0.3
 
-# 7. Start websockify on IPv6 (Railway routes internal traffic via IPv6)
-gosu sandbox websockify [::]:6080 localhost:5900 &
+# 7. Start websockify. Railway routes internal traffic over IPv6, so it listens
+# there; a host with no IPv6 at all (Nodion) refuses that outright, so it
+# listens on IPv4 instead.
+if python3 -c 'import socket; s = socket.socket(socket.AF_INET6); s.bind(("::", 0)); s.close()' 2>/dev/null; then
+    WS_LISTEN="[::]:6080"
+else
+    WS_LISTEN="0.0.0.0:6080"
+fi
+gosu sandbox websockify "$WS_LISTEN" localhost:5900 &
 
 # 8. Run the CMD (agent server)
 exec gosu sandbox env DISPLAY=:99 "$@"

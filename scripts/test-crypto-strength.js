@@ -106,5 +106,9 @@ test("the bundled screen viewer offers only the no-password sign-in, and carries
   assert.equal(fs.existsSync(path.join(root, "webapp/public/novnc/core/ra2.js")), false);
   assert.match(read("sandbox-image/Dockerfile"), /xvfb x11vnc python3-websockify/, "the sandbox computer installs no second viewer");
   assert.doesNotMatch(read("sandbox-image/Dockerfile"), /\/usr\/share\/novnc/);
-  assert.match(read("sandbox-image/entrypoint.sh"), /gosu sandbox websockify \[::\]:6080 localhost:5900 &/, "and serves no viewer pages, only the relay");
+  const entry = read("sandbox-image/entrypoint.sh");
+  assert.match(entry, /gosu sandbox websockify "\$WS_LISTEN" localhost:5900 &/, "and serves no viewer pages, only the relay");
+  assert.doesNotMatch(entry, /websockify[^\n]*--web/);
+  // On IPv6 where the host has it (Railway's private network), else IPv4.
+  assert.match(entry, /socket\.AF_INET6[\s\S]{0,80}WS_LISTEN="\[::\]:6080"\nelse\n\s+WS_LISTEN="0\.0\.0\.0:6080"/);
 });

@@ -15,6 +15,9 @@ import os
 import requests as _requests
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
+# A host may hand over the address alone ("10.0.0.5:3000", as Nodion does).
+if GATEWAY_URL and "://" not in GATEWAY_URL:
+    GATEWAY_URL = "http://" + GATEWAY_URL
 SANDBOX_TOKEN = os.environ.get("SANDBOX_TOKEN", "")
 USER_ID = os.environ.get("USER_ID", "")
 
