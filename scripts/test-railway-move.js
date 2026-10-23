@@ -115,3 +115,8 @@ test("Settings is one button, and closedhand.com passes the sign-in straight on"
   assert.match(site, /app\.get\('\/railway\/return'[\s\S]{0,500}new URL\('\/api\/move\/railway\/return', back\)/);
   assert.match(site, /if \(u\.protocol === 'https:'\) return require\('\.\/public\/entry-navigation'\)\.registeredAddress\(u\.origin\);/);
 });
+
+test("Closedhand's own Railway app is built in, so Go always-on is there without setup", () => {
+  assert.match(read("webapp/railway-move.js"), /const CLIENT_ID = process\.env\.RAILWAY_CLIENT_ID \|\| "rlwy_oaci_[A-Za-z0-9]+";/);
+  assert.doesNotMatch(read("webapp/railway-move.js"), /client_secret|CLIENT_SECRET/, "no secret, anywhere");
+});

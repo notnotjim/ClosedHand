@@ -14,7 +14,9 @@
 // never leaves this computer.
 const crypto = require("crypto");
 
-const CLIENT_ID = process.env.RAILWAY_CLIENT_ID || "";
+// Closedhand's app on Railway, registered as native with PKCE: the ID is
+// public, like Closedhand's Google app ID, and there is no secret to hold.
+const CLIENT_ID = process.env.RAILWAY_CLIENT_ID || "rlwy_oaci_az4hdCpq4U0seDvW20wyzStx";
 const AUTHORIZE = "https://backboard.railway.com/oauth/auth";
 const TOKEN = "https://backboard.railway.com/oauth/token";
 const API = "https://backboard.railway.com/graphql/v2";
