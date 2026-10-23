@@ -86,10 +86,3 @@ test("a model that cited nothing, or a refused request, is a failure, so free se
 test("providers with no documented search, or terms against this use, have none", () => {
   for (const p of ["gemini", "groq", "deepinfra", "ollama", "custom"]) assert.equal(forProvider(p), null, p);
 });
-
-test("Settings names a price for exactly the providers the bot can search through", () => {
-  const { PROVIDERS } = require("../webapp/provider-capabilities");
-  const priced = Object.keys(PROVIDERS).filter((p) => PROVIDERS[p].search).sort();
-  assert.deepEqual(priced, Object.keys(ADAPTERS).sort());
-  for (const p of priced) assert.match(PROVIDERS[p].search, /^(about )?\$[\d.]+ per 1,000 searches/, p);
-});

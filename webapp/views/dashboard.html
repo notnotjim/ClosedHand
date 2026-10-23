@@ -2044,9 +2044,9 @@
         <button class="tab" data-tab="automations" onclick="switchTab('automations')">Schedules</button>
         <button class="tab" data-tab="projects" onclick="switchTab('projects')">Projects</button>
         <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
-        <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
         <button class="tab" data-tab="brain" onclick="switchTab('brain')">Context Brain</button>
         <button class="tab" data-tab="usage" onclick="switchTab('usage')">Usage</button>
+        <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
       </div>
 
       <details class="dashboard-help" id="dashboard-help" hidden>
@@ -2686,22 +2686,6 @@
             </div>
           </div>
 
-          <!-- Appearance: light or dark for every page, kept in the person's
-               settings so it is the same on all their devices (theme.js). -->
-          <div class="settings-group">
-            <div class="settings-group-header">
-              <h2>Appearance</h2>
-              <p class="section-desc">Light or dark, on every page and every device you open Closedhand on.</p>
-            </div>
-            <div class="settings-group-body">
-              <div class="segmented-control" id="appearance" role="radiogroup" aria-label="Appearance">
-                <button class="seg-btn" type="button" role="radio" data-pick="device">Match this device</button>
-                <button class="seg-btn" type="button" role="radio" data-pick="light">Light</button>
-                <button class="seg-btn" type="button" role="radio" data-pick="dark">Dark</button>
-              </div>
-            </div>
-          </div>
-
           <!-- AI Model Selection -->
           <div class="settings-group" style="border-color:rgba(var(--fg-rgb),0.1);">
             <div class="settings-group-header">
@@ -2720,13 +2704,6 @@
               <div id="byok-panel"></div>
               <div id="byok-status" style="margin-top:8px;"></div>
               <p id="llm-desc" hidden></p>
-              <div id="provider-search-row" hidden style="margin-top:16px;">
-                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--fg);cursor:pointer;">
-                  <input type="checkbox" id="provider-search" onchange="saveProviderSearch(this.checked)" style="width:14px;height:14px;margin:0;accent-color:var(--accent-strong);">
-                  <span id="provider-search-label">Search the web through your provider</span>
-                </label>
-                <p id="provider-search-note" class="account-action-desc" style="margin:4px 0 0 22px;line-height:1.5;"></p>
-              </div>
             </div>
           </div>
 
@@ -4511,7 +4488,7 @@
     function selectLLM() {
       document.getElementById("byok-panel").style.display = "";
       document.getElementById("llm-desc").textContent = "Choose your primary model, support model and image model.";
-      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated"); loadProviderSearch(); loadIncludedAi(); });
+      window.ClosedHandModels.mount(document.getElementById("byok-panel"), function () { showToast("Models updated"); loadIncludedAi(); });
     }
     selectLLM();
 
@@ -4592,40 +4569,6 @@
     }
     loadIncludedAi();
 
-    // Web search through the primary model's provider, shown only when that
-    // provider has a search of its own. Off, or when it fails, Closedhand
-    // uses the free search every Closedhand has.
-    async function loadProviderSearch() {
-      var row = document.getElementById("provider-search-row");
-      if (!row) return;
-      try {
-        var res = await fetch("/api/settings/provider-search");
-        var data = res.ok ? await res.json() : null;
-        if (!data || !data.available) { row.hidden = true; return; }
-        document.getElementById("provider-search-label").textContent = "Search the web through " + data.provider;
-        document.getElementById("provider-search-note").textContent = data.provider + " charges " + data.price + ". When this is off, or a search through " + data.provider + " fails, Closedhand uses free web search through DuckDuckGo and Brave.";
-        document.getElementById("provider-search").checked = data.enabled !== false;
-        row.hidden = false;
-      } catch (e) {
-        row.hidden = true;
-      }
-    }
-    loadProviderSearch();
-
-    async function saveProviderSearch(enabled) {
-      try {
-        var res = await fetch("/api/settings/provider-search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled: !!enabled }),
-        });
-        if (!res.ok) throw new Error("save failed");
-        showToast(enabled ? "Closedhand will search the web through your provider." : "Closedhand will use free web search.");
-      } catch (e) {
-        document.getElementById("provider-search").checked = !enabled;
-        showToast("Could not save that setting. Try again.");
-      }
-    }
 
     // --- Pulse Settings ---
     let pulseState = { proactiveLevel: "medium", quietStart: 22, quietEnd: 7, quietEnabled: true, deliveryPlatforms: [] };
@@ -4811,49 +4754,6 @@
       pulseState.proactiveLevel = btn.dataset.level;
       renderPulseLevel();
       savePulse();
-    });
-
-    // Appearance: the pick is on <html>, put there by the server (theme.js
-    // reads it). A new one plays the switch from the button pressed, here and
-    // in the web chat the dashboard opens over, and is kept in the person's
-    // settings, so every page and device opens in it.
-    function renderAppearance() {
-      const pick = window.closedhandTheme ? window.closedhandTheme.pick() : "device";
-      document.querySelectorAll("#appearance .seg-btn").forEach(btn => {
-        const on = btn.dataset.pick === pick;
-        btn.classList.toggle("active", on);
-        btn.setAttribute("aria-checked", String(on));
-      });
-    }
-    function switchAppearance(pick, at) {
-      window.closedhandTheme.setPick(pick, at);
-      try {
-        if (window.parent !== window && window.parent.closedhandTheme && window.frameElement) {
-          const frame = window.frameElement.getBoundingClientRect();
-          window.parent.closedhandTheme.setPick(pick, at && { x: frame.left + at.x, y: frame.top + at.y });
-        }
-      } catch (_) { /* a page that is not the web chat's */ }
-      renderAppearance();
-    }
-    renderAppearance();
-    document.getElementById("appearance").addEventListener("click", async (e) => {
-      const btn = e.target.closest(".seg-btn");
-      if (!btn || !window.closedhandTheme) return;
-      const was = window.closedhandTheme.pick(), next = btn.dataset.pick;
-      if (next === was) return;
-      const box = btn.getBoundingClientRect();
-      switchAppearance(next, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
-      try {
-        const res = await fetch("/api/settings/appearance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pick: next }),
-        });
-        if (!res.ok) throw new Error("not saved");
-      } catch (_) {
-        switchAppearance(was);
-        showToast("Could not save that. Try again.", true);
-      }
     });
 
     let _pulseSaving = false;

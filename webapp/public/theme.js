@@ -1,7 +1,8 @@
-// Light or dark, as the person picked under Appearance in Settings: the
-// server puts the pick on <html data-theme-pick> when it serves a page (Match
-// this device when there is none), and this, loaded first in every page's
-// head, sets data-theme before anything is drawn. The colours themselves are
+// Light or dark, as the person picked with the sun and moon at the top of the
+// web chat and the dashboard: the server puts the pick on <html
+// data-theme-pick> when it serves a page (the device's own when there is
+// none), and this, loaded first in every page's head, sets data-theme before
+// anything is drawn. The colours themselves are
 // in interface.css, by name, under :root and :root[data-theme="light"].
 // Switching plays closedhand.com's transition (its theme.js): the other theme
 // spreads from the control inside a glowing ember ring, stars come out on the
@@ -34,6 +35,9 @@
     root.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
   }
 
+  // The dashboard, in its frame over the web chat, takes the web chat's pick,
+  // even one made a moment ago and not yet kept.
+  try { if (window.parent !== window && window.parent.closedhandTheme) root.setAttribute('data-theme-pick', window.parent.closedhandTheme.pick()); } catch (e) { /* not the web chat's frame */ }
   apply(current());
   // This runs before the rest of the head is read, so the bar's tag comes later.
   document.addEventListener('DOMContentLoaded', function () { bar(current()); });
@@ -93,5 +97,31 @@
     shift.finished.finally(function () { ring.remove(); });
   }
 
-  window.closedhandTheme = { current: current, pick: pick, setPick: setPick };
+  // The dashboard opens in a frame over the web chat: it follows a new pick
+  // at once, without a switch of its own.
+  function follow(next) {
+    root.setAttribute('data-theme-pick', next);
+    apply(current());
+  }
+
+  // The sun and moon flip to the other theme from where they were pressed,
+  // and the pick is kept in the person's settings, so every page and every
+  // device opens in it. The same control as closedhand.com's.
+  document.addEventListener('click', function (event) {
+    var button = event.target.closest && event.target.closest('.theme-toggle');
+    if (!button) return;
+    var was = pick(), next = current() === 'light' ? 'dark' : 'light';
+    var box = button.getBoundingClientRect();
+    var frames = function (to) {
+      var frame = document.getElementById('dashIframe');
+      try { if (frame && frame.contentWindow.closedhandTheme) frame.contentWindow.closedhandTheme.follow(to); } catch (e) { /* not loaded yet */ }
+    };
+    setPick(next, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
+    frames(next);
+    fetch('/api/settings/appearance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pick: next }) })
+      .then(function (r) { if (!r.ok) throw new Error('not saved'); })
+      .catch(function () { setPick(was); frames(was); });
+  });
+
+  window.closedhandTheme = { current: current, pick: pick, setPick: setPick, follow: follow };
 })();

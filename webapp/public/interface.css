@@ -449,6 +449,20 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
   from { clip-path: circle(0 at var(--reveal-x, 100%) var(--reveal-y, 0)); }
   to { clip-path: circle(var(--reveal-r, 150vmax) at var(--reveal-x, 100%) var(--reveal-y, 0)); }
 }
+/* Light or dark: the brush sun and moon at the top of the web chat and the
+   dashboard, the same as closedhand.com's (theme.js switches it). The sun
+   goes down to the right as the moon rises from the left, and back. */
+.theme-toggle { position: relative; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; overflow: hidden; transition: color .2s; -webkit-tap-highlight-color: transparent; }
+.theme-toggle:hover { color: var(--fg); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle > span { grid-area: 1 / 1; width: 1.125rem; height: 1.125rem; transition: translate 1s cubic-bezier(.45, 0, .55, 1), opacity .6s ease .1s; }
+.theme-toggle svg { display: block; width: 100%; height: 100%; transition: translate 1s cubic-bezier(.25, .8, .35, 1.12); }
+:root[data-theme="light"] .theme-toggle .sun { translate: 80% 0; opacity: 0; }
+:root[data-theme="light"] .theme-toggle .sun svg { translate: 0 170%; }
+:root:not([data-theme="light"]) .theme-toggle .moon { translate: -80% 0; opacity: 0; }
+:root:not([data-theme="light"]) .theme-toggle .moon svg { translate: 0 170%; }
+.theme-toggle:active > span { scale: .85; }
+@media (prefers-reduced-motion: reduce) { .theme-toggle > span, .theme-toggle svg { transition: none; } }
 .theme-ring { position: fixed; z-index: 2147483647; pointer-events: none; left: calc(var(--reveal-x) - var(--reveal-r)); top: calc(var(--reveal-y) - var(--reveal-r)); width: calc(var(--reveal-r) * 2); height: calc(var(--reveal-r) * 2); border-radius: 50%; view-transition-name: theme-ring;
   box-shadow: 0 0 0 1.5px rgba(var(--accent-rgb), .9), 0 0 2.25rem .6rem rgba(var(--accent-rgb), .42), inset 0 0 2.25rem .6rem rgba(var(--accent-rgb), .32), 0 0 5rem 1.5rem rgba(var(--accent-rgb), .14); }
 ::view-transition-group(theme-ring) { animation: none; }

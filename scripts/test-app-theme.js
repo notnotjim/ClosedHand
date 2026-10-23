@@ -61,10 +61,26 @@ test("the pick is put on every page as it is served, and only a real pick", () =
   assert.match(read("webapp/report-page.js"), /:root\[data-theme-pick="dark"\] \{/, "and follow it");
 });
 
-test("Settings has Appearance: Match this device, Light and Dark", () => {
+test("light or dark is the sun and moon at the top, as on closedhand.com, not a card in Settings", () => {
+  const chat = read("webapp/views/index.html");
+  const site = read("closedhand-com/views/home.html");
+  const button = site.slice(site.indexOf('<button type="button" class="theme-toggle"'), site.indexOf("</button>", site.indexOf('class="theme-toggle"')) + 9);
+  assert.equal(chat.split(button).length - 1, 2, "the site's own button, in the web chat's top bar and the dashboard's header");
+  assert.match(chat, /<div class="header-right">\s*<button type="button" class="theme-toggle"/, "first at the top, as on the site");
+  assert.match(chat, /<div class="dash-slide-actions">\s*<button type="button" class="theme-toggle"[\s\S]{0,4000}?<\/button>\s*<button class="dash-slide-close"/);
   const dash = read("webapp/views/dashboard.html");
-  assert.match(dash, /<h2>Appearance<\/h2>\s*<p class="section-desc">Light or dark, on every page and every device you open Closedhand on\.<\/p>/);
-  assert.match(dash, /data-pick="device">Match this device<\/button>\s*<button class="seg-btn" type="button" role="radio" data-pick="light">Light<\/button>\s*<button class="seg-btn" type="button" role="radio" data-pick="dark">Dark<\/button>/);
-  assert.match(dash, /window\.parent\.closedhandTheme\.setPick\(pick, at && \{ x: frame\.left \+ at\.x, y: frame\.top \+ at\.y \}\);/, "the web chat behind the dashboard switches with it");
-  assert.match(dash, /fetch\("\/api\/settings\/appearance"/);
+  assert.doesNotMatch(dash, /<h2>Appearance<\/h2>|id="appearance"|Match this device/);
+  const theme = read("webapp/public/theme.js");
+  assert.match(theme, /var was = pick\(\), next = current\(\) === 'light' \? 'dark' : 'light';/, "it flips to the other theme");
+  assert.match(theme, /frame\.contentWindow\.closedhandTheme\.follow\(to\)/, "the dashboard follows at once");
+  assert.match(theme, /fetch\('\/api\/settings\/appearance', \{ method: 'POST'/, "kept in settings, for every device");
+  const css = read("webapp/public/interface.css");
+  for (const rule of [":root[data-theme=\"light\"] .theme-toggle .sun { translate: 80% 0; opacity: 0; }", ".theme-toggle:active > span { scale: .85; }"])
+    assert.ok(css.includes(rule) && read("closedhand-com/public/interface.css").includes(rule), "the same look as the site: " + rule);
+});
+
+test("Settings is the last tab", () => {
+  const tabs = [...read("webapp/views/dashboard.html").matchAll(/<button class="tab[^"]*" data-tab="([a-z-]+)"/g)].map((m) => m[1]);
+  assert.equal(tabs[tabs.length - 1], "settings");
+  assert.deepEqual(tabs.slice(-3), ["brain", "usage", "settings"]);
 });

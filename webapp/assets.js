@@ -49,7 +49,7 @@ function page(name) {
   if (!entry || entry.mtime !== stat.mtimeMs) { entry = { mtime: stat.mtimeMs, html: forHost(fs.readFileSync(file, "utf8")) }; pages.set(file, entry); }
   return stamp(entry.html);
 }
-// Light or dark, as the person picked under Appearance in Settings
+// Light or dark, as the person picked with the sun and moon at the top
 // (settings.appearance): put on every page as it is served, so theme.js sets
 // the theme before anything is drawn. "device", or none yet, leaves it to the
 // device. Kept here by the server (server.js) at start and on each change.
