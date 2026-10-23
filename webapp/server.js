@@ -1900,7 +1900,7 @@ app.post("/api/move/railway", (req, res) => {
 });
 app.get("/api/move/railway/return", (req, res) => {
   railwayMove.finish({ code: req.query.code, state: req.query.state, error: req.query.error },
-    { startMove: (to) => move.startMove(to, outboundDeps()) });
+    { startMove: (to) => move.startMove(to, outboundDeps()), moveStatus: () => move.outboundStatus() });
   res.redirect("/?dash=%23settings");
 });
 app.get("/api/move/status", (req, res) => {

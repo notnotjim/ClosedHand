@@ -120,3 +120,35 @@ test("Closedhand's own Railway app is built in, so Go always-on is there without
   assert.match(read("webapp/railway-move.js"), /const CLIENT_ID = process\.env\.RAILWAY_CLIENT_ID \|\| "rlwy_oaci_[A-Za-z0-9]+";/);
   assert.doesNotMatch(read("webapp/railway-move.js"), /client_secret|CLIENT_SECRET/, "no secret, anywhere");
 });
+
+test("a move that fails after the project was made takes the project away, so nothing is left on the bill", async () => {
+  const run = async (failAt) => {
+    const signIn = new URL(railwayMove.begin("http://localhost:3000"));
+    const calls = [];
+    const reply = (body, status = 200) => ({ ok: status < 400, status, json: async () => body });
+    const fakeFetch = async (url, opts = {}) => {
+      if (url.endsWith("/oauth/token")) return reply({ access_token: "tok" });
+      if (url.endsWith("/health")) return reply({ ok: true });
+      const { query } = JSON.parse(opts.body);
+      calls.push(query.match(/\b(me|template|projectCreate|templateDeployV2|projectDelete|project)\b/)[1]);
+      if (/me \{ workspaces/.test(query)) return reply({ data: { me: { workspaces: [{ id: "ws1" }] } } });
+      if (/template\(code/.test(query)) return reply({ data: { template: { id: "tpl", serializedConfig: { services: { b: { name: "webapp", variables: {} } } } } } });
+      if (/projectCreate/.test(query)) return reply({ data: { projectCreate: { id: "proj", environments: { edges: [{ node: { id: "env" } }] } } } });
+      if (/templateDeployV2/.test(query)) return failAt === "deploy" ? reply({ errors: [{ message: "Your trial has ended" }] }) : reply({ data: { templateDeployV2: { projectId: "proj" } } });
+      if (/projectDelete/.test(query)) return reply({ data: { projectDelete: true } });
+      return reply({ data: { project: { services: { edges: [{ node: { name: "webapp", serviceInstances: { edges: [{ node: { latestDeployment: { status: "SUCCESS" }, domains: { serviceDomains: [{ domain: "w.up.railway.app" }] } } }] } } }] } } } });
+    };
+    let moveStep = "sending";
+    await new Promise((resolve) => {
+      railwayMove.finish({ code: "c", state: signIn.searchParams.get("state") },
+        { fetch: fakeFetch, pollMs: 1, startMove: () => { moveStep = "failed"; }, moveStatus: () => ({ step: moveStep }) });
+      setTimeout(resolve, 80);
+    });
+    return calls;
+  };
+  const atDeploy = await run("deploy");
+  assert.deepEqual(atDeploy.slice(-2), ["templateDeployV2", "projectDelete"], "a deploy Railway refuses");
+  assert.match(railwayMove.status().error, /Your trial has ended\. Nothing has moved/);
+  const laterOn = await run("move");
+  assert.equal(laterOn[laterOn.length - 1], "projectDelete", "a move that stops after it started");
+});

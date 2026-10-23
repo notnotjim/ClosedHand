@@ -24,7 +24,8 @@ const RETURN = "https://closedhand.com/railway/return";
 const TEMPLATE = "ob3IfQ";
 const REGION = "europe-west4-drams3a"; // Amsterdam
 const SETUP_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const SIGN_IN_TIME = 15 * 60 * 1000;
+// Long enough to make a Railway account and add a card on the way.
+const SIGN_IN_TIME = 60 * 60 * 1000;
 const START_TIME = 20 * 60 * 1000;
 
 let pending = null; // { nonce, verifier, at }: a sign-in under way
@@ -130,9 +131,24 @@ async function run(code, verifier, deps) {
     if (service.name === "webapp") service.variables = { ...service.variables, SETUP_CODE: { ...(service.variables || {}).SETUP_CODE, defaultValue: setupCode } };
   }
 
-  // 3. A project of its own, with the template deployed into it.
+  // 3. A project of its own, with the template deployed into it. A move that
+  // fails from here on takes the project away again, so nothing is left
+  // running on the person's Railway bill.
   const project = (await gql("mutation($i: ProjectCreateInput!) { projectCreate(input: $i) { id environments { edges { node { id } } } } }",
     { i: { name: "Closedhand", workspaceId } })).projectCreate;
+  const removeProject = () => gql("mutation($p: String!) { projectDelete(id: $p) }", { p: project.id })
+    .catch((e) => console.error("[railway-move] could not remove the project it made:", e.message));
+  try {
+    await deployAndMove(gql, doFetch, deps, { template, config, project, workspaceId, setupCode });
+  } catch (e) {
+    await removeProject();
+    throw e;
+  }
+  watchMove(deps, removeProject);
+}
+
+async function deployAndMove(gql, doFetch, deps, { template, config, project, workspaceId, setupCode }) {
+  const said = (message) => Object.assign(new Error(message), { said: true });
   const environmentId = project.environments.edges[0].node.id;
   await gql("mutation($i: TemplateDeployV2Input!) { templateDeployV2(input: $i) { projectId } }",
     { i: { templateId: template.id, serializedConfig: config, projectId: project.id, environmentId, workspaceId } });
@@ -158,6 +174,17 @@ async function run(code, verifier, deps) {
   // 5. The move itself, as if its address and code had been pasted in.
   setup = null;
   deps.startMove({ address, code: setupCode });
+}
+
+// Follows the move it started: one that stops takes the Railway project away.
+function watchMove(deps, removeProject) {
+  if (!deps.moveStatus) return;
+  const timer = setInterval(() => {
+    const step = (deps.moveStatus() || {}).step;
+    if (step === "done") clearInterval(timer);
+    else if (step === "failed") { clearInterval(timer); removeProject(); }
+  }, deps.pollMs || 5000);
+  if (timer.unref) timer.unref();
 }
 
 function status() { return setup; }
