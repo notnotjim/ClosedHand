@@ -1,6 +1,8 @@
-// The installer's opening screen. macOS Terminal draws block characters short
-// of their cell, so there the large fist must be coloured spaces only; the
-// small one, and every other terminal, keep the half blocks. Runs the installer's own drawing code at a
+// The installer's opening screen. The fist is painted in the brand's cream as
+// the install runs, one brush stroke as far along as the install has got.
+// macOS Terminal draws block characters short of their cell, so there the
+// large fist is coloured spaces only; the small one, and every other terminal,
+// use half blocks at the stroke's edges. Runs the installer's own drawing code at a
 // given terminal size, with tput answered by the test.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -14,7 +16,8 @@ const drawing = fs.readFileSync(install, 'utf8').match(/# --- The drawing[\s\S]*
   .replace('if [ ! -t 1 ] || [ "${TERM:-dumb}" = "dumb" ]; then return 0; fi', '')
   .replace(/^  trap .*$/gm, '').replace("printf '\\033[?25l\\n'", '');
 
-// opts: clock (seconds), os (uname), ssh, display: the computer the screen thinks it is on.
+// opts: clock (seconds), os (uname), ssh, display: the computer the screen thinks it is on;
+// pct, how far the install has got; colorterm, what the terminal says of its colours.
 function screen(cols, lines, termProgram, log = '/dev/null', opts = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ch-fist-'));
   const file = path.join(dir, 'draw.sh');
@@ -26,31 +29,67 @@ LOG=${log}
 ${drawing}
 ui_init
 [ "$UI" = "1" ] || { echo PLAIN; exit 0; }
-ui_draw 3 "Getting the code"
+ui_draw ${opts.pct ?? 3} "Getting the code"
 `);
   const env = { PATH: process.env.PATH, TERM: 'xterm-256color', LANG: 'en_US.UTF-8', TERM_PROGRAM: termProgram };
+  if (opts.colorterm) env.COLORTERM = opts.colorterm;
   if (opts.ssh) env.SSH_CONNECTION = '10.0.0.2 50000 10.0.0.1 22';
   if (opts.display) env.DISPLAY = ':0';
   const out = execFileSync('sh', [file], { env }).toString();
   fs.rmSync(dir, { recursive: true });
   return out;
 }
-// The fist is drawn in greys (256-colour 232 to 255); the bar's green is not part of it.
-const fist = out => out.split('\n').filter(l => /\x1b\[(?:0;)?(?:38|48);5;(?:23[2-9]|24\d|25[0-5])[;m]/.test(l));
+// The fist is drawn in cream: 256-colour 230, or the brand's own where the
+// terminal takes any colour. The bar's green is not part of it.
+const INK = /\x1b\[(?:38|48);(?:5;230|2;239;230;214)m/;
+const fist = out => out.split('\n').filter(l => INK.test(l));
+// How many pixels of the fist are painted: a coloured space is two in half-block
+// cells and one in macOS Terminal's large drawing; a half block is one.
+const painted = (out, spaces) => fist(out).join('').split(/(\x1b\[[0-9;]*m)/).reduce((n, part, i, all) => {
+  if (!/^\x1b\[(?:38|48);(?:5;230|2;239;230;214)m$/.test(part)) return n;
+  const next = all[i + 1] || '';
+  return n + (part.includes('[48;') ? (spaces ? next.length / 2 : next.length * 2) : next.length);
+}, 0);
+// The art itself: rows with ink and pixels with ink, in the 32 and 64 wide pictures.
+const art = (name, width) => {
+  const fr = fs.readFileSync(install, 'utf8').match(new RegExp(`^${name}='([^']*)'$`, 'm'))[1];
+  const px = []; for (const [, n, ch] of fr.matchAll(/(\d+)([a-y])/g)) for (let k = 0; k < +n; k++) px.push(ch.charCodeAt(0) - 97);
+  const rows = []; for (let y = 0; y * width < px.length; y++) rows.push(px.slice(y * width, (y + 1) * width));
+  return { rows, ink: px.filter(v => v > 0).length };
+};
 
 test('macOS Terminal gets the large fist in coloured spaces only', () => {
-  const lines_ = fist(screen(102, 43, 'Apple_Terminal'));
-  assert.equal(lines_.length, 28);
-  for (const l of lines_) assert.doesNotMatch(l, /[\u2580-\u259f]/, 'no block characters');
+  const out = screen(102, 43, 'Apple_Terminal', '/dev/null', { pct: 100 });
+  const { rows, ink } = art('HAND_FIST_32', 32);
+  assert.equal(fist(out).length, rows.filter(r => r.some(v => v > 0)).length, 'every row with ink, one pixel tall');
+  for (const l of fist(out)) assert.doesNotMatch(l, /[\u2580-\u259f]/, 'no block characters');
+  assert.equal(painted(out, true), ink, 'finished, every pixel of the fist is painted');
 });
 
-test('the small fist, and every other terminal, keep the half blocks as they were', () => {
-  assert.deepEqual(fist(screen(80, 24, 'Apple_Terminal')), fist(screen(80, 24, 'vscode')));
-  for (const [cols, lines, rows] of [[80, 24, 14], [140, 36, 14], [102, 43, 28]]) {
-    const lines_ = fist(screen(cols, lines, 'vscode'));
-    assert.equal(lines_.length, rows);
+test('the small fist, and every other terminal, use half blocks only at the edges of the stroke', () => {
+  assert.deepEqual(fist(screen(80, 24, 'Apple_Terminal', '/dev/null', { pct: 100 })), fist(screen(80, 24, 'vscode', '/dev/null', { pct: 100 })));
+  for (const [cols, lines, name, width] of [[80, 24, 'HAND_FIST_32', 32], [140, 36, 'HAND_FIST_32', 32], [102, 43, 'HAND_FIST_64', 64]]) {
+    const out = screen(cols, lines, 'vscode', '/dev/null', { pct: 100 });
+    const lines_ = fist(out);
     assert.ok(lines_.some(l => /[\u2580\u2584]/.test(l)));
+    assert.ok(!lines_.some(l => l.includes('\u2588')), 'a cell inked top and bottom is a coloured space, which leaves no seam');
+    assert.equal(painted(out, false), art(name, width).ink);
   }
+});
+
+test('the fist is painted along its stroke as the install runs, and finished at 100%', () => {
+  const at = pct => painted(screen(102, 43, 'vscode', '/dev/null', { pct }), false);
+  const steps = [3, 25, 50, 75, 100].map(at);
+  for (let i = 1; i < steps.length; i++) assert.ok(steps[i] > steps[i - 1], `more is painted at each step: ${steps}`);
+  assert.ok(steps[0] > 0 && steps[0] < steps[4] / 10, 'it starts with a touch of the brush');
+  assert.equal(steps[4], art('HAND_FIST_64', 64).ink);
+});
+
+test("the fist is cream, the brand's own where the terminal takes any colour, and never grey", () => {
+  const plain = screen(102, 43, 'vscode', '/dev/null', { pct: 100 });
+  assert.match(plain, /\x1b\[38;5;230m/);
+  assert.doesNotMatch(plain, /\x1b\[(?:38|48);5;(?:23[2-9]|24\d|25[0-5])m/, 'no greys');
+  assert.match(screen(102, 43, 'vscode', '/dev/null', { pct: 100, colorterm: 'truecolor' }), /\x1b\[38;2;239;230;214m/);
 });
 
 test('the screen never says there is no account', () => {

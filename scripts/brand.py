@@ -14,6 +14,11 @@
 #
 #   python3 scripts/brand.py build-brush [--film]
 #
+# The installer's fist, painted along the stroke as an install runs (every
+# set; the original, with no stroke to follow, is swept top to bottom):
+#
+#   python3 scripts/brand.py build-install-art
+#
 # The icons pages show beside the fist, drawn with the same brush (brand/icons,
 # one SVG each in the colour of the text around it; pages carry them inline):
 #
@@ -118,37 +123,107 @@ def _taper(t, start, end):
     return (0.35 + 0.65 * a) * (0.25 + 0.75 * b)
 
 
-# Where the line starts at the wrist it leaves the hand open; this closes it
-# for the installer's fill (scripts/hand-frames.py --close), never drawn.
-CLOSE = ((36, 107), (57, 90))
 SCALE = 40
 
 
-def brush_mask(scale=SCALE, per=240, with_box=False):
-    """The mark as a white-on-black mask, cropped to the ink."""
-    from PIL import Image, ImageDraw
+def _stamps(per=240):
+    """Where the brush touches, in the order it does: x, y and radius on the
+    120 grid, and how far along the line (0 to 1)."""
     pts, cur = [START], START
     for c1, c2, end in SEGS:
         pts += [_cubic(cur, c1, c2, end, i / per) for i in range(1, per + 1)]
         cur = end
-    im = Image.new("L", (120 * scale, 120 * scale), 0)
-    d = ImageDraw.Draw(im)
     n = len(pts)
     for i, (x, y) in enumerate(pts):
         t = i / (n - 1)
-        r = max(0.8, (1.6 + 3.4 * math.sin(math.pi * t) ** 0.5) * _taper(t, 0.04, 0.05)) * scale
-        d.ellipse([x * scale - r, y * scale - r, x * scale + r, y * scale + r], fill=255)
-    box = im.getbbox()
-    return (im.crop(box), box) if with_box else im.crop(box)
+        yield x, y, max(0.8, (1.6 + 3.4 * math.sin(math.pi * t) ** 0.5) * _taper(t, 0.04, 0.05)), t
 
 
-def grid_to_canvas(pt, mask_box, size):
-    """Where a point of the 120 grid lands, as fractions of a canvas the mark is fitted into."""
-    W, H = size
-    mw, mh = mask_box[2] - mask_box[0], mask_box[3] - mask_box[1]
-    k = min(W / mw, H / mh)
-    ox, oy = (W - round(mw * k)) // 2, (H - round(mh * k)) // 2
-    return ((ox + (pt[0] * SCALE - mask_box[0]) * k) / W, (oy + (pt[1] * SCALE - mask_box[1]) * k) / H)
+def brush_mask(scale=SCALE):
+    """The mark as a white-on-black mask, cropped to the ink."""
+    from PIL import Image, ImageDraw
+    im = Image.new("L", (120 * scale, 120 * scale), 0)
+    d = ImageDraw.Draw(im)
+    for x, y, r, _ in _stamps():
+        d.ellipse([(x - r) * scale, (y - r) * scale, (x + r) * scale, (y + r) * scale], fill=255)
+    return im.crop(im.getbbox())
+
+
+# --- The installer's fist ------------------------------------------------------
+# install.sh paints the fist as Closedhand installs: one brush stroke, from the
+# wrist up over the knuckles, down the far side and round into the thumb, as
+# far along as the install has got. Each pixel holds when the brush first
+# reaches it, 1 to 24 (0 is no ink); the installer shows those up to its
+# progress. Two sizes, 32 by 28 and 64 by 56 pixels, run-length coded as
+# <count><letter>, a for 0 and b..y for 1..24.
+PAINT_STEPS = 24
+
+
+def paint_order(scale=10):
+    """The brush mark with each pixel's step in the painting, cropped to the ink."""
+    from PIL import Image, ImageDraw
+    im = Image.new("L", (120 * scale, 120 * scale), 0)
+    d = ImageDraw.Draw(im)
+    # The earliest touch is drawn last, so it is the one a pixel keeps.
+    for x, y, r, t in reversed(list(_stamps())):
+        d.ellipse([(x - r) * scale, (y - r) * scale, (x + r) * scale, (y + r) * scale],
+                  fill=1 + min(PAINT_STEPS - 1, int(t * PAINT_STEPS)))
+    return im.crop(im.getbbox())
+
+
+def swept_order(png):
+    """A fist with no stroke to follow (the original): painted top to bottom."""
+    from PIL import Image
+    a = Image.open(png).convert("RGBA").split()[3]
+    a = a.crop(a.getbbox())
+    out = Image.new("L", a.size, 0)
+    src, dst = a.load(), out.load()
+    for y in range(a.height):
+        for x in range(a.width):
+            if src[x, y] > 128:
+                dst[x, y] = 1 + min(PAINT_STEPS - 1, int(y / a.height * PAINT_STEPS))
+    return out
+
+
+def install_art(order, w, h, cover=0.38):
+    """One size of the installer's fist: the order picture fitted inside a
+    one-pixel margin, each pixel inked where the brush covers enough of it,
+    with the earliest step it covers, then run-length coded."""
+    W, H = order.size
+    k = min((w - 2) / W, (h - 2) / H)
+    pw, ph = round(W * k), round(H * k)
+    ox, oy = (w - pw) // 2, (h - ph) // 2
+    px = order.load()
+    cells = []
+    for gy in range(h):
+        for gx in range(w):
+            cx, cy = gx - ox, gy - oy
+            v = 0
+            if 0 <= cx < pw and 0 <= cy < ph:
+                x0, x1 = int(cx * W / pw), max(int(cx * W / pw) + 1, int((cx + 1) * W / pw))
+                y0, y1 = int(cy * H / ph), max(int(cy * H / ph) + 1, int((cy + 1) * H / ph))
+                inked = [px[x, y] for y in range(y0, y1) for x in range(x0, x1) if px[x, y]]
+                if len(inked) >= cover * (x1 - x0) * (y1 - y0):
+                    v = min(inked)
+            cells.append(v)
+    runs, prev, count = [], cells[0], 0
+    for v in cells + [-1]:
+        if v == prev:
+            count += 1
+        else:
+            runs.append(f"{count}{chr(97 + prev)}")
+            prev, count = v, 1
+    return "".join(runs)
+
+
+def build_install_art():
+    """The installer's fist for every set: the brush one painted along its
+    stroke, the original swept top to bottom."""
+    for name in sorted(os.listdir(MARKS)):
+        order = paint_order() if name == "brush" else swept_order(os.path.join(MARKS, name, "webapp/public/fist.png"))
+        open(os.path.join(MARKS, name, "install-art.txt"), "w").write(
+            f"HAND_FIST_32='{install_art(order, 32, 28)}'\nHAND_FIST_64='{install_art(order, 64, 56)}'\n")
+    print("Built the installer's fist for every set; `use` puts the active one in install.sh.")
 
 
 def fit(mask, size, colour, box=None):
@@ -169,7 +244,7 @@ def build_brush(film=False):
     orig = os.path.join(MARKS, "original")
     dst = os.path.join(MARKS, "brush")
     out = lambda rel: (os.makedirs(os.path.dirname(os.path.join(dst, rel)), exist_ok=True), os.path.join(dst, rel))[1]
-    mask, mask_box = brush_mask(with_box=True)
+    mask = brush_mask()
     # Cream on transparent, the original's own canvases.
     for rel in ("closedhand-com/public/fist.png", "webapp/public/fist.png"):
         fit(mask, (242, 267), CREAM).save(out(rel), optimize=True)
@@ -218,11 +293,10 @@ def build_brush(film=False):
     _dmg_background(out("desktop/dmg/fist-dark.png"), out("desktop/dmg/background.png"), out("desktop/dmg/background@2x.png"))
     # The traced outline the 3D film extrudes, on the logo's canvas.
     _trace(fit(mask, (3579, 3959), (0, 0, 0)), out("closedhand-com/tools/ring-video/fist.svg"))
-    # The installer's pixel fist, from the new fist.png.
-    close = ",".join(f"{v:.4f}" for pt in CLOSE for v in grid_to_canvas(pt, mask_box, (242, 267)))
-    lines = subprocess.run([sys.executable, os.path.join(ROOT, "scripts/hand-frames.py"), out("webapp/public/fist.png"), "export", "--close", close],
-                           capture_output=True, text=True, check=True).stdout.split()
-    open(os.path.join(dst, "install-art.txt"), "w").write(f"HAND_FIST_32='{lines[0]}'\nHAND_FIST_64='{lines[1]}'\n")
+    # The installer's fist, painted along the same stroke.
+    order = paint_order()
+    open(os.path.join(dst, "install-art.txt"), "w").write(
+        f"HAND_FIST_32='{install_art(order, 32, 28)}'\nHAND_FIST_64='{install_art(order, 64, 56)}'\n")
     if film:
         _film(dst)
     else:
@@ -408,6 +482,8 @@ if __name__ == "__main__":
         save(cmd[1])
     elif cmd[0] == "build-brush":
         build_brush(film="--film" in cmd)
+    elif cmd[0] == "build-install-art":
+        build_install_art()
     elif cmd[0] == "build-icons":
         build_icons()
     elif cmd[0] == "build-og":

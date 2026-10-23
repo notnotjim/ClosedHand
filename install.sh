@@ -37,42 +37,41 @@ fi
 # --- The drawing -------------------------------------------------------------
 # Decoration. The installer proper starts at "Preconditions" below.
 #
-# The Closedhand fist, held while the install runs. Taken from the brand icon
-# (webapp/public/fist.png) by scripts/hand-frames.py: a shaded pixel picture,
-# run-length coded, at two sizes.
-HAND_FIST_32='12a5i3a4i12a5i2a15i9a24i7a25i6a12i3u13i4a4i3v5i3u5i2t8i1a4i3v1u4i4u4i3t13i2v3u3i3u2t3i3t1s12i1v8u9t2s11i9u9t7s7i8u9t8s7i7u1t7i1t9s7i6u1t14i1s1i1s8i5u1t16i2r8i4u1t5i2t1s8i3r8i2u3t4i2t9s4r4i1a3i1u4t4i1t9s5r4i1a3i5t4i9s5r5i2a3i4t5i7s6r5i2a3i5t5i5s7r4i3a3i5t6i2s8r5i4a2i3t3s8i7r5i4a2i2t5s9i4r5i6a1i1t5s2a17i6a2i4s5a14i8a1i3s8a11i9a1i1s13a7i10a1s17a3i7a'
-HAND_FIST_64='25a7i54a12i5a8i26a6i6a14i2a12i22a11i2a31i19a46i16a48i15a50i13a51i13a24i4u26i9a10i2v12i6u11i2t14i7a8i6v9i7u10i4t15i5a7i6v1u9i8u8i6t15i3a7i6v3u7i8u1t8i6t16i2a7i5v4u7i7u2t8i6t16i2a6i5v5u7i6u3t7i7t17i1a6i3v8u5i6u5t5i8t17i1a6i2v10u3i6u18t2s23i1v18u19t4s5i2s14i1v18u19t12s14i18u18t14s14i17u18t15s14i16u18t16s14i15u2t9i7t17s14i13u2t17i17s15i12u2t23i12s15i11u2t33i2s1r15i10u2t33i2s2r15i9u3t32i1s3r9i1a6i8u3t10i3t18i2s4r9i1a6i6u5t8i6t6s9i3s5r9i1a6i5u6t7i6t18s6r9i1a6i4u6t8i4t19s7r8i2a6i3u7t7i4t19s8r8i3a5i2u8t7i3t18s9r9i3a5i1u9t8i1t18s10r9i3a6i9t8i18s11r9i3a6i10t8i16s11r9i5a5i10t9i14s12r9i5a5i10t10i12s13r9i5a5i11t10i9s14r9i6a5i11t11i7s15r9i7a5i9t2s12i4s16r9i7a5i8t4s14i16r9i9a4i6t7s15i14r9i9a4i5t9s17i10r10i10a3i4t10s1a19i6r10i11a4i2t10s4a19i3r11i12a3i1t9s7a31i13a3i9s10a28i15a3i7s13a26i15a3i6s16a23i17a2i4s21a19i19a2i2s25a15i20a2i1s28a12i20a3s31a9i21a2s35a5i15a'
+# The Closedhand fist, painted while the install runs: one brush stroke, from
+# the wrist up over the knuckles, down the far side and round into the thumb,
+# as far along as the install has got. Made from the brand's own stroke by
+# scripts/brand.py build-install-art, run-length coded, at two sizes.
+HAND_FIST_32='44a5h3a2j1k14a4e2a3g4h1i4j2k10a6e3f2g4h2i3j3k9a2d4e3f2g4h2i3j3k8a3d1e2a4f1g3a4i1j1a4k2l1m5a3d4a3f4a4i3a2k3l2m3a4d4a2f1g4a4i3a5l3m2a3d6a1g6a2i4a5l3m2a3d23a3m1n2a3d23a4n2a3c8a3v2w10a4n2a3c6a5v5w2x2a1y2a4n2a3c5a3u3v5w3x1y2a1o3n3a3c5a4u4a3w3x3a4o3a3c5a3u14a4o3a3c5a3t14a4o3a3c5a3t13a5o4a2b5a4t12a4o5a2b5a3t2s11a2p1o1p5a3b5a2t4s8a5p6a2b6a1t5s2r5a4p7a2b7a4s6r1a5p8a1b9a2s5r3q3p9a2b10a5r5q11a1b13a2r5q27a3q40a'
+HAND_FIST_64='89a8h54a12h4a5j4k27a4e2f5a4g9h1i1a8j4k23a8e3f2a6g8h3i7j6k20a10e4f6g8h3i8j5k19a11e5f5g8h4i7j6k17a12e6f4g8h4i6j8k15a4d8e7f4g1h1a5h6i5j8k15a5d6e9f2g5a9i4j9k2l2m10a6d2e5a8f1g7a8i1j4a7k4l3m8a6d1e6a7f2g7a8i1j5a5k6l3m6a7d8a6f2g7a8i6a11l4m5a6d9a5f2g8a8i6a11l4m5a6d9a7g9a7i6a11l5m4a6d10a6g10a5i8a9l6m4a6d11a4g12a2i10a9l6m1n2a6d41a5l1a8m1n2a6d48a6m2n2a6d48a1n3m4n2a6d48a8n2a1d3c2d48a8n2a5c1d17a5v2w24a8n2a6c15a8v6w18a9n2a6c13a10v9w2x13a9n2a6c12a11v9w7x5y3a1o7n3a5c13a4u7v9w8x3y3a2o7n3a6c11a6u5v10w8x1y5a4o4n1o3a6c10a7u2v5a8w8x6a8o4a6c10a7u14a6x9a8o4a6c10a7u29a8o4a6c10a7u28a9o5a5c10a6u29a9o5a5c10a1u6t28a8o6a5c10a7t28a8o6a5c10a7t28a8o6a2c3b10a8t26a1p8o7a5b9a9t25a1p7o8a5b10a9t24a3p4o1p8a5b10a7t3s22a9p9a4b11a5t6s20a8p10a4b12a4t8s17a9p10a5b12a2t11s15a9p11a4b13a1t12s2r11a9p12a4b14a11s6r8a9p13a3b15a9s10r4a1q8p14a3b17a7s12r1a2q8p15a3b17a6s11r5q6p17a2b19a4s10r8q3p18a2b22a1s10r11q19a2b23a8r11q20a2b26a5r10q22a1b28a3r9q55a1r7q58a4q80a'
 
-HAND_AWK='# The fist. FR is PW pixels wide and twice ROWS tall, one grey level per
-# pixel, run-length coded as <count><letter>: a is background, b..y dark to
-# light. A terminal cell shows two pixels, one above the other, with the
-# half-block glyphs.
+HAND_AWK='# The fist. FR is PW pixels wide and twice ROWS tall, run-length coded
+# as <count><letter>: a is no ink, b..y the step of the stroke (1 to 24) at
+# which the brush reaches that pixel. Pixels up to SHOW are drawn, in one
+# colour. A terminal cell shows two pixels, one above the other.
 #   PW  pixel width     ROWS  cell rows     PAD  blank columns on the left
-#   COLOR  1 = 256-colour greys, 0 = shades of block characters
-#   TP BT  top and bottom half blocks     SH1..SH4  the mono ramp
+#   SHOW   steps painted so far, 0 to 24
+#   INK PAPER  the ink colour as foreground and as background, or both empty
+#          on a terminal without colour, where block characters stand in
+#   TP BT FB  top half, bottom half and full block
 BEGIN {
   n = 0; i = 1; L = length(FR)
   while (i <= L) {
     c = ""; ch = substr(FR, i, 1)
     while (ch >= "0" && ch <= "9") { c = c ch; i++; ch = substr(FR, i, 1) }
     v = index("abcdefghijklmnopqrstuvwxy", ch) - 1
-    for (k = 0; k < c + 0; k++) { px[n % PW, int(n / PW)] = v; n++ }
+    for (k = 0; k < c + 0; k++) { on[n % PW, int(n / PW)] = (v > 0 && v <= SHOW); n++ }
     i++
   }
   margin = ""
   for (k = 0; k < PAD; k++) margin = margin " "
-  # macOS Terminal draws block characters short of their cell, so half
-  # blocks leave a seam wherever the two pixels of a cell differ. There, at
-  # the large size (SPACES), the fist is drawn with coloured spaces alone,
-  # which fill the cell edge to edge: each pixel of the 32-wide picture is two
-  # spaces, the same picture with no seams.
-  if (SPACES && COLOR) {
+  # macOS Terminal draws block characters short of their cell, so they leave
+  # a seam. Where a cell is inked top and bottom it is a space in the ink
+  # colour instead, which fills the cell edge to edge; at the large size
+  # there (SPACES) every pixel is two such spaces, with no block at all.
+  if (SPACES && INK != "") {
     for (y = 0; y < ROWS; y++) {
       line = margin
-      for (c = 0; c < PW; c++) {
-        v = px[c, y]
-        line = line (v ? sprintf("\033[48;5;%dm  ", 231 + v) : "\033[0m  ")
-      }
+      for (c = 0; c < PW; c++) line = line (on[c, y] ? PAPER "  " : "\033[0m  ")
       printf "\033[2K%s\033[0m\n", line
     }
     exit
@@ -80,38 +79,30 @@ BEGIN {
   for (r = 0; r < ROWS; r++) {
     line = margin
     for (c = 0; c < PW; c++) {
-      t = px[c, 2 * r]; b = px[c, 2 * r + 1]
-      if (COLOR) {
-        if (t && b)       line = line sprintf("\033[38;5;%d;48;5;%dm%s", 231 + t, 231 + b, TP)
-        else if (t)       line = line sprintf("\033[0;38;5;%dm%s", 231 + t, TP)
-        else if (b)       line = line sprintf("\033[0;38;5;%dm%s", 231 + b, BT)
-        else              line = line "\033[0m "
-      } else {
-        a = (t + b) / 2
-        if (a <= 0)       line = line " "
-        else if (a < 7)   line = line SH1
-        else if (a < 13)  line = line SH2
-        else if (a < 19)  line = line SH3
-        else              line = line SH4
-      }
+      t = on[c, 2 * r]; b = on[c, 2 * r + 1]
+      if (t && b)  line = line (INK != "" ? PAPER " \033[0m" : FB)
+      else if (t)  line = line INK TP "\033[0m"
+      else if (b)  line = line INK BT "\033[0m"
+      else         line = line " "
     }
     printf "\033[2K%s\033[0m\n", line
   }
 }
 '
 
-# Print the fist at the size ui_init settled on.
+# Print the fist at the size ui_init settled on, painted as far as $1 percent.
 hand_frame() {
+  _show=$(( ($1 * 24 + 99) / 100 ))
+  if [ "$_show" -gt 24 ]; then _show=24; fi
   # macOS Terminal at the large size gets the spaces-only drawing (see
-  # HAND_AWK). A space holds one colour, so the small size has no clean
-  # equivalent and keeps its half blocks everywhere.
+  # HAND_AWK). Two spaces make one pixel, so at the small size that would
+  # halve the picture; it keeps half blocks at the stroke's edges.
   _sp=0
   if [ "$BK" -ge 2 ]; then case "${TERM_PROGRAM:-}" in Apple_Terminal) _sp=1 ;; esac; fi
   if [ "$_sp" = 1 ]; then _fr=$HAND_FIST_32; _pw=32
   elif [ "$BK" -ge 2 ]; then _fr=$HAND_FIST_64; _pw=$BSW; else _fr=$HAND_FIST_32; _pw=$BSW; fi
-  awk -v FR="$_fr" -v PW="$_pw" -v ROWS="$BH" -v PAD="$BPAD" -v COLOR="$BCOLOR" -v SPACES="$_sp" \
-      -v TP="$BTP" -v BT="$BBT" \
-      -v SH1="$BS1" -v SH2="$BS2" -v SH3="$BS3" -v SH4="$BS4" "$HAND_AWK" </dev/null
+  awk -v FR="$_fr" -v PW="$_pw" -v ROWS="$BH" -v PAD="$BPAD" -v SPACES="$_sp" -v SHOW="$_show" \
+      -v INK="$BINK" -v PAPER="$BPAPER" -v TP="$BTP" -v BT="$BBT" -v FB="$BS4" "$HAND_AWK" </dev/null
 }
 
 # --- Progress display --------------------------------------------------------
@@ -167,15 +158,14 @@ ui_init() {
     *UTF-8*|*utf-8*|*UTF8*|*utf8*) BTP=$(printf '\342\226\200')
                                    BBT=$(printf '\342\226\204')
                                    BS1=$(printf '\342\226\221')
-                                   BS2=$(printf '\342\226\222')
-                                   BS3=$(printf '\342\226\223')
                                    BS4=$(printf '\342\226\210')
                                    BSH=$BS4
                                    BHL=$BS1 ;;
-    *) BTP="'"; BBT=','; BS1='.'; BS2=':'; BS3='+'; BS4='#'; BSH='#'; BHL=':' ;;
+    *) BTP="'"; BBT=','; BS1='.'; BS4='#'; BSH='#'; BHL=':' ;;
   esac
-  # The shading wants 256 colours; with fewer, the hand is drawn in four
-  # shades of block character instead.
+  # The fist is the brand's cream, exactly where the terminal takes any
+  # colour, else the nearest of 256; with fewer, it is drawn in block
+  # characters in the terminal's own colour.
   BCOLOR=0
   _colors=$(tput colors 2>/dev/null || echo 0)
   case "$_colors" in ''|*[!0-9]*) _colors=0 ;; esac
@@ -184,6 +174,13 @@ ui_init() {
   # Green for what is finished: the filled part of the bar and each ticked
   # box. Setup's own green where there are 256 colours, plain green otherwise.
   if [ "$BCOLOR" = 1 ]; then GREEN=$(printf '\033[38;5;108m'); else GREEN=$(printf '\033[32m'); fi
+  BINK=""; BPAPER=""
+  if [ "$BCOLOR" = 1 ]; then
+    case "${COLORTERM:-}" in
+      truecolor|24bit) BINK=$(printf '\033[38;2;239;230;214m'); BPAPER=$(printf '\033[48;2;239;230;214m') ;;
+      *)               BINK=$(printf '\033[38;5;230m');         BPAPER=$(printf '\033[48;5;230m') ;;
+    esac
+  fi
   RESET=$(printf '\033[0m')
 
   UI=1
@@ -291,7 +288,7 @@ ui_draw() {
     printf '\033[%dA' "$BLOCK"
   fi
 
-  hand_frame
+  hand_frame "$_dpct"
   ui_line ""
   ui_centred "C L O S E D H A N D"
   ui_centred "A personal AI assistant you actually own"
@@ -317,7 +314,8 @@ browser_here() {
 # The closing line says what Closedhand is and, where a browser will open,
 # alternates every 8 seconds with what happens when installing ends. Around
 # each change the line is faint for a frame, so it fades across instead of
-# jumping. Faint rather than grey: greys are the fist's own colours.
+# jumping. Faint rather than a colour of its own: the fist's cream and the
+# bar's green are the only colours on the screen.
 NOTE_LAST=""
 ui_note() {
   _nt="Your data stays with you."
