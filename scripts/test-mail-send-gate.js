@@ -36,13 +36,32 @@ test("every address that sends mail is known, and nothing else is", () => {
   ]) assert.ok(!isMailSendUrl(url), url);
 });
 
-test("a raw send through the API is refused in the chat and in background tasks", () => {
+test("a raw send or draft write through the API is refused in the chat, background tasks and code", () => {
   const engine = read("lib/engine.js");
-  const refuse = engine.indexOf('require("./send-gate").isMailSendUrl(block.input?.url)');
+  const refuse = engine.indexOf('const rawMail = require("./send-gate").rawMailRefusal(block.name, block.input);');
   assert.ok(refuse > 0 && refuse < engine.indexOf("let needsConfirmation = (ACTIONS_NEEDING_CONFIRMATION.includes(block.name)"), "refused before anything else");
   const agents = read("lib/agents.js");
-  assert.match(agents, /sendGate\.isMailSendUrl\(block\.input\?\.url\)\) \{\n\s*toolResults\.push\(\{ type: "tool_result", tool_use_id: block\.id, content: JSON\.stringify\(\{ error: sendGate\.RAW_SEND_REFUSAL \}\) \}\);/);
+  assert.match(agents, /const rawMail = sendGate\.rawMailRefusal\(block\.name, block\.input\);\n\s*if \(rawMail\) \{\n\s*toolResults\.push\(\{ type: "tool_result", tool_use_id: block\.id, content: JSON\.stringify\(\{ error: rawMail \}\) \}\);/);
   assert.doesNotMatch(agents, /function isMailSendUrl/, "one definition");
+  assert.match(read("lib/gateway.js"), /const refused = require\("\.\/send-gate"\)\.codeCallRefusal\(service, method, url, body\);\n\s*if \(refused\) return res\.status\(403\)\.json\(\{ error: refused \}\);/, "code on the sandbox computer too");
+
+  const gate = require("../lib/send-gate");
+  const gmail = "https://gmail.googleapis.com/gmail/v1/users/me";
+  assert.match(gate.rawMailRefusal("api_request", { method: "POST", url: `${gmail}/messages/send` }), /Never send email/);
+  assert.match(gate.rawMailRefusal("api_request", { method: "PUT", url: `${gmail}/drafts/r-draft-1` }), /gmail_draft_update[^.]*keep a reply in its thread/);
+  assert.match(gate.rawMailRefusal("sandbox_gateway", { method: "POST", url: `${gmail}/drafts` }), /gmail_create_draft/);
+  assert.equal(gate.rawMailRefusal("api_request", { method: "GET", url: `${gmail}/drafts/r-draft-1` }), null, "reading a draft");
+  assert.equal(gate.rawMailRefusal("api_request", { method: "DELETE", url: `${gmail}/drafts/r-draft-1` }), null, "a delete is asked about on its card");
+  assert.equal(gate.rawMailRefusal("web_fetch", { url: `${gmail}/messages/send` }), null);
+
+  // Code cannot be asked anything, so through the sandbox route it reads only.
+  assert.equal(gate.codeCallRefusal("google", "GET", `${gmail}/messages?q=from:harbour`), null);
+  assert.match(gate.codeCallRefusal("google", "POST", `${gmail}/messages/send`), /Never send email/);
+  assert.match(gate.codeCallRefusal("google", "PATCH", "https://www.googleapis.com/calendar/v3/calendars/primary/events/ev-1"), /api_request, which asks/);
+  assert.match(gate.codeCallRefusal("slack", "POST", "https://slack.com/api/chat.postMessage", { channel: "C1", text: "Racquets land Tuesday" }), /api_request/);
+  assert.equal(gate.codeCallRefusal("shopify", "POST", "https://kestrel.myshopify.com/admin/api/2025-01/graphql.json", { query: "{ shop { name } }" }), null, "a GraphQL read");
+  assert.match(gate.codeCallRefusal("shopify", "POST", "https://kestrel.myshopify.com/admin/api/2025-01/graphql.json", { query: "mutation { productDelete(input: {id: \"gid://1\"}) { deletedProductId } }" }), /api_request/);
+  assert.equal(gate.codeCallRefusal("none", "POST", "https://api.harbourpost.example/v1/lookup"), null, "not one of the person's accounts");
   assert.deepEqual([...require("../lib/send-gate").MAIL_SEND_TOOLS], ["gmail_send", "gmail_reply", "outlook_send", "outlook_reply", "send_mail", "reply_to_mail", "gmail_send_draft", "outlook_send_draft", "send_mail_draft"]);
 });
 

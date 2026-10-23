@@ -62,25 +62,30 @@ test('a draft edited in Gmail since Closedhand last saw it is handed back, not o
 
   // Closedhand wrote version msg-1; the person then saved msg-2 in Gmail.
   lastSeen.set('r-draft-1', 'msg-1');
-  const back = await run({ draft_id: 'r-draft-1' }, 'r-draft-1', draft('msg-2'), null);
+  const back = await run({ draft_id: 'r-draft-1', body: 'x' }, 'r-draft-1', draft('msg-2'), null);
   assert.equal(back.changed_in_mailbox, true);
   assert.match(back.error, /edited in Gmail after you last saw it/);
   assert.equal(back.current_wording, 'Hi Mara,\nTwo racquets and a pavilion banner.');
   assert.match(back.error, /never tell them it did not/);
-  assert.equal(await run({ draft_id: 'r-draft-1' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'once seen, the change goes ahead');
+  assert.equal(await run({ draft_id: 'r-draft-1', body: 'x' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'once seen, the change goes ahead');
 
   // Nothing written this run: the synced copy says which version was seen.
   lastSeen.clear();
   cached = [{ external_id: 'msg-1' }];
-  assert.equal((await run({ draft_id: 'r-draft-1' }, 'r-draft-1', draft('msg-2'), null)).changed_in_mailbox, true, 'a copy from before the edit');
+  assert.equal((await run({ draft_id: 'r-draft-1', body: 'x' }, 'r-draft-1', draft('msg-2'), null)).changed_in_mailbox, true, 'a copy from before the edit');
   lastSeen.clear();
   cached = [{ external_id: 'msg-2' }];
-  assert.equal(await run({ draft_id: 'r-draft-1' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'a copy that has the edit');
+  assert.equal(await run({ draft_id: 'r-draft-1', body: 'x' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'a copy that has the edit');
   lastSeen.clear();
   cached = [{ external_id: 'msg-1' }];
-  assert.equal(await run({ draft_id: 'msg-2' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'naming the live version means it was seen');
+  assert.equal(await run({ draft_id: 'msg-2', body: 'x' }, 'r-draft-1', draft('msg-2'), null), 'rewritten', 'naming the live version means it was seen');
   cached = null;
-  assert.equal(await run({ draft_id: 'r-draft-1' }, 'r-draft-1', draft('msg-9'), null), 'rewritten', 'nothing known, nothing to compare');
+  assert.equal(await run({ draft_id: 'r-draft-1', body: 'x' }, 'r-draft-1', draft('msg-9'), null), 'rewritten', 'nothing known, nothing to compare');
+
+  // A change to the headers alone (a send-as From) keeps the wording as it
+  // now stands, the person's edit included, so there is nothing to compare.
+  lastSeen.set('r-draft-1', 'msg-1');
+  assert.equal(await run({ draft_id: 'r-draft-1', from: 'ana@harbour.test' }, 'r-draft-1', draft('msg-5'), null), 'rewritten');
 
   // What Closedhand saves is what it has seen.
   assert.match(block('gmail_draft_update'), /const saved = result\.message\?\.id \|\| \(await liveGmailDraft\(dApi, draftId, "minimal"\)\)\.draft\?\.message\?\.id;\n\s*if \(saved\) draftLastSeen\.set\(draftId, saved\);/);

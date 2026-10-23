@@ -157,6 +157,52 @@ for (const scenario of ["superseded", "other-thread", "replacement-during-call",
   });
 }
 
+// Three messages arrived together after a dropped connection: the first was
+// set aside for the second, the second for the third, and the first question
+// was never answered. Set-aside requests now join one follow-up, and each is
+// saved in the conversation before the newer message is read.
+test("requests set aside one after another are answered together, and kept", async () => {
+  const { deferReply } = require("../lib/deferred-reply");
+  const db = fakeDb();
+  const base = { userId: "owner", platform: "whatsapp_linked", chatId: "phone", threadId: "thread" };
+  await deferReply(db, { ...base, requestId: "one", goal: "Does it go from my other address?", messages: exchange("a", "search_cache", {}, { from: "ana@harbour.test" }) });
+  await deferReply(db, { ...base, requestId: "two", goal: "?", messages: exchange("b", "search_cache", {}, { draft: "r-draft-1" }) });
+  assert.equal(db.tables.task_followups.length, 1, "one follow-up per chat");
+  const row = db.tables.task_followups[0];
+  assert.equal(row.request_id, "two");
+  assert.equal(row.payload.goal, "Does it go from my other address?\n?");
+  assert.equal(evidence.evidenceFrom(row.payload.messages).length, 2, "both requests' findings");
+  await deferReply(db, { ...base, requestId: "two", goal: "?", messages: [] });
+  assert.equal(db.tables.task_followups[0].payload.goal, "?", "the same request again is not doubled");
+  db.tables.task_followups[0].status = "sent";
+  await deferReply(db, { ...base, requestId: "three", goal: "And the tracking?", messages: [] });
+  assert.equal(db.tables.task_followups[0].payload.goal, "And the tracking?", "an answered one is not asked again");
+
+  const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
+  const yieldAt = engine.indexOf("[Engine] Yielding to newer message");
+  const setAside = engine.slice(yieldAt, engine.indexOf("return null;", yieldAt));
+  assert.match(setAside, /conversation\.push\(\{ role: "assistant", content: busyLine \}\);\n\s*if \(ctx\.activeUserStore\) \{\n\s*require\("\.\/storage"\)\.syncAdapterBack\(\);\n\s*await ctx\.activeUserStore\.save\(\)/, "saved, and waited for, before the newer message loads it");
+});
+
+test("the line for work moving to the background names nothing the request does not", async () => {
+  const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
+  const at = engine.indexOf("async function composeHandover(");
+  let said = "";
+  const fake = { "./dashboard-links": { agentLinkNotice: async () => "Watch it on your dashboard." },
+    "./llm": { getInternalClient: () => ({ client: {}, model: "fixture" }) },
+    "./task-model": { modelCall: async () => ({ content: [{ type: "text", text: said }] }) },
+    "./plain-dashes": require("../lib/plain-dashes") };
+  const compose = new Function("require", "ctx", engine.slice(at, engine.indexOf("\n}\n", at) + 2) + "\nreturn composeHandover;")((m) => fake[m], {});
+  const request = "Why does the second paragraph sound so stiff? Make it plainer.";
+  said = "I'm reworking your wording for the Leeds pickup on the 9th and the £250 budget, and will post it here.";
+  assert.match(await compose("u1", request, [], 100, "whatsapp_linked"), /^I'm carrying on with this in the background and will post the answer here when it's done\.\n\nWatch it/);
+  said = "I'm reworking the wording you asked about and will post the new version here.";
+  assert.match(await compose("u1", request, [], 100, "whatsapp_linked"), /^I'm reworking the wording you asked about/);
+  said = "I'm finding the 3 cheapest flights to Lisbon on the 14th and will post them here.";
+  assert.match(await compose("u1", "Find me the 3 cheapest flights to Lisbon on the 14th", [], 100, "web"), /^I'm finding the 3 cheapest/, "figures the request has are fine");
+  assert.match(engine.slice(at, at + 1600), /never add a place, date, amount, name or detail it does not contain/);
+});
+
 test("full source pages preserve exact details and isolate user/source identity", async () => {
   const { readCachedRecord } = require("../lib/task-retrieval");
   const db = fakeDb({data_cache:[
