@@ -23,6 +23,24 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   dashboard with no working script).
 - Gate `git push` behind checks with `&&`, never `;`, so a failed check stops the push.
 
+## Uniformity
+- Things of the same kind work, look and read the same everywhere: every tile in a list, every
+  main action, every status word, every date, every note of one kind, every page of the site
+  and app. People scan by sameness, and a difference reads as meaning something, so it makes
+  them stop and wonder.
+- Before adding or changing anything, find its siblings and reuse their component, words and
+  layout rather than making a lookalike. A list people can add to ends with the same dashed
+  "+ Add a …" tile; main actions share one rule in `webapp/public/interface.css`; every
+  connection says "Connected". A new look is built once as a shared piece and its siblings
+  move to it, never left as a one-off that appears nowhere else.
+- The same goes for how things work. Everything the person connects (an app, an MCP server,
+  an API key for voice or search) is added the same way and used the same way, without them
+  having to ask for it by name.
+- Keep a difference only where the person would act differently because of it, and let it
+  show for that reason (yellow means something wrong with their account, and nothing else is
+  yellow). When you change one item of a kind, fix any drift you notice in its siblings in
+  the same change.
+
 ## User-Facing Copy
 - The bot is "Closedhand". "Your assistant" only stands in for it to avoid saying Closedhand twice
   in a row ("Closedhand Bridge gives your assistant access…"), never as its first mention.

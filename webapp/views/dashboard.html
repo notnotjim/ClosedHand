@@ -854,10 +854,10 @@
 
     /* Adding a skill: the last card among the person's skills, dashed, as
        something to do rather than something they have. */
-    .dashboard-container .int-card.add-skill-card { border-style: dashed; background: transparent; color: var(--muted); }
-    .dashboard-container .int-card.add-skill-card .int-name { color: var(--muted); }
-    .dashboard-container .int-card.add-skill-card:hover, .dashboard-container .int-card.add-skill-card:focus-visible { color: var(--fg); border-color: rgba(var(--fg-rgb),0.36); outline: none; }
-    .dashboard-container .int-card.add-skill-card:hover .int-name, .dashboard-container .int-card.add-skill-card:focus-visible .int-name { color: var(--fg); }
+    .dashboard-container .int-card.add-card { border-style: dashed; background: transparent; color: var(--muted); }
+    .dashboard-container .int-card.add-card .int-name { color: var(--muted); }
+    .dashboard-container .int-card.add-card:hover, .dashboard-container .int-card.add-card:focus-visible { color: var(--fg); border-color: rgba(var(--fg-rgb),0.36); outline: none; }
+    .dashboard-container .int-card.add-card:hover .int-name, .dashboard-container .int-card.add-card:focus-visible .int-name { color: var(--fg); }
 
     /* Learned skills: their own group under the Skills section's cards. */
     #skills-learned-heading { margin-top: 24px; }
@@ -3197,7 +3197,6 @@
         }
       }
 
-      // "Add a connection" sits right below, so the row holds only what is live.
       updateConnectedSection();
 
       // Cache platforms for tab-switch re-render
@@ -3745,13 +3744,23 @@
     }
 
     // "Connected" shows only when something is: a service, a pasted server
-    // or the Mac. An empty section said nothing; "Add a connection" below
-    // says where connections come from.
+    // or the Mac. An empty section said nothing; "Add a connection" further
+    // down says where connections come from. Like Skills, it ends with the
+    // dashed tile that takes the person there.
     function updateConnectedSection() {
       var section = document.getElementById('connected-section');
       if (!section) return;
+      section.querySelectorAll('.add-wrap').forEach(function (el) { el.remove(); });
       var any = !!section.querySelector('#connected-grid > .int-wrap, #mcp-list > .int-wrap, #apple-local-section:not([style*="display: none"])');
       section.style.display = any ? '' : 'none';
+      if (!any) return;
+      var servers = document.getElementById('mcp-list');
+      var last = servers && servers.querySelector(':scope > .int-wrap') ? servers : document.getElementById('connected-grid');
+      last.insertAdjacentHTML('beforeend', addCard('Add a connection', 'goToAddConnection()'));
+    }
+    function goToAddConnection() {
+      var add = document.getElementById('mcp-section');
+      if (add) add.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     async function loadMcps() {
@@ -4377,7 +4386,7 @@
       });
 
       // Filter connected grid
-      document.querySelectorAll('#connected-grid > .int-card, #connected-grid > .int-wrap').forEach(function(el) {
+      document.querySelectorAll('#connected-grid > .int-card, #connected-grid > .int-wrap:not(.add-wrap)').forEach(function(el) {
         var name = (el.querySelector('.int-name') || {}).textContent || '';
         var show = !q || name.toLowerCase().includes(q);
         el.style.display = show ? '' : 'none';
@@ -4388,7 +4397,7 @@
       });
 
       // Filter MCP list items
-      document.querySelectorAll('#mcp-list > div').forEach(function(el) {
+      document.querySelectorAll('#mcp-list > div:not(.add-wrap)').forEach(function(el) {
         var text = el.textContent || '';
         el.style.display = (!q || text.toLowerCase().includes(q)) ? '' : 'none';
       });
@@ -4407,7 +4416,7 @@
       // either side; when cleared, visible if it has anything at all.
       var connSection = document.getElementById('connected-section');
       if (connSection) {
-        if (q) connSection.style.display = document.querySelector('#connected-grid > .int-wrap:not([style*="display: none"]), #mcp-list > .int-wrap:not([style*="display: none"])') ? '' : 'none';
+        if (q) connSection.style.display = document.querySelector('#connected-grid > .int-wrap:not(.add-wrap):not([style*="display: none"]), #mcp-list > .int-wrap:not(.add-wrap):not([style*="display: none"])') ? '' : 'none';
         else updateConnectedSection();
       }
       // The same search narrows the apps under "Add a connection"; the paste
@@ -6581,11 +6590,15 @@
 
     // A skill Closedhand wrote itself (lib/skill-learning.js): where it was
     // learned, how often it has been used, and the whole text it follows.
-    // Last among the person's skills: any skill can be added, and this says
-    // so where they are listed, then takes them to the box that adds it.
-    var ADD_SKILL_CARD = '<div class="int-wrap"><div class="int-card add-skill-card" role="button" tabindex="0" onclick="focusConnectBox()" onkeydown="if (event.key === \'Enter\' || event.key === \' \') { event.preventDefault(); focusConnectBox(); }">' +
-      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-      '<span class="int-name">Add a skill</span></div></div>';
+    // The dashed tile that closes a list of things the person can add to
+    // (skills, connections): it says so where they are listed, then takes
+    // them to where one is added. One tile for every such list.
+    function addCard(label, action) {
+      return '<div class="int-wrap add-wrap"><div class="int-card add-card" role="button" tabindex="0" onclick="' + action + '" onkeydown="if (event.key === \'Enter\' || event.key === \' \') { event.preventDefault(); ' + action + '; }">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '<span class="int-name">' + label + '</span></div></div>';
+    }
+    var ADD_SKILL_CARD = addCard('Add a skill', 'focusConnectBox()');
     function focusConnectBox() {
       var input = document.getElementById('mcp-url-input');
       if (!input) return;

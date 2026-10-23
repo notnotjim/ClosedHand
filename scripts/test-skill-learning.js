@@ -219,6 +219,10 @@ test("it runs after chat replies and background tasks, and the dashboard shows i
   assert.match(dash, /Instructions Closedhand follows for a particular kind of task\.<\/p>/);
   assert.match(dash, /list\.innerHTML = all\.map\(skillCard\)\.join\(''\) \+ ADD_SKILL_CARD;/, "Add a skill closes the person's skills and takes them to the box that adds one");
   assert.match(dash, /function focusConnectBox\(\) \{\n\s*var input = document\.getElementById\('mcp-url-input'\);/);
+  // One dashed tile for every list the person can add to: Skills, and Connected too.
+  assert.match(dash, /var ADD_SKILL_CARD = addCard\('Add a skill', 'focusConnectBox\(\)'\);/);
+  assert.match(dash, /last\.insertAdjacentHTML\('beforeend', addCard\('Add a connection', 'goToAddConnection\(\)'\)\);/);
+  assert.equal((dash.match(/class="int-card add-card"/g) || []).length, 1, "built in one place");
   assert.match(read("webapp/public/llm-hint.js"), /window\.infoHint = function \(text, label\) \{[\s\S]*?tip\.textContent = text;\n\s*return attach\(mark, tip\);/, "the i reuses the hint that opens on hover, focus or tap");
   assert.equal(read("lib/skill-scan-prompt.js"), read("webapp/skill-scan-prompt.js"));
   assert.match(read("webapp/security-scan.js"), /require\("\.\/skill-scan-prompt"\)\.skillScanPrompt\(content\)/);
