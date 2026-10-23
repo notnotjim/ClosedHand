@@ -74,7 +74,7 @@ test("back from Railway: a project from the template in Amsterdam, its own setup
       assert.equal(opts.headers.Authorization, "Bearer tok");
       const { query, variables } = JSON.parse(opts.body);
       if (/me \{ workspaces/.test(query)) return reply({ data: { me: { workspaces: [{ id: "ws1" }] } } });
-      if (/template\(code/.test(query)) { assert.equal(variables.c, "ob3IfQ"); return reply({ data: { template: { id: "tpl", serializedConfig: JSON.parse(JSON.stringify(config)) } } }); }
+      if (/template\(id/.test(query)) { assert.equal(variables.t, "86557f2f-7a26-46c6-9599-0b9c8f422dab"); return reply({ data: { template: { id: "tpl", serializedConfig: JSON.parse(JSON.stringify(config)) } } }); }
       if (/projectCreate/.test(query)) { assert.equal(variables.i.workspaceId, "ws1"); return reply({ data: { projectCreate: { id: "proj", environments: { edges: [{ node: { id: "env" } }] } } } }); }
       if (/templateDeployV2/.test(query)) return reply({ data: { templateDeployV2: { projectId: "proj" } } });
       if (/project\(id/.test(query)) {
@@ -132,7 +132,7 @@ test("a move that fails after the project was made takes the project away, so no
       const { query } = JSON.parse(opts.body);
       calls.push(query.match(/\b(me|template|projectCreate|templateDeployV2|projectDelete|project)\b/)[1]);
       if (/me \{ workspaces/.test(query)) return reply({ data: { me: { workspaces: [{ id: "ws1" }] } } });
-      if (/template\(code/.test(query)) return reply({ data: { template: { id: "tpl", serializedConfig: { services: { b: { name: "webapp", variables: {} } } } } } });
+      if (/template\(id/.test(query)) return reply({ data: { template: { id: "tpl", serializedConfig: { services: { b: { name: "webapp", variables: {} } } } } } });
       if (/projectCreate/.test(query)) return reply({ data: { projectCreate: { id: "proj", environments: { edges: [{ node: { id: "env" } }] } } } });
       if (/templateDeployV2/.test(query)) return failAt === "deploy" ? reply({ errors: [{ message: "Your trial has ended" }] }) : reply({ data: { templateDeployV2: { projectId: "proj" } } });
       if (/projectDelete/.test(query)) return reply({ data: { projectDelete: true } });

@@ -21,7 +21,9 @@ const AUTHORIZE = "https://backboard.railway.com/oauth/auth";
 const TOKEN = "https://backboard.railway.com/oauth/token";
 const API = "https://backboard.railway.com/graphql/v2";
 const RETURN = "https://closedhand.com/railway/return";
-const TEMPLATE = "ob3IfQ";
+// Closedhand's template on Railway (railway.com/deploy/closedhand), by its
+// ID: its short name changed when it was published, its ID never does.
+const TEMPLATE = "86557f2f-7a26-46c6-9599-0b9c8f422dab";
 const REGION = "europe-west4-drams3a"; // Amsterdam
 const SETUP_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 // Long enough to make a Railway account and add a card on the way.
@@ -123,7 +125,7 @@ async function run(code, verifier, deps) {
   const workspaceId = workspaces[0].id;
 
   // 2. The template, in Amsterdam, with a setup code chosen here.
-  const template = (await gql("query($c: String!) { template(code: $c) { id serializedConfig } }", { c: TEMPLATE })).template;
+  const template = (await gql("query($t: String!) { template(id: $t) { id serializedConfig } }", { t: TEMPLATE })).template;
   const config = template.serializedConfig;
   const setupCode = Array.from(crypto.randomBytes(24), (b) => SETUP_LETTERS[b % SETUP_LETTERS.length]).join("");
   for (const service of Object.values(config.services || {})) {
