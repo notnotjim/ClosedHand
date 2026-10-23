@@ -152,7 +152,7 @@ test("every page is under Pages, a week on the list then Archived, whichever cha
   assert.match(dashboard, /<button class="tab" data-tab="pages" onclick="switchTab\('pages'\)">Pages<\/button>/);
   assert.match(dashboard, /fetch\('\/api\/pages\?archived=1'\)/);
   assert.match(dashboard, /Delete this page for good\? The answer stays in the chat you asked in\./);
-  assert.match(dashboard, />Trip plans, guides and comparisons Closedhand made for you, to open here or download as PDF or Word\.</, "says what a page is, plainly");
+  assert.match(dashboard, />When an answer needs more room than a chat message, Closedhand also lays it out as a page that only you can open, to read here or download as PDF, Word or Excel\.<br>Each project has its own page too, kept up to date as it goes, opened from its card under Projects\.</, "says what a page is, plainly");
 });
 
 test("a saved agent's page is linked in its message, and removing a run keeps its page", () => {
