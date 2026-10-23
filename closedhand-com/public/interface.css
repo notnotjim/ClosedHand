@@ -283,14 +283,19 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .site-head nav a.gh { display: inline-flex; align-items: center; gap: .375rem; }
 .site-head nav a.gh svg { width: .9375rem; height: .9375rem; fill: currentColor; }
 /* The way to your own Closedhand, the one link in the header that is yours:
-   its words over a swipe of the fist's brush, redrawn on hover. Not a
-   button, so the download button stays the one filled thing on a page.
-   The web chat's Dashboard link is drawn the same (webapp interface.css). */
-:is(.site-head nav, .header-right) a.nav-cta { position: relative; display: inline-block; padding: .4375rem .125rem .5625rem; border: 0; border-radius: 0; background: none; color: var(--fg); font-size: .9375rem; font-weight: 500; white-space: nowrap; }
-:is(.site-head nav, .header-right) a.nav-cta::after { content: ""; position: absolute; left: -.3125rem; right: -.375rem; bottom: .0625rem; height: .5625rem; background: var(--accent); -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
-:is(.site-head nav, .header-right) a.nav-cta:is(:hover, :focus-visible)::after { animation: brush-draw .5s cubic-bezier(.2, .7, .2, 1); }
-@keyframes brush-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@media (prefers-reduced-motion: reduce) { :is(.site-head nav, .header-right) a.nav-cta::after { animation: none !important; } }
+   its words over a swipe of the fist's brush. On hover a fresh coat is
+   painted over the stroke from left to right and the words lift a little;
+   leaving takes the coat off the same way, so the stroke never flickers. Not
+   a button, so the download button stays the one filled thing on a page. The
+   app's main actions and its Dashboard link are drawn the same (webapp
+   interface.css). */
+:is(.site-head nav, .header-right) a.nav-cta { position: relative; display: inline-block; padding: .4375rem .125rem .5625rem; border: 0; border-radius: 0; background: none; color: var(--fg); font-size: .9375rem; font-weight: 500; white-space: nowrap; transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+:is(.site-head nav, .header-right) a.nav-cta::before, :is(.site-head nav, .header-right) a.nav-cta::after { content: ""; position: absolute; left: -.3125rem; right: -.375rem; bottom: .0625rem; height: .5625rem; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
+:is(.site-head nav, .header-right) a.nav-cta::before { background: var(--accent); }
+:is(.site-head nav, .header-right) a.nav-cta::after { bottom: 0; height: .6875rem; background: color-mix(in srgb, var(--accent) 78%, var(--fg)); clip-path: inset(0 100% 0 0); transition: clip-path .45s cubic-bezier(.65, 0, .35, 1); }
+:is(.site-head nav, .header-right) a.nav-cta:is(:hover, :focus-visible) { transform: translateY(-.0625rem); }
+:is(.site-head nav, .header-right) a.nav-cta:is(:hover, :focus-visible)::after { clip-path: inset(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { :is(.site-head nav, .header-right) a.nav-cta, :is(.site-head nav, .header-right) a.nav-cta::after { transition: none; } }
 @media (max-width: 600px) {
   .site-head { padding: .75rem .875rem; }
   .site-head nav { gap: 1rem; }

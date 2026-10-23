@@ -21,7 +21,11 @@ a { color: inherit; }
 .btn:hover { background: rgba(var(--fg-rgb),0.08); border-color: rgba(var(--fg-rgb),0.28); }
 .btn:disabled { opacity: 0.55; cursor: default; }
 .btn img { width: 1.125rem; height: 1.125rem; flex: none; }
-/* The one filled thing on a page, as on the home page. */
+/* The one filled thing on a page, as on the home page: downloading, signing
+   in, paying. Someone new to Closedhand commits here, so it looks like a button
+   beyond doubt, a solid shape with a large target. Inside Closedhand, where
+   people know their way, main actions are ink instead: words over the brush,
+   as "My Closedhand" (webapp interface.css). */
 .btn-primary { background: var(--fg); border-color: var(--fg); color: var(--bg); font: 500 1.0625rem/1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; }
 .btn-primary:hover { background: var(--fg-strong); border-color: var(--fg-strong); transform: translateY(-1px); }
 

@@ -57,14 +57,10 @@
     #code-form:not([hidden]) { animation: step-in 0.25s ease-out; }
     @keyframes step-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { #code-form:not([hidden]) { animation: none; } }
-    .again { display: block; margin-top: 12px; font-size: 13px; color: var(--text-tertiary); background: none; border: none; padding: 0; width: auto; cursor: pointer; text-decoration: underline; }
-    .again:hover { transform: none; color: var(--text-secondary); }
-    button {
-      width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
-      background: var(--accent); color: var(--bg); font-family: inherit; font-size: 14.5px;
-      font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
-    }
-    button:hover { transform: translateY(-1px); }
+    .again { display: block; margin-top: 12px; font-family: inherit; font-size: 13px; color: var(--text-tertiary); background: none; border: none; padding: 0; width: auto; cursor: pointer; text-decoration: underline; }
+    .again:hover { color: var(--text-secondary); }
+    /* The main action is the shared ink button (interface.css .cta). */
+    button.cta { margin-top: 18px; }
     .err { display: none; margin-top: 12px; font-size: 13px; color: var(--warn); }
     .hint { margin-top: 16px; font-size: 12.5px; color: var(--text-tertiary); text-align: center; }
       .lede { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
@@ -83,7 +79,7 @@
       <p class="lede">This Closedhand isn't set up yet. To show it's yours, type the setup code from where you created it. On Railway it's in your project, under the webapp service's Variables, as SETUP_CODE.</p>
       <label for="code">Setup code</label>
       <input class="setup" type="text" id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus required>
-      <button type="submit">Continue</button>
+      <button type="submit" class="cta">Continue</button>
       <p class="err" id="err"></p>
     </form>
   </div>

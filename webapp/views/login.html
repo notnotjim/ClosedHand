@@ -59,14 +59,10 @@
     #code-form:not([hidden]) { animation: step-in 0.25s ease-out; }
     @keyframes step-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { #code-form:not([hidden]) { animation: none; } }
-    .again { display: block; margin-top: 12px; font-size: 13px; color: var(--text-tertiary); background: none; border: none; padding: 0; width: auto; cursor: pointer; text-decoration: underline; }
-    .again:hover { transform: none; color: var(--text-secondary); }
-    button {
-      width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px;
-      background: var(--accent); color: var(--bg); font-family: inherit; font-size: 14.5px;
-      font-weight: 600; cursor: pointer; transition: transform 0.15s ease;
-    }
-    button:hover { transform: translateY(-1px); }
+    .again { display: block; margin-top: 12px; font-family: inherit; font-size: 13px; color: var(--text-tertiary); background: none; border: none; padding: 0; width: auto; cursor: pointer; text-decoration: underline; }
+    .again:hover { color: var(--text-secondary); }
+    /* The main action is the shared ink button (interface.css .cta). */
+    button.cta { margin-top: 18px; }
     .err { display: none; margin-top: 12px; font-size: 13px; color: var(--warn); }
     .hint { margin-top: 16px; font-size: 12.5px; color: var(--text-tertiary); text-align: center; }
   </style>
@@ -80,7 +76,7 @@
     <form class="card" id="login-form" method="post">
       <label for="pw">Dashboard password</label>
       <input type="password" id="pw" autocomplete="current-password" autofocus>
-      <button type="submit">Sign in</button>
+      <button type="submit" class="cta">Sign in</button>
       <p class="err" id="err"></p>
     </form>
     <!-- Through the personal URL: the second step, the code sent to a chat app,
@@ -90,7 +86,7 @@
       <p class="sent" id="sent"></p>
       <label for="code">Sign-in code</label>
       <input class="code" type="text" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="······">
-      <button type="submit">Sign in</button>
+      <button type="submit" class="cta">Sign in</button>
       <p class="err" id="code-err"></p>
       <button type="button" class="again" id="again">Start again</button>
     </form>

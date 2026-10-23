@@ -50,14 +50,26 @@ test("pages carry the brush icons as drawn, and no emoji", () => {
 });
 
 // The header's link to your own Closedhand is underlined with the same brush
-// on closedhand.com and in the web chat: one drawing, copied to both.
-test("the brush underline is the drawn one on both sides, under both header links", () => {
+// on closedhand.com and in the web chat: one drawing, copied to both. In the
+// app every main action is drawn by the same rule as that link, words over
+// the brush with no box, and on both sides hover paints a fresh coat over the
+// stroke instead of making it vanish and redraw.
+test("the brush underline is the drawn one on both sides, under both header links and the app's main actions", () => {
   const drawn = read("brand/icons/underline.svg");
   for (const copy of ["closedhand-com/public/brush-underline.svg", "webapp/public/brush-underline.svg"]) assert.ok(read(copy).equals(drawn), `${copy} is brand/icons/underline.svg`);
-  for (const css of ["closedhand-com/public/interface.css", "webapp/public/interface.css"]) {
-    const text = read(css).toString();
-    assert.match(text, /a\.nav-cta::after \{[^}]*mask: url\(\/brush-underline\.svg\)/, `${css} draws the underline`);
-    assert.doesNotMatch(text, /a\.nav-cta \{[^}]*border-radius: (?:62|99)/, `${css} has no pill`);
+  const site = read("closedhand-com/public/interface.css").toString();
+  assert.match(site, /a\.nav-cta::after \{[^}]*mask: url\(\/brush-underline\.svg\)/, "closedhand.com draws the underline");
+  const app = read("webapp/public/interface.css").toString();
+  const ink = app.match(/^:is\(([^)]*)\) \{\n  position: relative;/m);
+  assert.ok(ink, "the app has one ink rule");
+  for (const member of [".header-right a.nav-cta", ".cta", ".save-btn", ".go", ".project-form button[type=submit]"]) assert.ok(ink[1].split(", ").includes(member), member);
+  assert.match(app, /::after \{ content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; -webkit-mask: url\(\/brush-underline\.svg\)/, "the app draws the underline");
+  for (const [name, text] of [["closedhand.com", site], ["the app", app]]) {
+    assert.doesNotMatch(text, /a\.nav-cta \{[^}]*border-radius: (?:62|99)/, `${name} has no pill`);
+    assert.doesNotMatch(text, /brush-draw/, `${name} never makes the stroke vanish and redraw`);
+    assert.match(text, /clip-path: inset\(0 100% 0 0\); transition: clip-path \.45s cubic-bezier\(\.65, 0, \.35, 1\);/, `${name} paints a fresh coat on hover`);
   }
   assert.match(read("webapp/views/index.html").toString(), /id="dashboardLink" class="nav-cta"/);
+  for (const page of ["login.html", "setup-code.html", "keep.html"]) assert.doesNotMatch(read(`webapp/views/${page}`).toString(), /background: ?var\(--accent\);[^}]*color: ?var\(--bg\)/, `${page} has no button of its own`);
+  assert.doesNotMatch(read("webapp/public/keep.css").toString(), /\.primary\{/);
 });
