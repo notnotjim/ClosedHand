@@ -1,5 +1,5 @@
-// Recall never holds a reply for long. It and the matter pick run together
-// under one time budget, the message is embedded once between them, matters
+// Recall never holds a reply for long. It and the project pick run together
+// under one time budget, the message is embedded once between them, projects
 // someone is waiting on go ahead of background indexing in one batch, and in
 // Docker the bot comes before the sandbox's browser for processor and memory.
 const { test } = require("node:test");
@@ -20,13 +20,13 @@ test("recall that runs late is set aside, and the reply carries on", async () =>
   assert.deepEqual(await box.f(Promise.resolve(["context", "matter"])), ["context", "matter"], "a quick one is untouched");
 });
 
-test("the engine runs recall and the matter pick together, under the budget, sharing one embedding", () => {
+test("the engine runs recall and the project pick together, under the budget, sharing one embedding", () => {
   const engine = read("lib/engine.js");
   assert.match(engine, /const RECALL_BUDGET_MS = 6000;/);
   assert.match(engine, /const recalled = fetchRelevantContext\(userId, userMessage, conversation\.slice\(-5, -1\), \{\n\s*shareEmbedding: \(text, embedding\) => \{ shared = \{ text, embedding \}; \},/);
-  assert.match(engine, /matters\.pickTouched\(userId, userMessage, \{\n\s*messageVector: shared\?\.text === userMessage \? shared\.embedding : null,/);
+  assert.match(engine, /projects\.pickTouched\(userId, userMessage, \{\n\s*messageVector: shared\?\.text === userMessage \? shared\.embedding : null,/);
   assert.match(engine, /contextInjection = \(await timing\.time\("recall", withinRecallBudget\(Promise\.all\(\[recalled, picked\]\)\)\)\)\?\.\[0\] \|\| "";/);
-  assert.doesNotMatch(engine, /await matters\.pickTouched/, "the pick no longer waits for recall to finish");
+  assert.doesNotMatch(engine, /await projects\.pickTouched/, "the pick no longer waits for recall to finish");
 });
 
 test("recall hands over its query embedding before it waits on anything", async () => {
@@ -44,14 +44,14 @@ test("recall hands over its query embedding before it waits on anything", async 
   const message = "Is the flight delay going to affect my plans next week at all?";
   const handed = [];
   const run = box.module.exports.fetchRelevantContext("user-a", message, [], { shareEmbedding: (text, p) => handed.push({ text, p }) });
-  assert.equal(handed.length, 1, "handed over synchronously, so the matter pick can start at once");
+  assert.equal(handed.length, 1, "handed over synchronously, so the project pick can start at once");
   assert.equal(handed[0].text, message, "a message with no follow-up anchor is searched as written");
   assert.deepEqual(await handed[0].p, [1]);
   await run;
   assert.equal(embeds, 1, "embedded once");
 });
 
-function loadMatters(embedLog) {
+function loadProjects(embedLog) {
   const usi = {
     embedText: async (text) => { embedLog.push({ one: text }); return [1, 0]; },
     embedBatch: async (texts, opts) => { embedLog.push({ batch: texts.length, opts }); return texts.map((t) => (/Flat move/.test(t) ? [1, 0] : [0, 1])); },
@@ -59,36 +59,36 @@ function loadMatters(embedLog) {
   const fakes = {
     "./model-wire": { responseText: () => "" },
     "./db": { supabase: { from() { const q = { select: () => q, eq: () => q, order: () => q, delete: () => q, lt: async () => ({}), limit: async () => ({ data: [
-      { id: "m-move", title: "Flat move", summary: "Moving flat on the 20th", state: {}, status: "open", last_touched: new Date().toISOString() },
-      { id: "m-tax", title: "Tax return", summary: "Self assessment due", state: {}, status: "open", last_touched: new Date().toISOString() },
+      { id: "m-move", name: "Flat move", emoji: "📦", summary: "Moving flat on the 20th", state: {}, status: "offered", last_touched: new Date().toISOString() },
+      { id: "m-tax", name: "Tax return", emoji: "🧾", summary: "Self assessment due", state: {}, status: "offered", last_touched: new Date().toISOString() },
     ] }) }; return q; } } },
     "./llm": { getInternalClient: () => null },
     "./services/usi": usi,
   };
-  // Left in place: matters.js requires the embedder lazily, inside the pick.
+  // Left in place: projects.js requires the embedder lazily, inside the pick.
   const load = Module._load;
   Module._load = function (request, parent, ...rest) {
-    if (parent && /lib[\\/]matters\.js$/.test(parent.filename) && fakes[request]) return fakes[request];
+    if (parent && /lib[\\/]projects\.js$/.test(parent.filename) && fakes[request]) return fakes[request];
     return load.call(this, request, parent, ...rest);
   };
-  delete require.cache[require.resolve("../lib/matters")];
-  return require("../lib/matters");
+  delete require.cache[require.resolve("../lib/projects")];
+  return require("../lib/projects");
 }
 
-test("the matter pick reuses recall's embedding and embeds matters once, in one urgent batch", async () => {
+test("the pick of something noticed reuses recall's embedding and embeds each once, in one urgent batch", async () => {
   const log = [];
-  const matters = loadMatters(log);
-  await matters.warmMatters("user-a");
-  const picked = await matters.pickTouched("user-a", "when is the van coming for the move?", { messageVector: Promise.resolve([1, 0]) });
+  const projects = loadProjects(log);
+  await projects.warm("user-a");
+  const picked = await projects.pickTouched("user-a", "when is the van coming for the move?", { messageVector: Promise.resolve([1, 0]) });
   assert.equal(picked, "m-move");
   assert.equal(log.filter((e) => e.one).length, 0, "the message is not embedded a second time");
-  assert.deepEqual(log, [{ batch: 2, opts: { urgent: true } }], "both matters in one call, ahead of background indexing");
+  assert.deepEqual(log, [{ batch: 2, opts: { urgent: true } }], "both projects in one call, ahead of background indexing");
 
   log.length = 0;
-  await matters.pickTouched("user-a", "and the tax form?", { messageVector: Promise.resolve([0, 1]) });
-  assert.equal(log.length, 0, "unchanged matters are not embedded again");
+  await projects.pickTouched("user-a", "and the tax form?", { messageVector: Promise.resolve([0, 1]) });
+  assert.equal(log.length, 0, "unchanged projects are not embedded again");
 
-  await matters.pickTouched("user-a", "anything new on the move?");
+  await projects.pickTouched("user-a", "anything new on the move?");
   assert.deepEqual(log, [{ one: "anything new on the move?" }], "without recall's vector it embeds the message itself");
 });
 

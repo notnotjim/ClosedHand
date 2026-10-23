@@ -29,7 +29,8 @@ union all select 'page title', title from reports
 union all select 'task id', id::text from agent_tasks
 union all select 'task title', title from agent_tasks
 union all select 'reminder', name from schedules
-union all select 'matter', title from matters
+union all select 'project', name from projects
+union all select 'project about', about from projects
 union all select 'profile email', email from profiles
 union all select 'profile name', display_name from profiles
 union all select 'profile name', settings->>'preferred_name' from profiles

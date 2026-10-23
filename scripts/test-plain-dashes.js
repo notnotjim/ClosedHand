@@ -36,9 +36,10 @@ test("every way Closedhand writes to the person goes through it", () => {
   assert.doesNotMatch(read("lib/plain-dashes.js"), new RegExp(EM), "the rule's own code holds none either");
 });
 
-test("ongoing matters are saved without emdashes too", () => {
-  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "../lib/matters.js"), "utf8");
-  assert.match(src, /JSON\.parse\(require\("\.\/plain-dashes"\)\.noEmDashes\(text\)\)/);
+test("projects are saved without emdashes too", () => {
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "../lib/projects.js"), "utf8");
+  assert.match(src, /const cleanText = \(x, n\) => require\("\.\/plain-dashes"\)\.noEmDashes\(String\(x \|\| ""\)\)\.trim\(\)\.slice\(0, n\);/);
+  assert.match(src, /summary: cleanText\(t\.summary, 300\),\n\s*state: cleanState\(t\.state\),/);
   const { noEmDashes } = require("../lib/plain-dashes");
   const json = JSON.stringify({ facts: ["Not in email or calendar originally \u2014 WhatsApp only"] });
   assert.deepEqual(JSON.parse(noEmDashes(json)).facts, ["Not in email or calendar originally, WhatsApp only"]);

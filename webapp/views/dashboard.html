@@ -436,9 +436,6 @@
     #apple-modal .mac-code-input { width:96px; padding:7px 10px; background:var(--raised); border:1px solid rgba(var(--fg-rgb),0.16); border-radius:8px; color:var(--fg); font-size:14px; font-family:ui-monospace,monospace; letter-spacing:2px; text-transform:uppercase; text-align:center; outline:none; }
     #apple-modal .mac-code-input:focus { border-color:var(--accent); }
     #apple-modal .mac-step-note { flex-basis:100%; margin-left:32px; font-size:13px; color:var(--muted); line-height:1.5; }
-    /* An ongoing matter's rows: labels in their own column, a little air. */
-    .matter-rows { display:grid; grid-template-columns:64px minmax(0,1fr); gap:6px 12px; margin-top:10px; line-height:1.5; }
-    .matter-rows .matter-k { color:var(--muted); }
     .modal {
       background: rgba(var(--fg-rgb),0.1);
       border: 1px solid rgba(var(--fg-rgb),0.16);
@@ -1991,6 +1988,8 @@
   <link rel="stylesheet" href="/connection-catalogue.css">
   <link rel="stylesheet" href="/goals.css">
   <script defer src="/goals.js"></script>
+  <link rel="stylesheet" href="/projects.css">
+  <script defer src="/projects.js"></script>
   <script defer src="/connection-catalogue.js"></script>
   <link rel="stylesheet" href="/assistant-email.css">
   <script src="/assistant-email.js" defer></script>
@@ -2043,7 +2042,7 @@
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
         <button class="tab" data-tab="automations" onclick="switchTab('automations')">Schedules</button>
-        <button class="tab" data-tab="goals" onclick="switchTab('goals')">Goals</button>
+        <button class="tab" data-tab="projects" onclick="switchTab('projects')">Projects</button>
         <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
         <button class="tab" data-tab="settings" onclick="switchTab('settings')">Settings</button>
         <button class="tab" data-tab="brain" onclick="switchTab('brain')">Context Brain</button>
@@ -2414,35 +2413,19 @@
       </div>
 
       <!-- Settings Tab Content -->
-      <!-- Goals: what the person is working towards, as plans Closedhand helps
-           them carry out (webapp/public/goals.js, lib/goals.js). -->
-      <div class="tab-content" id="tab-goals">
+      <!-- Projects: what the person is working on over days or weeks, each
+           marked by an emoji in every chat app, each with its goal if it has
+           one (webapp/public/projects.js, webapp/public/goals.js,
+           webapp/projects.js, lib/projects.js, lib/goals.js). -->
+      <div class="tab-content" id="tab-projects">
         <div style="padding-top:16px;">
-          <p class="goals-intro">Closedhand helps you reach your goals with methods proven in peer-reviewed research.<br>Tell Closedhand a goal or add one here.</p>
+          <p class="goals-intro">Things you're working on over days or weeks, like a goal, trip, or a project at work. Each has an emoji: start a message with it in any chat and you're in that project, with its own conversation, instructions and files.</p>
           <p id="goals-cheer" role="status" hidden></p>
-          <div class="goals-head"><button type="button" class="goals-new" id="goal-new-toggle">+ New goal</button></div>
-          <form id="goal-new" hidden>
-            <input type="text" id="goal-new-title" maxlength="160" placeholder="What do you want to achieve?" aria-label="New goal" autocomplete="off">
-            <div class="goal-shapes" role="radiogroup" aria-label="Kind of goal">
-              <label><input type="radio" name="goal-shape" value="milestone" checked> A finish line to reach</label>
-              <label><input type="radio" name="goal-shape" value="habit"> An ongoing habit</label>
-            </div>
-            <div class="goal-new-more" id="goal-new-milestone">
-              <label class="goal-new-wide">Done when <input type="text" id="goal-new-done" maxlength="400" placeholder="e.g. I run 5k in under 30 minutes" autocomplete="off"></label>
-              <label>By <input type="date" id="goal-new-by" class="goal-time"></label>
-            </div>
-            <div class="goal-new-more" id="goal-new-habit" hidden>
-              <label><input type="number" id="goal-new-per" class="goal-time" min="1" max="7" value="3" aria-label="Times a week"> times a week</label>
-              <label class="goal-new-wide">When <input type="text" id="goal-new-cue" maxlength="160" placeholder="e.g. after work" autocomplete="off"></label>
-            </div>
-            <div class="goal-new-actions">
-              <button type="submit">Add goal</button>
-              <button type="button" class="goal-small goal-quiet" id="goal-new-cancel">Cancel</button>
-            </div>
-          </form>
-          <div id="goals-list"></div>
-          <div id="goals-achieved"></div>
-          <p id="goals-error" class="auto-card-meta" role="status" hidden></p>
+          <div class="goals-head"><button type="button" class="goals-new" id="project-new-toggle">+ New project</button></div>
+          <form id="project-new" class="project-form" hidden></form>
+          <div id="projects-list"></div>
+          <div id="projects-archived"></div>
+          <p id="projects-error" class="auto-card-meta" role="status" hidden></p>
         </div>
       </div>
 
@@ -2863,7 +2846,6 @@
             <button class="memory-filter active" data-filter="all" onclick="setMemoryFilter('all')">All</button>
             <button class="memory-filter" data-filter="pinned" onclick="setMemoryFilter('pinned')">Pinned facts</button>
             <button class="memory-filter" data-filter="knowledge" onclick="setMemoryFilter('knowledge')">Context Notes</button>
-            <button class="memory-filter" data-filter="matters" onclick="setMemoryFilter('matters')">Ongoing</button>
             <span style="position:relative;display:inline-flex;">
               <span class="mon-info" style="border-color:rgba(var(--fg-rgb),0.16);color:var(--muted);cursor:pointer;" onclick="var p=document.getElementById('memory-info-pop');p.style.display=p.style.display==='none'?'block':'none';event.stopPropagation();">i</span>
               <div id="memory-info-pop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:24px;left:-140px;z-index:40;width:300px;background:rgba(var(--fg-rgb),0.1);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:var(--muted);box-shadow:0 8px 24px rgba(var(--bg-rgb),0.5);">Context Notes are summaries of past conversations, written when a chat grows too long to keep in full. Empty means none has yet.</div>
@@ -5095,8 +5077,8 @@
         if (typeof loadDatasets === 'function') loadDatasets();
         loadPages();
       }
-      if (tabName === 'goals' && window.loadGoals) {
-        window.loadGoals();
+      if (tabName === 'projects' && window.loadProjects) {
+        window.loadProjects();
       }
     }
 
@@ -6236,8 +6218,8 @@
       }
     }
 
-    // Each goal's next check-in. The goal lives on the Goals tab; this row
-    // only says when, and opens it there.
+    // Each goal's next check-in. The goal lives on its project, in the
+    // Projects tab; this row only says when, and opens it there.
     async function loadGoalCheckIns() {
       try {
         var res = await fetch('/api/goals');
@@ -8014,10 +7996,6 @@
 
     function switchBrainView(mode) {
       _brainViewMode = mode;
-      if (mode === 'graph' && _memoryFilter === 'matters') {
-        _memoryFilter = 'all';
-        document.querySelectorAll('.memory-filter').forEach(function(btn) { btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all'); });
-      }
       document.querySelectorAll('.brain-view-btn').forEach(function(btn) {
         if (btn.dataset.view === mode) {
           btn.style.background = 'rgba(var(--fg-rgb),0.16)';
@@ -8140,7 +8118,6 @@
     }
 
     function loadUnifiedMemory() {
-      loadMatters();
       Promise.all([
         fetch('/api/notes').then(function(r) { return r.json(); }).catch(function() { return []; }),
         fetch('/api/knowledge').then(function(r) { return r.json(); }).catch(function() { return []; })
@@ -8523,49 +8500,17 @@
         || tags.indexOf('pulse') !== -1 || tags.indexOf('briefing') !== -1;
     }
 
-    // ---- Matters in flight: the live picture, one card each ----
-    var _matters = [];
-    async function loadMatters() {
-      try { var r = await fetch('/api/matters'); if (r.ok) _matters = await r.json(); } catch (e) {}
-      if (_memoryFilter === 'matters' || _memoryFilter === 'all') renderMemoryList();
-    }
-    function renderMatterCard(m) {
-      var s = m.state || {};
-      var when = new Date(m.last_touched).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      var rows = '';
-      if (s.people && s.people.length) rows += '<span class="matter-k">People</span><span>' + s.people.map(function(p) { return escHtml(p.name) + (p.position ? ' <span style="color:var(--accent);">' + escHtml(p.position) + '</span>' : '') + (p.said ? ' <span style="color:var(--muted);">' + escHtml(p.said) + '</span>' : ''); }).join(' · ') + '</span>';
-      if (s.open && s.open.length) rows += '<span class="matter-k">Open</span><span>' + s.open.map(escHtml).join(' · ') + '</span>';
-      if (s.decisions && s.decisions.length) rows += '<span class="matter-k">Decided</span><span>' + s.decisions.map(escHtml).join(' · ') + '</span>';
-      if (s.facts && s.facts.length) rows += '<span class="matter-k">Facts</span><span>' + s.facts.map(escHtml).join(' · ') + '</span>';
-      var done = m.status === 'resolved';
-      return '<div style="background:rgba(var(--fg-rgb),0.03);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;color:var(--fg);' + (done ? 'opacity:0.55;' : '') + '">' +
-        '<div style="display:flex;align-items:center;gap:10px;"><span style="font-weight:600;color:var(--fg);">' + escHtml(m.title) + '</span><span style="color:var(--muted);font-size:12px;">' + (done ? 'concluded' : 'updated ' + when) + (m.expected_end ? ' · until ' + new Date(m.expected_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '') + '</span><span style="flex:1;"></span>' +
-        (done ? '' : '<button class="conn-btn conn-btn-manage" title="Closedhand marks this done itself when it sees the plan has concluded. Use this if it has not noticed." onclick="resolveMatter(\'' + m.id + '\')">Done</button>') +
-        '<button class="conn-btn conn-btn-disconnect" style="opacity:0.55;" title="Forget it entirely: for something Closedhand should never have treated as a plan." onclick="deleteMatter(\'' + m.id + '\')">Remove</button></div>' +
-        (m.summary ? '<div style="color:var(--muted);margin-top:8px;line-height:1.5;">' + escHtml(m.summary) + '</div>' : '') + (rows ? '<div class="matter-rows">' + rows + '</div>' : '') + '</div>';
-    }
-    async function resolveMatter(id) { await fetch('/api/matters/' + id + '/resolve', { method: 'POST' }); loadMatters(); }
-    async function deleteMatter(id) { await fetch('/api/matters/' + id, { method: 'DELETE' }); loadMatters(); }
-
     function renderMemoryList() {
       var el = document.getElementById('brain-list');
       if (!el) return;
       var html = '';
-
-      // Ongoing matters first: the live picture of what is going on now.
-      if ((_memoryFilter === 'matters' || _memoryFilter === 'all') && _matters.length > 0) {
-        html += '<div class="memory-section-label">Ongoing</div>';
-        html += _matters.map(renderMatterCard).join('');
-      } else if (_memoryFilter === 'matters') {
-        html += '<div style="text-align:center;padding:24px;color:rgba(var(--fg-rgb),0.6);font-size:13px;">Nothing ongoing. When a plan with several people or steps is under way in a conversation, Closedhand keeps its live picture here: who said what, what is open, what was decided. It closes on its own when the matter is over or goes quiet.</div>';
-      }
 
       // Pinned facts, grouped. One flat list put a personal note next to a
       // company's tax number, and two notes about the same company could sit
       // apart with nothing to say they were about the same thing. The row shows
       // its subject where it has one, because that is what the note is about;
       // the key is a storage detail.
-      if (_memoryFilter !== 'knowledge' && _memoryFilter !== 'matters' && _pinnedFacts.length > 0) {
+      if (_memoryFilter !== 'knowledge' && _pinnedFacts.length > 0) {
         var CATEGORY_ORDER = ['profile', 'preference', 'person', 'business', 'topic'];
         var CATEGORY_LABELS = {
           profile: 'About You', preference: 'Preferences', person: 'People',
@@ -8608,7 +8553,7 @@
       }
 
       // Context notes: separate pulse/briefing results from organic observations
-      if (_memoryFilter !== 'pinned' && _memoryFilter !== 'matters' && _brainData && _brainData.length > 0) {
+      if (_memoryFilter !== 'pinned' && _brainData && _brainData.length > 0) {
         var sorted = _brainData.slice().sort(function(a, b) {
           return new Date(b.updated_at) - new Date(a.updated_at);
         });
@@ -8666,9 +8611,6 @@
 
     function setMemoryFilter(filter) {
       _memoryFilter = filter;
-      // Ongoing matters are cards with no place in the constellation, so this
-      // filter shows the list. (Going back to the graph falls back to All.)
-      if (filter === 'matters' && _brainViewMode === 'graph') switchBrainView('list');
       // An open detail panel from the previous filter reads as that item
       // belonging to the new filter's list; close it with the list it came from.
       closeBrainPanel();
@@ -8914,11 +8856,12 @@
     // messages already sent and in anyone's bookmarks.
     function resolveAndSwitchFromHash() {
       const h = window.location.hash.replace('#', '');
-      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h;
+      // #goals is in messages already sent: goals are on their projects now.
+      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h === 'goals' ? 'projects' : h;
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-      } else if (['connections', 'automations', 'goals', 'pages', 'settings', 'brain', 'usage'].includes(resolved)) {
+      } else if (['connections', 'automations', 'projects', 'pages', 'settings', 'brain', 'usage'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'connect' || resolved === 'skills') {
         // Connection links open the catalogue and MCP input.

@@ -49,8 +49,9 @@ test('a bare /dashboard opens the dashboard, and a missing page has a way back',
 
 test('goals, file search, progress lines, today and the Google card', () => {
   const goals = read('webapp/public/goals.js');
-  assert.match(goals, /No goals yet\. One might be/);
-  assert.match(goals, /if \(empty\) empty\.hidden = show;/);
+  // A goal is added from its project, asking what to achieve and how.
+  assert.match(goals, /title\.placeholder = "What do you want to achieve\?"/);
+  assert.match(goals, /title\.placeholder = h \? "What do you want to do regularly\?" : "What do you want to achieve\?";/);
   assert.match(page, /It recalls by meaning, not just keywords/);
   // One way to add any source, the same for every one: no Google-only shortcut.
   assert.doesNotMatch(page, /ragQuickDrive|Search your Google Drive/);

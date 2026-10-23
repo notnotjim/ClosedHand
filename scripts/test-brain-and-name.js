@@ -1,5 +1,5 @@
-// Context Brain opens on the list with readable labels and no em dashes in its
-// matters; a removed goal closes its matter; the person can say what they are called.
+// Context Brain opens on the list with readable labels; projects are named
+// without em dashes; the person can say what they are called.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -22,12 +22,10 @@ test('the list is the default view and profile facts are labelled by what they a
   assert.match(dash, />used ' \+ n\.accessCount \+ \(n\.accessCount === 1 \? ' time' : ' times'\)/);
 });
 
-test('matters are saved without em dashes, and a goal that ends closes its matter', () => {
-  const matters = fs.readFileSync(path.join(root, 'lib', 'matters.js'), 'utf8');
-  assert.match(matters, /const clean = \(x, n\) => noEmDashes\(String\(x\)\)\.slice\(0, n\);/);
-  assert.match(matters, /t\.title = clean\(t\.title, 120\);/);
-  assert.match(server, /if \(goal\) await closeGoalMatters\(userId, goal\.title\);/);
-  assert.match(server, /if \(!error && \(patch\.status === "achieved" \|\| patch\.status === "dropped"\)\) await closeGoalMatters\(userId, goal\.title\);/);
+test('a project the background pass names is saved without em dashes, and goals are not offered as projects', () => {
+  const projects = fs.readFileSync(path.join(root, 'lib', 'projects.js'), 'utf8');
+  assert.match(projects, /const name = cleanText\(t\.name, 80\);/);
+  assert.match(projects, /A personal goal or habit the user is setting for themselves \(getting fit, learning a language\) is not a new one: those are kept as goals\./);
 });
 
 test('the name Closedhand uses can be changed in Preferences', () => {

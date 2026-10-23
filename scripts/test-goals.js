@@ -1,9 +1,10 @@
 // Goals: set up the way research says goals get done (their reason, the
 // obstacle and an if-then plan, a finish line, small steps and the habit that
 // gets there, a reward only if they chose one, check-ins),
-// tracked in a history, checked in on at the time chosen, and shown on their
-// own tab. The goals code runs here against a database kept in memory. All
-// goals and names invented.
+// tracked in a history, checked in on at the time chosen. A goal is a
+// project's goal, one a project: shown on its project and checked in on in
+// its project's conversation. The goals code runs here against a database
+// kept in memory. All goals and names invented.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -63,8 +64,9 @@ test("a goal is saved with its reason, if-then plan, steps and check-in, and kee
   const tables = {};
   await withModules({ "./db": { supabase: memoryDb(tables) } }, async () => {
     const goals = require("../lib/goals");
+    await assert.rejects(goals.saveGoal("u1", { title: "Run 5k" }), /A goal belongs to a project\./);
     const g = await goals.saveGoal("u1", {
-      title: "Run 5k under 30 minutes by 1 March", why: "to feel strong again", obstacle: "tired after work",
+      project_id: "p1", title: "Run 5k under 30 minutes by 1 March", why: "to feel strong again", obstacle: "tired after work",
       if_then: "If I'm tired after work, then I'll do 10 minutes instead of skipping", target_date: "2027-03-01",
       steps: [{ text: "Pick a 10-week plan", owner: "closedhand" }, { text: "First easy run", due: "2026-10-07" }],
       check_in: { days: ["sunday"], time: "19:00" },
@@ -73,6 +75,7 @@ test("a goal is saved with its reason, if-then plan, steps and check-in, and kee
     assert.equal(g.plan[0].owner, "closedhand");
     assert.ok(g.check_in.next_at, "the first check-in time is set straight away");
     assert.deepEqual(tables.goal_events.map((e) => e.kind), ["created"]);
+    await assert.rejects(goals.saveGoal("u1", { project_id: "p1", title: "Another" }), /That project already has a goal/, "one goal a project");
 
     const updated = await goals.recordProgress("u1", { id: g.id.slice(0, 8), action: "step_done", step: "10-week plan", text: "picked the beginner one" });
     assert.equal(updated.plan[0].status, "done");
@@ -96,7 +99,7 @@ test("a habit counts this week, with no streak to break", async () => {
   const tables = {};
   await withModules({ "./db": { supabase: memoryDb(tables) } }, async () => {
     const goals = require("../lib/goals");
-    const g = await goals.saveGoal("u1", { title: "Spanish most days", shape: "habit", habit: { action: "15 minutes on Duolingo", cue: "after breakfast", per_week: 5 } }, { timezone: "Europe/Lisbon" });
+    const g = await goals.saveGoal("u1", { project_id: "p2", title: "Spanish most days", shape: "habit", habit: { action: "15 minutes on Duolingo", cue: "after breakfast", per_week: 5 } }, { timezone: "Europe/Lisbon" });
     await goals.recordProgress("u1", { id: g.id, action: "habit_done" });
     await goals.recordProgress("u1", { id: g.id, action: "habit_done" });
     const [active] = await goals.activeGoals("u1", "Europe/Lisbon");
@@ -110,7 +113,7 @@ test("a finish line keeps the habit that gets there, and a reward only they chos
   await withModules({ "./db": { supabase: memoryDb(tables) } }, async () => {
     const goals = require("../lib/goals");
     const g = await goals.saveGoal("u1", {
-      title: "Hold a conversation in Portuguese", done_when: "a 20-minute chat with no English", target_date: "2027-06-01",
+      project_id: "p3", title: "Hold a conversation in Portuguese", done_when: "a 20-minute chat with no English", target_date: "2027-06-01",
       habit: { action: "15 minutes of listening", cue: "on the bus", per_week: 5 }, reward: "a weekend in Porto",
       steps: [{ text: "Find a tutor", owner: "closedhand" }],
     }, { timezone: "Europe/Lisbon" });
@@ -121,7 +124,7 @@ test("a finish line keeps the habit that gets there, and a reward only they chos
     const line = goals.promptLines([active])[0];
     assert.match(line, /Done when: a 20-minute chat with no English\. .*Habit: on the bus, 15 minutes of listening, 5x a week; 1 so far this week\. Next: Find a tutor/);
     assert.match(line, /Reward they chose: a weekend in Porto$/);
-    const plain = await goals.saveGoal("u1", { title: "Read more" });
+    const plain = await goals.saveGoal("u1", { project_id: "p4", title: "Read more" });
     assert.equal(plain.reward, undefined, "no reward unless one is given");
     const checkIn = require("../lib/goal-check-ins").checkInPrompt({ ...active, user_id: "u1" });
     assert.match(checkIn, /For the habit, how many times this week/);
@@ -131,10 +134,10 @@ test("a finish line keeps the habit that gets there, and a reward only they chos
 
 test("check-ins come at the chosen time, once, and say where things stand", async () => {
   const now = new Date("2026-10-11T12:00:30Z");
-  const sent = [], prompts = [];
+  const sent = [], prompts = [], kept = [];
   const tables = {
     goals: [
-      { id: "aaaaaaaa-due", user_id: "u1", title: "Run 5k", shape: "milestone", status: "active", plan: [{ id: "s1", text: "First easy run", owner: "you", status: "todo" }], check_in: { days: [0], time: "19:00", timezone: "Asia/Ho_Chi_Minh", next_at: "2026-10-11T12:00:00.000Z" } },
+      { id: "aaaaaaaa-due", user_id: "u1", project_id: "p-run", title: "Run 5k", shape: "milestone", status: "active", plan: [{ id: "s1", text: "First easy run", owner: "you", status: "todo" }], check_in: { days: [0], time: "19:00", timezone: "Asia/Ho_Chi_Minh", next_at: "2026-10-11T12:00:00.000Z" } },
       { id: "bbbbbbbb-later", user_id: "u1", title: "Read more", shape: "milestone", status: "active", plan: [], check_in: { days: [3], time: "19:00", timezone: "Asia/Ho_Chi_Minh", next_at: "2026-10-14T12:00:00.000Z" } },
       { id: "cccccccc-stale", user_id: "u1", title: "Stale", shape: "milestone", status: "active", plan: [], check_in: { days: [5], time: "08:00", timezone: "Asia/Ho_Chi_Minh", next_at: "2026-10-09T01:00:00.000Z" } },
       { id: "dddddddd-new", user_id: "u1", title: "New", shape: "milestone", status: "active", plan: [], check_in: { days: [1], time: "07:00", timezone: "Asia/Ho_Chi_Minh", next_at: null } },
@@ -150,10 +153,12 @@ test("check-ins come at the chosen time, once, and say where things stand", asyn
     "./proactive": { getProactiveTargets: async (_u, _s, links) => links },
     "./scheduling": { runScheduledPrompt: async (prompt) => { prompts.push(prompt); return "You're on the plan: next is your first easy run. Did Tuesday's run happen?"; } },
     "./messaging": { sendToPlatform: async (platform, chatId, text) => { sent.push([platform, chatId, text]); } },
-    "./conversation": { getConversation: () => [] },
+    "./projects": { warm: async () => [{ id: "p-run", emoji: "🏃", name: "Running" }], said: async (u, p, text, opts) => { kept.push([p.id, text, opts]); } },
   }, async () => {
     await require("../lib/goal-check-ins").sweep(now);
   });
+  assert.equal(sent[0][2], "🏃 You're on the plan: next is your first easy run. Did Tuesday's run happen?", "it comes with its project's emoji");
+  assert.deepEqual(kept, [["p-run", sent[0][2], { asks: true }]], "kept in the project's conversation, and the next message answers it there");
   assert.equal(prompts.length, 1, "only the goal that is due checks in");
   assert.match(prompts[0], /\[goal aaaaaaaa\] Run 5k\. Next: First easy run/);
   assert.match(prompts[0], /no judgement and no guilt: suggest a smaller next step or a fresh start/);
@@ -178,30 +183,40 @@ test("Closedhand sets goals up the researched way and records progress from the 
   assert.match(progress.description, /a fresh start on a natural new beginning/);
   const save = tools.find((t) => t.name === "save_rule");
   assert.deepEqual(Object.keys(save.input_schema.properties), ["rule"], "preferences are preferences again");
-  assert.match(read("lib/engine.js"), /THEIR GOALS \(set by them; help them get there\)/);
+  // A goal rides in its project's messages, not in every one.
+  assert.doesNotMatch(read("lib/engine.js"), /THEIR GOALS/);
+  assert.match(read("lib/projects.js"), /Its goal \(record progress with goal_progress, change it with goal_set\):\\n\$\{require\("\.\/goals"\)\.promptLines\(\[p\.goal\]\)\.join\("\\n"\)\}/);
+  assert.match(read("lib/projects.js"), /\$\{r\.goal && r\.goal\.status === "active" \? ` \(goal: \$\{r\.goal\.title\}\)` : ""\}/, "outside it, a line beside the project's name");
+  assert.match(read("lib/engine.js"), /A project can have a goal \(shown beside its name\): let advice lean towards it where that genuinely helps/);
+  assert.match(set.description, /A goal belongs to a project, one goal a project: the project this message is in, one they name \(project\), or a new one you start for it \(emoji/);
   assert.match(set.description, /anything this goal needs that only they know/);
   assert.match(set.description, /No web search, page or background work while setting it up unless they ask/);
   assert.match(read("lib/engine.js"), /If it is already one of their goals, update that one with its id; never add it a second time\./, "the dashboard's plan button never makes a second goal");
-  assert.match(read("lib/engine.js"), /promptLines\(userGoals\)\.join\("\\n"\) \+ "\\n";\n  \}\n  prompt \+= "\\n\\nSETTING A GOAL: [^"]*not research\. Ask your questions first[^"]*only say it is on the Goals tab after goal_set succeeds/, "the first goal gets the ask-first rule too, not only people who have goals");
+  assert.match(read("lib/engine.js"), /prompt \+= aboutTheUser\(\);\n  prompt \+= "\\n\\nSETTING A GOAL: [^"]*not research\. Ask your questions first[^"]*only say it is set up after goal_set succeeds/, "the first goal gets the ask-first rule too, not only people who have goals");
   assert.match(read("migrations/055_goal_plans.sql"), /INSERT INTO goals \(user_id, title, source, created_at\)\n  SELECT user_id, rule, COALESCE\(source, 'chat'\), created_at FROM user_rules WHERE kind = 'goal';/, "goals saved this morning move across");
 });
 
-test("goals have their own tab, after Schedules, that says how it helps", () => {
+test("a goal is on its project's card, added in the project's form, and opened from Upcoming", () => {
   const dashboard = read("webapp/views/dashboard.html");
-  assert.match(dashboard, /data-tab="automations"[^\n]*>Schedules<\/button>\n\s*<button class="tab" data-tab="goals" onclick="switchTab\('goals'\)">Goals<\/button>/);
-  assert.match(dashboard, /Closedhand helps you reach your goals with methods proven in peer-reviewed research\.<br>Tell Closedhand a goal or add one here\./);
+  assert.doesNotMatch(dashboard, /data-tab="goals"|id="tab-goals"/, "no Goals tab: goals are on their projects");
+  assert.match(dashboard, /h === 'goals' \? 'projects'/, "links to #goals open Projects");
   const tab = read("webapp/public/goals.js");
   for (const label of ['"Done when"', '"Habit"', '"Next"', '"Progress feed"', '`Plan it with ${state.assistant || "Closedhand"}`']) assert.ok(tab.includes(label), label);
-  assert.match(dashboard, /id="goal-new-milestone"[\s\S]*id="goal-new-done"[\s\S]*id="goal-new-by"[\s\S]*id="goal-new-habit" hidden[\s\S]*id="goal-new-per"[\s\S]*id="goal-new-cue"/, "each kind asks the one thing it needs");
+  assert.match(tab, /document\.querySelectorAll\("\[data-goal-for\]"\)\.forEach\(\(slot\) => \{/, "each project card's slot holds its goal");
+  assert.match(tab, /body: JSON\.stringify\(\{ project_id: projectId, \.\.\.goal \}\)/);
+  const projectsTab = read("webapp/public/projects.js");
+  assert.doesNotMatch(projectsTab, /"Add a goal", \(\) => window\.goalCards\.form/, "no goal button on every project's card");
+  assert.match(projectsTab, /const goalLabel = el\("span", "project-label", "Goal"\); goalLabel\.append\(el\("span", "project-optional", "Optional"\)\);/, "a goal is an optional part of the project's form");
+  assert.match(projectsTab, /const wanted = goal && goal\.value\(\);\n\s*if \(wanted\) await window\.goalCards\.add\(saved\.id, wanted\);/);
   assert.match(read("webapp/server.js"), /if \(shape === "habit"\) fields\.habit = \{/, "a habit made on the dashboard counts its week from the start");
-  assert.match(tab, /\(state\.achieved \|\| \[\]\)\.forEach\(\(g\) => done\.append\(card\(g\)\)\)/, "an achieved goal opens like any other");
+  assert.match(read("webapp/server.js"), /if \(!project\) return res\.status\(400\)\.json\(\{ error: "Add the goal from its project\." \}\);/);
   assert.match(tab, /else act\("Not achieved yet"/);
   assert.match(dashboard, /setUpcoming\('checkins', due\.map\(function\(g\) \{/, "a goal's next check-in is listed under Upcoming");
   assert.match(dashboard, /onclick: "openGoal\('" \+ g\.id \+ "'\)" \}\)\);/, "and opens the goal itself");
-  assert.match(tab, /window\.openGoal = async \(id\) => \{\n\s*state\.open\.add\(id\);/);
+  assert.match(tab, /window\.openGoal = async \(id\) => \{\n\s*state\.open\.add\(id\);\n\s*if \(typeof window\.switchTab === "function"\) window\.switchTab\("projects"\);/);
   assert.match(read("migrations/055_goal_plans.sql"), /done_when text,[\s\S]*habit jsonb,[\s\S]*reward text,/);
   assert.match(dashboard, /<script defer src="\/goals\.js"><\/script>/);
-  assert.match(dashboard, /<h2>Preferences<\/h2>/, "Settings keeps preferences; goals moved to their tab");
+  assert.match(dashboard, /<h2>Preferences<\/h2>/, "Settings keeps preferences; goals are on their projects");
   assert.doesNotMatch(dashboard, /Goals &amp; Preferences|new-goal-input/);
   const server = read("webapp/server.js");
   for (const route of ['app.get("/api/goals"', 'app.post("/api/goals"', 'app.patch("/api/goals/:id"', 'app.post("/api/goals/:id/steps"', 'app.patch("/api/goals/:id/steps/:stepId"', 'app.post("/api/goals/:id/habit"', 'app.delete("/api/goals/:id"', 'app.get("/api/goals/:id/events"']) assert.ok(server.includes(route), route);

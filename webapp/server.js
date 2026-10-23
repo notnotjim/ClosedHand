@@ -2393,6 +2393,7 @@ const connectionCatalogue = require("./connection-catalogue").createCatalogue({ 
 connectionCatalogue.register(app);
 require("./bank-connections").register(app, { db: supabase, userId: getUserIdFromRequest });
 require("./assistant-email-settings").register(app, supabase, getUserIdFromRequest);
+require("./projects").register(app, { db: supabase, userId: getUserIdFromRequest, withAppearance: assets.withAppearance });
 
 // OAuth state tokens (in-memory, short-lived)
 const oauthStates = new Map();
@@ -4090,6 +4091,7 @@ app.get("/api/threads", async (req, res) => {
       .select("id, title, is_active, created_at, updated_at, messages")
       .eq("user_id", userId)
       .eq("archived", false)
+      .is("project_id", null)
       .order("updated_at", { ascending: false })
       .limit(50);
     const { data: prof } = await supabase.from("profiles").select("settings").eq("id", userId).maybeSingle();
@@ -4122,6 +4124,7 @@ app.get("/api/threads/search", async (req, res) => {
       .select("id, title, is_active, updated_at, messages")
       .eq("user_id", userId)
       .eq("archived", false)
+      .is("project_id", null)
       .order("updated_at", { ascending: false })
       .limit(50);
     const results = (data || []).filter(t => {
@@ -4196,6 +4199,10 @@ app.post("/api/threads/:id/activate", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
+    // A project's conversation is never the open one (lib/projects.js).
+    const { data: target } = await supabase.from("conversation_threads")
+      .select("id").eq("id", req.params.id).eq("user_id", userId).is("project_id", null).limit(1);
+    if (!target || !target.length) return res.status(404).json({ error: "That conversation is not here any more." });
     // Deactivate all for this user
     await supabase.from("conversation_threads")
       .update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
@@ -6637,33 +6644,6 @@ app.get("/api/reminders", async (req, res) => {
 });
 
 // GET /api/flights — tracked flights from notes
-// Matters in flight: the live picture Closedhand keeps of things with
-// several people or steps. Shown in Context Brain so the person can see what
-// it thinks is going on, close one, or throw one away.
-app.get("/api/matters", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { data, error } = await supabase.from("matters")
-    .select("id, title, summary, state, status, expected_end, last_touched, created_at, resolved_at")
-    .eq("user_id", userId).neq("status", "stale").order("last_touched", { ascending: false }).limit(50);
-  if (error) return res.status(500).json({ error: "Could not load matters" });
-  res.json(data || []);
-});
-app.post("/api/matters/:id/resolve", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { error } = await supabase.from("matters").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("user_id", userId).eq("id", req.params.id);
-  if (error) return res.status(500).json({ error: "Could not update it" });
-  res.json({ success: true });
-});
-app.delete("/api/matters/:id", async (req, res) => {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) return res.status(401).json({ error: "Not logged in" });
-  const { error } = await supabase.from("matters").delete().eq("user_id", userId).eq("id", req.params.id);
-  if (error) return res.status(500).json({ error: "Could not remove it" });
-  res.json({ success: true });
-});
-
 // Where a flight or booking came from: the email Closedhand read it in, to
 // open, and the files attached to the mail about it. A booking is often spread
 // over several emails (an order confirmation with the details, the airline's
@@ -7331,11 +7311,12 @@ app.delete("/api/rules/:id", async (req, res) => {
 });
 
 // ============================================================================
-// GOALS API: the Goals tab. The chat edits the same rows (lib/goals.js), and
-// both use goals-time.js for check-in times, so they always agree.
+// GOALS API: each project's goal, shown on its card in the Projects tab. The
+// chat edits the same rows (lib/goals.js), and both use goals-time.js for
+// check-in times, so they always agree.
 // ============================================================================
 const goalsTime = require("./goals-time");
-const GOAL_FIELDS = "id, title, shape, why, obstacle, if_then, target_date, done_when, habit, reward, plan, stage, status, check_in, source, created_at, updated_at, achieved_at";
+const GOAL_FIELDS = "id, project_id, title, shape, why, obstacle, if_then, target_date, done_when, habit, reward, plan, stage, status, check_in, source, created_at, updated_at, achieved_at";
 
 async function goalOwner(req, res) {
   const userId = getUserIdFromRequest(req);
@@ -7363,9 +7344,8 @@ function goalReply(res, e) { res.status(e.status || 500).json({ error: e.message
 app.get("/api/goals", async (req, res) => {
   const userId = await goalOwner(req, res); if (!userId) return;
   try {
-    const achieved = req.query.status === "achieved";
     const { data, error } = await supabase.from("goals").select(GOAL_FIELDS).eq("user_id", userId)
-      .in("status", achieved ? ["achieved"] : ["active", "paused"]).order("created_at", { ascending: false });
+      .in("status", ["active", "paused", "achieved"]).not("project_id", "is", null).order("created_at", { ascending: false });
     if (error) throw new Error("Could not load your goals.");
     const { tz, botName } = await goalProfile(userId);
     const since = goalsTime.weekStart(tz).toISOString();
@@ -7376,13 +7356,8 @@ app.get("/api/goals", async (req, res) => {
       if (r.error) throw new Error("Could not load your goals.");
       ticks = r.data || [];
     }
-    let achievedCount = 0;
-    if (!achieved) {
-      const c = await supabase.from("goals").select("id").eq("user_id", userId).eq("status", "achieved");
-      achievedCount = (c.data || []).length;
-    }
     res.json({
-      timezone: tz, week_start: since, achieved_count: achievedCount, assistant_name: botName,
+      timezone: tz, week_start: since, assistant_name: botName,
       goals: (data || []).map((g) => ({
         ...g,
         this_week: ticks.filter((t) => t.goal_id === g.id).map((t) => t.at),
@@ -7408,7 +7383,12 @@ app.post("/api/goals", async (req, res) => {
     const title = String(req.body?.title || "").trim().slice(0, 160);
     if (!title) return res.status(400).json({ error: "Write the goal first." });
     const shape = req.body?.shape === "habit" ? "habit" : "milestone";
-    const fields = { user_id: userId, title, shape, source: "dashboard" };
+    // A goal is a project's goal, one a project.
+    const { data: project } = await supabase.from("projects").select("id").eq("user_id", userId).eq("id", String(req.body?.project_id || "")).eq("status", "active").maybeSingle();
+    if (!project) return res.status(400).json({ error: "Add the goal from its project." });
+    const { data: had } = await supabase.from("goals").select("id").eq("user_id", userId).eq("project_id", project.id).limit(1);
+    if (had && had.length) return res.status(409).json({ error: "This project already has a goal." });
+    const fields = { user_id: userId, project_id: project.id, title, shape, source: "dashboard" };
     if (shape === "habit") fields.habit = { action: "", cue: String(req.body?.habit?.cue || "").trim().slice(0, 160), per_week: Math.max(1, Math.min(7, Number(req.body?.habit?.per_week) || 3)) };
     else {
       const doneWhen = String(req.body?.done_when || "").trim().slice(0, 400);
@@ -7447,7 +7427,6 @@ app.patch("/api/goals/:id", async (req, res) => {
       if (typeof body[k] === "string") { patch[k] = body[k].trim().slice(0, k === "title" ? 160 : 400) || (k === "title" ? goal.title : null); said.push(["planned", `${{ title: "Goal", why: "Why", if_then: "If-then", obstacle: "Obstacle", done_when: "Done when", reward: "Reward" }[k]}: ${patch[k] || "cleared"}`]); }
     }
     const { data, error } = await supabase.from("goals").update(patch).eq("id", goal.id).eq("user_id", userId).select(GOAL_FIELDS).single();
-    if (!error && (patch.status === "achieved" || patch.status === "dropped")) await closeGoalMatters(userId, goal.title);
     if (error) throw new Error("Could not save that.");
     for (const [kind, text] of said) await goalEvent(goal, userId, kind, text);
     res.json(data);
@@ -7500,28 +7479,11 @@ app.post("/api/goals/:id/habit", async (req, res) => {
   } catch (e) { goalReply(res, e); }
 });
 
-// A goal that is removed, achieved or let go closes the matter about it in
-// Context Brain. One removed from Goals stayed "Ongoing" there, still saying
-// the goal was waiting on days and a gym.
-async function closeGoalMatters(userId, title) {
-  const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const goal = norm(title);
-  if (!goal) return;
-  const { data, error } = await supabase.from("matters").select("id, title").eq("user_id", userId).eq("status", "open");
-  if (error) { console.error("[goals] could not read matters:", error.message); return; }
-  for (const m of data || []) {
-    if (!norm(m.title).includes(goal)) continue;
-    const { error: e } = await supabase.from("matters").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", m.id).eq("user_id", userId);
-    if (e) console.error("[goals] could not close a matter:", e.message);
-  }
-}
-
 app.delete("/api/goals/:id", async (req, res) => {
   const userId = await goalOwner(req, res); if (!userId) return;
   try {
     const goal = await ownGoal(userId, req.params.id).catch(() => null);
     await mustWrite("could not remove that goal", supabase.from("goals").delete().eq("id", req.params.id).eq("user_id", userId));
-    if (goal) await closeGoalMatters(userId, goal.title);
     res.json({ success: true });
   } catch (e) { goalReply(res, e); }
 });

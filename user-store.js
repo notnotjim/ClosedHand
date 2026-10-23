@@ -138,9 +138,11 @@ class UserStore {
         store.activeThreadId = activeThread.id;
       } else {
         // No active thread. Auto-resume the most recent thread if it's fresh and short.
+        // A project's conversation is never the open one (lib/projects.js).
         const { data: recentThread } = await supabase.from("conversation_threads")
           .select("id, messages, updated_at")
           .eq("user_id", userId)
+          .is("project_id", null)
           .order("updated_at", { ascending: false })
           .limit(1)
           .single();
@@ -189,6 +191,7 @@ class UserStore {
       const { data: threadList } = await supabase.from("conversation_threads")
         .select("id, title, is_active, created_at, updated_at")
         .eq("user_id", userId)
+        .is("project_id", null)
         .order("updated_at", { ascending: false })
         .limit(20);
       store.threadList = threadList || [];

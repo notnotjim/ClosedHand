@@ -44,7 +44,7 @@ test('every prompt that tells a model the date uses the person\'s own clock', ()
     assert.doesNotMatch(src, /Today is \$\{new Date\(/, f);
     assert.doesNotMatch(src, /Today is \$\{today\}/, f);
   }
-  for (const f of ['agents.js', 'matters.js', 'onboarding.js']) {
+  for (const f of ['agents.js', 'projects.js', 'onboarding.js']) {
     assert.match(fs.readFileSync(path.join(lib, f), 'utf8'), /currentTimeContext\(/, f);
   }
 });

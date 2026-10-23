@@ -120,7 +120,7 @@ test("a long reply without marks is split anyway: the answer, then the rest in o
 });
 
 test("replies and delivered results get the fallback before they are saved or sent", () => {
-  assert.match(read("lib/engine.js"), /finalText = require\("\.\/follow-on"\)\.withBreaks\(finalText\);\n\s*conversation\.push/);
+  assert.match(read("lib/engine.js"), /finalText = require\("\.\/follow-on"\)\.withBreaks\(finalText\);\n\s*\/\/ A reply in a project starts with its emoji \(lib\/projects\.js\)\.\n\s*const marked = projects\.markReply\(userId, finalText\);\n\s*finalText = marked\.text;\n\s*conversation\.push/);
   assert.match(read("lib/task-delivery.js"), /message: require\("\.\/follow-on"\)\.withBreaks\(message\)/);
 });
 

@@ -55,12 +55,12 @@ test("chat work stays while it runs or waits, and a finished run only when its a
 
 test("the Schedules tab holds what is about time; what Closedhand made is on Pages", () => {
   assert.match(dashboard, /onclick="switchTab\('automations'\)">Schedules<\/button>/);
-  const schedule = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-goals"'));
+  const schedule = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-projects"'));
   assert.doesNotMatch(schedule, />Resources<|id="files-section"|id="datasets-section"|skills-library/, "no Resources on the Schedules tab");
   const pages = dashboard.slice(dashboard.indexOf('id="tab-pages"'), dashboard.indexOf('id="tab-settings"'));
   assert.match(pages, /id="files-section"[\s\S]*<div class="mc-subsection-label">Files<\/div>[\s\S]*id="datasets-section"[\s\S]*<div class="mc-subsection-label">Tables<\/div>/, "files and tables sit under Pages");
   assert.match(dashboard, /if \(tabName === 'pages'\) \{\n\s*if \(typeof loadFiles === 'function'\) loadFiles\(\);\n\s*if \(typeof loadDatasets === 'function'\) loadDatasets\(\);/);
-  assert.match(dashboard, /const resolved = \(h === 'workers' \|\| h === 'agents' \|\| h === 'schedules' \|\| h === 'schedule'\) \? 'automations' : h;/, "old #agents links still open it");
+  assert.match(dashboard, /const resolved = \(h === 'workers' \|\| h === 'agents' \|\| h === 'schedules' \|\| h === 'schedule'\) \? 'automations' : h === 'goals' \? 'projects' : h;/, "old #agents links still open it");
   assert.match(read("lib/dashboard-links.js"), /async function dashboardUrl\(platform, section = "schedules"\)/);
 });
 
@@ -78,7 +78,7 @@ test("Upcoming says what, what kind and when; what already happened folds under 
 });
 
 test("saved agents are routines, everywhere a person reads about them; agents stay where agents work", () => {
-  const schedules = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-goals"'));
+  const schedules = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-projects"'));
   assert.doesNotMatch(schedules, /Saved agents|Saved Agents|New agent/);
   assert.match(schedules, /<div class="mc-metric-label">Agents at work<\/div>/);
   assert.match(schedules, /<div class="mc-metric-label">Routines<\/div>/);

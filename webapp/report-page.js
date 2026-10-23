@@ -8,8 +8,6 @@
 // One reading of the page's Markdown feeds the page, the Word document and
 // the spreadsheet, so the three never disagree about what the page says.
 
-const AdmZip = require("adm-zip");
-
 // A follow-on break (lib/follow-on.js) is a paragraph in a document.
 const BREAK = /^[ \t]*\[\[next\]\][ \t]*$/gm;
 const ROW = /^\s*\|.*\|\s*$/;
@@ -117,7 +115,9 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 "IBM 
 main { max-width: 760px; margin: 0 auto; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 18px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; text-decoration: none; }
-.brand img { width: 18px; height: 18px; }
+.brand img { width: 18px; height: 18px; filter: brightness(0.11); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme-pick="light"]) .brand img { filter: none; } }
+:root[data-theme-pick="dark"] .brand img { filter: none; }
 .files { display: flex; gap: 8px; }
 .file { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px 5px 11px; }
 .file svg { flex: none; color: var(--muted); }
@@ -231,6 +231,7 @@ function docxBuffer(report) {
 <w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:pPr><w:ind w:left="360"/><w:spacing w:after="60"/></w:pPr></w:style>
 <w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/></w:tblBorders><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
 </w:styles>`;
+  const AdmZip = require("adm-zip");
   const zip = new AdmZip();
   zip.addFile("[Content_Types].xml", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`));
@@ -269,4 +270,4 @@ function xlsxBuffer(report) {
   return XLSX.write(book, { type: "buffer", bookType: "xlsx" });
 }
 
-module.exports = { blocks, hasTables, bodyHtml, pageHtml, deletedHtml, missingHtml, docxBuffer, xlsxBuffer };
+module.exports = { blocks, hasTables, bodyHtml, pageHtml, deletedHtml, missingHtml, docxBuffer, xlsxBuffer, esc, inline };

@@ -1,13 +1,17 @@
-// The Goals tab: each goal as a card showing what matters at a glance (the
-// finish line, the habit that gets there and this week's count, the next
-// step and progress, the check-in), opening to the rest: why it matters, the
-// if-then plan, the reward, the steps, the check-in time and the progress feed. Edits here and in chat change the same goal (lib/goals.js).
+// A project's goal, on its card in the Projects tab (webapp/public/
+// projects.js): what matters at a glance (the finish line, the habit that
+// gets there and this week's count, the next step and progress, the
+// check-in), opening to the rest: why it matters, the if-then plan, the
+// reward, the steps, the check-in time and the progress feed. Edits here and
+// in chat change the same goal (lib/goals.js). A project card leaves a slot
+// (data-goal-for, its project's id) and this fills it; a goal is added in the
+// project's own form, as one of its optional parts.
 (() => {
   const byId = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const DAY = ["S", "M", "T", "W", "T", "F", "S"];
   const DAYNAME = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  let state = { goals: [], open: new Set(), achieved: null, achievedOpen: false, weekStart: null, timezone: null };
+  let state = { goals: [], open: new Set(), weekStart: null, timezone: null };
 
   async function api(path, opts = {}) {
     const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
@@ -27,11 +31,9 @@
     try {
       const data = await api("/api/goals");
       state.goals = data.goals; state.weekStart = data.week_start; state.timezone = data.timezone;
-      state.achievedCount = data.achieved_count; state.assistant = data.assistant_name || "Closedhand";
-      if (state.achievedOpen) state.achieved = (await api("/api/goals?status=achieved")).goals;
-      byId("goals-error").hidden = true;
+      state.assistant = data.assistant_name || "Closedhand";
       render();
-    } catch (e) { byId("goals-error").textContent = e.message; byId("goals-error").hidden = false; }
+    } catch (e) { const err = byId("projects-error"); if (err) { err.textContent = e.message; err.hidden = false; } }
   }
 
   const longDate = (v) => new Date(dayOf(v) + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
@@ -96,7 +98,7 @@
     c.dataset.id = g.id;
     const head = el("button", "goal-head"); head.type = "button"; head.setAttribute("aria-expanded", String(open));
     const title = el("span", "goal-title", g.title);
-    head.append(title);
+    head.append(el("span", "goal-label", "Goal"), title);
     if (g.status === "paused") head.append(el("span", "goal-tag", "Paused"));
     if (g.status === "achieved") head.append(el("span", "goal-by", g.achieved_at ? "achieved " + shortDate(g.achieved_at) : "achieved"));
     head.append(el("span", "chevron-down"));
@@ -115,7 +117,7 @@
     if (g.check_in_text && g.status === "active") c.append(el("p", "goal-checkin", "Check-in: " + g.check_in_text));
     if (g.status !== "achieved" && !g.why && !g.if_then) {
       const plan = el("button", "goal-plan-chat", `Plan it with ${state.assistant || "Closedhand"}`); plan.type = "button";
-      plan.onclick = () => askInChat(`Help me set up my ${g.shape === "habit" ? "habit" : "goal"}: ${g.title}`);
+      plan.onclick = () => askInChat(`${emojiOf(g.project_id)} Help me set up my ${g.shape === "habit" ? "habit" : "goal"}: ${g.title}`.trim());
       c.append(plan);
     }
     if (open) c.append(detail(g));
@@ -190,7 +192,7 @@
     else act("Not achieved yet", "", () => setStatus(g, "active"));
     const remove = act("Remove", "goal-remove", async () => {
       if (remove.dataset.confirm !== "1") { remove.dataset.confirm = "1"; remove.textContent = "Remove for good?"; return; }
-      try { await api(`/api/goals/${g.id}`, { method: "DELETE" }); state.open.delete(g.id); await load(); } catch (e) { alertIn(g.id, e.message); }
+      try { await api(`/api/goals/${g.id}`, { method: "DELETE" }); state.open.delete(g.id); await load(); if (window.loadProjects) window.loadProjects(); } catch (e) { alertIn(g.id, e.message); }
     });
     d.append(actions);
     return d;
@@ -248,62 +250,65 @@
     if (window.parent !== window) window.parent.postMessage({ type: "chat-prefill", text }, location.origin);
   }
 
+  // The project's emoji, so a goal planned in chat lands in its project.
+  function emojiOf(projectId) {
+    const slot = document.querySelector(`[data-goal-for="${projectId}"]`);
+    return slot ? slot.dataset.goalEmoji || "" : "";
+  }
+
+  // Every project card's goal slot, filled with its goal, if it has one.
   function render() {
-    const list = byId("goals-list"); list.replaceChildren();
-    if (!state.goals.length) {
-      const empty = el("div", "goal-empty");
-      // The intro above already says how to add one; this shows what one looks like.
-      empty.append(el("p", "", "No goals yet. One might be “Run a 10k by spring” or “Read for 20 minutes a day”."));
-      list.append(empty);
-    }
-    state.goals.forEach((g) => list.append(card(g)));
-    const done = byId("goals-achieved"); done.replaceChildren();
-    if (state.achievedCount) {
-      const row = el("button", "mc-section-label archive-row", "Achieved "); row.type = "button";
-      row.setAttribute("aria-expanded", String(state.achievedOpen));
-      row.append(el("span", "count", "· " + state.achievedCount), el("span", "chevron-down"));
-      row.onclick = async () => { state.achievedOpen = !state.achievedOpen; if (state.achievedOpen && !state.achieved) state.achieved = (await api("/api/goals?status=achieved")).goals; render(); };
-      done.append(row);
-      if (state.achievedOpen) (state.achieved || []).forEach((g) => done.append(card(g)));
-    }
+    document.querySelectorAll("[data-goal-for]").forEach((slot) => {
+      const g = state.goals.find((x) => x.project_id === slot.dataset.goalFor);
+      slot.replaceChildren(...(g ? [card(g)] : []));
+    });
   }
 
-  function openNew(show) {
-    byId("goal-new").hidden = !show; byId("goal-new-toggle").hidden = show;
-    // The form is the empty state's answer: while it is open the note goes.
-    const empty = document.querySelector("#goals-list .goal-empty"); if (empty) empty.hidden = show;
-    if (show) byId("goal-new-title").focus();
+  // A goal's fields, inside the project form (projects.js): what to achieve,
+  // and a finish line or a habit. value() is what to save, or null when no
+  // goal was written.
+  function fields() {
+    const box = el("div"); box.id = "goal-new";
+    const title = el("input"); title.type = "text"; title.maxLength = 160; title.placeholder = "What do you want to achieve?"; title.setAttribute("aria-label", "Goal"); title.autocomplete = "off";
+    const shapes = el("div", "goal-shapes"); shapes.setAttribute("role", "radiogroup"); shapes.setAttribute("aria-label", "Kind of goal");
+    const radio = (value, text, checked) => { const l = el("label"); const r = el("input"); r.type = "radio"; r.name = "goal-shape"; r.value = value; r.checked = checked; l.append(r, " " + text); return [l, r]; };
+    const [ml, mr] = radio("milestone", "A finish line to reach", true), [hl, hr] = radio("habit", "An ongoing habit", false);
+    shapes.append(ml, hl);
+    const milestone = el("div", "goal-new-more");
+    const doneLabel = el("label", "goal-new-wide", "Done when "); const done = el("input"); done.type = "text"; done.maxLength = 400; done.placeholder = "e.g. I run 5k in under 30 minutes"; done.autocomplete = "off"; doneLabel.append(done);
+    const byLabel = el("label", "", "By "); const by = el("input", "goal-time"); by.type = "date"; byLabel.append(by);
+    milestone.append(doneLabel, byLabel);
+    const habit = el("div", "goal-new-more"); habit.hidden = true;
+    const perLabel = el("label"); const per = el("input", "goal-time"); per.type = "number"; per.min = "1"; per.max = "7"; per.value = "3"; per.setAttribute("aria-label", "Times a week"); perLabel.append(per, " times a week");
+    const cueLabel = el("label", "goal-new-wide", "When "); const cue = el("input"); cue.type = "text"; cue.maxLength = 160; cue.placeholder = "e.g. after work"; cue.autocomplete = "off"; cueLabel.append(cue);
+    habit.append(perLabel, cueLabel);
+    for (const r of [mr, hr]) r.onchange = () => { const h = hr.checked; habit.hidden = !h; milestone.hidden = h; title.placeholder = h ? "What do you want to do regularly?" : "What do you want to achieve?"; };
+    box.append(title, shapes, milestone, habit);
+    return {
+      box,
+      focus: () => title.focus(),
+      value() {
+        if (!title.value.trim()) return null;
+        const shape = hr.checked ? "habit" : "milestone";
+        const more = shape === "habit" ? { habit: { cue: cue.value.trim(), per_week: Number(per.value) || 3 } } : { done_when: done.value.trim(), target_date: by.value || null };
+        return { title: title.value.trim(), shape, ...more };
+      },
+    };
   }
 
-  window.loadGoals = load;
+  // Saved with its project, once the project is.
+  async function add(projectId, goal) {
+    const g = await api("/api/goals", { method: "POST", body: JSON.stringify({ project_id: projectId, ...goal }) });
+    state.open.add(g.id);
+  }
+
+  window.goalCards = { load, render, fields, add, has: (projectId) => state.goals.some((g) => g.project_id === projectId) };
   // Another part of the dashboard (a check-in under Upcoming) opens a goal.
   window.openGoal = async (id) => {
     state.open.add(id);
-    if (typeof window.switchTab === "function") window.switchTab("goals");
+    if (typeof window.switchTab === "function") window.switchTab("projects");
     await load();
     const card = document.querySelector(`.goal-card[data-id="${id}"]`);
     if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  document.addEventListener("DOMContentLoaded", () => {
-    byId("goal-new-toggle").onclick = () => openNew(true);
-    byId("goal-new-cancel").onclick = () => openNew(false);
-    byId("goal-new").querySelectorAll("input[name=goal-shape]").forEach((r) => { r.onchange = () => {
-      const habit = r.value === "habit" && r.checked;
-      byId("goal-new-habit").hidden = !habit; byId("goal-new-milestone").hidden = habit;
-      byId("goal-new-title").placeholder = habit ? "What do you want to do regularly?" : "What do you want to achieve?";
-    }; });
-    byId("goal-new").onsubmit = async (ev) => {
-      ev.preventDefault();
-      const title = byId("goal-new-title").value.trim(); if (!title) return;
-      const shape = byId("goal-new").querySelector("input[name=goal-shape]:checked")?.value || "milestone";
-      try {
-        const more = shape === "habit"
-          ? { habit: { cue: byId("goal-new-cue").value.trim(), per_week: Number(byId("goal-new-per").value) || 3 } }
-          : { done_when: byId("goal-new-done").value.trim(), target_date: byId("goal-new-by").value || null };
-        const g = await api("/api/goals", { method: "POST", body: JSON.stringify({ title, shape, ...more }) });
-        for (const id of ["goal-new-title", "goal-new-done", "goal-new-by", "goal-new-cue"]) byId(id).value = "";
-        openNew(false); state.open.add(g.id); await load();
-      } catch (e) { byId("goals-error").textContent = e.message; byId("goals-error").hidden = false; }
-    };
-  });
 })();

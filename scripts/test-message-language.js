@@ -36,7 +36,7 @@ test('the chat, the background agent and the hand-off line all carry it', () => 
   const root = path.join(__dirname, '..', 'lib');
   const engine = fs.readFileSync(path.join(root, 'engine.js'), 'utf8');
   assert.match(engine, /const languageBlock = lastUserMessage \? "\\n" \+ require\("\.\/message-language"\)\.languageRule\(lastUserMessage\) : "";/);
-  assert.match(engine, /mattersBlock \+ languageBlock \+/);
+  assert.match(engine, /projectsBlock \+ languageBlock \+/);
   assert.match(engine, /in first person and in the language of their request/);
   assert.match(fs.readFileSync(path.join(root, 'agents.js'), 'utf8'), /require\("\.\/message-language"\)\.languageRule\(/);
 });
