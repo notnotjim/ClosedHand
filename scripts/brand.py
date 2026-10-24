@@ -9,10 +9,9 @@
 #   python3 scripts/brand.py use original     the fist before it
 #   python3 scripts/brand.py which            the set in place now
 #
-# Building the brush set (needs Pillow and potrace; the 3D ring film also
-# needs Chrome, ffmpeg and Playwright, see closedhand-com/tools/ring-video):
+# Building the brush set (needs Pillow and potrace):
 #
-#   python3 scripts/brand.py build-brush [--film]
+#   python3 scripts/brand.py build-brush
 #
 # The installer's fist, painted along the stroke as an install runs (every
 # set; the original, with no stroke to follow, is swept top to bottom):
@@ -51,10 +50,6 @@ FILES = [
     "closedhand-com/public/og.png",
     "closedhand-com/public/favicon.svg",
     "closedhand-com/public/favicon.png",
-    "closedhand-com/public/orb/ring-glass.webm",
-    "closedhand-com/public/orb/ring-glass.mov",
-    "closedhand-com/public/orb/ring-glass-poster.png",
-    "closedhand-com/tools/ring-video/fist.svg",
     "webapp/public/fist.png",
     "webapp/public/logo.png",
     "webapp/public/logocircle.png",
@@ -246,7 +241,7 @@ def fit(mask, size, colour, box=None):
     return out
 
 
-def build_brush(film=False):
+def build_brush():
     from PIL import Image
     orig = os.path.join(MARKS, "original")
     dst = os.path.join(MARKS, "brush")
@@ -299,18 +294,10 @@ def build_brush(film=False):
     full.save(out("webapp/public/logo-full.png"), optimize=True)
     # The Mac download window, drawn again from its page with the new ink fist.
     _dmg_background(out("desktop/dmg/fist-dark.png"), out("desktop/dmg/background.png"), out("desktop/dmg/background@2x.png"))
-    # The traced outline the 3D film extrudes, on the logo's canvas.
-    _trace(fit(mask, (3579, 3959), (0, 0, 0)), out("closedhand-com/tools/ring-video/fist.svg"))
     # The installer's fist, painted along the same stroke.
     order = paint_order()
     open(os.path.join(dst, "install-art.txt"), "w").write(
         f"HAND_FIST_32='{install_art(order, 32, 28)}'\nHAND_FIST_64='{install_art(order, 64, 56)}'\n")
-    if film:
-        _film(dst)
-    else:
-        for rel in ("closedhand-com/public/orb/ring-glass.webm", "closedhand-com/public/orb/ring-glass.mov", "closedhand-com/public/orb/ring-glass-poster.png"):
-            if not os.path.exists(os.path.join(dst, rel)):
-                print(f"{rel}: not filmed yet (run with --film)")
     print("Built the brush set in brand/marks/brush.")
 
 
@@ -472,33 +459,6 @@ def _icns_write(img, path):
     subprocess.run(["iconutil", "-c", "icns", iconset, "-o", path], check=True)
 
 
-def _trace(img, path):
-    from PIL import Image
-    tmp = tempfile.mkdtemp()
-    bw = Image.new("L", img.size, 255)
-    bw.paste(0, mask=img.split()[3].point(lambda a: 255 if a > 127 else 0))
-    bw.convert("1").save(os.path.join(tmp, "m.bmp"))
-    subprocess.run(["potrace", "-s", "-o", path, os.path.join(tmp, "m.bmp")], check=True)
-
-
-def _film(dst):
-    tool = os.path.join(ROOT, "closedhand-com/tools/ring-video")
-    live = os.path.join(tool, "fist.svg")
-    keep = open(live, "rb").read()
-    shutil.copyfile(os.path.join(dst, "closedhand-com/tools/ring-video/fist.svg"), live)
-    orb = os.path.join(ROOT, "closedhand-com/public/orb")
-    before = {f: open(os.path.join(orb, f), "rb").read() for f in ("ring-glass.webm", "ring-glass.mov", "ring-glass-poster.png")}
-    try:
-        subprocess.run(["sh", os.path.join(tool, "make.sh")], check=True)
-        os.makedirs(os.path.join(dst, "closedhand-com/public/orb"), exist_ok=True)
-        for f in before:
-            shutil.copyfile(os.path.join(orb, f), os.path.join(dst, "closedhand-com/public/orb", f))
-    finally:
-        open(live, "wb").write(keep)
-        for f, data in before.items():
-            open(os.path.join(orb, f), "wb").write(data)
-
-
 if __name__ == "__main__":
     cmd = sys.argv[1:] or ["which"]
     if cmd[0] == "use" and len(cmd) == 2:
@@ -506,7 +466,7 @@ if __name__ == "__main__":
     elif cmd[0] == "save" and len(cmd) == 2:
         save(cmd[1])
     elif cmd[0] == "build-brush":
-        build_brush(film="--film" in cmd)
+        build_brush()
     elif cmd[0] == "build-install-art":
         build_install_art()
     elif cmd[0] == "build-icons":
@@ -518,4 +478,4 @@ if __name__ == "__main__":
     elif cmd[0] == "which":
         print(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
     else:
-        sys.exit("Usage: brand.py use <mark> | which | build-brush [--film] | build-icons | build-og | build-favicon | save <name>")
+        sys.exit("Usage: brand.py use <mark> | which | build-brush | build-icons | build-og | build-favicon | save <name>")

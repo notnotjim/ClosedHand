@@ -835,15 +835,43 @@ body.chat-active .mon-area { display:none; }
   .orb-stage { position: relative; width: var(--orb-size, 13.5rem); height: var(--orb-size, 13.5rem); display: grid; place-items: center; }
   /* The film is lit for a dark ground; on cream it is darkened to read, on
      the stage so the tap's flash still brightens it. */
-  :root[data-theme="light"] .orb-stage { filter: brightness(0.45) contrast(1.8) saturate(1.3); }
-  /* The smoke ring and 3D fist: filmed, looping. It plays while on screen
-     and flashes when tapped. */
+  .orb-film { position: absolute; inset: 0; }
+  :root[data-theme="light"] .orb-film { filter: brightness(0.45) contrast(1.8) saturate(1.3); }
+  /* The smoke ring: filmed, looping. It plays while on screen and flashes
+     when tapped; pressing gives a little, words and light with it. */
   .orb-smoke { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: transparent; pointer-events: none; }
   .orb-stage.pulsing .orb-smoke { animation: orb-flash 0.45s ease-out; }
   @keyframes orb-flash { 0% { filter: brightness(2.2); transform: scale(1.06); } 100% { filter: none; transform: none; } }
-  /* The fist is part of the film: the logo in 3D glass inside the smoke
-     ring, filmed at the phone's own resolution. Pressing it gives a little. */
-  .orb-open:active .orb-smoke { transform: scale(0.97); }
+  .orb-body { position: absolute; inset: 0; display: grid; place-items: center; transition: transform .2s ease; }
+  .orb-open:active .orb-body { transform: scale(0.97); }
+  /* Closedhand answering inside the smoke: a question types out and the
+     answer is simply there, as if it already knew. A warm light behind the
+     words breathes, swells as each answer lands and flashes with the tap.
+     Everything is sized to the ring, so a small phone shrinks it whole. */
+  .orb-stage { container-type: size; }
+  .orb-core { position: absolute; left: 50%; top: 50%; width: 64%; height: 64%; translate: -50% -50%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(var(--accent-soft-rgb),0.26), rgba(var(--accent-soft-rgb),0.09) 58%, rgba(var(--accent-soft-rgb),0));
+    animation: orb-breathe 6s ease-in-out infinite; transition: filter .8s ease; }
+  @keyframes orb-breathe { 0%, 100% { opacity: .7; scale: .94; } 50% { opacity: 1; scale: 1.04; } }
+  .orb-stage.answered .orb-core { filter: brightness(1.6); }
+  .orb-stage.pulsing .orb-core { animation: orb-flash 0.45s ease-out; }
+  .orb-talk { position: relative; width: 66cqw; display: flex; flex-direction: column; align-items: center; gap: 2.4cqw; text-align: center; animation: orb-float 5s ease-in-out infinite; transition: opacity .6s ease; }
+  .orb-talk.is-leaving { opacity: 0; }
+  @keyframes orb-float { 0%, 100% { translate: 0 -1.1cqw; } 50% { translate: 0 1.1cqw; } }
+  .orb-ask { min-height: 1.3em; font: 400 clamp(.6875rem, 6.3cqw, .875rem)/1.3 var(--font-ui); color: var(--muted); }
+  .orb-ask.typing::after { content: ''; display: inline-block; width: .08em; height: 1em; margin-left: .1em; vertical-align: -0.15em; background: currentColor; animation: orb-caret 1s steps(1) infinite; }
+  @keyframes orb-caret { 50% { opacity: 0; } }
+  .orb-answer { font: 500 clamp(.8125rem, 8cqw, 1.125rem)/1.2 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.005em; color: var(--fg); text-wrap: balance;
+    transition: opacity .7s ease, filter .7s ease, translate .7s ease; }
+  .orb-answer.is-hidden { opacity: 0; filter: blur(.25rem); translate: 0 .375rem; }
+  /* A small ring has room for one of them at a time: the answer takes the
+     question's place as it lands. */
+  @container (max-width: 10rem) {
+    .orb-talk { display: grid; place-items: center; }
+    .orb-ask, .orb-answer { grid-area: 1 / 1; }
+    .orb-talk.answered .orb-ask { opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility 0s .4s; }
+  }
+  .orb-said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .orb-label { display: inline-flex; align-items: center; gap: .5rem; margin-top: 2px; font: 500 1.4375rem/1.1 var(--font-brand); font-variation-settings: 'opsz' 48, 'SOFT' 30; letter-spacing: -0.01em; color: var(--fg); }
   .orb-label svg { width: 1.1875rem; height: 1.1875rem; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
   .orb-address { margin-top: .5rem; font: .8125rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
@@ -912,19 +940,25 @@ body.chat-active .mon-area { display:none; }
       }
     </script>
 
-    <!-- Phones and tablets: the Closedhand someone already uses, one tap
-         away, with the smoke ring drifting round the fist. On a phone that
-         has used My Closedhand it shows and opens that exact address. -->
+    <!-- Phones and tablets: Closedhand answering inside the smoke ring, a
+         newcomer's first look at what it does, and one tap into the
+         Closedhand someone already uses. On a phone that has used My
+         Closedhand it shows and opens that exact address. -->
     <a class="orb-open handheld-only" id="orbOpen" href="/open" aria-label="Open your Closedhand">
       <span class="orb-stage" aria-hidden="true">
-        <!-- The desktop's own smoke ring with the fist in 3D inside it,
-             filmed (tools/ring-video), played as a small transparent loop. Its sources are set by script on
-             phones and tablets only, so computers never download it. -->
-        <video class="orb-smoke" id="orbSmoke" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback data-mov="/orb/ring-glass.mov" data-webm="/orb/ring-glass.webm" data-poster="/orb/ring-glass-poster.png"></video>
+        <span class="orb-body">
+          <!-- The desktop's own smoke ring, filmed (tools/ring-video), played
+               as a small transparent loop. Its sources are set by script on
+               phones and tablets only, so computers never download it. -->
+          <span class="orb-film"><video class="orb-smoke" id="orbSmoke" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback data-mov="/orb/smoke.mov" data-webm="/orb/smoke.webm" data-poster="/orb/smoke-poster.png"></video></span>
+          <span class="orb-core"></span>
+          <span class="orb-talk" id="orbTalk"><span class="orb-ask" id="orbAsk">When’s my dentist?</span><span class="orb-answer" id="orbAnswer">Thursday at 3pm, in your calendar.</span></span>
+        </span>
       </span>
       <span class="orb-label">Open dashboard<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
       <span class="orb-address" id="orbAddress" hidden></span>
     </a>
+    <p class="orb-said handheld-only">Ask Closedhand things like “When’s my dentist?” and it answers from your own calendar, mail and messages: “Thursday at 3pm.”</p>
     <!-- Newcomers on a phone can't install it there: it lives on a computer
          and is used from here. Nothing here downloads to the phone. -->
     <div class="get-it handheld-only" id="getIt">
@@ -1630,12 +1664,12 @@ body.chat-active .mon-area { display:none; }
 })();
 </script>
 <script>
-// The fist on phones and tablets: the filmed smoke ring plays only while
-// on screen and the page is visible, and stays on its first frame for
-// reduced motion or when the phone won't autoplay (Low Power Mode). Safari
-// plays the HEVC file, which carries transparency there; other browsers
-// skip it (they don't play QuickTime) and take the WebM. Tapping the fist
-// flashes the ring, then opens.
+// The orb on phones and tablets: the filmed smoke ring plays only while on
+// screen and the page is visible, and stays on its first frame for reduced
+// motion or when the phone won't autoplay (Low Power Mode). Safari plays the
+// HEVC file, which carries transparency there; other browsers skip it (they
+// don't play QuickTime) and take the WebM. Tapping it flashes the ring, then
+// opens.
 (function () {
   var smoke = document.getElementById('orbSmoke'), link = document.getElementById('orbOpen');
   if (!smoke || !link || !document.documentElement.classList.contains('handheld')) return;
@@ -1657,6 +1691,48 @@ body.chat-active .mon-area { display:none; }
   // A phone that refused to autoplay may allow it after a touch.
   document.addEventListener('touchstart', sync, { once: true, passive: true });
   sync();
+  // Inside it, Closedhand answers made-up questions in turn: the question
+  // types out, the answer is simply there, and the light behind it swells.
+  // Reduced motion keeps the first one, as the page has it. Paused, like the
+  // film, while off screen or hidden.
+  var EXAMPLES = [
+    ['When’s my dentist?', 'Thursday at 3pm, in your calendar.'],
+    ['Did Sam reply?', 'Yes: dinner’s at\u00a08, on WhatsApp.'],
+    ['When do I fly?', 'Friday, 7:40am. It’s in your inbox.'],
+    ['Anything to reply to?', 'Two: your landlord and Mia.'],
+  ];
+  var ask = document.getElementById('orbAsk'), answer = document.getElementById('orbAnswer'), talk = document.getElementById('orbTalk');
+  var orb = link.querySelector('.orb-stage');
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function awake() { while (!onScreen || document.hidden) await wait(400); }
+  async function converse() {
+    for (var i = 0; ; i = (i + 1) % EXAMPLES.length) {
+      await awake();
+      answer.classList.add('is-hidden');
+      talk.classList.remove('answered');
+      answer.textContent = EXAMPLES[i][1];
+      ask.textContent = '';
+      ask.classList.add('typing');
+      talk.classList.remove('is-leaving');
+      await wait(500);
+      for (var c of EXAMPLES[i][0]) { await awake(); ask.textContent += c; await wait(60 + Math.random() * 60); }
+      await wait(500);
+      ask.classList.remove('typing');
+      answer.classList.remove('is-hidden');
+      talk.classList.add('answered');
+      orb.classList.add('answered');
+      setTimeout(function () { orb.classList.remove('answered'); }, 1200);
+      await wait(3800);
+      talk.classList.add('is-leaving');
+      await wait(800);
+    }
+  }
+  if (still) talk.classList.add('answered');
+  else {
+    answer.classList.add('is-hidden');
+    ask.textContent = '';
+    wait(1200).then(converse);
+  }
   link.addEventListener('click', function (e) {
     if (still || e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();

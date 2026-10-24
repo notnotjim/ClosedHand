@@ -1,22 +1,46 @@
-// Renders the ring and 3D fist frame by frame in Chrome (see make.sh).
-const { chromium } = require(process.env.PW);
-const fs = require('fs'), path = require('path');
+// Renders the smoke ring frame by frame in Chrome (see make.sh), driven over
+// its debugging port, so nothing needs installing besides Chrome.
+const { spawn } = require('child_process');
+const fs = require('fs'), os = require('os'), path = require('path');
+const [n, radius, outDir, only] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
-  const [n, radius, height, depth, outDir, only] = [Number(process.argv[2]), Number(process.argv[3]), Number(process.argv[4]), Number(process.argv[5]), process.argv[6], process.argv[7]];
   fs.mkdirSync(outDir, { recursive: true });
-  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-  const p = await b.newPage();
-  p.on('pageerror', e => console.log('pageerror', e.message));
-  p.on('console', m => { if (m.type() === 'error') console.log('console', m.text()); });
-  await p.goto('file://' + path.join(__dirname, 'film.html'));
-  await p.waitForFunction(() => typeof window.loadFist === 'function');
-  await p.evaluate(([svg, h, d]) => window.loadFist(svg, h, d), [fs.readFileSync(path.join(__dirname, 'fist.svg'), 'utf8'), height, depth]);
-  await p.waitForFunction(() => window.ready === true, null, { timeout: 30000 });
-  const frames = only ? only.split(',').map(Number) : [...Array(n).keys()];
-  for (const i of frames) {
-    const url = await p.evaluate(([i, n, rad]) => window.frame(i, n, rad), [i, n, radius]);
-    fs.writeFileSync(path.join(outDir, 'f' + String(i).padStart(4, '0') + '.png'), Buffer.from(url.split(',')[1], 'base64'));
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'ring-film-'));
+  const port = 9500 + Math.floor(Math.random() * 400);
+  const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', '--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist',
+    '--allow-file-access-from-files', '--remote-debugging-port=' + port, '--user-data-dir=' + profile, 'about:blank'], { stdio: 'ignore' });
+  try {
+    let tabs;
+    for (let i = 0; i < 100 && !tabs; i++) { try { tabs = await (await fetch('http://127.0.0.1:' + port + '/json')).json(); } catch { await wait(100); } }
+    const ws = new WebSocket(tabs.find((t) => t.type === 'page').webSocketDebuggerUrl);
+    await new Promise((r) => { ws.onopen = r; });
+    let id = 0; const pending = {};
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.id && pending[m.id]) { pending[m.id](m); delete pending[m.id]; }
+      if (m.method === 'Runtime.exceptionThrown') console.log('pageerror', m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
+    };
+    const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending[i] = r; ws.send(JSON.stringify({ id: i, method, params })); });
+    const evaluate = async (expression) => {
+      const r = (await send('Runtime.evaluate', { expression, returnByValue: true })).result;
+      if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || 'the film page failed');
+      return r.result.value;
+    };
+    await send('Runtime.enable');
+    await send('Page.navigate', { url: 'file://' + path.join(__dirname, 'film.html') });
+    let ready = false;
+    for (let i = 0; i < 300 && !ready; i++) { ready = await evaluate('window.ready === true').catch(() => false); if (!ready) await wait(100); }
+    if (!ready) throw new Error('the film page never got ready');
+    const frames = only ? only.split(',').map(Number) : [...Array(n).keys()];
+    for (const i of frames) {
+      const url = await evaluate(`window.frame(${i}, ${n}, ${radius})`);
+      fs.writeFileSync(path.join(outDir, 'f' + String(i).padStart(4, '0') + '.png'), Buffer.from(url.split(',')[1], 'base64'));
+    }
+    ws.close();
+    console.log('wrote', frames.length);
+  } finally {
+    await new Promise((r) => { chrome.once('exit', r); chrome.kill(); });
+    fs.rmSync(profile, { recursive: true, force: true });
   }
-  await b.close();
-  console.log('wrote', frames.length);
-})();
+})().catch((e) => { console.error(e.message); process.exit(1); });
