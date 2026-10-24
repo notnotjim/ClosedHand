@@ -958,7 +958,7 @@ body.chat-active .mon-area { display:none; }
       <span class="orb-label">Open dashboard<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
       <span class="orb-address" id="orbAddress" hidden></span>
     </a>
-    <p class="orb-said handheld-only">Ask Closedhand things like “When’s my dentist?” and it answers from your own calendar, mail and messages: “Thursday at 3pm.”</p>
+    <p class="orb-said handheld-only">Ask Closedhand things like “When’s my dentist?” and it answers from your own calendar, mail and messages: “Thursday at 3pm.” It also tells you things before you ask, like “Heads up: rent’s due Friday.”</p>
     <!-- Newcomers on a phone can't install it there: it lives on a computer
          and is used from here. Nothing here downloads to the phone. -->
     <div class="get-it handheld-only" id="getIt">
@@ -1691,15 +1691,17 @@ body.chat-active .mon-area { display:none; }
   // A phone that refused to autoplay may allow it after a touch.
   document.addEventListener('touchstart', sync, { once: true, passive: true });
   sync();
-  // Inside it, Closedhand answers made-up questions in turn: the question
-  // types out, the answer is simply there, and the light behind it swells.
-  // Reduced motion keeps the first one, as the page has it. Paused, like the
-  // film, while off screen or hidden.
+  // Inside it, Closedhand talks, made-up examples in turn. Asked something,
+  // the question types out and the answer is simply there. Unasked, as Pulse
+  // does, the light swells first and its message arrives with the time, like
+  // one landing on your phone. Reduced motion keeps the first, as the page
+  // has it. Paused, like the film, while off screen or hidden.
   var EXAMPLES = [
-    ['When’s my dentist?', 'Thursday at 3pm, in your calendar.'],
-    ['Did Sam reply?', 'Yes: dinner’s at\u00a08, on WhatsApp.'],
-    ['When do I fly?', 'Friday, 7:40am. It’s in your inbox.'],
-    ['Anything to reply to?', 'Two: your landlord and Mia.'],
+    { ask: 'When’s my dentist?', say: 'Thursday at 3pm, in your calendar.' },
+    { at: '8:00am', say: 'Morning. Just two meetings today.' },
+    { ask: 'Did Sam reply?', say: 'Yes: dinner’s at\u00a08, on WhatsApp.' },
+    { at: '6:30pm', say: 'Heads\u00a0up: rent’s due Friday.' },
+    { ask: 'When do I fly?', say: 'Friday, 7:40am. It’s in your inbox.' },
   ];
   var ask = document.getElementById('orbAsk'), answer = document.getElementById('orbAnswer'), talk = document.getElementById('orbTalk');
   var orb = link.querySelector('.orb-stage');
@@ -1707,17 +1709,25 @@ body.chat-active .mon-area { display:none; }
   async function awake() { while (!onScreen || document.hidden) await wait(400); }
   async function converse() {
     for (var i = 0; ; i = (i + 1) % EXAMPLES.length) {
+      var example = EXAMPLES[i];
       await awake();
       answer.classList.add('is-hidden');
       talk.classList.remove('answered');
-      answer.textContent = EXAMPLES[i][1];
+      answer.textContent = example.say;
       ask.textContent = '';
-      ask.classList.add('typing');
       talk.classList.remove('is-leaving');
-      await wait(500);
-      for (var c of EXAMPLES[i][0]) { await awake(); ask.textContent += c; await wait(60 + Math.random() * 60); }
-      await wait(500);
-      ask.classList.remove('typing');
+      if (example.ask) {
+        ask.classList.add('typing');
+        await wait(500);
+        for (var c of example.ask) { await awake(); ask.textContent += c; await wait(60 + Math.random() * 60); }
+        await wait(500);
+        ask.classList.remove('typing');
+      } else {
+        await wait(900);
+        orb.classList.add('answered');
+        await wait(500);
+        ask.textContent = example.at;
+      }
       answer.classList.remove('is-hidden');
       talk.classList.add('answered');
       orb.classList.add('answered');

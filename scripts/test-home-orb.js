@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
@@ -19,14 +20,14 @@ test('the film is the smoke alone, and nothing still points at the fist film', (
   assert.doesNotMatch(read('closedhand-com/tools/ring-video/film.html'), /fist/i);
 });
 
-test('the words inside start where the page does, and every example fits a small ring', () => {
-  const examples = JSON.parse(home.match(/var EXAMPLES = (\[[\s\S]*?\]);/)[1].replace(/'/g, '"').replace(/,\s*\]$/, ']'));
-  assert.ok(examples.length >= 3);
+test('it answers and it speaks first, starting where the page does, every example fitting a small ring', () => {
+  const examples = vm.runInNewContext('(' + home.match(/var EXAMPLES = (\[[\s\S]*?\]);/)[1] + ')');
+  assert.ok(examples.some((e) => e.ask) && examples.some((e) => e.at), 'questions answered, and messages it sends unasked');
   // Reduced motion and no script show the page's own words: the first example.
-  assert.ok(home.includes('<span class="orb-ask" id="orbAsk">' + examples[0][0] + '</span><span class="orb-answer" id="orbAnswer">' + examples[0][1] + '</span>'));
-  for (const [ask, answer] of examples) {
-    assert.ok(ask.length <= 22, 'short question: ' + ask);
-    assert.ok(answer.length <= 36, 'short answer: ' + answer);
+  assert.ok(home.includes('<span class="orb-ask" id="orbAsk">' + examples[0].ask + '</span><span class="orb-answer" id="orbAnswer">' + examples[0].say + '</span>'));
+  for (const e of examples) {
+    assert.ok((e.ask || e.at).length <= 22, 'short first line: ' + (e.ask || e.at));
+    assert.ok(e.say.length <= 36, 'short reply: ' + e.say);
   }
 });
 
