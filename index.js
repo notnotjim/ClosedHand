@@ -232,6 +232,8 @@ async function main() {
   require("./lib/included-credit").start();
   // A report the person sent, said once when it is fixed (lib/bug-reports.js).
   require("./lib/bug-reports").start();
+  // Pages archived three months ago are deleted (lib/page-expiry.js).
+  require("./lib/page-expiry").start();
   await startPulse();
   // Warm the runtime-config cache before anything reads it synchronously.
   // getConfCached returns undefined on a cold cache, so an unwarmed read of

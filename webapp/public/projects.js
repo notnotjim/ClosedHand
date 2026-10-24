@@ -245,7 +245,7 @@
     return f;
   }
 
-  // Merging and deleting, inside the edit form: rare, and both final.
+  // Merging, inside the edit form: rare, and final.
   function moreActions(p) {
     const box = el("div", "project-more");
     const others = state.projects.filter((x) => x.id !== p.id);
@@ -260,7 +260,13 @@
       }));
       box.append(row);
     }
-    const del = btn("goal-small goal-quiet project-delete", "Delete project", () => {
+    return box;
+  }
+
+  // Delete, on every card as on every page under Pages, archived ones too,
+  // and asked about first: it is final.
+  function deleteButton(p) {
+    const del = btn("goal-small goal-quiet project-delete", "Delete", () => {
       const ask = el("div", "project-confirm");
       ask.append(el("span", "", `Delete ${p.emoji} ${p.name}? This deletes its goal, record, notes and conversation. Its routines carry on without it, files and Context Notes stay in Context Brain, and nothing in your email or calendar is touched.`));
       ask.append(
@@ -268,8 +274,7 @@
         btn("goal-small goal-quiet", "Keep it", () => ask.replaceWith(del)));
       del.replaceWith(ask);
     });
-    box.append(del);
-    return box;
+    return del;
   }
 
   function card(p) {
@@ -289,7 +294,8 @@
       btn("goal-small", "Edit", () => { state.editing = p.id; render(); }),
       btn("goal-small goal-quiet", p.status === "archived" ? "Bring back" : "Archive", async () => {
         try { await api(`/api/projects/${p.id}`, { method: "PATCH", body: JSON.stringify({ archived: p.status !== "archived" }) }); await load(); } catch (e) { showError(e.message); }
-      }));
+      }),
+      deleteButton(p));
     c.append(acts);
     return c;
   }
@@ -299,7 +305,7 @@
     const active = state.projects.filter((p) => p.status === "active");
     const archived = state.projects.filter((p) => p.status === "archived");
     if (!active.length && byId("project-new").hidden) {
-      list.append(el("p", "goal-empty", "No projects yet. Tell Closedhand in any chat (\"make the house move a project\") or start one here."));
+      list.append(el("p", "goal-empty", "No projects yet."));
     }
     for (const p of active) list.append(card(p));
     const old = byId("projects-archived"); old.textContent = "";

@@ -186,7 +186,7 @@ function register(app, { db, userId: who, withAppearance }) {
   // in Context Brain, and emails and events stay in their apps.
   app.delete("/api/projects/:id", async (req, res) => {
     const userId = owner(req, res); if (!userId) return;
-    const { error } = await db.from("projects").delete().eq("user_id", userId).eq("id", req.params.id);
+    const { error } = await rules.deleteProject(db, userId, req.params.id);
     if (error) return fail(res, new Error("Could not delete it."));
     res.json({ success: true });
   });

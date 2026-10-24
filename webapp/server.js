@@ -5123,7 +5123,7 @@ app.post("/api/pages/:id/delete", async (req, res) => {
 
 // GET /api/pages: every page, whoever made it, newest first. A page stays
 // on the list for a week, then folds into Archived (?archived=1), as agent
-// runs do. Nothing is deleted.
+// runs do, and is deleted three months later (lib/page-expiry.js).
 app.get("/api/pages", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });

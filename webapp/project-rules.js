@@ -147,4 +147,20 @@ async function mergeConversations(db, userId, intoId, fromId) {
   if (done.error) throw new Error("Could not merge their conversations.");
 }
 
-module.exports = { isMark, markKey, firstMark, onlyMark, splitReply, takenBy, note, link, file, synced, typed, withContext, merged, mergeConversations, MAX_CONTEXT };
+// Deleting a project removes it and what hangs on it (its goal and its
+// conversation go with the row), then leaves its name alone, as declined, for
+// a month: Closedhand makes a project of something that comes up again, and
+// must not make one the person deleted straight back (lib/projects.js).
+async function deleteProject(db, userId, id) {
+  const { data: p } = await db.from("projects").select("name").eq("user_id", userId).eq("id", id).single();
+  const { error } = await db.from("projects").delete().eq("user_id", userId).eq("id", id);
+  if (error) return { error };
+  if (p?.name) {
+    // Deleted either way; only the reminder not to make it again is lost.
+    const kept = await db.from("projects").insert({ user_id: userId, name: p.name, status: "declined", last_touched: new Date().toISOString() });
+    if (kept.error) console.error("[projects] deleted name not kept:", kept.error.message);
+  }
+  return {};
+}
+
+module.exports = { isMark, markKey, firstMark, onlyMark, splitReply, takenBy, note, link, file, synced, typed, withContext, merged, mergeConversations, deleteProject, MAX_CONTEXT };
