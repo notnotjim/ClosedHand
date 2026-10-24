@@ -63,6 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // on launch; the Supervisor hands over the local one once it is up.
         UserDefaults.standard.set(false, forKey: "isPaired")
         Supervisor.shared.start()
+        Updater.shared.start()
     }
 
     /// Opening the app again while it runs (a Finder double-click, or the

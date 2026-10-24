@@ -171,8 +171,12 @@ if (!ctx.discordClient) {
 
 // Health check
 ctx._lastMessageTime = Date.now();
+// busy: a reply is being written or a message waits for one. The Mac app
+// installs an update only when this is false; a background task carries on
+// after the restart by itself.
 ctx.expressApp.get("/health", (req, res) => {
-  res.json({ status: "ok", platform: "closedhand-bot", uptime: process.uptime() });
+  const busy = Object.values(ctx.currentAsk || {}).some(Boolean) || Object.values(ctx.pendingIncoming || {}).some((n) => n > 0);
+  res.json({ status: "ok", platform: "closedhand-bot", uptime: process.uptime(), busy });
 });
 // The files on emails Closedhand keeps, asked for by the dashboard (lib/mail-file.js).
 require("./lib/mail-file").register(ctx.expressApp);

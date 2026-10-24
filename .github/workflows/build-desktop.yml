@@ -116,6 +116,7 @@ jobs:
     env:
       HAS_CERT: ${{ secrets.MAC_CERT_P12 != '' }}
       HAS_NOTARY: ${{ secrets.NOTARY_PASSWORD != '' }}
+      HAS_SPARKLE: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,9 +176,36 @@ jobs:
           name: Closedhand-${{ matrix.arch }}
           path: desktop/dist/Closedhand-*.dmg
 
+      # The feed the app's updater reads (Sources/ClosedHand/Updater.swift):
+      # this version, signed with the update key, and the difference from the
+      # last release's app, so a daily update is a small download.
+      - name: Update feed
+        if: ${{ env.IDENTITY != '' && env.HAS_SPARKLE == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.decide.outputs.version }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          LAST=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1)
+          U="$RUNNER_TEMP/updates"
+          mkdir -p "$U" "$RUNNER_TEMP/sparkle"
+          cp desktop/dist/Closedhand-*.dmg "$U/"
+          gh release download "$LAST" --pattern 'Closedhand-*-arm64.dmg' --dir "$U" || echo "No earlier app to make a difference from."
+          curl -fsSL https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz -o "$RUNNER_TEMP/sparkle.tar.xz"
+          echo "c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c  $RUNNER_TEMP/sparkle.tar.xz" | shasum -a 256 -c -
+          tar -xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | "$RUNNER_TEMP/sparkle/bin/generate_appcast" --ed-key-file - \
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/" \
+            --maximum-versions 1 --maximum-deltas 3 -o "$U/appcast.xml" "$U"
+          ls -la "$U"
+          cat "$U/appcast.xml"
+
       # Released only once the signed DMG exists, so the latest release, the
-      # closedhand.com download, always has one. The notes are one line with
-      # a link to every change since the last release.
+      # closedhand.com download, always has one, with its update feed and
+      # difference files. The notes are one line with a link to every change
+      # since the last release.
       - name: Release
         if: ${{ env.IDENTITY != '' }}
         env:
@@ -186,10 +214,15 @@ jobs:
           SHA: ${{ needs.decide.outputs.sha }}
         run: |
           TAG="v$VERSION"
+          ASSETS=(desktop/dist/Closedhand-*.dmg)
+          if [ -f "$RUNNER_TEMP/updates/appcast.xml" ]; then
+            ASSETS+=("$RUNNER_TEMP/updates/appcast.xml")
+            for d in "$RUNNER_TEMP"/updates/*.delta; do [ -f "$d" ] && ASSETS+=("$d"); done
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" desktop/dist/Closedhand-*.dmg --clobber
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
             LAST=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1)
             echo "Updates and fixes since ${LAST#v}. [Every change](https://github.com/$GITHUB_REPOSITORY/compare/$LAST...$TAG)" > "$RUNNER_TEMP/notes.md"
-            gh release create "$TAG" desktop/dist/Closedhand-*.dmg --target "$SHA" --title "Closedhand $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --latest
+            gh release create "$TAG" "${ASSETS[@]}" --target "$SHA" --title "Closedhand $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --latest
           fi

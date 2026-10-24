@@ -132,8 +132,11 @@ BUNDLE_RES="$(dirname "$BIN")/ClosedHand_ClosedHand.bundle"
 
 # --- assemble -----------------------------------------------------------------
 say "Assembling $APP"
-rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN" "$APP/Contents/MacOS/ClosedHand"
+# Sparkle, which keeps the app up to date (Sources/ClosedHand/Updater.swift),
+# where the app's rpath looks for it.
+cp -R "$(dirname "$BIN")/Sparkle.framework" "$APP/Contents/Frameworks/"
 [ -d "$BUNDLE_RES" ] && cp -R "$BUNDLE_RES" "$APP/Contents/Resources/"
 cp "$HERE/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 # Closedhand's own Google app (see lib/google-app.js): from the environment,
@@ -193,6 +196,14 @@ find "$APP/Contents/Resources" -type f -perm +111 ! -name "*.dylib" ! -name "*.n
 sign_code --entitlements "$HERE/WorkspaceVM.entitlements" "$APP/Contents/Resources/bin/WorkspaceVM"
 # The LLM runner needs none of the runtime's exceptions: hardened runtime only.
 sign_code "$APP/Contents/Resources/llama/llama-server"
+# Sparkle's helpers inside out, then the framework, as Sparkle asks for an
+# app outside the App Store; the Downloader keeps its own entitlements.
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+sign_code "$SPARKLE/XPCServices/Installer.xpc"
+sign_code --preserve-metadata=entitlements "$SPARKLE/XPCServices/Downloader.xpc"
+sign_code "$SPARKLE/Autoupdate"
+sign_code "$SPARKLE/Updater.app"
+sign_code "$APP/Contents/Frameworks/Sparkle.framework"
 sign_code --entitlements "$HERE/ClosedHand.entitlements" "$APP"
 codesign --verify --deep --strict "$APP" && say "Signed OK"
 du -sh "$APP"

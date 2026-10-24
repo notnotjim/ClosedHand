@@ -383,6 +383,21 @@ final class Supervisor: ObservableObject {
         }
     }
 
+    /// Whether Closedhand is between replies, for an update to restart it
+    /// (Updater.swift): the bot's /health says busy while a reply is being
+    /// written or a message waits. A bot that is not running has nothing to
+    /// interrupt.
+    func isIdle(_ done: @escaping (Bool) -> Void) {
+        guard bot == .running else { done(true); return }
+        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(botPort)/health")!)
+        req.timeoutInterval = 3
+        URLSession.shared.dataTask(with: req) { data, _, _ in
+            let health = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+            let busy = (health?["busy"] as? Bool) ?? false
+            DispatchQueue.main.async { done(!busy) }
+        }.resume()
+    }
+
     private func probe(port: Int, _ done: @escaping (Bool) -> Void) {
         var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/health")!)
         req.timeoutInterval = 3

@@ -113,6 +113,10 @@ struct MenuView: View {
                     HStack(spacing: 5) { Image(systemName: "doc.text").font(.system(size: 10)); Text("Logs").font(.caption) }
                         .foregroundColor(.secondary)
                 }
+                Button(action: { Updater.shared.checkNow() }) {
+                    HStack(spacing: 5) { Image(systemName: "arrow.down.circle").font(.system(size: 10)); Text("Updates").font(.caption) }
+                        .foregroundColor(.secondary)
+                }
             }
             .buttonStyle(.plain)
 

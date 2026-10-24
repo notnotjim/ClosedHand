@@ -25,5 +25,12 @@
     <key>ClosedHandSHA</key><string>__SHA__</string>
     <key>ClosedHandGoogleClientID</key><string>__GOOGLE_CLIENT_ID__</string>
     <key>ClosedHandGoogleClientSecret</key><string>__GOOGLE_CLIENT_SECRET__</string>
+    <!-- Updates (Sources/ClosedHand/Updater.swift): the newest release's feed,
+         checked daily, downloaded and installed without asking. Only an
+         update signed with the private half of this key is installed. -->
+    <key>SUFeedURL</key><string>https://github.com/notnotjim/Closedhand/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>9iWa5mtJekA6SXhW3h8WN8RkPZlj7MkmC9pfqLScfkM=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUAutomaticallyUpdate</key><true/>
 </dict>
 </plist>
