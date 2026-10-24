@@ -486,18 +486,11 @@ body.library-active .page { min-height:0; }
     width: 2.375rem;
     height: 2.375rem;
     opacity: 0.55;
-    transition: opacity 0.2s;
   }
-  .feat-card-icons img:hover { opacity: 0.85; }
   @media (max-width: 600px) {
     .feat-card-icons { gap: .75rem; flex-wrap: nowrap; }
     .feat-card-icons img { flex: 0 1 2.375rem; min-width: 0; height: auto; aspect-ratio: 1; }
   }
-.feat-card-action { display: inline-flex; align-items: center; gap: .4375rem; font-size: .875rem; color: var(--muted); padding: .5rem 1rem; border: 1px solid rgba(var(--fg-rgb),0.12); border-radius: .5rem; background: rgba(var(--fg-rgb),0.04); transition: color 0.15s, border-color 0.15s, background 0.15s; }
-.feat-card:hover .feat-card-action { color: var(--fg); border-color: rgba(var(--accent-strong-rgb),0.3); background: rgba(var(--accent-strong-rgb),0.06); }
-.feat-card-action[data-connected="true"] { color: var(--ok); border-color: rgba(var(--ok-rgb),0.25); background: rgba(var(--ok-rgb),0.06); }
-.feat-card-action[data-connected="true"] svg { display: none; }
-.feat-card-action[data-connected="true"]::before { content: ''; width: .4375rem; height: .4375rem; border-radius: 50%; background: var(--ok); }
 .feat-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -866,7 +859,6 @@ body.chat-active .mon-area { display:none; }
   }
   .site-foot a { color: rgba(var(--fg-rgb),0.6); text-decoration: none; }
   .site-foot a:hover { color: var(--fg); }
-  .feat-card { display: block; text-decoration: none; }
   @media (max-width: 600px) {
     .header-right a { margin-left: .875rem; }
     .header-right a.gh span { display: none; }
