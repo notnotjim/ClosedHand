@@ -33,6 +33,8 @@ test("a message goes only when the person's LLM clearly says so, and never when 
   const no = await gate.check({ userId: "u1", store: tokyo, message: "Your dentist is on Friday.", evidence: "Dentist Thursday 09:00", modelFor: judge('{"send": false, "problems": ["The evidence says Thursday"]}') });
   assert.deepEqual(no, { send: false, problems: ["The evidence says Thursday"] });
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "x y z", evidence: "", modelFor: judge("I think it is fine") })).send, false, "an answer that is not a verdict");
+  assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "Ravi moved dinner to 19:30.", evidence: "Ravi: 19:30", modelFor: judge('Checked it.\n{"send": true, "problems": []}') })).send, true, "words around the JSON");
+  assert.equal(seen[0].max_tokens, 4000, "room for a reasoning LLM to finish");
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "x y z", evidence: "", modelFor: judge(new Error("provider down")) })).send, false, "fails closed");
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "  ", evidence: "" })).send, false);
 });
@@ -95,6 +97,29 @@ test("quiet hours, in the person's own time zone, hold every notice until they e
   assert.match(read("lib/pulse.js"), /if \(require\("\.\/proactive"\)\.quietNow\(store\)\) \{/);
 });
 
+test("the clock follows flight tracking: after a landing, quiet hours and the check use the new place", async () => {
+  const { personZone, timeBlock } = require("../lib/time-context");
+  const now = new Date("2026-11-02T23:30:00Z"); // 08:30 in Tokyo, 23:30 in London
+  const landed = { location: { timezone: "Asia/Tokyo", name: "Tokyo", updated: "2026-10-01T00:00:00Z" }, profile: { settings: {} },
+    facts: { "flight-ZX101": JSON.stringify({ flightNumber: "ZX101", departure: { airport: "HND", tz: "Asia/Tokyo", dateTime: "2026-11-02T10:00:00+09:00" }, arrival: { airport: "LHR", tz: "Europe/London", dateTime: "2026-11-02T22:30:00Z" } }) } };
+  assert.equal(personZone(landed, now), "Europe/London", "landed an hour ago");
+  assert.equal(personZone({ ...landed, facts: {} }, now), "Asia/Tokyo", "no flight: the saved place");
+  assert.equal(quietNow(landed, now), true, "23:30 in London is quiet, though 08:30 in Tokyo is not");
+  assert.equal(quietNow({ ...landed, facts: {} }, now), false);
+  assert.match(timeBlock(landed, now), /Europe\/London, inferred from flight ZX101/);
+
+  const seen = [];
+  const hour = 3600000, iso = (ms) => new Date(ms).toISOString();
+  const justLanded = { ...landed, facts: { "flight-ZX101": JSON.stringify({ flightNumber: "ZX101", departure: { airport: "HND", tz: "Asia/Tokyo", dateTime: iso(Date.now() - 13 * hour) }, arrival: { airport: "LHR", tz: "Europe/London", dateTime: iso(Date.now() - hour) } }) } };
+  await gate.check({ userId: "u1", store: justLanded, message: "Your bag for ZX101 is at belt 5.", evidence: "x", modelFor: judge('{"send": true}', seen) });
+  assert.match(JSON.parse(seen[0].messages[0].content).now, /Europe\/London/, "the check is told where they are now");
+  assert.match(seen[0].system, /A travel time given in its own airport's or property's local time, and saying so, is right/);
+  const pulse = read("lib/pulse.js");
+  assert.match(pulse, /const userTz = timeContext\.personZone\(store\);/);
+  assert.match(pulse, /"\\n\\n" \+ timeContext\.timeBlock\(store\);/, "the writer gets the chat's clock and flight dates");
+  assert.doesNotMatch(pulse, /nowStamp/);
+});
+
 test("a flight found at setup is told the way every found flight is", () => {
   const onboarding = read("lib/onboarding.js");
   assert.match(onboarding, /require\("\.\/flights-scheduler"\)\.announceNewFlights\(userId, ctx\.activeUserStore \|\| userStore, newFlights\)/);
@@ -121,6 +146,18 @@ test("Pulse: new mail by when it arrived, local times, the chat lately, the chec
   assert.ok(at > 0 && at < pulse.indexOf("await deliver(text);"), "checked before it goes");
   assert.match(pulse.slice(pulse.indexOf("await deliver(text);")), /^await deliver\(text\);\n[^\n]*\n\s*if \(sent\) \{[\s\S]{0,400}recordTold/, "told only when it reached someone");
   assert.match(pulse, /try \{ await sendToPlatform\(t\.platform, t\.platform_user_id, text\); sent = true; \}/);
+});
+
+test("Pulse reads what is new from every connection, not only mail and calendar, with times where the person is", () => {
+  const pulse = read("lib/pulse.js");
+  assert.match(pulse, /\.eq\("user_id", userId\)\.neq\("type", "email"\)\n\s*\.gt\("created_at", lookback\)/, "chats, bookings, pages, bank and the rest");
+  assert.match(pulse, /const otherItems = \(newOther \|\| \[\]\)\.filter\(\(r\) => !watches\.ignored\(r\) && unclaimed\(r\)\)/, "never their own messages, nor what was told or is watched");
+  assert.match(pulse, /\.\.\.otherItems\.map\(\(r\) => watches\.itemText\(r, userTz\)/);
+  assert.match(pulse, /const numbered = \[\.\.\.realEmails, \.\.\.otherItems\];/, "and whatever it tells is recorded as told");
+  const { itemText } = require("../lib/watches");
+  const msg = { type: "message", source: "whatsapp", data: { chat_name: "Harbour group", sender: "Ana", date: "2026-10-23T18:42:00Z", text: "Still on for lunch?" } };
+  assert.match(itemText(msg, "Asia/Tokyo"), /from Ana, Saturday,? 24 October at 03:42: Still on for lunch\?/, "Friday in UTC was Saturday in Tokyo");
+  assert.match(itemText(msg), /2026-10-23T18:42:00Z/, "watches' own use unchanged");
 });
 
 test("a sign-in to do again is told once it can be, and again after the next failure", async () => {

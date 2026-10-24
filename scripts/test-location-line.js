@@ -18,7 +18,7 @@ test("the line names the saved place, or says none is saved", () => {
 });
 
 test("Pulse and the chat are told where the person is by the same line", () => {
-  assert.match(read("lib/pulse.js"), /require\("\.\/location"\)\.locationLine\(store\.location\) \+\n\s*"\\n\\n" \+ require\("\.\/timezone"\)\.nowStamp/);
+  assert.match(read("lib/pulse.js"), /require\("\.\/location"\)\.locationLine\(store\.location\) \+\n\s*"\\n\\n" \+ timeContext\.timeBlock\(store\)/, "and the chat's clock, flights included");
   assert.match(read("lib/engine.js"), /out \+= "\\n\\n" \+ require\("\.\/location"\)\.locationLine\(ctx\.store\.location\);/);
 });
 

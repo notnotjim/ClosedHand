@@ -53,9 +53,9 @@ test('the writer uses the scope for its tools, its catalogue and get_tool_detail
 test('the time comes last, so each check starts with the same prompt and providers can reuse it', () => {
   const src = fs.readFileSync(require.resolve('../lib/pulse.js'), 'utf8');
   const prompt = src.slice(src.indexOf('const fullPrompt'), src.indexOf(';', src.indexOf('const fullPrompt')));
-  assert.ok(prompt.indexOf('toolScope.catalog') < prompt.indexOf('nowStamp'), prompt);
+  assert.ok(prompt.indexOf('toolScope.catalog') < prompt.indexOf('timeContext.timeBlock'), prompt);
   const system = src.slice(src.indexOf('const systemPrompt = `'), src.indexOf('`;', src.indexOf('const systemPrompt = `')));
-  assert.doesNotMatch(system, /nowStamp/);
+  assert.doesNotMatch(system, /nowStamp|timeBlock/);
 });
 
 // An email anyone can send is part of what Pulse reads, so one could be

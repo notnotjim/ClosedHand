@@ -47,7 +47,7 @@ test('the screen is told the date, so "tomorrow" and "weeks away" can be told ap
   await triage({ items, level: 'medium', now: 'Today is Monday 12 April 2027.', fallback: async (s, m) => { message = m; return '{"pulse":false,"flagged":[]}'; } });
   assert.match(message, /^Today is Monday 12 April 2027\.\n\nNew items since last check:/);
   const pulse = require('fs').readFileSync(require('path').join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
-  assert.match(pulse, /items: triageItems, level, goals, known: knownLines,\n\s*now: require\("\.\/timezone"\)\.nowStamp\(/);
+  assert.match(pulse, /items: triageItems, level, goals, known: knownLines,\n\s*now: timeContext\.timeBlock\(store\),/);
 });
 
 // A mailing list can open "Dear Sam" and end "call me". The screen is told
@@ -71,5 +71,5 @@ test('mail sent to a list is marked, and the screen knows what that means', asyn
   assert.match(pulse, /select\("source, type, external_id, data, data->>from, data->>subject, data->labels, data->>body"\)/);
   assert.match(pulse, /EMAIL\$\{fromMailingList\(e\) \? " \[mailing list\]" : ""\}/);
   assert.match(pulse, /its "call me" is not a request waiting on \$\{userName\}/, 'the writer holds the same line');
-  assert.match(pulse, /filter\(e => !JUNK_SENDER\.test\(e\.from \|\| ""\) && !sortedAsBulk\(e\.labels\)\n/, 'what Gmail filed as bulk never reaches the screen');
+  assert.match(pulse, /filter\(e => !JUNK_SENDER\.test\(e\.from \|\| ""\) && !sortedAsBulk\(e\.labels\) && unclaimed\(e\)\)/, 'what Gmail filed as bulk never reaches the screen');
 });

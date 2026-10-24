@@ -162,7 +162,7 @@ test("Pulse leaves alone what a watch with words is waiting for, and what anyone
   assert.equal(watches.claims(watch({ trigger_event_source: "bank" }), email("m4", { subject: "BW-40417" })), false);
   const pulse = read("lib/pulse.js");
   assert.match(pulse, /!toldKeys\.has\(toldItems\.key\(e\.source, e\.external_id\)\) && !openWatches\.some\(\(w\) => watches\.claims\(w, e\)\)/);
-  assert.match(pulse, /await toldItems\.recordTold\(supabase, userId, flaggedEmails, "pulse"\);/, "what Pulse tells is recorded");
+  assert.match(pulse, /await toldItems\.recordTold\(supabase, userId, flaggedItems, "pulse"\);/, "what Pulse tells is recorded");
   assert.match(pulse, /\.map\(\(line, i\) => `\[\$\{i \+ 1\}\] \$\{line\}`\)/, "triage items are numbered");
   assert.match(read("lib/pulse-triage.js"), /starting with its number in brackets/);
 });
