@@ -111,6 +111,11 @@ jobs:
           - runner: macos-15
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    # Whether signing and notarising can happen, in the job's own settings
+    # so each step's condition can read them (secrets cannot be read there).
+    env:
+      HAS_CERT: ${{ secrets.MAC_CERT_P12 != '' }}
+      HAS_NOTARY: ${{ secrets.NOTARY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -133,7 +138,7 @@ jobs:
           echo "Sandbox computer: $WS"
 
       - name: Import signing certificate
-        if: ${{ env.CERT != '' }}
+        if: ${{ env.HAS_CERT == 'true' }}
         env:
           CERT: ${{ secrets.MAC_CERT_P12 }}
           CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
@@ -157,7 +162,7 @@ jobs:
           ARCH="$ARCH" desktop/dmg.sh
 
       - name: Notarise
-        if: ${{ env.IDENTITY != '' && env.NOTARY_PASSWORD != '' }}
+        if: ${{ env.IDENTITY != '' && env.HAS_NOTARY == 'true' }}
         env:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
