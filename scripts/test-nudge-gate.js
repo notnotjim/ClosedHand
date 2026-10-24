@@ -143,7 +143,7 @@ test("Pulse: new mail by when it arrived, local times, the chat lately, the chec
   assert.match(pulse, /\.\.\.recent\.map\(\(m\) => `Said in the chat lately/);
   const at = pulse.indexOf("const verdictToSend = await gate.check(");
   assert.ok(at > 0 && at < pulse.indexOf("await deliver(text);"), "checked before it goes");
-  assert.match(pulse.slice(pulse.indexOf("await deliver(text);")), /^await deliver\(text\);\n[^\n]*\n\s*if \(sent\) \{[\s\S]{0,400}recordTold/, "told only when it reached someone");
+  assert.match(pulse.slice(pulse.indexOf("await deliver(text);")), /^await deliver\(text\);\n\s*if \(!sent\) return \{ error: "Could not reach any of their chat apps; nothing was delivered\." \};\n[\s\S]{0,300}recordTold/, "told only when it reached someone");
   assert.match(pulse, /try \{ await sendToPlatform\(t\.platform, t\.platform_user_id, text\); sent = true; \}/);
 });
 
@@ -151,10 +151,10 @@ test("Pulse reads what is new from every connection, not only mail and calendar,
   const pulse = read("lib/pulse.js");
   assert.match(pulse, /\.eq\("user_id", userId\)\.neq\("type", "email"\)\n\s*\.gt\("created_at", lookback\)/, "chats, bookings, pages, bank and the rest");
   assert.match(pulse, /const otherItems = \(newOther \|\| \[\]\)\.filter\(\(r\) => !watches\.ignored\(r\) && unclaimed\(r\)\)/, "never their own messages, nor what was told or is watched");
-  assert.match(pulse, /\.\.\.otherItems\.map\(line\),/);
-  assert.match(pulse, /const numbered = \[\.\.\.realEmails, \.\.\.otherItems, \.\.\.sentLines\.map\(\(\) => null\), \.\.\.coming, \.\.\.projectLines\.map\(\(\) => null\)\];/, "and whatever it tells is recorded as told, never what they sent");
+  assert.match(pulse, /\.\.\.otherItems\.map\(\(r\) => noted\(line\(r\), facts\.replyNote\(r, wrote\)\)\),/, "each with whether they wrote since");
+  assert.match(pulse, /const numbered = \[\.\.\.realEmails, \.\.\.otherItems, \.\.\.waitingRows, \.\.\.sentLines\.map\(\(\) => null\), \.\.\.coming, \.\.\.projectLines\.map\(\(\) => null\)\];/, "and whatever it tells is recorded as told, never what they sent");
   assert.match(pulse, /\.eq\("type", "message"\)\.eq\("data->>sender", "me"\)/, "what they sent is in the picture, so an answered question is not called unanswered");
-  assert.match(pulse, /e\.labels\.includes\("SENT"\)/);
+  assert.match(pulse, /const sentMail = mailRows\.filter\(\(e\) => Array\.isArray\(e\.data\.labels\) && e\.data\.labels\.includes\("SENT"\)\);/);
   assert.match(pulse, /const evidence = \[citedItems\.join\("\\n"\), flaggedText,/, "the check gets what the message stands on");
   assert.match(pulse, /Never hold back something that clears the bar\./);
   assert.doesNotMatch(pulse, /is the RIGHT answer most of the time/, "usefulness is the bar, not rarity");

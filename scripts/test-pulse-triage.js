@@ -68,14 +68,14 @@ test('a point names the items it rests on, and all of them are recorded as told'
 });
 
 test('Pulse: the person\'s main LLM notices, over new, coming and open, looking again as time passes', () => {
-  assert.match(pulse, /require\("\.\/llm"\)\.getUserLLMClient\(userId, store\)[\s\S]{0,200}purpose: "pulse_notice"/);
+  assert.match(pulse, /const ask = async \(system, content, purpose = "pulse_notice"\) => \{\n\s*const \{ client, model \} = require\("\.\/llm"\)\.getUserLLMClient\(userId, store\);/);
   assert.doesNotMatch(pulse, /cheapChat/, 'no small model for the judgement');
-  assert.match(pulse, /items: triageItems, sent: sentItems, coming: comingItems, open: openItems, level, goals, known: knownLines,\n\s*now: timeContext\.timeBlock\(store\), ask,/);
+  assert.match(pulse, /items: triageItems, waiting: waitingItems, sent: sentItems, coming: comingItems, open: openItems, level, goals, known: knownLines,\n\s*now: timeContext\.timeBlock\(store\), ask,/);
   assert.match(pulse, /\.gte\("received_at", new Date\(\)\.toISOString\(\)\)\.lte\("received_at", new Date\(Date\.now\(\) \+ 7 \* 86400000\)\.toISOString\(\)\)/, 'the next seven days, from any connection');
   assert.match(pulse, /const LOOK_EVERY_H = \{ low: 12, medium: 4, high: 2 \};/);
   assert.match(pulse, /if \(realEmails\.length === 0 && otherItems\.length === 0 && !enteringSoon && !lookDue\) \{/);
   assert.ok(pulse.indexOf('if (verdict.failed)') < pulse.indexOf('lastLook.set(userId, Date.now());'), 'a failed look is not a look');
-  assert.match(pulse, /pulseContext\.coveredByReminder\(r\.received_at, reminders\) \? " \(a reminder will tell them\)"/, 'marked, not dropped');
+  assert.match(pulse, /pulseContext\.coveredByReminder\(r\.received_at, reminders\) \? "a reminder will tell them" : ""/, 'marked, not dropped');
 });
 
 // A mailing list can open "Dear Sam" and end "call me". Noticing is told

@@ -43,7 +43,7 @@ test('the screen and the writer are both given it', async () => {
   await notice({ items: ['[1] EMAIL from a@example.test: x'], level: 'medium', known: ['Reminder already set: dentist-fixture: reminder at 07:30, for 09:00'], ask: async (s, m) => { message = m; return '{"pulse":false}'; } });
   assert.match(message, /ALREADY KNOWN \(an item these cover adds nothing unless it changes them\):\nReminder already set: dentist-fixture/);
   const pulse = fs.readFileSync(path.join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
-  assert.match(pulse, /pulseContext\.coveredByReminder\(r\.received_at, reminders\) \? " \(a reminder will tell them\)"/, 'what a reminder covers is marked, so only a change to it is news');
+  assert.match(pulse, /pulseContext\.coveredByReminder\(r\.received_at, reminders\) \? "a reminder will tell them" : ""/, 'what a reminder covers is marked, so only a change to it is news');
   assert.match(pulse, /WHAT CLOSEDHAND HAS ALREADY DONE for \$\{userName\} \(current, and newer than any email, draft or record that says otherwise/);
   assert.match(pulse, /REMINDERS ALREADY SET/);
   assert.match(pulse, /never call the entry wrong or "an hour off"/);
@@ -53,7 +53,7 @@ test('the writer reads what the rest of the person\'s world says about the flagg
   const pulse = fs.readFileSync(path.join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
   // The same recall a chat message gets: mail, chats such as WhatsApp, files.
   assert.match(pulse, /const recalled = await require\("\.\/brain"\)\.fetchRelevantContext\(userId, flaggedText\)\.catch\(\(\) => null\);/);
-  assert.match(pulse, /already known\.\$\{recalled \|\| ""\}\$\{recentText\}`/, 'it comes with the flagged items, and the chat lately');
-  assert.match(pulse, /RECALLED ITEMS: the flagged items can come with POSSIBLY RELATED items/, 'and the instructions say how to use it');
+  assert.match(pulse, /\$\{citedItems\.join\("\\n"\)\}\$\{mailText\}\$\{recalled \|\| ""\}\$\{recentText\}\\n\\nLAST TOLD: \$\{lastTold\}`/, 'it comes with the cited items, the emails in full, the chat lately and what it last told them');
+  assert.match(pulse, /RECALLED ITEMS: the noticed points can come with POSSIBLY RELATED items/, 'and the instructions say how to use it');
   assert.match(require('../lib/brain').fetchRelevantContext.toString(), /POSSIBLY RELATED/, 'the block points at those instructions');
 });
