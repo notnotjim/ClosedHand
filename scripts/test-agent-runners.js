@@ -56,7 +56,7 @@ function harness(options = {}) {
     "verification":{prepareTask:async(...args)=> options.prepare ? options.prepare(...args) : {tier:"default",criteria:["Correct time"]},verifyCompletion:async()=> options.verdict || {passed:true,status:"passed"},retryNote:(a,m,f)=>`VERIFICATION (attempt ${a}/${m}): ${f}`},
     "task-delivery":{deliverFinished:async()=>{}},"response-presentation":{responsePresentation:()=>""},
     "token-tracker":{getContextWindow:()=>200000,estimateContextTokens:(m,s,t)=>({total:JSON.stringify([m,s,t]).length/4})},
-    "config":{getConf:async()=>null},"dashboard-links":{agentLinkNotice:async()=>"Report: https://fixture.test/dashboard#agents"}
+    "config":{getConf:async()=>null},"dashboard-links":{agentLinkNotice:async()=>"Report: https://fixture.test/dashboard#tasks"}
   };
   function structuredCloneStore(){return {...store,profile:structuredClone(store.profile)};}
   function load(name, actual = false) {
@@ -173,7 +173,7 @@ test("large requested reports retain a readable chat digest and full result", as
   const answer = await delivery.reportDigest("Sourced detail. ".repeat(400), "telegram", "user", {});
   assert.equal(h.calls.length, 1);
   assert.ok(answer.includes("20:00"));
-  assert.ok(answer.includes("https://fixture.test/dashboard#agents"));
+  assert.ok(answer.includes("https://fixture.test/dashboard#tasks"));
 });
 test("one-off runner answers in the originating chat without creating a schedule or document", async () => {
   const h = harness({tables: {agent_tasks: [row({platform: "telegram", chat_id: "phone"})]}});

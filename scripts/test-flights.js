@@ -236,7 +236,7 @@ function loadAnnouncements(targets, options = {}) {
   const announce = vm.runInNewContext(body + '\nannounceNewFlights', {
     FlightTime: clock, LIVE: false, flightIntervals: {}, ctx: {},
     _getNoteValue: n => n?.value || n,
-    dashboardUrl: async (platform, section) => { assert.equal(section, 'schedules'); if (options.noUrl) throw Error('unavailable'); return 'https://phone.example/dashboard#schedules'; },
+    dashboardUrl: async (platform, section) => { assert.equal(section, 'tasks'); if (options.noUrl) throw Error('unavailable'); return 'https://phone.example/dashboard#tasks'; },
     deliveryTargets: async () => targets,
     sendToPlatform: async (...args) => { if (options.fail) throw Error('offline'); sends.push(args); return { id: 'captured' }; },
     getConversation: () => conversation, saveStore() {}, console: { error: text => errors.push(text) },
@@ -251,7 +251,7 @@ test('the real announcement sends old/new local clocks and a phone link without 
   assert.equal(h.sends.length, 1);
   assert.match(h.sends[0][2], /schedule has changed/);
   assert.match(h.sends[0][2], /20:00.*was 20:40.*BKK local time/);
-  assert.match(h.sends[0][2], /https:\/\/phone.example\/dashboard#schedules/);
+  assert.match(h.sends[0][2], /https:\/\/phone.example\/dashboard#tasks/);
   assert.equal(h.conversation.length, 1);
   const disabled = loadAnnouncements([]); await disabled.announce(f);
   assert.equal(disabled.sends.length, 0); assert.equal(disabled.conversation.length, 0);

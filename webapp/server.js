@@ -5013,7 +5013,7 @@ app.get("/api/connections/scopes", async (req, res) => {
   }
 });
 
-// GET /api/agents — the chat work the Schedules tab shows (see the route).
+// GET /api/agents — the chat work the Tasks tab shows (see the route).
 // A finished run whose answer may not have arrived is listed for a week.
 // Pages use the same week before folding into their Archived section.
 const ARCHIVE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;

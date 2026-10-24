@@ -366,10 +366,10 @@ test("the engine, tools and claims check use projects", () => {
 
 test("the dashboard has a Projects tab, Context Brain has no Ongoing, and each project has a page", () => {
   const dash = read("webapp/views/dashboard.html");
-  assert.match(dash, /data-tab="automations"[^\n]*>Schedules<\/button>\n\s*<button class="tab" data-tab="projects" onclick="switchTab\('projects'\)">Projects<\/button>\n\s*<button class="tab" data-tab="pages"/);
+  assert.match(dash, /data-tab="tasks"[^\n]*>Tasks<\/button>\n\s*<button class="tab" data-tab="projects" onclick="switchTab\('projects'\)">Projects<\/button>\n\s*<button class="tab" data-tab="pages"/);
   assert.match(dash, /<script defer src="\/projects\.js"><\/script>/);
   assert.doesNotMatch(dash, /data-filter="matters"|\/api\/matters/);
-  assert.match(dash, /\['connections', 'automations', 'projects', 'pages'/);
+  assert.match(dash, /\['connections', 'tasks', 'projects', 'pages'/);
   const server = read("webapp/server.js");
   assert.match(server, /require\("\.\/projects"\)\.register\(app, \{ db: supabase, userId: getUserIdFromRequest, withAppearance: assets\.withAppearance \}\);/);
   assert.doesNotMatch(server, /from\("matters"\)/);

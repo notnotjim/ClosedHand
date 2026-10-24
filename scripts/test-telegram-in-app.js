@@ -42,7 +42,7 @@ test("only Closedhand's own pages open this way, never another site", () => {
   vm.runInNewContext(fn("telegramTarget") + "\nthis.f = telegramTarget;", box);
   assert.equal(box.f("/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07");
   assert.equal(box.f("/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07", "buttons sent before pages had their name");
-  assert.equal(box.f("/dashboard#schedules"), "/dashboard#schedules");
+  assert.equal(box.f("/dashboard#tasks"), "/dashboard#tasks");
   assert.equal(box.f("/canvas/abc123"), "/canvas/abc123");
   for (const bad of ["//evil.example/x", "https://evil.example", "/report/../../x", "/api/agents", "javascript:alert(1)", ""]) {
     assert.equal(box.f(bad), "/", bad);
@@ -106,8 +106,8 @@ test("a page link becomes an Open page button, and in-app buttons go through the
   await bot.sendMessage(7, `Full report: ${BASE}/report/${SAIGON}`);
   assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open page", web_app: { url: open(`/page/${SAIGON}`) } }, "a link from before pages had their name opens the page");
 
-  await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${BASE}/dashboard#schedules` } }]] } });
-  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, open("/dashboard#schedules"));
+  await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${BASE}/dashboard#tasks` } }]] } });
+  assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, open("/dashboard#tasks"));
   await bot.sendMessage(7, "Elsewhere", { reply_markup: { inline_keyboard: [[{ text: "Site", web_app: { url: "https://example.com/x" } }]] } });
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, "https://example.com/x", "other sites are left alone");
   assert.equal((read("index.js").match(/splitTelegram\(require\("\.\/lib\/telegram-in-app"\)\.telegramInApp\(new TelegramBot\(/g) || []).length, 2, "both places the bot is made, parts split before buttons are added");
@@ -130,9 +130,9 @@ test("links written for the web chat open in Telegram, as buttons named after ea
   assert.equal(sent.at(-1).text, "Here you go: Newcastle's Champions League chances");
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].text, "Newcastle's Champions League chances", "the model's own words for it");
 
-  await bot.sendMessage(7, `I'm on it.\n\nYou can watch it run on your dashboard: ${BASE}/dashboard#agents`);
-  assert.equal(sent.at(-1).text, "I'm on it.\n\nYou can watch it run on your dashboard");
-  assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open dashboard", web_app: { url: open("/dashboard#agents") } });
+  await bot.sendMessage(7, `Your routine is saved. It's on your dashboard: ${BASE}/dashboard#tasks`);
+  assert.equal(sent.at(-1).text, "Your routine is saved. It's on your dashboard");
+  assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open dashboard", web_app: { url: open("/dashboard#tasks") } });
 
   await bot.editMessageText(`Done: /page/${SAIGON}`, { chat_id: 7, message_id: 3 });
   assert.equal(sent.at(-1).edit, true);

@@ -1234,9 +1234,9 @@
     .flights-date-header:first-child { margin-top: 8px; }
     .flights-away { color: var(--accent); text-transform: none; letter-spacing: 0; }
     /* One line each under Upcoming: what it is, what kind, and when. */
-    #tab-automations .upcoming-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; margin: 0 0 6px; border: 1px solid rgba(var(--fg-rgb),0.1); border-radius: 8px; background: none; color: inherit; font: inherit; text-align: left; }
-    #tab-automations button.upcoming-row { cursor: pointer; }
-    #tab-automations button.upcoming-row:hover { border-color: rgba(var(--fg-rgb),0.22); }
+    #tab-tasks .upcoming-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; margin: 0 0 6px; border: 1px solid rgba(var(--fg-rgb),0.1); border-radius: 8px; background: none; color: inherit; font: inherit; text-align: left; }
+    #tab-tasks button.upcoming-row { cursor: pointer; }
+    #tab-tasks button.upcoming-row:hover { border-color: rgba(var(--fg-rgb),0.22); }
     .upcoming-row .upcoming-icon { flex: none; font-size: 14px; }
     .upcoming-row .upcoming-what { flex: 1; min-width: 0; }
     .upcoming-row .upcoming-title { display: block; font-size: 14px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2050,7 +2050,7 @@
       <div class="dashboard-toolbar">
       <div class="tab-bar">
         <button class="tab active" data-tab="connections" onclick="switchTab('connections')">Connections</button>
-        <button class="tab" data-tab="automations" onclick="switchTab('automations')">Schedules</button>
+        <button class="tab" data-tab="tasks" onclick="switchTab('tasks')">Tasks</button>
         <button class="tab" data-tab="projects" onclick="switchTab('projects')">Projects</button>
         <button class="tab" data-tab="pages" onclick="switchTab('pages')">Pages</button>
         <button class="tab" data-tab="brain" onclick="switchTab('brain')">Context Brain</button>
@@ -2270,9 +2270,9 @@
       </div>
 
       <!-- Workers Tab Content -->
-      <div class="tab-content" id="tab-automations">
+      <div class="tab-content" id="tab-tasks">
         <div style="padding-top:16px;">
-          <p class="goals-intro">Everything on Closedhand's schedule, from what it's working on now to what's coming up.</p>
+          <p class="goals-intro">Everything Closedhand is doing for you, from what it's working on now to what's coming up.</p>
 
           <!-- Stats cards -->
           <div class="mc-metrics">
@@ -2963,7 +2963,7 @@
     const welcomeSteps = [
       { tab: 'connections', text: 'Your connected apps live here. Add an app when you need it or disconnect one any time.' },
       { tab: 'brain', text: 'See what I remember in Context Brain. You can read, correct or delete your Pinned facts and Context Notes.' },
-      { tab: 'automations', text: 'Check on the jobs you give me, like a morning briefing. You can manage them here, then get back to your day.' }
+      { tab: 'tasks', text: 'Check on the jobs you give me, like a morning briefing. You can manage them here, then get back to your day.' }
     ];
     function positionWelcome() {
       const panel = document.getElementById('dashboard-welcome');
@@ -3245,8 +3245,6 @@
 
       // Load bridge status (must be after connected grid renders)
       loadBridgeStatus();
-
-      // (Schedules moved to Automations tab)
     }
 
     // --- Integration card click (whole-card tappable) ---
@@ -4838,37 +4836,6 @@
       return false;
     }
 
-    // --- Schedules (kept for backward compat) ---
-
-    function cronToHuman(cron) {
-      if (!cron) return cron;
-      const parts = cron.trim().split(/\s+/);
-      if (parts.length < 5) return cron;
-      const [min, hour, dom, , dow] = parts;
-      const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-
-      function fmtTime(h, m) {
-        const hr = parseInt(h), mn = parseInt(m);
-        const ampm = hr >= 12 ? "PM" : "AM";
-        const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-        return h12 + ":" + String(mn).padStart(2, "0") + " " + ampm;
-      }
-
-      if (min.startsWith("*/") && hour === "*") return "Every " + min.slice(2) + " minutes";
-      if (hour !== "*" && dom === "*" && dow === "*") return "Every day at " + fmtTime(hour, min);
-      if (hour !== "*" && dow === "1-5") return "Weekdays at " + fmtTime(hour, min);
-      if (hour !== "*" && dow === "0,6") return "Weekends at " + fmtTime(hour, min);
-      if (hour !== "*" && dom === "*" && dow !== "*" && /^[\d,]+$/.test(dow)) {
-        const days = dow.split(",").map(d => dayNames[parseInt(d)] || d).join(", ");
-        return days + " at " + fmtTime(hour, min);
-      }
-      if (hour !== "*" && dom !== "*" && dow === "*") {
-        const suffix = dom === "1" ? "st" : dom === "2" ? "nd" : dom === "3" ? "rd" : "th";
-        return dom + suffix + " of every month at " + fmtTime(hour, min);
-      }
-      return cron;
-    }
-
     // --- Account management ---
 
     function startAccountAction(action) {
@@ -4997,7 +4964,7 @@
       document.querySelectorAll('.tab-content').forEach(tc => {
         tc.classList.toggle('active', tc.id === `tab-${tabName}`);
       });
-      if (tabName === 'automations') {
+      if (tabName === 'tasks') {
         loadAutomations();
         loadAutomationStats();
         loadSkills();
@@ -8921,17 +8888,13 @@
       document.addEventListener('touchcancel', function() { if (active && horiz) window.parent.postMessage({ type: 'dash-drag-end', dx: 0, vx: 0 }, '*'); active = false; }, { passive: true });
     })();
 
-    // Deep-link: switch to tab from URL hash (e.g. #schedules, #settings)
-    const hashTab = window.location.hash.replace('#', '');
-    // #agents is what links say now. #workers still resolves, because it is in
-    // messages already sent and in anyone's bookmarks.
+    // Deep-link: switch to tab from URL hash (e.g. #tasks, #settings)
     function resolveAndSwitchFromHash() {
-      const h = window.location.hash.replace('#', '');
-      const resolved = (h === 'workers' || h === 'agents' || h === 'schedules' || h === 'schedule') ? 'automations' : h;
+      const resolved = window.location.hash.replace('#', '');
       if (resolved === 'dashboard-link') {
         switchTab('settings');
         setTimeout(function() { document.getElementById('phone-block').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-      } else if (['connections', 'automations', 'projects', 'pages', 'settings', 'brain', 'usage'].includes(resolved)) {
+      } else if (['connections', 'tasks', 'projects', 'pages', 'settings', 'brain', 'usage'].includes(resolved)) {
         switchTab(resolved);
       } else if (resolved === 'connect' || resolved === 'skills') {
         // Connection links open the catalogue and MCP input.

@@ -107,7 +107,7 @@
   function show(el, text) { el.textContent = text; el.style.display = "block"; }
   function signedIn() {
     var next = new URLSearchParams(location.search).get("next") || "/";
-    // The server cannot see #agents; browsers carry it onto the login URL.
+    // The server cannot see #tasks; browsers carry it onto the login URL.
     // Restore it after signing in, while keeping redirects on this origin.
     var destination = new URL(next, location.origin);
     if (!next.startsWith("/") || destination.origin !== location.origin) destination = new URL("/", location.origin);

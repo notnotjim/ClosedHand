@@ -25,20 +25,19 @@ function links(conf) { return load('lib/dashboard-links.js', { './config': conf 
 const phone = 'https://test-phone.trycloudflare.com';
 test('first chat link awaits phone config, including a cold cache', async () => {
   const conf = config({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone });
-  assert.equal(await links(conf).dashboardUrl('whatsapp'), phone + '/dashboard#schedules');
-  assert.equal(await links(conf).dashboardUrl('telegram'), phone + '/dashboard#schedules');
+  assert.equal(await links(conf).dashboardUrl('whatsapp'), phone + '/dashboard#tasks');
+  assert.equal(await links(conf).dashboardUrl('telegram'), phone + '/dashboard#tasks');
 });
 test('web stays relative and disabled phone access never emits localhost or stale URLs', async () => {
   const client = links(config({ PHONE_ACCESS_URL: phone }, { BASE_URL: 'http://localhost:3000' }));
-  assert.equal(await client.dashboardUrl('web'), '/dashboard#schedules');
-  assert.equal(await client.agentLinkNotice('web'), 'You can watch it run on your [dashboard](/dashboard#schedules).', 'the link sits on the word');
-  assert.equal(await client.agentLinkNotice('web', 'Full result'), '[Full result](/dashboard#schedules)');
+  assert.equal(await client.dashboardUrl('web'), '/dashboard#tasks');
+  assert.equal(await client.agentLinkNotice('web', 'Full result'), '[Full result](/dashboard#tasks)', 'the link sits on the words');
   assert.equal(await client.dashboardUrl('whatsapp'), null);
-  assert.match(await client.agentLinkNotice('whatsapp'), /claim your personal URL/);
+  assert.match(await client.agentLinkNotice('whatsapp', 'Full result'), /claim your personal URL/);
 });
 test('configured permanent HTTPS address wins over the temporary tunnel', async () => {
   const conf = config({ PHONE_ACCESS: '1', PHONE_ACCESS_URL: phone }, { WEBAPP_URL: 'https://my.example.com/' });
-  assert.equal(await links(conf).dashboardUrl('telegram'), 'https://my.example.com/dashboard#schedules');
+  assert.equal(await links(conf).dashboardUrl('telegram'), 'https://my.example.com/dashboard#tasks');
 });
 test('unsafe or computer-only addresses are never sent to chat', async () => {
   for (const address of ['http://example.com', 'https://localhost:3000', 'https://127.0.0.1', 'https://192.168.1.3', 'https://bot', 'https://laptop.local', 'https://user:secret@example.com', 'https://example.com/?token=secret']) {

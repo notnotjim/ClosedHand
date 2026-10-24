@@ -188,14 +188,13 @@ test("the line for work moving to the background names nothing the request does 
   const engine = fs.readFileSync(path.join(__dirname, "..", "lib", "engine.js"), "utf8");
   const at = engine.indexOf("async function composeHandover(");
   let said = "";
-  const fake = { "./dashboard-links": { agentLinkNotice: async () => "Watch it on your dashboard." },
-    "./llm": { getInternalClient: () => ({ client: {}, model: "fixture" }) },
+  const fake = { "./llm": { getInternalClient: () => ({ client: {}, model: "fixture" }) },
     "./task-model": { modelCall: async () => ({ content: [{ type: "text", text: said }] }) },
     "./plain-dashes": require("../lib/plain-dashes") };
   const compose = new Function("require", "ctx", engine.slice(at, engine.indexOf("\n}\n", at) + 2) + "\nreturn composeHandover;")((m) => fake[m], {});
   const request = "Why does the second paragraph sound so stiff? Make it plainer.";
   said = "I'm reworking your wording for the Leeds pickup on the 9th and the £250 budget, and will post it here.";
-  assert.match(await compose("u1", request, [], 100, "whatsapp_linked"), /^I'm carrying on with this in the background and will post the answer here when it's done\.\n\nWatch it/);
+  assert.match(await compose("u1", request, [], 100, "whatsapp_linked"), /^I'm carrying on with this in the background and will post the answer here when it's done\.$/, "and no dashboard link after it");
   said = "I'm reworking the wording you asked about and will post the new version here.";
   assert.match(await compose("u1", request, [], 100, "whatsapp_linked"), /^I'm reworking the wording you asked about/);
   said = "I'm finding the 3 cheapest flights to Lisbon on the 14th and will post them here.";

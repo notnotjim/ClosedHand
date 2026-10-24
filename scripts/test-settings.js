@@ -27,7 +27,7 @@ function notifications() {
     block("    function escAttribute(", "    // --- MCP Connections") +
     block("    async function loadPulse()", "    async function saveConfirmSends") +
     block("    function renderPlatformPills(", "    function renderQuietHours") +
-    block("    async function savePulse()", "    // --- Schedules"), state);
+    block("    async function savePulse()", "    // --- Account management"), state);
   return { state, container };
 }
 const linked = { whatsapp: { connected: true, linkedDevice: true, name: "WhatsApp" } };

@@ -50,18 +50,19 @@ test("chat work stays while it runs or waits, and a finished run only when its a
   assert.match(dashboard, /a\.delivery_status !== 'sent' &&\n\s*a\.completed_at && Date\.now\(\) - new Date\(a\.completed_at\)\.getTime\(\) > 2 \* 60000\) \{\n\s*detail = 'This may not have reached the chat you asked in, so it stays here\. ' \+ detail;/, "a late delivery says why the card is still there");
   assert.match(dashboard, /function archiveRow\(toggle, count, open\) \{\n\s*if \(!count\) return '';/, "Pages keeps its Archived row");
   assert.doesNotMatch(dashboard, /'Running now'|'This week'/, "the cards say running or waiting themselves");
-  assert.match(dashboard, />Everything on Closedhand's schedule, from what it's working on now to what's coming up\.</, "the tab says what it holds, in its own word");
+  assert.match(dashboard, />Everything Closedhand is doing for you, from what it's working on now to what's coming up\.</, "the tab says what it holds");
 });
 
-test("the Schedules tab holds what is about time; what Closedhand made is on Pages", () => {
-  assert.match(dashboard, /onclick="switchTab\('automations'\)">Schedules<\/button>/);
-  const schedule = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-projects"'));
-  assert.doesNotMatch(schedule, />Resources<|id="files-section"|id="datasets-section"|skills-library/, "no Resources on the Schedules tab");
+test("the Tasks tab holds what Closedhand is doing and will do; what it made is on Pages", () => {
+  assert.match(dashboard, /<button class="tab" data-tab="tasks" onclick="switchTab\('tasks'\)">Tasks<\/button>/);
+  const tasks = dashboard.slice(dashboard.indexOf('id="tab-tasks"'), dashboard.indexOf('id="tab-projects"'));
+  assert.doesNotMatch(tasks, />Resources<|id="files-section"|id="datasets-section"|skills-library/, "no Resources on the Tasks tab");
   const pages = dashboard.slice(dashboard.indexOf('id="tab-pages"'), dashboard.indexOf('id="tab-settings"'));
   assert.match(pages, /id="files-section"[\s\S]*<div class="mc-subsection-label">Files<\/div>[\s\S]*id="datasets-section"[\s\S]*<div class="mc-subsection-label">Tables<\/div>/, "files and tables sit under Pages");
   assert.match(dashboard, /if \(tabName === 'pages'\) \{\n\s*if \(typeof loadFiles === 'function'\) loadFiles\(\);\n\s*if \(typeof loadDatasets === 'function'\) loadDatasets\(\);/);
-  assert.match(dashboard, /const resolved = \(h === 'workers' \|\| h === 'agents' \|\| h === 'schedules' \|\| h === 'schedule'\) \? 'automations' : h;/, "old #agents links still open it");
-  assert.match(read("lib/dashboard-links.js"), /async function dashboardUrl\(platform, section = "schedules"\)/);
+  assert.match(dashboard, /const resolved = window\.location\.hash\.replace\('#', ''\);/, "#tasks opens it; no old names");
+  assert.doesNotMatch(dashboard, /'workers'|=== 'schedules'|#agents|Schedules/);
+  assert.match(read("lib/dashboard-links.js"), /async function dashboardUrl\(platform, section = "tasks"\)/);
 });
 
 test("Upcoming says what, what kind and when; what already happened folds under Past", () => {
@@ -78,7 +79,7 @@ test("Upcoming says what, what kind and when; what already happened folds under 
 });
 
 test("saved agents are routines, everywhere a person reads about them; agents stay where agents work", () => {
-  const schedules = dashboard.slice(dashboard.indexOf('id="tab-automations"'), dashboard.indexOf('id="tab-projects"'));
+  const schedules = dashboard.slice(dashboard.indexOf('id="tab-tasks"'), dashboard.indexOf('id="tab-projects"'));
   assert.doesNotMatch(schedules, /Saved agents|Saved Agents|New agent/);
   assert.match(schedules, /<div class="mc-metric-label">Agents at work<\/div>/);
   assert.match(schedules, /<div class="mc-metric-label">Routines<\/div>/);
@@ -87,7 +88,7 @@ test("saved agents are routines, everywhere a person reads about them; agents st
   const defs = read("lib/tools/definitions.js");
   assert.match(defs, /Create a routine: an agent the person sets up once that runs on a schedule, when something happens, or when they ask\. Call it a routine when you talk about it\./);
   assert.match(defs, /`Setting up a routine: \$\{q\}` : "Setting up a routine"/, "the web chat's progress line says routine too");
-  assert.match(read("lib/tools/handlers.js"), /"Routine '" \+ auto\.name \+ "' saved\. It shows under Routines on the Schedules tab\."/);
+  assert.match(read("lib/tools/handlers.js"), /"Routine '" \+ auto\.name \+ "' saved\. It shows under Routines on the Tasks tab\."/);
 });
 
 test("a repeating reminder is under Upcoming at its next time, saying how often", () => {
