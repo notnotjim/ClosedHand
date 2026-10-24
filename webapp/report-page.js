@@ -105,13 +105,13 @@ function shell(title, inner) {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
 <style>
 :root { --bg: #f7f3ee; --fg: #241c18; --muted: #75685f; --line: #e3dbd2; --accent: #b9452f; --head: #efe7de; color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme-pick="light"]) { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; } }
 :root[data-theme-pick="dark"] { --bg: #141010; --fg: #efe6d6; --muted: #a2968b; --line: #2f2724; --accent: #d8624b; --head: #1f1917; color-scheme: dark; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 "IBM Plex Sans", system-ui, -apple-system, sans-serif; padding: max(20px, env(safe-area-inset-top)) 16px 64px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 "DM Sans", system-ui, -apple-system, sans-serif; padding: max(20px, env(safe-area-inset-top)) 16px 64px; }
 main { max-width: 760px; margin: 0 auto; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 18px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; text-decoration: none; }

@@ -408,13 +408,13 @@ function shell(title, inner) {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
 <style>
 :root { --bg: #EFE6D6; --raised: #F7F1E7; --fg: #1A1817; --fg-rgb: 26,24,23; --muted: #5E574F; --accent: #C4513B; --accent-rgb: 196,81,59; --ok: #4E7F3A; --ok-rgb: 78,127,58; --warn: #8A6416; --warn-rgb: 138,100,22; color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme-pick="light"]) { --bg: #100E0D; --raised: #1A1817; --fg: #EFE6D6; --fg-rgb: 239,230,214; --muted: #B6AFA4; --accent: #D8624B; --accent-rgb: 216,98,75; --ok: #8DBD79; --ok-rgb: 141,189,121; --warn: #D0A652; --warn-rgb: 208,166,82; color-scheme: dark; } }
 :root[data-theme-pick="dark"] { --bg: #100E0D; --raised: #1A1817; --fg: #EFE6D6; --fg-rgb: 239,230,214; --muted: #B6AFA4; --accent: #D8624B; --accent-rgb: 216,98,75; --ok: #8DBD79; --ok-rgb: 141,189,121; --warn: #D0A652; --warn-rgb: 208,166,82; color-scheme: dark; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 "IBM Plex Sans", system-ui, -apple-system, sans-serif; padding: max(18px, env(safe-area-inset-top)) 16px 56px; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 "DM Sans", system-ui, -apple-system, sans-serif; padding: max(18px, env(safe-area-inset-top)) 16px 56px; -webkit-font-smoothing: antialiased; }
 main { max-width: 880px; margin: 0 auto; }
 a { color: inherit; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid rgba(var(--fg-rgb),0.12); }

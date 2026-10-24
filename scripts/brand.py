@@ -33,6 +33,11 @@
 #
 #   python3 scripts/brand.py build-favicon
 #
+# The Mac download window's background for every set, drawn again from
+# desktop/dmg/background.html with that set's fist (needs Chrome):
+#
+#   python3 scripts/brand.py build-dmg
+#
 # Every file is drawn the way the original is: the same canvas, colour and
 # placement, the app icon on the same dark gradient, the circle mark in the
 # same ring, the favicon the same colour-following mask.
@@ -430,6 +435,14 @@ def build_favicon():
     use(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
 
 
+def build_dmg():
+    for mark in sorted(os.listdir(MARKS)):
+        dmg = os.path.join(MARKS, mark, "desktop/dmg")
+        _dmg_background(os.path.join(dmg, "fist-dark.png"), os.path.join(dmg, "background.png"), os.path.join(dmg, "background@2x.png"))
+        print(f"brand/marks/{mark}/desktop/dmg/background.png, background@2x.png")
+    use(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
+
+
 def _dmg_background(fist, one, two):
     tmp = tempfile.mkdtemp()
     shutil.copyfile(os.path.join(ROOT, "desktop/dmg/background.html"), os.path.join(tmp, "background.html"))
@@ -475,7 +488,9 @@ if __name__ == "__main__":
         build_og()
     elif cmd[0] == "build-favicon":
         build_favicon()
+    elif cmd[0] == "build-dmg":
+        build_dmg()
     elif cmd[0] == "which":
         print(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
     else:
-        sys.exit("Usage: brand.py use <mark> | which | build-brush | build-icons | build-og | build-favicon | save <name>")
+        sys.exit("Usage: brand.py use <mark> | which | build-brush | build-icons | build-og | build-favicon | build-dmg | save <name>")

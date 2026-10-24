@@ -87,7 +87,7 @@
 /* So are the logos that are one colour and drawn white; the rest keep their colours. */
 :root[data-theme="light"] img:is([src$="/logos/github.svg"], [src$="/logos/notion.svg"], [src$="/logos/x.svg"], [src$="/logos/tiktok.svg"]) { filter: brightness(0.11); }
 :root {
-  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-ui: 'DM Sans', system-ui, sans-serif;
   --font-brand: 'Fraunces', Georgia, serif;
   --ui-small: 13px;
   --ui-label: 14px;
