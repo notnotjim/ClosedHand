@@ -95,7 +95,7 @@ function createApp({ db, env = process.env, request = fetch, startMailWorker = r
 
   app.get('/health', (req, res) => res.json({ ok: true }));
   // Browsers and crawlers ask for /favicon.ico whatever a page names.
-  app.get('/favicon.ico', (req, res) => res.type('png').sendFile(path.join(PUBLIC, 'logocircle.png')));
+  app.get('/favicon.ico', (req, res) => res.type('png').sendFile(path.join(PUBLIC, 'favicon.png')));
   // Lets Microsoft confirm closedhand.com publishes these sign-in apps, so
   // its permission screen names closedhand.com.
   app.get('/.well-known/microsoft-identity-association.json', (req, res) => {

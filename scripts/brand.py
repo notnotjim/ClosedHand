@@ -29,6 +29,11 @@
 #
 #   python3 scripts/brand.py build-og
 #
+# closedhand.com's icons for every set: the app's tab icon, and for Google,
+# which shows no SVG and sets every icon on a white disc, the dark fist on white:
+#
+#   python3 scripts/brand.py build-favicon
+#
 # Every file is drawn the way the original is: the same canvas, colour and
 # placement, the app icon on the same dark gradient, the circle mark in the
 # same ring, the favicon the same colour-following mask.
@@ -44,6 +49,8 @@ FILES = [
     "closedhand-com/public/logo.png",
     "closedhand-com/public/logocircle.png",
     "closedhand-com/public/og.png",
+    "closedhand-com/public/favicon.svg",
+    "closedhand-com/public/favicon.png",
     "closedhand-com/public/orb/ring-glass.webm",
     "closedhand-com/public/orb/ring-glass.mov",
     "closedhand-com/public/orb/ring-glass-poster.png",
@@ -274,6 +281,7 @@ def build_brush(film=False):
     sizes = sorted(ico.info.get("sizes", {(16, 16), (32, 32)}))
     big = fit(mask, (256, 256), MID, (16, 0, 224, 256))
     big.save(out("webapp/public/favicon.ico"), sizes=sizes)
+    _site_icons(dst)
     # The app icon: the original's dark gradient, the fist where the old one stood.
     app = _icns_png(os.path.join(orig, "desktop/AppIcon.icns"))
     ap = app.load()
@@ -418,6 +426,23 @@ def build_og():
     use(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
 
 
+def _site_icons(mark_dir):
+    from PIL import Image
+    shutil.copyfile(os.path.join(mark_dir, "webapp/public/favicon.svg"), os.path.join(mark_dir, "closedhand-com/public/favicon.svg"))
+    fist = Image.open(os.path.join(mark_dir, "desktop/dmg/fist-dark.png")).convert("RGBA")
+    fist = fist.resize((round(fist.width * 128 / fist.height), 128), Image.LANCZOS)
+    icon = Image.new("RGBA", (192, 192), (255, 255, 255, 255))
+    icon.alpha_composite(fist, ((192 - fist.width) // 2, (192 - fist.height) // 2))
+    icon.convert("RGB").save(os.path.join(mark_dir, "closedhand-com/public/favicon.png"), optimize=True)
+
+
+def build_favicon():
+    for mark in sorted(os.listdir(MARKS)):
+        _site_icons(os.path.join(MARKS, mark))
+        print(f"brand/marks/{mark}/closedhand-com/public/favicon.svg, favicon.png")
+    use(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
+
+
 def _dmg_background(fist, one, two):
     tmp = tempfile.mkdtemp()
     shutil.copyfile(os.path.join(ROOT, "desktop/dmg/background.html"), os.path.join(tmp, "background.html"))
@@ -488,7 +513,9 @@ if __name__ == "__main__":
         build_icons()
     elif cmd[0] == "build-og":
         build_og()
+    elif cmd[0] == "build-favicon":
+        build_favicon()
     elif cmd[0] == "which":
         print(open(ACTIVE).read().strip() if os.path.exists(ACTIVE) else "original")
     else:
-        sys.exit("Usage: brand.py use <mark> | which | build-brush [--film] | build-icons | build-og | save <name>")
+        sys.exit("Usage: brand.py use <mark> | which | build-brush [--film] | build-icons | build-og | build-favicon | save <name>")

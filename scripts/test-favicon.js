@@ -3,6 +3,8 @@
 // It is cream on dark tab bars and near-black on light ones; Safari ignores
 // that choice, so its colour is a mid-tone that reads on both. Pages that
 // name no icon (a PDF in a tab) get favicon.ico in that same mid-tone.
+// closedhand.com wears it too, beside a PNG for Google, which shows no SVG and
+// sets every icon on a white disc: the dark fist on white.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -35,4 +37,17 @@ test("pages that name no icon still get the fist", () => {
   assert.equal(ico.readUInt16LE(2), 1, "a real icon file");
   assert.equal(ico.readUInt16LE(4), 3, "16, 32 and 48 pixel sizes");
   assert.match(read("webapp/server.js"), /app\.use\(express\.static\(path\.join\(__dirname, "public"\)/, "served from public, before the login gate");
+});
+
+test("closedhand.com's pages wear the same icon, and Google gets the dark fist on white", () => {
+  const PNG = '<link rel="icon" href="/favicon.png" type="image/png" sizes="192x192">';
+  const views = fs.readdirSync(path.join(root, "closedhand-com/views")).filter((f) => f.endsWith(".html"));
+  for (const f of views) {
+    const icons = read(`closedhand-com/views/${f}`).match(/<link rel="(?:shortcut |alternate |apple-touch-)?icon"[^>]*>/g) || [];
+    assert.deepEqual(icons, [PNG, ICON], f);
+  }
+  assert.ok(fs.readFileSync(path.join(root, "closedhand-com/public/favicon.svg")).equals(fs.readFileSync(path.join(root, "webapp/public/favicon.svg"))), "the app's icon exactly");
+  const png = fs.readFileSync(path.join(root, "closedhand-com/public/favicon.png"));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [192, 192], "square, as Google asks");
+  assert.match(read("closedhand-com/server.js"), /app\.get\('\/favicon\.ico', \(req, res\) => res\.type\('png'\)\.sendFile\(path\.join\(PUBLIC, 'favicon\.png'\)\)\);/);
 });
