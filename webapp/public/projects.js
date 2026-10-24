@@ -328,5 +328,9 @@
   window.loadProjects = load;
   document.addEventListener("DOMContentLoaded", () => {
     byId("project-new-toggle").onclick = () => openNew(true);
+    // A link straight to #projects opens the tab before this deferred script
+    // has run, so the tab's own load found nothing to call and the list
+    // stayed empty until another tab was clicked.
+    if (byId("tab-projects")?.classList.contains("active")) load();
   });
 })();

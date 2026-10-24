@@ -438,6 +438,9 @@ test("a project is deleted from its card, and its name alone is kept a month", a
   assert.match(ui, /btn\("goal-small goal-quiet", p\.status === "archived" \? "Bring back" : "Archive",[\s\S]{0,300}\}\),\n\s*deleteButton\(p\)\);/);
   assert.doesNotMatch(ui.slice(ui.indexOf("function moreActions"), ui.indexOf("function deleteButton")), /DELETE/, "not tucked inside Edit any more");
   assert.match(read("webapp/projects.js"), /const \{ error \} = await rules\.deleteProject\(db, userId, req\.params\.id\);/);
+  // A link straight to #projects opens the tab before this deferred script
+  // runs; it then loads the list itself.
+  assert.match(ui, /if \(byId\("tab-projects"\)\?\.classList\.contains\("active"\)\) load\(\);/);
   const calls = [];
   const db = { from: () => {
     const q = { op: null, select() { return q; }, eq() { return q; }, single: async () => ({ data: { name: "Gym plan" } }),
