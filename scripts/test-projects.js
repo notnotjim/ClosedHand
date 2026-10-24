@@ -4,9 +4,10 @@
 // in the project's own conversation with its description, instructions,
 // context and the text of its files, and its reply starts with the emoji; any
 // other message sees only each project's emoji and name. The emoji alone says
-// where it stands, with its page. Closedhand makes a project itself when
-// something comes up again, and that reply says so; one the person deletes
-// is not made again for a month. Both services hold to one set of rules
+// where it stands, with its page. Closedhand offers a project only when rules
+// and then the person's own LLM judge it one, once, with an emoji they can
+// change, and never starts one silently; one the person deletes is not
+// offered again for a month. Both services hold to one set of rules
 // (project-rules.js).
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -57,15 +58,18 @@ function fakeDb(tables) {
   return { db, log };
 }
 
-function loadProjects(rows, answer = '{"touched":[]}', { threads = [], files = {}, goals = [] } = {}) {
+function loadProjects(rows, answer = '{"touched":[]}', { threads = [], files = {}, goals = [], verdict = null } = {}) {
   const { db, log } = fakeDb({ projects: rows, conversation_threads: threads });
-  const asked = [];
+  const asked = [], judged = [];
   const fakes = {
     "./attachments": { loadAttachment: async (id) => (files[id] ? { _type: "text", textContent: files[id] } : { error: "gone" }) },
     "./goals": { activeGoals: async () => goals, promptLines: (gs) => gs.map((g) => `- [goal ${g.id.slice(0, 8)}] ${g.title}`) },
     "./timezone": { getUserTimezone: () => "UTC" },
     "./db": { supabase: db },
-    "./llm": { getInternalClient: () => ({ model: "m", client: { messages: { create: async (req) => { asked.push(req.messages[0].content); return { answer }; } } } }) },
+    "./llm": { getInternalClient: () => ({ model: "m", client: { messages: { create: async (req) => { asked.push(req.messages[0].content); return { answer }; } } } }),
+      getUserLLMClient: () => ({ model: "main", client: { messages: { create: async (req) => { judged.push(req); return { answer: verdict }; } } } }) },
+    "./task-model": { modelCall: (client, req) => client.messages.create(req) },
+    "./verification": { parseObject: (t) => { try { return JSON.parse(t); } catch { return null; } } },
     "./model-wire": { responseText: (r) => r.answer },
     "./services/usi": { embedText: async () => null, embedBatch: async () => [] },
   };
@@ -76,7 +80,7 @@ function loadProjects(rows, answer = '{"touched":[]}', { threads = [], files = {
   };
   delete require.cache[require.resolve("../lib/projects")];
   const projects = require("../lib/projects");
-  return { projects, log, asked, rows, threads };
+  return { projects, log, asked, judged, rows, threads };
 }
 
 const move = (extra = {}) => ({ id: "aaaa1111-move", name: "House move", emoji: "📦", about: "Moving from our flat in Leeds to a house in York.", instructions: "Always use the Leeds address on forms until the move.\nKeep the van and movers under 900 together.", summary: "Van booked for Saturday.",
@@ -220,37 +224,67 @@ test("an archived project comes back when its emoji is used, unless another has 
   assert.equal((await taken.projects.fileTurn("u1", "📦 desks")).project.name, "Office move");
 });
 
-test("end dates archive, a note not come up again goes, and a deleted name goes after a month", async () => {
+test("end dates archive, an unanswered offer is a no, a note not come up again goes, and a no goes after a month", async () => {
   const now = Date.now();
   const { projects, rows } = loadProjects([
     move({ expected_end: iso(now - 3 * DAY) }),
     { id: "o1", name: "Mia's party", status: "offered", emoji: "🎉", state: {}, created_at: iso(now - 9 * DAY), last_touched: iso(now - 4 * DAY) },
     { id: "o3", name: "Book club", status: "offered", emoji: "📚", state: {}, created_at: iso(now - 9 * DAY), last_touched: iso(now - DAY) },
+    { id: "o5", name: "Kitchen refit", status: "offered", emoji: "🔨", state: {}, offered_at: iso(now - 4 * DAY), created_at: iso(now - 9 * DAY), last_touched: iso(now - 4 * DAY) },
     { id: "o2", name: "Old idea", status: "declined", state: {}, created_at: iso(now - 40 * DAY), last_touched: iso(now - 40 * DAY) },
     { id: "o4", name: "Gym plan", status: "declined", state: {}, created_at: iso(now - 5 * DAY), last_touched: iso(now - 5 * DAY) },
   ]);
   await projects.warm("u1");
-  assert.deepEqual(rows.map((r) => [r.id, r.status]), [["aaaa1111-move", "archived"], ["o3", "offered"], ["o4", "declined"]]);
+  assert.deepEqual(rows.map((r) => [r.id, r.status]), [["aaaa1111-move", "archived"], ["o3", "offered"], ["o5", "declined"], ["o4", "declined"]]);
 });
 
-test("something noticed is made a project when it comes up again, and that reply says so once", async () => {
-  const noticed = { id: "eeee5555-party", name: "Mia's party", emoji: "📦", status: "offered", summary: "Party on the 14th, three yes so far", state: { people: [{ name: "Ravi Fixture", position: "yes" }] }, links: [], files: [], offered_at: null, created_at: iso(Date.now()), last_touched: iso(Date.now()) };
-  const { projects, rows } = loadProjects([noticed, move()]);
+test("something noticed is offered only when the rules pass and the person's LLM judges it a project", async () => {
+  const noticed = () => ({ id: "eeee5555-party", name: "Mia's party", emoji: "📦", status: "offered", summary: "Party on the 14th, three yes so far", state: { people: [{ name: "Ravi Fixture", position: "yes" }], open: ["Book the room", "Order the cake"] }, links: [], files: [], offered_at: null, created_at: iso(Date.now() - DAY), last_touched: iso(Date.now()) });
+  const said = "ravi fixture said yes to mia's party";
+  const yes = JSON.stringify({ offer: true, why: "They are organising it, several people, two weeks to go", name: "Mia's party", emoji: "📦" });
+  const { projects, rows, judged } = loadProjects([noticed(), move()], undefined, { verdict: yes });
   await projects.warm("u1");
-  await projects.fileTurn("u1", "ravi fixture said yes to mia's party");
-  assert.equal(await projects.pickTouched("u1", "ravi fixture said yes to mia's party"), "eeee5555-party");
+  await projects.fileTurn("u1", said);
+  assert.equal(await projects.pickTouched("u1", said), "eeee5555-party");
+  assert.equal(await projects.judgeTouched("u1", said, [{ role: "user", content: "Mia's party is on the 14th" }]), true);
+  assert.equal(judged.length, 1, "judged by the person's own LLM");
+  assert.match(judged[0].system, /Say yes only when all of these hold: the user is the one running it[\s\S]*When unsure, say no\./);
+  assert.match(judged[0].messages[0].content, /"first_noticed_days_ago":1[\s\S]*"their_projects":\["House move"\]/);
   const block = projects.getProjectsBlock("u1");
-  assert.match(block, /PROJECT JUST MADE: This message is about something that has come up before: Mia's party[\s\S]*I've made this a project: 🗂️ Mia's party\. Start a message with 🗂️ to pick it up from any chat, or archive it under Projects on the dashboard\./);
-  assert.deepEqual([rows[0].status, rows[0].emoji], ["active", "🗂️"], "made at once, with a free emoji: 📦 is House move's");
-  assert.equal(rows[0].state.people[0].name, "Ravi Fixture", "what was noticed comes with it");
-  assert.doesNotMatch(projects.getProjectsBlock("u1"), /PROJECT JUST MADE/, "said once");
-
-  // Asked for by name when it was already noticed: that one becomes it.
-  const again = loadProjects([{ ...noticed, status: "offered", emoji: "🎉" }, move()]);
-  const made = await again.projects.create("u1", { name: "mia's party", emoji: "🎈" });
+  assert.match(block, /PROJECT TO OFFER: This message is about something that looks set to run for a while: Mia's party/);
+  assert.match(block, /Happy with 🗂️, or would you like a different emoji\?/, "an emoji they can change, never one already taken (📦 is House move's)");
+  assert.match(block, /call project_create with offer "eeee5555"/);
+  assert.ok(rows[0].offered_at, "marked offered at once");
+  assert.doesNotMatch(projects.getProjectsBlock("u1"), /PROJECT TO OFFER/, "and never again");
+  const made = await projects.create("u1", { name: "Mia's party", emoji: "🎈", offer: "eeee5555" });
   assert.equal(made.project.status, "active");
-  assert.equal(made.project.state.people[0].name, "Ravi Fixture");
-  assert.equal(again.rows.length, 2, "one project, not a second beside it");
+  assert.equal(made.project.state.people[0].name, "Ravi Fixture", "what was noticed comes with it");
+  assert.equal(rows.length, 2, "the offer became the project");
+
+  // A no from the judgement: not offered, and not raised again for a month.
+  const no = loadProjects([noticed(), move()], undefined, { verdict: JSON.stringify({ offer: false, why: "A topic they are discussing, not running" }) });
+  await no.projects.warm("u1");
+  await no.projects.fileTurn("u1", said);
+  await no.projects.pickTouched("u1", said);
+  assert.equal(await no.projects.judgeTouched("u1", said, []), false);
+  assert.doesNotMatch(no.projects.getProjectsBlock("u1"), /PROJECT TO OFFER/);
+  assert.equal(no.rows[0].status, "declined");
+
+  // The rules first: nothing still to do and only one person, or another
+  // offer in the last day, and the LLM is not asked at all.
+  for (const [why, rowsFor] of [
+    ["nothing ahead", () => [{ ...noticed(), state: { people: [{ name: "Ravi Fixture" }], open: [] } }, move()]],
+    ["offered something today", () => [noticed(), move(), { id: "o9", name: "Book club", status: "offered", offered_at: iso(Date.now() - 3600000), state: {}, created_at: iso(Date.now()), last_touched: iso(Date.now()) }]],
+  ]) {
+    const r = loadProjects(rowsFor(), undefined, { verdict: yes });
+    await r.projects.warm("u1");
+    await r.projects.fileTurn("u1", said);
+    await r.projects.pickTouched("u1", said);
+    assert.equal(await r.projects.judgeTouched("u1", said, []), false, why);
+    assert.equal(r.judged.length, 0, why);
+    assert.equal(r.rows[0].status, "offered", `${why}: kept, it may grow`);
+    assert.doesNotMatch(r.projects.getProjectsBlock("u1"), /PROJECT TO OFFER/, why);
+  }
 });
 
 test("starting and changing a project holds to one emoji each", async () => {
@@ -296,7 +330,7 @@ test("the pass after a turn: a project message updates that project only; any ot
   const outside = loadProjects([move(), wedding(), declined], answer);
   await outside.projects.updateFromTurn("u1", "I'm starting a book club at Ravi's", "Nice.", []);
   assert.match(outside.asked[0], /THEIR PROJECTS \(each kept in a conversation of its own; never return these, or a new one for the same thing\): \["House move","Wedding"\]/);
-  assert.match(outside.asked[0], /NOT TO NOTICE AGAIN \(the user deleted these projects\): \["Gym plan"\]/);
+  assert.match(outside.asked[0], /NOT TO NOTICE AGAIN \(the user deleted these, said no, or they were judged not to be projects\): \["Gym plan"\]/);
   assert.equal(outside.rows[0].summary, "Van booked for Saturday.", "a message outside a project never changes one");
   assert.deepEqual(outside.rows.filter((r) => r.status === "offered").map((r) => [r.name, r.emoji]), [["Book club", "📚"]], "one offer a turn");
 });
@@ -340,7 +374,9 @@ test("the dashboard has a Projects tab, Context Brain has no Ongoing, and each p
   assert.match(server, /require\("\.\/projects"\)\.register\(app, \{ db: supabase, userId: getUserIdFromRequest, withAppearance: assets\.withAppearance \}\);/);
   assert.doesNotMatch(server, /from\("matters"\)/);
   const web = read("webapp/projects.js");
-  assert.match(dash, /<p class="goals-intro">Things you're working on over days or weeks, like a goal, trip or move\.<br>Closedhand makes one when something keeps coming up in chat, and a message starting with its emoji picks up its history, status and files\.<\/p>/);
+  assert.match(dash, /<p class="goals-intro">Things you're working on over days or weeks, like a goal, trip or move\.<br>Closedhand offers to make one when something keeps coming up in chat, and a message starting with its emoji picks up its history, status and files\.<\/p>/);
+  const engine = read("lib/engine.js");
+  assert.match(engine, /const judged = picked\.then\(\(id\) => \(id \? projects\.judgeTouched\(userId, userMessage, conversation\.slice\(-9, -1\)\) : null\)\)\.catch\(\(\) => null\);\n\s*contextInjection = \(await timing\.time\("recall", withinRecallBudget\(Promise\.all\(\[recalled, picked\]\)\)\)\)\?\.\[0\] \|\| "";\n\s*if \(await picked\) await timing\.time\("project check", judged\);/, "judged beside recall, never inside its budget");
   for (const route of ['app.get("/api/projects/find"', 'app.get("/api/projects"', 'app.post("/api/projects"', 'app.patch("/api/projects/:id"', 'app.post("/api/projects/:id/merge"', 'app.delete("/api/projects/:id"', 'app.post("/api/projects/:id/files"', 'app.get("/page/project/:id"']) assert.ok(web.includes(route), route);
   assert.ok(JSON.parse(read("closedhand-com/workers/edge/direct-routes.json")).includes("/page/*"), "the page reaches the computer through the tunnel");
   const { projectHtml } = require("../webapp/projects");
