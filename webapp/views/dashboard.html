@@ -2223,7 +2223,7 @@
             <!-- Glowing pill input (animated rotating conic-gradient border from 21st.dev GlowingInput pattern) -->
             <div class="mcp-pill" style="max-width:520px;margin:0 auto;">
               <div class="mcp-pill-inner">
-                <textarea id="mcp-url-input" rows="1" placeholder="Paste an MCP server, GitHub link, install command, config, skill, API key or anything else that connects" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" style="flex:1;padding:0;background:transparent;border:none;color:var(--fg);font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
+                <textarea id="mcp-url-input" rows="1" placeholder="Paste an MCP server, skill or API key" aria-label="MCP server, skill or API key" oninput="mcpGrowInput(this)" onkeydown="mcpInputKey(event)" onpaste="mcpPaste(event)" style="flex:1;padding:0;background:transparent;border:none;color:var(--fg);font-size:13px;outline:none;font-family:inherit;resize:none;line-height:1.5;max-height:220px;overflow-y:auto;" spellcheck="false"></textarea>
                 <button onclick="addMcpConnection()" id="mcp-connect-btn" class="mcp-connect-btn">Connect</button>
               </div>
             </div>
@@ -3986,7 +3986,7 @@
       el.textContent = text;
     }
 
-    // Empty, the box is as tall as its list of everything it takes.
+    // Empty, the box is as tall as the words that say what it takes.
     function mcpGrowInput(el) {
       el.style.height = 'auto';
       var empty = !el.value;
@@ -4005,6 +4005,14 @@
     function mcpInputKey(e) {
       // Enter connects; Shift+Enter makes a new line for a JSON block.
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addMcpConnection(); }
+    }
+
+    // A link pasted into the empty box is all there is to it, so it starts at
+    // once. A command, a config or a key may still be edited, and waits for Connect.
+    function mcpPaste(e) {
+      var text = (e.clipboardData && e.clipboardData.getData('text') || '').trim();
+      if (e.target.value.trim() || !/^https?:\/\/\S+$/i.test(text)) return;
+      setTimeout(addMcpConnection, 0);
     }
 
     async function addMcpConnection() {
@@ -4206,15 +4214,16 @@
     function renderMcpChoices(data) {
       var panel = document.getElementById('mcp-auth-status');
       panel.style.display = 'block'; panel.replaceChildren();
-      var intro = document.createElement('p'); intro.textContent = 'Choose the connection to add. Commands run on the computer running Closedhand.';
+      var intro = document.createElement('p'); intro.textContent = 'Choose the connection to add.';
       var source = document.createElement('a'); source.href = data.source; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = 'View project instructions';
-      panel.append(intro); if (data.source) panel.append(source);
+      if (data.setup_choices.length > 1) panel.append(intro);
+      if (data.source) panel.append(source);
       data.setup_choices.forEach(function(choice) {
         var section = document.createElement('div'); section.className = 'mcp-setup-choice';
         var title = document.createElement('strong'); title.textContent = choice.name;
         var details = document.createElement('details'), summary = document.createElement('summary'), code = document.createElement('pre');
-        summary.textContent = 'Connection details'; code.textContent = choice.input; details.append(summary,code);
         var config = JSON.parse(choice.input), fields=[];
+        summary.textContent = 'Connection details'; code.textContent = JSON.stringify(config, null, 2); details.append(summary,code);
         function placeholders(obj) {
           if (!obj || typeof obj !== 'object') return;
           Object.keys(obj).forEach(function(key) {

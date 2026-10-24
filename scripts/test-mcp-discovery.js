@@ -19,6 +19,7 @@ test('repository discovery offers separate configurations without executing docu
  assert.equal(resolved.choices.length,2);
  assert.equal(JSON.parse(resolved.choices[0].input).env.API_KEY,'YOUR_API_KEY');
  assert.equal(candidates(doc).some(x=>x.input.includes('curl')),false);
+ assert.deepEqual(resolved.choices.map(x=>x.name),['one · Runs on the computer running Closedhand','two · Online at https://example.com/mcp'],'each says where it runs');
 });
 test('discovery is bounded to public GitHub hosts and reports missing instructions',async()=>{
  let count=0;const fetcher=async()=>{count++;return new Response('Nothing to install here.');};

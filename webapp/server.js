@@ -2926,7 +2926,7 @@ async function connectMcpHandler(req, res) {
     if (parsed.kind === "invalid" || !parsed.entries.length) return res.status(400).json({ error: parsed.error || "Nothing to connect in that" });
 
     if (parsed.entries.some(entry => /(?:YOUR[_ -]|<[^>]+>|\$\{[^}]+\}|REPLACE[_ -]|API_KEY_HERE|\/path\/to\/)/i.test(JSON.stringify(entry)))) {
-      return res.json({setup_choices:parsed.entries.map(entry=>({name:entry.name||'Connection details',input:JSON.stringify(entry.transport==='stdio'?{command:entry.command,args:entry.args,env:entry.env}:{url:entry.server_url,headers:entry.headers,type:entry.transport})}))});
+      return res.json({setup_choices:parsed.entries.map(require('./mcp-input-resolver').choice)});
     }
     const selfHost = mcpClient.isSelfHost();
     const connected = [];

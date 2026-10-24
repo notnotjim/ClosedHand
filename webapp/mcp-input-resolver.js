@@ -1,6 +1,11 @@
 // Read public connection instructions as data. Never execute documentation.
 const mcp = require('./mcp-client');
 const MAX_BYTES = 262144;
+// One connection to offer: what it is, where it runs, and what it will run.
+function choice(entry) {
+  return { name: (entry.name || 'Connection') + (entry.transport === 'stdio' ? ' · Runs on the computer running Closedhand' : ' · Online at ' + entry.server_url), input: JSON.stringify(entry.transport === 'stdio'
+    ? {command:entry.command,args:entry.args,env:entry.env} : {url:entry.server_url,headers:entry.headers,type:entry.transport}) };
+}
 function candidates(text) {
   const found = new Map();
   const add = input => {
@@ -8,8 +13,7 @@ function candidates(text) {
     for (const entry of parsed.entries || []) {
       if (entry.transport === 'stdio' && !['npx','uvx','uv','node','python','python3','docker','bunx'].includes(entry.command)) continue;
       const key = JSON.stringify([entry.server_url, entry.env, entry.headers]);
-      if (!found.has(key)) found.set(key, { name: (entry.name || 'Connection') + (entry.transport === 'stdio' ? ' · Runs here with ' + entry.command : ' · Online at ' + entry.server_url), input: JSON.stringify(entry.transport === 'stdio'
-        ? {command:entry.command,args:entry.args,env:entry.env} : {url:entry.server_url,headers:entry.headers,type:entry.transport}) });
+      if (!found.has(key)) found.set(key, choice(entry));
     }
   };
   const trimmed = text.trim();
@@ -75,5 +79,5 @@ async function resolveInput(input, fetcher=fetch) {
   if(!choices.length)throw new Error('No runnable MCP configuration was found on this page. Paste its MCP URL, JSON configuration, or installation command. A source repository may require building first.');
   return {source:'https://github.com/'+owner+'/'+repo,choices};
 }
-module.exports={resolveInput,candidates};
+module.exports={resolveInput,candidates,choice};
 

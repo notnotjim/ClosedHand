@@ -90,11 +90,12 @@ test("the tab is laid out as Connected, then Add a connection", () => {
   assert.match(dashboard, />Connect a Mac with Closedhand Bridge</);
   assert.doesNotMatch(dashboard, /'Mac Bridge'|Bridge disconnected/, "Mac access is one name, whichever app gives it");
   assert.match(dashboard, /if \(live\) document\.getElementById\('connected-section'\)\.appendChild\(macCard\);/, "the Mac moves to Connected once set up");
-  assert.match(dashboard, /placeholder="Paste an MCP server, GitHub link, install command, config, skill, API key or anything else that connects" aria-label="MCP server, skill or API key"/, "one box, and one short list of what it takes");
+  assert.match(dashboard, /placeholder="Paste an MCP server, skill or API key" aria-label="MCP server, skill or API key"/, "one box, and one line saying what it takes");
+  assert.match(dashboard, /if \(e\.target\.value\.trim\(\) \|\| !\/\^https\?:\\\/\\\/\\S\+\$\/i\.test\(text\)\) return;\n\s*setTimeout\(addMcpConnection, 0\);/, "a link pasted into the empty box starts by itself; anything else waits for Connect");
   assert.match(dashboard, /<a href="https:\/\/registry\.modelcontextprotocol\.io\/" target="_blank" rel="noopener noreferrer"[^>]*>Browse MCP servers &rarr;<\/a>/, "the official MCP Registry");
   assert.match(dashboard, /<a href="https:\/\/github\.com\/anthropics\/skills" target="_blank" rel="noopener noreferrer"[^>]*>Browse skills &rarr;<\/a>/, "Anthropic's own skills");
   assert.doesNotMatch(dashboard, /class="mcp-description"/, "the list isn't said twice");
-  // Each thing the list names is one the box reads: scripts/test-mcp-setup.js.
+  // Every kind of paste the box takes is read in scripts/test-mcp-setup.js.
   assert.match(dashboard, /<div class="section" id="skills-section">\n\s*<h2>Skills<\/h2>[\s\S]*?<div class="integrations-grid" id="skills-connected"><\/div>/, "every skill, built in or added, is listed on Connections");
   assert.match(dashboard, /var all = _builtinSkills\.map\(function \(skill\) \{ return \{ skill: skill, builtin: true \}; \}\)\n\s*\.concat\(_installedSkills\.filter\(function \(skill\) \{ return !isLearned\(skill\); \}\)\.map/, "built-in skills are listed, not only added ones");
   assert.match(dashboard, /<div class="integrations-grid" id="skills-connected"><\/div>\n\s*<h3 class="add-sub skills-learned-heading" id="skills-learned-heading" hidden>Learned by Closedhand<\/h3>\n\s*<div class="integrations-grid" id="skills-learned"><\/div>/, "skills Closedhand learned sit apart, under the same small label the tab uses for its other groups");

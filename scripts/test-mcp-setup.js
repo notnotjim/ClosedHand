@@ -1,9 +1,9 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const mcp=require('../webapp/mcp-client');
-// The Connect anything box lists everything it takes (dashboard.html);
+// The Connect anything box (dashboard.html) takes every kind of paste below;
 // each one is read here, with invented names.
-test('every kind of paste the box lists is one it reads',()=>{
+test('every kind of paste the box takes is one it reads',()=>{
  for (const [paste, kind] of [["https://mcp.kestrel.example/mcp", "url"], ["npm:@kestrel/mcp-server", "command"], ["pypi:kestrel-mcp", "command"],
   ["https://www.npmjs.com/package/@kestrel/mcp-server", "command"], ["https://pypi.org/project/kestrel-mcp/", "command"],
   ["npx -y @kestrel/mcp-server", "command"], ["uvx kestrel-mcp", "command"], ["docker run -i --rm kestrel/mcp", "command"],
