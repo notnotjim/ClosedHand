@@ -1,17 +1,101 @@
 name: Build desktop app
 
-# Builds Closedhand.app for Apple Silicon. Signs and notarises when
-# the secrets are present (a Developer ID certificate as base64 .p12, its
-# password, and notary credentials); otherwise the build is ad hoc signed and
-# only useful for checking that it still builds. On a tag (v*) the DMGs are
-# attached to the release.
+# Builds Closedhand.app for Apple Silicon and releases it. Closedhand for Mac
+# carries Closedhand's code inside it, so the download on closedhand.com (the
+# latest release) is only as new as the last release. Code is pushed many
+# times an hour, so the app is not built for each push: once a day this
+# releases the newest commit on main that passed Checks, if anything the app
+# carries changed since the last release, and builds the Mac sandbox computer
+# again only when its code changed. Run it by hand to release now; a v* tag
+# pushed by hand still builds that version.
+#
+# Signs and notarises when the secrets are present (a Developer ID
+# certificate as base64 .p12, its password, and notary credentials); an
+# unsigned build is only for checking that it still builds and is never
+# released.
 on:
+  schedule:
+    - cron: "0 18 * * *" # 03:00 in Japan
+  workflow_dispatch:
   push:
     tags: ["v*"]
-  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.d.outputs.release }}
+      sha: ${{ steps.d.outputs.sha }}
+      version: ${{ steps.d.outputs.version }}
+      workspace: ${{ steps.d.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: d
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            SHA=$(git rev-list -n1 "$GITHUB_REF_NAME")
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            LAST=$(git tag --list 'v*' --sort=-v:refname | head -1)
+            SHA=$(gh run list --workflow checks.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha')
+            # Only what the app carries counts: not the website, tests, CI or notes.
+            if [ -z "$(git diff --name-only "$LAST" "$SHA" -- . ':!closedhand-com' ':!scripts' ':!.github' ':!docs' ':!brand' ':!*.md')" ]; then
+              echo "Nothing the app carries has changed since $LAST."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            V="${LAST#v}"
+            VERSION="${V%.*}.$(( ${V##*.} + 1 ))"
+          fi
+          # The Mac sandbox computer is built again only when its code changed
+          # since the newest one published.
+          WS=$(gh release list --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("workspace-"))][0].tagName // ""')
+          WORKSPACE=true
+          if [ -n "$WS" ]; then
+            WS_SHA=$(git rev-list -n1 "$WS" 2>/dev/null || true)
+            if [ -n "$WS_SHA" ] && git diff --quiet "$WS_SHA" "$SHA" -- sandbox-image desktop/workspace/guest desktop/workspace/build-runtime.sh desktop/workspace/write-manifest.js; then WORKSPACE=false; fi
+          fi
+          echo "Releasing $VERSION from $SHA; sandbox computer rebuilt: $WORKSPACE"
+          { echo "release=true"; echo "sha=$SHA"; echo "version=$VERSION"; echo "workspace=$WORKSPACE"; } >> "$GITHUB_OUTPUT"
+
+  workspace:
+    needs: decide
+    if: needs.decide.outputs.release == 'true' && needs.decide.outputs.workspace == 'true'
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.decide.outputs.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build kernel, initrd and disk
+        run: bash desktop/workspace/build-runtime.sh "$RUNNER_TEMP/workspace"
+      # Published as a prerelease that is never the latest release: the Mac
+      # download on closedhand.com is the latest release.
+      - name: Publish the sandbox computer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.decide.outputs.sha }}
+        run: |
+          OUT="$RUNNER_TEMP/workspace"
+          TAG="workspace-$(node -p "require('$OUT/manifest.json').version")"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" "$OUT/kernel" "$OUT/initrd" "$OUT/root.ext4.gz" "$OUT/manifest.json" \
+            --title "Mac sandbox computer ${TAG#workspace-}" \
+            --notes "The sandbox computer for Closedhand for Mac, built from ${SHA::7}. The app downloads it on first use." \
+            --prerelease --latest=false --target "$SHA"
+
   build:
+    needs: [decide, workspace]
+    if: always() && needs.decide.outputs.release == 'true' && (needs.workspace.result == 'success' || needs.workspace.result == 'skipped')
     strategy:
       matrix:
         include:
@@ -21,10 +105,24 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.decide.outputs.sha }}
+          fetch-depth: 0
       - uses: actions/cache@v4
         with:
           path: desktop/.cache/pg-${{ matrix.arch }}
           key: pg-16.15-pgvector-${{ matrix.arch }}-${{ hashFiles('desktop/pg.sh') }}
+
+      # The app downloads its sandbox computer as the newest published
+      # manifest lists it.
+      - name: Point the app at the sandbox computer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          WS=$(gh release list --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("workspace-"))][0].tagName')
+          gh release download "$WS" --pattern manifest.json --dir "$RUNNER_TEMP/ws" --clobber
+          cp "$RUNNER_TEMP/ws/manifest.json" desktop/workspace/manifest.json
+          echo "Sandbox computer: $WS"
 
       - name: Import signing certificate
         if: ${{ env.CERT != '' }}
@@ -43,11 +141,11 @@ jobs:
       - name: Build
         env:
           ARCH: ${{ matrix.arch }}
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0' }}
+          VERSION: ${{ needs.decide.outputs.version }}
           CLOSEDHAND_GOOGLE_CLIENT_ID: ${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_ID }}
           CLOSEDHAND_GOOGLE_CLIENT_SECRET: ${{ secrets.CLOSEDHAND_GOOGLE_CLIENT_SECRET }}
         run: |
-          VERSION="${VERSION#v}" desktop/build.sh
+          VERSION="$VERSION" desktop/build.sh
           ARCH="$ARCH" desktop/dmg.sh
 
       - name: Notarise
@@ -64,10 +162,21 @@ jobs:
           name: Closedhand-${{ matrix.arch }}
           path: desktop/dist/Closedhand-*.dmg
 
-      # An unsigned build must never replace a notarised one on a release, so
-      # attaching needs the signing identity to have been present.
-      - name: Attach to release
-        if: ${{ github.ref_type == 'tag' && env.IDENTITY != '' }}
+      # Released only once the signed DMG exists, so the latest release, the
+      # closedhand.com download, always has one. The notes are one line with
+      # a link to every change since the last release.
+      - name: Release
+        if: ${{ env.IDENTITY != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.ref_name }}" desktop/dist/Closedhand-*.dmg --clobber
+          VERSION: ${{ needs.decide.outputs.version }}
+          SHA: ${{ needs.decide.outputs.sha }}
+        run: |
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" desktop/dist/Closedhand-*.dmg --clobber
+          else
+            LAST=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1)
+            echo "Updates and fixes since ${LAST#v}. [Every change](https://github.com/$GITHUB_REPOSITORY/compare/$LAST...$TAG)" > "$RUNNER_TEMP/notes.md"
+            gh release create "$TAG" desktop/dist/Closedhand-*.dmg --target "$SHA" --title "Closedhand $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --latest
+          fi
