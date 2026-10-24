@@ -63,14 +63,13 @@ async function getSetupState() {
   // being checked. Pending counts as done here, so setup carries on to the
   // claim; if the key never comes, the step asks for an AI account again.
   const urlClaimed = !!(envOr("PHONE_ADDRESS_NAME") || envOr("PHONE_PERMANENT_URL"));
-  let modelIncluded = null, modelIncludedName = settings.included_ai?.name || null, modelIncludedImages = true;
-  if (model && settings.model_config?.included) { modelIncluded = "ready"; modelIncludedImages = !!settings.model_config.roles?.vision; }
+  let modelIncluded = null;
+  if (model && settings.model_config?.included) modelIncluded = "ready";
   else if (!model && settings.included_api_key && !settings.included_ai?.error) modelIncluded = "pending";
   else if (!model && !urlClaimed && db) {
-    // Which LLM a claim would bring, by name, so setup can say what it is.
+    // Whether a claim would bring it.
     const registration = require("./phone-registration");
-    const offered = await registration.includedAiModel().catch(() => null);
-    if (offered) { modelIncluded = "pending"; modelIncludedName = await require("./included-ai-setup").modelName(offered); }
+    if (await registration.includedAiModel().catch(() => null)) modelIncluded = "pending";
   }
   const modelDone = model || modelIncluded === "pending";
 
@@ -163,8 +162,6 @@ async function getSetupState() {
     },
     localModels: conf.LOCAL_MODELS_STATUS || null,
     modelIncluded,
-    modelIncludedName,
-    modelIncludedImages,
     chatProvider: settings.model_config?.connections?.primary?.provider || (conf.DEEPINFRA_API_KEY && (!settings.llm_provider || settings.llm_provider === "custom")
       ? "deepinfra"
       : settings.llm_provider || null),

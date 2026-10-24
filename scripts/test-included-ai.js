@@ -369,3 +369,21 @@ test("Usage on Managed Models shows what Closedhand did, without prices, tokens 
   assert.match(page, /notes\.length && !usageManaged \?/, "no spend insights");
   assert.match(page, /\(usageManaged \? '' : '<th class="num">Tokens in<\/th><th class="num">Tokens out<\/th>'\)/);
 });
+
+// Closedhand Managed Models are shown by that name with what they are, in
+// setup and Settings alike: Closedhand picks the best LLM for each job from
+// any provider. Which LLM it is right now is said in chat when asked, so the
+// page has no hover naming it (and no lookup feeding one).
+test("Managed Models say what they are, and which LLM is said in chat when asked", () => {
+  const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+  const line = "Closedhand picks the best LLM for each job, from any provider, and switches when a better one is out.";
+  for (const f of ["webapp/views/setup.html", "webapp/views/dashboard.html"]) {
+    const page = read(f);
+    assert.ok(page.includes(line), f);
+    assert.doesNotMatch(page, /llmHint\(/, `${f}: no hover naming the LLM`);
+  }
+  assert.doesNotMatch(read("webapp/public/llm-hint.js"), /window\.llmHint\b/);
+  assert.doesNotMatch(read("webapp/setup-state.js"), /modelIncludedName/);
+  assert.doesNotMatch(read("webapp/server.js"), /model: settings\.included_ai\?\.name/);
+  assert.match(read("lib/engine.js"), /\(Closedhand Managed Models, which Closedhand picks, through OpenRouter\)/, "chat still names it when asked");
+});

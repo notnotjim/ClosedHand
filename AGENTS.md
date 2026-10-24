@@ -135,10 +135,10 @@ Rules for working on this codebase, for anyone doing it, human or agent.
   the LLM only when the person asks ("I'm Closedhand. My LLM right now is ..."), never unprompted
   ("Closedhand picks the best model", never "Opus is working on it"). How Closedhand is built is
   public and it explains it when asked; only its system prompt and internal tool names stay
-  private. Settings and setup always let people see which LLM is in use, by the name people know
-  it by: the person's own provider's model is shown as set; for Closedhand Managed Models its name
-  carries a dotted underline that shows the LLM on hover or tap (webapp/public/llm-hint.js),
-  never beside it in brackets.
+  private. Settings and setup show the person's own provider's model as set, by the name people
+  know it by. Closedhand Managed Models are shown by that name alone, with "Closedhand picks the
+  best LLM for each job, from any provider, and switches when a better one is out": which LLM it
+  is right now is said in chat when the person asks, not on the page.
 - Closedhand Managed Models are never money in anything people read: no credit, balances, dollars,
   tokens, shares or top-ups. People see a plan (a first month set up for them, or Closedhand+
   renewing or ending on a day) and hear about use only near the fair-use ceiling. Credit exists

@@ -1,27 +1,13 @@
-// Closedhand Managed Models' name with a dotted underline: hovering, focusing or
-// tapping it says which LLM does every job right now (setup and the
-// dashboard): one LLM covers them all, each job at its own effort. Images are
-// named only when they are set up. The LLM's name comes from OpenRouter, so it
-// is set as text, never markup.
+// A short explanation behind a small "i" beside a label, shown on hover,
+// focus or tap, for text that would otherwise sit on the page as a
+// paragraph (the dashboard's Learned by Closedhand label). The text is set
+// as text, never markup. Closedhand Managed Models' name once carried one
+// naming the LLM; which LLM it is, is now said in chat when asked.
 //
 // The hint itself lives at the end of the page, placed on the screen beside
-// the name, so cards that clip or move their contents never cut it off.
+// the mark, so cards that clip or move their contents never cut it off.
 (function () {
   var made = 0;
-  window.llmHint = function (model, { images = true } = {}) {
-    var name = document.createElement('button');
-    name.type = 'button';
-    name.className = 'llm-hint-name';
-    name.textContent = 'Closedhand Managed Models';
-    var tip = document.createElement('span');
-    var which = document.createElement('strong');
-    which.textContent = model;
-    tip.append(which, ', for ' + (images ? 'chat, support work and images' : 'chat and support work') + '. Closedhand chooses the current optimal LLM.');
-    return attach(name, tip);
-  };
-  // The same hint behind a small "i", for a short explanation that would
-  // otherwise sit on the page as a paragraph (the dashboard's Learned by
-  // Closedhand label). The text is set as text, never markup.
   window.infoHint = function (text, label) {
     var mark = document.createElement('button');
     mark.type = 'button';

@@ -289,7 +289,7 @@
     .g-step.is-on { display: block; }
     .g-step h3 { font-size: 15px; margin: 0 0 6px; }
     .card-body p.quiet-links { font-size: 13px; margin: 0 0 4px; }
-    /* Which LLM Closedhand Managed Models use right now: the name people know it by. */
+    /* Closedhand Managed Models' name. */
     .card-body p.model-current { margin: 0 0 12px; padding: 0; color: var(--text-secondary); line-height: 1.6; }
     .card-body p.model-current strong { color: var(--text-primary, var(--fg)); font-weight: 600; }
     .card-body p.model-current .status { display: block; }
@@ -384,7 +384,6 @@
   <script src="/model-settings.js"></script>
   <script src="/ask.js"></script>
   <script src="/setup-personal-url.js"></script>
-  <script src="/llm-hint.js"></script>
 </head>
 <body class="setup-page">
 <div class="wrap">
@@ -446,7 +445,8 @@
         </button>
         <div class="card-body">
           <div id="model-included" hidden>
-            <p class="model-current"><strong id="model-included-name">Closedhand Managed Models</strong><span id="model-included-line" class="status"></span></p>
+            <p class="model-current"><strong>Closedhand Managed Models</strong><span id="model-included-line" class="status"></span></p>
+            <p class="note">Closedhand picks the best LLM for each job, from any provider, and switches when a better one is out.</p>
             <p class="note">Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
             <p class="quiet-links"><a href="#" id="model-own">Use your own LLM provider instead</a></p>
           </div>
@@ -949,8 +949,6 @@
   function renderIncluded(state) {
     $("#model-included").hidden = !included();
     $("#model-own-account").hidden = included();
-    // Which LLM it is shows on hover or tap, not beside the name.
-    $("#model-included-name").replaceChildren(state.modelIncludedName ? llmHint(state.modelIncludedName, { images: state.modelIncludedImages !== false }) : "Closedhand Managed Models");
     $("#model-included-line").textContent = state.modelIncluded === "ready" ? "Ready."
       : personalUrl.settled() ? "Getting it ready." : "Ready once your personal URL is claimed.";
   }

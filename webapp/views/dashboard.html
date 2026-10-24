@@ -2730,6 +2730,7 @@
               <div id="included-ai" hidden style="margin-bottom:16px;">
                 <p id="included-ai-line" style="margin:0;font-size:14px;color:var(--fg);line-height:1.6;"></p>
                 <p id="included-ai-detail" style="margin:0 0 6px;font-size:14px;color:var(--muted);line-height:1.6;"></p>
+                <p class="account-action-desc" style="margin:0 0 4px;line-height:1.5;">Closedhand picks the best LLM for each job, from any provider, and switches when a better one is out.</p>
                 <p id="included-ai-note" class="account-action-desc" style="margin:0 0 8px;line-height:1.5;">Requests go from this computer through OpenRouter to LLM providers that keep nothing you send.</p>
                 <button type="button" id="included-ai-use" class="btn btn-small" style="display:none;" onclick="useIncludedAi()">Switch to Closedhand Managed Models</button>
                 <a href="#" id="included-ai-own" hidden onclick="showOwnAiAccount(event)" style="font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;">Use your own LLM provider instead</a>
@@ -4543,10 +4544,10 @@
 
     // Closedhand Managed Models: in use, with the person's own LLM provider one
     // click away; or waiting beside their own, ready to switch back to. Which
-    // LLM it is shows on hover or tap of its name. What is shown is the plan,
+    // LLM it is, is said in chat when asked: Closedhand picks the best for
+    // each job and changes it. What is shown is the plan,
     // never money or how much is used: a first month says nothing until its
     // last week, Closedhand+ says when it renews or ends.
-    function includedName(data) { return data.model ? llmHint(data.model, { images: data.images !== false }) : 'Closedhand Managed Models'; }
     function planDay(iso) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }); }
     function accountLink(words) {
       var a = document.createElement('a');
@@ -4584,8 +4585,7 @@
         if (!res.ok || !data.state) { box.hidden = true; return data; }
         var inUse = data.state === 'in-use';
         var line = document.getElementById('included-ai-line');
-        if (inUse) line.replaceChildren(includedName(data));
-        else line.replaceChildren(includedName(data), ' are also available');
+        line.textContent = inUse ? 'Closedhand Managed Models' : 'Closedhand Managed Models are also available';
         document.getElementById('included-ai-detail').replaceChildren.apply(document.getElementById('included-ai-detail'), inUse ? includedDetail(data) : []);
         // .btn sets its own display, so hidden alone would not hide it.
         document.getElementById('included-ai-use').style.display = inUse ? 'none' : '';

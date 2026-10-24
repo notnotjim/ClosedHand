@@ -2084,10 +2084,8 @@ app.get("/api/included-ai", async (req, res) => {
     const included = require("./included-ai");
     const inUse = included.inUse(settings);
     const credit = inUse ? await included.credit(settings) : null;
-    // Whether it reads images: known once in use; tried when switched to.
     res.json({ state: inUse ? "in-use" : "available", plan: settings.included_ai?.plan || null,
-      nearly: !!credit && credit.used >= credit.limit * included.NEARLY_USED,
-      model: settings.included_ai?.name || null, images: inUse ? !!settings.model_config?.roles?.vision : true });
+      nearly: !!credit && credit.used >= credit.limit * included.NEARLY_USED });
   } catch (e) {
     res.status(503).json({ error: "Could not read Closedhand Managed Models just now." });
   }

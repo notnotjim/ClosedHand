@@ -423,19 +423,13 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .ch-welcome-primary:disabled, .btn-modal-primary:disabled, .save-btn:disabled, .cta:disabled, .rag-query-btn:disabled, .goals-new:disabled, .rag-upload-btn:disabled, .btn-quiet:disabled { opacity: 0.5; cursor: default; }
 .ch-welcome-primary:focus-visible, .btn-modal-primary:focus-visible, .save-btn:focus-visible, .go:focus-visible, .g-signin:focus-visible, .cta:focus-visible, .btn-quiet:focus-visible, .rag-query-btn:focus-visible, .bridge-cta-dl:focus-visible, .goals-new:focus-visible, .deep:focus-visible, .rag-upload-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Closedhand Managed Models' name (llm-hint.js): a dotted underline that says
-   which LLM it is on hover, focus or tap. The hint is placed on the screen by
-   llm-hint.js, so cards that clip their contents never cut it off. */
+/* A short explanation behind a small "i" (llm-hint.js infoHint). The hint is
+   placed on the screen by llm-hint.js, so cards that clip their contents never
+   cut it off. */
 .llm-hint { position: relative; display: inline-block; }
-/* Doubled so a page's own button rules (the dashboard's) never pad it. */
-.llm-hint .llm-hint-name { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font: inherit; letter-spacing: inherit; color: inherit; cursor: help; text-decoration: underline dotted rgba(var(--fg-rgb),0.5); text-decoration-thickness: 1px; text-underline-offset: 4px; transition: text-decoration-color .15s; }
-.llm-hint .llm-hint-name:hover, .llm-hint.open .llm-hint-name { text-decoration-color: var(--accent); }
-.llm-hint-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 .llm-hint-tip { position: fixed; left: 0; top: 0; width: max-content; max-width: min(17rem, 80vw); padding: 9px 12px; border-radius: 10px; background: var(--raised); border: 1px solid rgba(var(--fg-rgb),0.14); box-shadow: 0 10px 30px rgba(var(--shade-rgb),0.45); color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.5; text-align: left; white-space: normal; opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .16s ease, transform .16s ease, visibility .16s; z-index: 30; pointer-events: none; }
-.llm-hint-tip strong { color: var(--fg); font-weight: 600; }
 .llm-hint-tip.shown { opacity: 1; visibility: visible; transform: none; }
 @media (prefers-reduced-motion: reduce) { .llm-hint-tip { transition: none; } }
-/* The same hint behind a small "i" (llm-hint.js infoHint), beside a label. */
 .llm-hint .info-hint-mark { display: inline-grid; place-items: center; width: 16px; height: 16px; margin: 0 0 0 6px; padding: 0; border: 1px solid currentColor; border-radius: 50%; background: none; color: inherit; font: inherit; font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: 0; text-transform: none; vertical-align: -3px; cursor: help; opacity: .7; transition: opacity .15s, color .15s; }
 .llm-hint .info-hint-mark:hover, .llm-hint.open .info-hint-mark { opacity: 1; color: var(--accent); }
 .llm-hint .info-hint-mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
