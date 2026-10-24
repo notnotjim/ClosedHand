@@ -2919,13 +2919,23 @@ async function connectMcpHandler(req, res) {
     try { resolved = await require('./mcp-input-resolver').resolveInput(input); }
     catch (e) { return res.status(400).json({error:e.message}); }
     if (resolved?.skill) return res.json({ skill: true, url: resolved.skill });
-    if (resolved) return res.json({ setup_choices: resolved.choices, source: resolved.source });
+    if (resolved) {
+      // Each choice that needs values says where to get them, read from the
+      // project's instructions by the person's own LLM.
+      const choices = await require('./mcp-input-resolver').whereToGet(resolved.text, resolved.choices, async (system, content) => {
+        const model = await scanModelFor(userId);
+        if (!model) return null;
+        const reply = await require("./model-wire").request(model, { model: model.model, effort: "fast", max_tokens: 600, system, messages: [{ role: "user", content }] }, { signal: AbortSignal.timeout(20000) });
+        return reply.content?.filter(b => b.type === "text").map(b => b.text).join("");
+      });
+      return res.json({ setup_choices: choices, source: resolved.source });
+    }
     const parsed = mcpClient.parseServerInput(input);
     if (parsed.kind === "skill") return res.json({ skill: true, url: parsed.url });
     if (parsed.kind === "empty") return res.status(400).json({ error: "Paste something first" });
     if (parsed.kind === "invalid" || !parsed.entries.length) return res.status(400).json({ error: parsed.error || "Nothing to connect in that" });
 
-    if (parsed.entries.some(entry => /(?:YOUR[_ -]|<[^>]+>|\$\{[^}]+\}|REPLACE[_ -]|API_KEY_HERE|\/path\/to\/)/i.test(JSON.stringify(entry)))) {
+    if (parsed.entries.some(entry => require('./mcp-input-resolver').PLACEHOLDER.test(JSON.stringify(entry)))) {
       return res.json({setup_choices:parsed.entries.map(require('./mcp-input-resolver').choice)});
     }
     const selfHost = mcpClient.isSelfHost();

@@ -56,3 +56,24 @@ test('setup values preserve surrounding headers and mounted paths',()=>{
   vm.runInNewContext(run,{fields:[field]});assert.equal(field.obj.value,expected);
  }
 });
+test('several choices are named by their own heading, and one that needs values says where to get them, linking only where the instructions do',async()=>{
+ const {whereToGet}=require('../webapp/mcp-input-resolver');
+ const doc='# Kestrel MCP\n\n## Setup\n\n### 1. Personal key\n\nMake a key at [Kestrel settings](https://app.kestrel.example/settings/keys). ![badge](https://img.shields.io/kestrel)\n\n#### With Claude Desktop\n\n```bash\n# Install\nnpm i -g kestrel\n```\n\n```json\n{"mcpServers":{"kestrel":{"command":"npx","args":["-y","@kestrel/kestrel-mcp"],"env":{"KESTREL_KEY":"YOUR_KEY"}}}}\n```\n\n### 2. Hosted\n\nSee https://kestrel.example/docs.\n\n```json\n{"mcpServers":{"kestrel":{"url":"https://mcp.kestrel.example/mcp"}}}\n```\n';
+ const choices=candidates(doc);
+ assert.deepEqual(choices.map(x=>x.name),['Personal key · Runs on the computer running Closedhand','Hosted · Online at https://mcp.kestrel.example/mcp'],'a # inside a code block is not a heading');
+ let asked;
+ const got=await whereToGet(doc,choices,async(system,content)=>{asked=JSON.parse(content);return 'Sure: {"options":[{"option":1,"where":"Make a key under Settings — Keys in Kestrel.","link":1},{"option":2,"where":"Nothing to do.","link":2}]}';});
+ assert.deepEqual(asked.options,[{option:1,name:'Personal key',values:['KESTREL_KEY']}],'only a choice with values to fill in is asked about');
+ assert.deepEqual(asked.links,['1. https://app.kestrel.example/settings/keys','2. https://kestrel.example/docs'],'links from the words, not badges or code');
+ assert.equal(got[0].where,'Make a key under Settings, Keys in Kestrel.');
+ assert.equal(got[0].where_url,'https://app.kestrel.example/settings/keys');
+ assert.equal(got[1].where,undefined);
+ assert.equal((await whereToGet(doc,choices,async()=>'{"options":[{"option":1,"where":"Go here.","link":9}]}'))[0].where,undefined,'no link it was not given');
+ assert.deepEqual(await whereToGet(doc,choices,async()=>{throw new Error('offline');}),choices,'without an answer the choices stay as they were');
+ let called=false;await whereToGet(doc,[choices[1]],async()=>{called=true;});
+ assert.equal(called,false,'nothing to fill in, nothing to ask');
+ const server=require('node:fs').readFileSync(require('node:path').join(__dirname,'../webapp/server.js'),'utf8');
+ assert.match(server,/const choices = await require\('\.\/mcp-input-resolver'\)\.whereToGet\(resolved\.text, resolved\.choices, async \(system, content\) => \{\n\s*const model = await scanModelFor\(userId\);/,'the person\'s own LLM reads it');
+ const dash=require('node:fs').readFileSync(require('node:path').join(__dirname,'../webapp/views/dashboard.html'),'utf8');
+ assert.match(dash,/if \(choice\.where && \/\^https:\\\/\\\/\/\.test\(choice\.where_url \|\| ''\)\) \{/,'the dashboard shows the line and its link above the fields');
+});

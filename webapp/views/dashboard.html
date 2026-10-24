@@ -4236,7 +4236,14 @@
             label.append(input);section.append(label);fields.push({obj:obj,key:key,input:input,template:value});
           });
         }
-        section.append(title,details);placeholders(config);
+        section.append(title);
+        // Where to get the values, as the project's own instructions say.
+        if (choice.where && /^https:\/\//.test(choice.where_url || '')) {
+          var where = document.createElement('p'); where.className = 'mcp-setup-where'; where.textContent = choice.where;
+          var go = document.createElement('a'); go.href = choice.where_url; go.target = '_blank'; go.rel = 'noopener noreferrer'; go.textContent = new URL(choice.where_url).hostname;
+          section.append(where, go);
+        }
+        section.append(details);placeholders(config);
         var button=document.createElement('button');button.className='conn-btn conn-btn-manage';button.textContent='Use this connection';
         button.onclick=async function(){
           if(document.getElementById('mcp-connect-btn').disabled)return;

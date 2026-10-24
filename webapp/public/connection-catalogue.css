@@ -59,12 +59,14 @@
 
 .mcp-setup-choice {text-align:left;padding:20px 0;border-top:1px solid rgba(var(--fg-rgb),.16);margin-top:20px;overflow-wrap:anywhere;}
 .mcp-setup-choice strong {display:block;margin-bottom:12px;}
+.mcp-setup-where {margin:0 0 4px;}
+.mcp-setup-choice > a {display:inline-block;margin-bottom:16px;}
 .mcp-setup-choice pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;}
 .mcp-setup-choice label {display:grid;gap:8px;margin:16px 0;}
 .mcp-setup-choice input {min-width:0;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:12px;border-radius:8px;border:1px solid rgba(var(--fg-rgb),.25);background:var(--bg);color:var(--fg);}
 .mcp-setup-choice button {margin-top:16px;min-height:44px;}
 
-#mcp-auth-status > a {color:var(--accent-link);text-underline-offset:3px;}
+#mcp-auth-status > a, .mcp-setup-choice > a {color:var(--accent-link);text-underline-offset:3px;}
 /* The Mac card, while it waits under Add a connection, sits as far from Apps
    as Apps sits from Connect anything. */
 #mcp-section > #apple-local-section {margin-bottom:32px;}
