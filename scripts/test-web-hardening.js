@@ -255,3 +255,12 @@ test('a file name never runs as a command, in the sandbox or on the Mac', () => 
   assert.doesNotMatch(server, /JSON\.stringify\((old|new)Path\)/);
   assert.match(read('webapp/rag-processor.js'), /const lsPath = rel \? `"\$HOME\/\$\(printf %s \$\{Buffer\.from\(rel, "utf8"\)\.toString\("base64"\)\} \| base64 --decode\)"` : `"\$HOME"`;/);
 });
+
+test("a chat app answers only in the person's own chat, never in a group", () => {
+  const r = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+  assert.match(r("lib/platforms/telegram.js"), /if \(msg\.chat\.type && msg\.chat\.type !== "private"\) return;/);
+  assert.match(r("lib/platforms/discord.js"), /if \(!msg\.channel\.isDMBased\(\)\) return;/);
+  assert.match(r("lib/platforms/slack-handler.js"), /if \(event\.channel_type !== "im"\) return;/);
+  assert.match(r("lib/platforms/line.js"), /if \(event\.source\?\.type !== "user"\) return;/);
+  assert.match(r("lib/platforms/whatsapp-linked.js"), /if \(!isSelfJid\(jid\)\) continue;/);
+});
