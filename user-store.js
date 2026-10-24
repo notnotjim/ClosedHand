@@ -613,8 +613,8 @@ class UserStore {
       .eq("service", service);
     console.log(`[connections] ${service} marked reconnect_required for ${this.userId} (${reason})`);
     // Once per failure, tell the person where they get their updates, so it
-    // never dies unnoticed; held in quiet hours or with no chat app chosen,
-    // it is told by the next sweep (lib/connection-alert.js start).
+    // never dies unnoticed; with no chat app chosen yet, the next sweep
+    // tells it once there is one (lib/connection-alert.js start).
     try { await require("./lib/connection-alert").tellOwnerOnce(this.userId, this, service); } catch (_) {}
   }
 

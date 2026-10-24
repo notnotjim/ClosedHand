@@ -8,8 +8,8 @@ const root = path.join(__dirname, '..');
 const stub = (rel, exports) => { const p = require.resolve(rel); require.cache[p] = { id: p, filename: p, loaded: true, exports }; };
 const sent = [];
 stub('../lib/db', { supabase: { from: () => ({ select: () => ({ eq: async () => ({ data: [{ platform: 'telegram', platform_user_id: '42' }] }) }) }) } });
-stub('../lib/proactive', { getProactiveTargets: async (u, s, links) => links });
-stub('../lib/messaging', { sendToPlatform: async (...a) => { sent.push(a); } });
+// Out of quiet hours: each chosen chat app gets it now (lib/proactive.js).
+stub('../lib/proactive', { deliverUnprompted: async (u, s, links, textFor) => { for (const t of links) sent.push([t.platform, t.platform_user_id, await textFor(t)]); return links.length > 0; } });
 stub('../lib/dashboard-links', { dashboardUrl: async (p, section) => `https://fixture.example/dashboard#${section}` });
 const alert = require('../lib/connection-alert');
 

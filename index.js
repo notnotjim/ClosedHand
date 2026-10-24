@@ -236,6 +236,8 @@ async function main() {
   require("./lib/page-expiry").start();
   // A sign-in to do again that could not be told yet (lib/connection-alert.js).
   require("./lib/connection-alert").start();
+  // Messages held in quiet hours go when they end (lib/proactive.js).
+  require("./lib/proactive").start();
   await startPulse();
   // Warm the runtime-config cache before anything reads it synchronously.
   // getConfCached returns undefined on a cold cache, so an unwarmed read of

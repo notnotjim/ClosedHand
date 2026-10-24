@@ -3,7 +3,8 @@
 // that hold it to that (lib/nudge-gate.js) and the mistakes Pulse made before
 // them: meeting times given to the model in UTC, mail that synced late never
 // looked at, a screening that failed counted as nothing to say, the recent
-// chat never seen, and quiet hours kept by Pulse alone.
+// chat never seen, quiet hours kept by Pulse alone, and messages raised in
+// the night either sent in it or lost.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -13,7 +14,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
 require.cache[require.resolve("../lib/db")] = { id: "db", loaded: true, exports: { supabase: {} } };
 const gate = require("../lib/nudge-gate");
 const tz = require("../lib/timezone");
-const { quietNow, getProactiveTargets } = require("../lib/proactive");
+const proactive = require("../lib/proactive");
+const { quietNow } = proactive;
 
 const tokyo = { userId: "u1", location: { timezone: "Asia/Tokyo" }, profile: { settings: {} },
   conversations: [{ role: "user", content: "Is the dentist still on Thursday?" }, { role: "assistant", content: [{ type: "text", text: "Yes, Thursday at 09:00." }] }] };
@@ -41,20 +43,62 @@ test("times are where the person is, and an all-day event is its own date", () =
   assert.match(tz.eventWhen("2026-10-17T02:00:00+08:00", "Europe/London"), /^Friday,? 16 October at 19:00$/);
 });
 
-test("quiet hours hold every unprompted message, except one due at a set moment", async () => {
+// A stand-in for the database: chat links, held messages, and what was asked.
+function fakeDb(rows = { chat_links: [], held_messages: [] }) {
+  const q = (table) => {
+    const filters = [];
+    const api = {
+      select: () => api, order: () => api,
+      eq: (k, v) => { filters.push([k, v]); return api; },
+      insert: async (row) => { rows[table].push({ id: "h" + rows[table].length, created_at: new Date().toISOString(), ...row }); return { error: null }; },
+      delete: () => ({ eq: async (k, v) => { rows[table] = rows[table].filter((r) => r[k] !== v); return { error: null }; } }),
+      then: (ok) => ok({ data: rows[table].filter((r) => filters.every(([k, v]) => r[k] === v)), error: null }),
+    };
+    return api;
+  };
+  return { rows, from: q };
+}
+
+test("quiet hours, in the person's own time zone, hold every notice until they end", async () => {
   const at = (iso) => new Date(iso);
   assert.equal(quietNow(tokyo, at("2026-10-24T14:00:00Z")), true, "23:00 in Tokyo");
   assert.equal(quietNow(tokyo, at("2026-10-24T01:00:00Z")), false, "10:00 in Tokyo");
   assert.equal(quietNow({ ...tokyo, profile: { settings: { pulse_settings: { quietEnabled: false } } } }, at("2026-10-24T14:00:00Z")), false);
   assert.equal(quietNow({ ...tokyo, profile: { settings: { pulse_settings: { quietStart: 1, quietEnd: 6 } } } }, at("2026-10-24T18:00:00Z")), true, "03:00 inside 1 to 6");
 
-  const store = { location: { timezone: "Asia/Tokyo" }, profile: { settings: { pulse_settings: { deliveryPlatforms: ["telegram"], quietStart: 0, quietEnd: 24 } } } };
-  const links = [{ platform: "telegram", platform_user_id: "7" }];
-  assert.deepEqual(await getProactiveTargets("u1", store, links), [], "held for later");
-  assert.deepEqual(await getProactiveTargets("u1", store, links, { anyHour: true }), links, "a gate change is due now");
-  assert.match(read("lib/flights-scheduler.js"), /getProactiveTargets\(userId, userStore, chatLinks, \{ anyHour: true \}\)/);
-  assert.match(read("lib/goal-check-ins.js"), /getProactiveTargets\(userId, store, links \|\| \[\], \{ anyHour: true \}\)/, "a check-in at the time they chose");
+  const db = fakeDb();
+  require.cache[require.resolve("../user-store")] = { id: "us", loaded: true, exports: { supabase: db } };
+  delete require.cache[require.resolve("../lib/proactive")];
+  const p = require("../lib/proactive");
+  const sent = [];
+  require.cache[require.resolve("../lib/messaging")] = { id: "m", loaded: true, exports: { sendToPlatform: async (...a) => sent.push(a) } };
+  const settings = (quiet) => ({ location: { timezone: "Asia/Tokyo" }, profile: { settings: { pulse_settings: { deliveryPlatforms: ["telegram"], ...(quiet ? { quietStart: 0, quietEnd: 24 } : { quietEnabled: false }) } } } });
+  const links = [{ platform: "telegram", platform_user_id: "7" }, { platform: "discord", platform_user_id: "9" }];
+
+  assert.equal(await p.deliverUnprompted("u1", settings(true), links, (t) => `Bank needs you, via ${t.platform}`), true, "held counts as told");
+  assert.equal(sent.length, 0, "nothing in the night");
+  assert.deepEqual(db.rows.held_messages.map((h) => [h.platform, h.text]), [["telegram", "Bank needs you, via telegram"]], "only the chosen chat app");
+  assert.equal(await p.sendHeld("u1", async () => settings(true)), 0, "still quiet");
+  assert.equal(await p.sendHeld("u1", async () => settings(false)), 1);
+  assert.deepEqual(sent, [["telegram", "7", "Bank needs you, via telegram"]]);
+  assert.equal(db.rows.held_messages.length, 0, "and it goes once");
+
+  assert.equal(await p.deliverUnprompted("u1", settings(false), links, () => "Now"), true);
+  assert.equal(sent.length, 2, "out of quiet hours it goes at once");
+  const none = { profile: { settings: { pulse_settings: { deliveryPlatforms: [] } } } };
+  assert.equal(await p.deliverUnprompted("u1", none, links, () => "x"), false, "nowhere to send it");
+
+  assert.match(read("lib/connection-alert.js"), /require\("\.\/proactive"\)\.deliverUnprompted\(userId, store, links \|\| \[\],/, "notices, bank ones included, use it");
+  assert.match(read("migrations/071_held_messages.sql"), /user_id          uuid NOT NULL REFERENCES profiles\(id\) ON DELETE CASCADE/);
+  assert.match(read("index.js"), /require\("\.\/lib\/proactive"\)\.start\(\);/);
   assert.doesNotMatch(read("lib/pulse.js"), /function isQuietHours/, "one copy of quiet hours");
+  assert.match(read("lib/pulse.js"), /if \(require\("\.\/proactive"\)\.quietNow\(store\)\) \{/);
+});
+
+test("a flight found at setup is told the way every found flight is", () => {
+  const onboarding = read("lib/onboarding.js");
+  assert.match(onboarding, /require\("\.\/flights-scheduler"\)\.announceNewFlights\(userId, ctx\.activeUserStore \|\| userStore, newFlights\)/);
+  assert.doesNotMatch(onboarding, /toLocaleDateString\("en-GB", \{ weekday: "short", day: "numeric", month: "short" \}\)/, "no date in the server's time zone");
 });
 
 test("a screening with no answer is tried again, not passed over", async () => {
@@ -86,22 +130,22 @@ test("a sign-in to do again is told once it can be, and again after the next fai
   const alert = require("../lib/connection-alert");
   const store = { connections: { google: { metadata: { email: "ana@harbour.test", reconnect_required: true, reconnect_told: false } } }, profile: { settings: { pulse_settings: { deliveryPlatforms: [] } } } };
   // No chat app chosen: nothing goes, and nothing is marked told.
-  require.cache[require.resolve("../lib/proactive")].exports.getProactiveTargets = async () => [];
+  const delivered = [];
+  require.cache[require.resolve("../lib/proactive")].exports.deliverUnprompted = async (u, st, l, textFor) => (st.chosen ? (delivered.push(await textFor({ platform: "telegram" })), true) : false);
   const realDb = require.cache[require.resolve("../lib/db")].exports;
   realDb.supabase = { from: (t) => (t === "chat_links" ? { select: () => ({ eq: async () => ({ data: [] }) }) } : fakeDb.from(t)) };
   assert.equal(await alert.tellOwnerOnce("u1", store, "google"), false);
   assert.equal(store.connections.google.metadata.reconnect_told, false, "kept for the next sweep");
   // Once a chat app is chosen, the sweep tells it and marks it told.
-  const sent = [];
-  require.cache[require.resolve("../lib/messaging")] = { id: "m", loaded: true, exports: { sendToPlatform: async (...a) => sent.push(a) } };
   require.cache[require.resolve("../lib/dashboard-links")] = { id: "d", loaded: true, exports: { dashboardUrl: async () => "https://fixture.example/dashboard#connections" } };
-  require.cache[require.resolve("../lib/proactive")].exports.getProactiveTargets = async () => [{ platform: "telegram", platform_user_id: "7" }];
+  store.chosen = true;
   assert.equal(await alert.tellOwnerOnce("u1", store, "google"), true);
-  assert.equal(sent.length, 1);
+  assert.equal(delivered.length, 1);
+  assert.match(delivered[0], /ana@harbour\.test[\s\S]*https:\/\/fixture\.example\/dashboard#connections/);
   assert.equal(store.connections.google.metadata.reconnect_told, true);
   assert.equal(calls.at(-1).metadata.reconnect_told, true, "saved");
   assert.equal(await alert.tellOwnerOnce("u1", store, "google"), false, "and not told twice");
-  assert.equal(sent.length, 1);
+  assert.equal(delivered.length, 1);
   assert.match(read("user-store.js"), /reconnect_required: true, reconnect_reason: reason, reconnect_told: false/, "each new failure is told");
   assert.match(read("user-store.js"), /require\("\.\/lib\/connection-alert"\)\.tellOwnerOnce\(this\.userId, this, service\)/);
   assert.deepEqual(require("../webapp/connection-health").cleared({ email: "a", reconnect_required: true, reconnect_reason: "x", reconnect_told: true }), { email: "a" });
