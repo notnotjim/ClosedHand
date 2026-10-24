@@ -1,5 +1,6 @@
 // Run after wrangler deploy. Receives `wrangler auth token --json` on stdin.
 // Never prints or stores credentials. Exclusions bypass the daily Worker quota.
+// An exclusion no longer in direct-routes.json is deleted, so removed paths don't linger.
 import { readFileSync } from 'node:fs';
 const { token } = JSON.parse(readFileSync(0, 'utf8'));
 if (!token) throw new Error('Missing operator authentication');
@@ -21,9 +22,12 @@ for (const route of desired) {
   if (found?.script && found.script !== 'closedhand-phone-offline') throw new Error('Conflicting route owner');
   await api(found ? '/' + found.id : '', found ? 'PUT' : 'POST', route);
 }
+const stale = r => !r.script && r.pattern.startsWith('*.closedhand.ai/') && !desired.some(d => d.pattern === r.pattern);
+for (const route of current.filter(stale)) await api('/' + route.id, 'DELETE');
 const verified = await api();
 for (const wanted of desired) {
   const found = verified.find(r => r.pattern === wanted.pattern);
   if (!found || (found.script || null) !== wanted.script || found.request_limit_fail_open !== true) throw new Error('Route verification failed');
 }
-console.log('Verified offline fallback, direct application routes and fail-open behavior.');
+if (verified.some(stale)) throw new Error('Route verification failed');
+console.log('Verified offline fallback, direct application routes, no stale exclusions and fail-open behavior.');
