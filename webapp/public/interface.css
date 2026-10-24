@@ -84,6 +84,8 @@
 }
 /* The fist is drawn cream; on cream it takes the text colour. */
 :root[data-theme="light"] .ch-brand > img, :root[data-theme="light"] .ch-brand img { filter: brightness(0.11); }
+/* So are the logos that are one colour and drawn white; the rest keep their colours. */
+:root[data-theme="light"] img:is([src$="/logos/github.svg"], [src$="/logos/notion.svg"], [src$="/logos/x.svg"], [src$="/logos/tiktok.svg"]) { filter: brightness(0.11); }
 :root {
   --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
   --font-brand: 'Fraunces', Georgia, serif;
@@ -137,7 +139,7 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
    connected services, pasted servers, skills) is one row card: one line,
    the same height and columns, its status on the right and its details
    opening below. Apps you could add are the small tiles. */
-.dashboard-container :is(.platforms-grid, .integrations-grid) { gap: 12px; grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); overflow: visible; }
+.dashboard-container :is(.platforms-grid, .integrations-grid) { gap: 12px; grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); align-items: start; overflow: visible; }
 .dashboard-container .platforms-wrap::after { display: none; }
 .dashboard-container :is(.plat-card, .int-card) { flex-direction: row; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px; background: var(--raised); border-radius: 10px; }
 .dashboard-container .plat-card .plat-top { flex: 1; min-width: 0; }

@@ -339,10 +339,13 @@
       transition: max-height 0.3s ease;
       background: var(--raised);
       border-radius: 10px;
-      border: 1px solid transparent;
+      /* No border while closed: its background would show through as a
+         strip under the card. */
+      border: 0 solid transparent;
     }
     .int-unfurl.open {
       max-height: 600px;
+      border-width: 1px;
       border-color: rgba(var(--fg-rgb),0.1);
     }
     .int-unfurl-inner {
@@ -3733,7 +3736,7 @@
       // skills), the clicked one included, so a second click closes it.
       var list = wrap.parentElement;
       list.querySelectorAll('.int-unfurl.open').forEach(function(u) { u.classList.remove('open'); });
-      list.querySelectorAll('.int-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
+      list.querySelectorAll(':is(.int-card, .plat-card).expanded').forEach(function(c) { c.classList.remove('expanded'); if (c.hasAttribute('aria-expanded')) c.setAttribute('aria-expanded', 'false'); });
       if (!isOpen) {
         unfurl.classList.add('open');
         el.classList.add('expanded');

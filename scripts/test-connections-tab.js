@@ -115,12 +115,14 @@ test("a card in any list opens on a click and closes on the next", () => {
   const code = dashboard.slice(start, dashboard.indexOf("\n    }\n", start) + 6);
   const classes = () => { const set = new Set(); return { add: (c) => set.add(c), remove: (c) => set.delete(c), contains: (c) => set.has(c) }; };
   const list = { cards: [] };
-  const make = () => { const card = { classList: classes() }, unfurl = { classList: classes() }, wrap = { parentElement: list, querySelector: () => unfurl }; card.closest = () => wrap; list.cards.push({ card, unfurl }); return { card, unfurl }; };
+  const make = () => { const attrs = {}, card = { classList: classes(), attrs, hasAttribute: (k) => k in attrs, setAttribute: (k, v) => { attrs[k] = v; } }, unfurl = { classList: classes() }, wrap = { parentElement: list, querySelector: () => unfurl }; card.closest = () => wrap; list.cards.push({ card, unfurl }); return { card, unfurl }; };
   list.querySelectorAll = (sel) => list.cards.map((c) => (sel.includes("unfurl") ? c.unfurl : c.card)).filter((n) => n.classList.contains(sel.includes("unfurl") ? "open" : "expanded"));
   const a = make(), b = make();
   const toggle = vm.runInNewContext(code + "\ntoggleMcpUnfurl", {});
   toggle(a.card); assert.ok(a.unfurl.classList.contains("open"));
+  a.card.setAttribute("aria-expanded", "true"); // as a chat app's card says it is open
   toggle(b.card); assert.ok(b.unfurl.classList.contains("open") && !a.unfurl.classList.contains("open"), "one open at a time");
+  assert.ok(!a.card.classList.contains("expanded") && a.card.attrs["aria-expanded"] === "false", "and the one it closed says so, chat apps included");
   toggle(b.card); assert.ok(!b.unfurl.classList.contains("open"), "a second click closes it");
 });
 
