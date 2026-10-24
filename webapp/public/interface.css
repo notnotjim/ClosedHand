@@ -395,21 +395,21 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
    web chat's Dashboard). Neutral outline
    (.btn-quiet, .conn-btn-manage, .ask-no): everyday actions and Cancel. Red outline (.conn-btn-disconnect, .ask-yes): removing or turning
    something off. Pages set only where a button sits, never how it looks. */
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]) {
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]) {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 7px 2px 9px;
   border: 0; border-radius: 0; background: none; color: var(--fg);
   font: 500 var(--ui-label)/1.3 var(--font-ui); white-space: nowrap; text-decoration: none; cursor: pointer;
   transition: transform .3s cubic-bezier(.2, .8, .2, 1);
 }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before, :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before { background: var(--accent); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { bottom: 0; height: 11px; background: color-mix(in srgb, var(--accent) 78%, var(--fg)); clip-path: inset(0 100% 0 0); transition: clip-path .45s cubic-bezier(.65, 0, .35, 1); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled) { transform: translateY(-1px); text-decoration: none; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled)::after { clip-path: inset(0 0 0 0); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):active:not(:disabled) { transform: translateY(0); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):disabled { opacity: .5; cursor: default; }
-@media (prefers-reduced-motion: reduce) { :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]), :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { transition: none; } }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before, :is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before { background: var(--accent); }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { bottom: 0; height: 11px; background: color-mix(in srgb, var(--accent) 78%, var(--fg)); clip-path: inset(0 100% 0 0); transition: clip-path .45s cubic-bezier(.65, 0, .35, 1); }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled) { transform: translateY(-1px); text-decoration: none; }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled)::after { clip-path: inset(0 0 0 0); }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):active:not(:disabled) { transform: translateY(0); }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+:is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { :is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]), :is(.btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { transition: none; } }
 .goals-new, .deep, .rag-upload-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 18px;
   border: 1px solid rgba(var(--accent-strong-rgb),0.45); border-radius: 8px; background: rgba(var(--accent-strong-rgb),0.08); color: var(--accent-link);
@@ -423,8 +423,8 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
   font: 500 var(--ui-label)/1.3 var(--font-ui); text-decoration: none; cursor: pointer; transition: background 0.12s;
 }
 .btn-quiet:hover { background: rgba(var(--fg-rgb),0.08); }
-.ch-welcome-primary:disabled, .btn-modal-primary:disabled, .save-btn:disabled, .cta:disabled, .rag-query-btn:disabled, .goals-new:disabled, .rag-upload-btn:disabled, .btn-quiet:disabled { opacity: 0.5; cursor: default; }
-.ch-welcome-primary:focus-visible, .btn-modal-primary:focus-visible, .save-btn:focus-visible, .go:focus-visible, .g-signin:focus-visible, .cta:focus-visible, .btn-quiet:focus-visible, .rag-query-btn:focus-visible, .bridge-cta-dl:focus-visible, .goals-new:focus-visible, .deep:focus-visible, .rag-upload-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-modal-primary:disabled, .save-btn:disabled, .cta:disabled, .rag-query-btn:disabled, .goals-new:disabled, .rag-upload-btn:disabled, .btn-quiet:disabled { opacity: 0.5; cursor: default; }
+.btn-modal-primary:focus-visible, .save-btn:focus-visible, .go:focus-visible, .g-signin:focus-visible, .cta:focus-visible, .btn-quiet:focus-visible, .rag-query-btn:focus-visible, .bridge-cta-dl:focus-visible, .goals-new:focus-visible, .deep:focus-visible, .rag-upload-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* A short explanation behind a small "i" (llm-hint.js infoHint). The hint is
    placed on the screen by llm-hint.js, so cards that clip their contents never

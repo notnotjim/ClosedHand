@@ -4965,6 +4965,19 @@
     }, 200);
   }
 
+  // Setup's hello, with no chat app, ends with "Say hello back": the words
+  // come over in this tab and go as the first message, once.
+  var firstWords = null;
+  try { firstWords = sessionStorage.getItem('ch-first-words'); sessionStorage.removeItem('ch-first-words'); } catch (e) {}
+  if (firstWords) {
+    var firstWordsWait = setInterval(function() {
+      if (!isAuthenticated) return;
+      clearInterval(firstWordsWait);
+      input.value = firstWords;
+      sendMessage();
+    }, 200);
+  }
+
 })();
 </script>
 

@@ -37,7 +37,7 @@ test('the strip sits on the sandbox browser, and red stays for problems', () => 
   assert.match(page, /'\/api\/sandbox\/sign-in', \{ method: 'POST'/);
 });
 
-test("setup's closing screen points to signing in on the sandbox computer", () => {
+test("setup's finish card points to signing in on the sandbox computer", () => {
   const setup = read('webapp/views/setup.html');
   assert.match(setup, /<a class="done-signins-link" href="\/#computers">Sign in on the sandbox computer<\/a>/);
   assert.match(setup, /Closedhand's sandbox computer has its own browser\./);

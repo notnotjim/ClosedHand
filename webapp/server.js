@@ -558,18 +558,22 @@ app.get("/api/setup/hello", async (req, res) => {
     const full = facts["profile-name"] || "";
     const nick = (full.match(/\(([^)]+)\)/) || [])[1];
     const name = nick || full.split(/\s+/)[0] || null;
-    const skip = /^(profile-|onboarding|_)/;
-    const pick = ["upcoming-key-event-1", "project-current-1", "profile-company", "profile-job-title"]
-      .find((k) => facts[k]) || Object.keys(facts).find((k) => !skip.test(k));
-    const fact = pick ? facts[pick].replace(/[.\s]+$/, "").slice(0, 140) : null;
-    const count = Object.keys(facts).filter((k) => !/^(profile-email|onboarding|_)/.test(k)).length;
+    // What it has read so far, counted again on every call: setup's hello
+    // shows these climbing while the first sync carries on.
+    const counted = async (filter) => {
+      const { count, error } = await filter(supabase.from("data_cache").select("id", { count: "exact", head: true }).eq("user_id", userId));
+      if (error) throw new Error(error.message);
+      return count || 0;
+    };
+    const [mail, events, messages] = await Promise.all([
+      counted((q) => q.eq("type", "email")), counted((q) => q.eq("type", "event")), counted((q) => q.eq("source", "whatsapp")),
+    ]);
     const { data: wa, error: waError } = await supabase.from("connections").select("metadata")
       .eq("user_id", userId).eq("service", "whatsapp_linked").maybeSingle();
     if (waError) throw new Error(waError.message);
-    const welcome = wa?.metadata?.welcome;
     res.set("Cache-Control", "no-store");
-    res.json({ name, fact, count, text: welcome?.text || null,
-      whatsapp: { linked: !!wa?.metadata?.linked, sent: !!welcome?.sentAt } });
+    res.json({ name, read: { mail, events, whatsapp: messages }, url: (await getRuntimeConf("PHONE_PERMANENT_URL")) || null,
+      whatsapp: { linked: !!wa?.metadata?.linked, sent: !!wa?.metadata?.welcome?.sentAt } });
   } catch (e) {
     res.status(503).json({ error: "Could not load the welcome. Try again." });
   }

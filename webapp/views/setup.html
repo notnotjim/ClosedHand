@@ -383,6 +383,7 @@
   <link rel="stylesheet" href="/model-settings.css">
   <script src="/model-settings.js"></script>
   <script src="/ask.js"></script>
+  <script src="/text-motion.js"></script>
   <script src="/setup-personal-url.js"></script>
 </head>
 <body class="setup-page">
@@ -799,26 +800,32 @@
     <h2>All set. <span>Closedhand is yours.</span></h2>
     <p id="finish-line">Everything Closedhand keeps is in your dashboard, yours to read or delete. Talk to it in the web chat or your chat apps.</p>
     <p class="hint" id="finish-home" hidden></p>
+    <p class="hint">Closedhand's sandbox computer has its own browser. Sign in there to anything you want Closedhand to have persistent access to. <a class="done-signins-link" href="/#computers">Sign in on the sandbox computer</a></p>
     <div class="finish-actions">
       <a class="go" href="/">Open Closedhand</a>
       <a class="deep" id="finish-wa" href="#" target="_blank" rel="noopener" hidden>Open WhatsApp</a>
       <a class="deep" id="finish-tg" href="#" target="_blank" rel="noopener" hidden>Open your Telegram bot</a>
     </div>
-    <button class="welcome-replay" id="welcome-replay" type="button">Read the welcome again</button>
+    <button class="welcome-replay" id="welcome-replay" type="button">See the welcome again</button>
   </section>
 
-  <dialog class="done-screen" id="done-screen" aria-labelledby="done-title">
-    <div class="done-content">
-      <div class="ch-welcome">
-        <a class="ch-brand" href="/"><img src="/fist.png" alt=""><span>Closedhand</span></a>
-        <h2 id="done-title" tabindex="-1" autofocus>All set</h2>
-        <div class="ch-welcome-message" id="done-words">Getting your welcome ready…</div>
-        <p class="ch-welcome-status" id="done-status" role="status"></p>
-        <p class="done-signins">Closedhand's sandbox computer has its own browser. Sign in there to anything you want Closedhand to have persistent access to.</p>
-        <div class="ch-welcome-actions">
-          <a class="ch-welcome-primary" href="/">Open Closedhand</a>
-          <a class="done-signins-link" href="/#computers">Sign in on the sandbox computer</a>
-        </div>
+  <!-- The hello: once every step is done or skipped, setup gives way to a
+       blank screen and Closedhand says hello, shows what it has read so far,
+       where to reach it, and where to carry on talking. -->
+  <dialog class="hello-screen" id="hello-screen" aria-labelledby="hello-words">
+    <div class="hello">
+      <img class="hello-fist" src="/fist.png" alt="">
+      <h2 class="hello-words" id="hello-words" tabindex="-1"><span id="hello-said" class="hello-sr"></span><span aria-hidden="true"><span id="hello-typed"></span><span id="hello-name"></span><span class="hello-caret"></span></span></h2>
+      <p class="hello-part hello-line" id="hello-read" hidden></p>
+      <p class="hello-part hello-line" id="hello-where" hidden>Reach me from any device at <span class="hello-sr" id="hello-url-said"></span><span class="hello-url" id="hello-url" aria-hidden="true"></span></p>
+      <div class="hello-part hello-next" id="hello-next" hidden>
+        <p class="hello-line" id="hello-next-line" role="status"></p>
+        <a class="deep hello-go" id="hello-go" href="#" target="_blank" rel="noopener" hidden></a>
+        <form class="hello-say" id="hello-say" hidden>
+          <input id="hello-say-input" type="text" placeholder="Say hello back…" aria-label="Say hello back" autocomplete="off" maxlength="2000">
+          <button type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Send</button>
+        </form>
+        <a class="hello-web" id="hello-web" href="/" hidden>Or open the web chat</a>
       </div>
     </div>
   </dialog>
@@ -843,12 +850,12 @@
         ? url.pathname + url.search + url.hash : '/';
     } catch (_) { return '/'; }
   }
-  document.querySelectorAll('.finish .go, .ch-welcome-primary').forEach(function(link) { link.href = setupDestination(); });
+  document.querySelectorAll('.finish .go').forEach(function(link) { link.href = setupDestination(); });
 
   var POLL_MS = 2500;
   var lastDone = {};
   var firstLoad = true;
-  var lastAllDone = null; // null until the first render, then a boolean
+  var lastComplete = null; // null until the first render, then a boolean
   var lastState = null;
 
   // Only optional steps can hold a skip. The filter also heals stale
@@ -1135,12 +1142,14 @@
         : "Closedhand answers whenever the computer running it is awake and online.";
       home.hidden = false;
       if (fin.hidden) { fin.hidden = false; if (!firstLoad) setTimeout(function () { fin.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350); }
-      // Show the welcome once per install when the last step lands.
-      if (lastAllDone === false && !celebrated()) celebrate();
     } else {
       fin.hidden = true;
     }
-    lastAllDone = allDone;
+    // Every step done or skipped: Closedhand says hello, once per install,
+    // as the last one lands (never on a reload of a finished setup).
+    var complete = requiredDone && steps.every(function (s) { return s.done || !!skips[s.key]; });
+    if (lastComplete === false && complete && !celebrated()) celebrate();
+    lastComplete = complete;
     if (firstLoad) openFromHash();
     firstLoad = false;
   }
@@ -1265,46 +1274,151 @@
     if (_waState.enabled || _waState.linked) autoOpenChooser("wa");
   }
 
-  // Keep the welcome open until the person chooses where to go next.
-  var _celebKey = null, _welcomeTimer = null, _welcomeRequest = 0, _finishedSent = false;
+  // The hello, once per install. Setup gives way to a blank screen and
+  // Closedhand types hello, wakes, shows what it has read so far (still
+  // counting), where to reach it, and where to carry on talking: the chat app
+  // it has just messaged, or, with no chat app, a box to answer it in the web
+  // chat. A tap or a key skips to the end.
+  var _celebKey = null, _helloRun = 0, _helloPoll = null, _finishedSent = false;
   function celebrated() {
     try { return !!(_celebKey && localStorage.getItem(_celebKey)); } catch (e) { return false; }
   }
+  var READ_KINDS = [["mail", "email", "emails"], ["events", "calendar event", "calendar events"], ["whatsapp", "WhatsApp message", "WhatsApp messages"]];
   function celebrate() {
     try { if (_celebKey) localStorage.setItem(_celebKey, "1"); } catch (e) {}
-    var dialog = $("#done-screen");
-    if (!dialog.open) dialog.showModal();
-    var request = ++_welcomeRequest, attempts = 0;
-    clearTimeout(_welcomeTimer);
-    $("#done-status").textContent = "";
-    async function readWelcome() {
-      try {
-        var response = await fetch("/api/setup/hello", { cache: "no-store" });
-        if (!response.ok) throw new Error("Welcome unavailable");
-        var h = await response.json();
-        if (request !== _welcomeRequest || !dialog.open) return;
-        var linked = h.whatsapp && h.whatsapp.linked;
-        $("#done-words").textContent = (linked && h.text) || (linked
-          ? "Your WhatsApp is connected. I'm getting your first message ready. You can keep going while I send it."
-          : "Hey" + (h.name ? " " + h.name : "") + ". Your dashboard shows what I know, which apps are connected, and the work you ask me to do. Let me show you around, then you can get back to your day.");
-        var pending = linked && !h.whatsapp.sent;
-        $("#done-status").classList.remove("is-error");
-        $("#done-status").textContent = linked && h.whatsapp.sent
-          ? "Sent to your WhatsApp. Look in Message Yourself."
-          : pending ? "Sending to WhatsApp…" : "You can connect a chat app any time from the dashboard.";
-        if (pending && ++attempts < 20) _welcomeTimer = setTimeout(readWelcome, 3000);
-        else if (pending) $("#done-status").textContent = "Your message is taking a little longer. I'll keep trying, you can carry on.";
-      } catch (e) {
-        if (request !== _welcomeRequest || !dialog.open) return;
-        $("#done-words").textContent = "You're ready to explore your dashboard. You can see your connections, look through Context Brain, and check on your agents there.";
-        $("#done-status").classList.add("is-error");
-        $("#done-status").textContent = "I couldn't load your welcome. Close this and choose Read the welcome again to retry.";
-      }
+    var M = window.TextMotion, dialog = $("#hello-screen"), run = ++_helloRun;
+    var skipped = false, stage = 0, latest = null, polls = 0;
+    function gone() { return run !== _helloRun || !dialog.open; }
+    function skip() { return skipped || gone(); }
+    function pause(ms) { return M.wait(skip() || M.still() ? 0 : ms); }
+    // Each new line fades in below, and what is already there glides up to
+    // keep the whole thing centred rather than jumping.
+    function show(el) {
+      var box = $(".hello", dialog), before = box.getBoundingClientRect().top;
+      el.hidden = false;
+      var moved = before - box.getBoundingClientRect().top;
+      if (moved && !M.still() && box.animate) box.animate([{ transform: "translateY(" + moved + "px)" }, { transform: "none" }], { duration: 800, easing: "cubic-bezier(.2,.8,.2,1)" });
+      void el.offsetWidth; el.classList.add("is-in");
     }
-    readWelcome();
+    function onSkip(e) { if (e.key !== "Escape") skipped = true; }
+
+    clearTimeout(_helloPoll);
+    dialog.classList.remove("is-awake");
+    $all(".hello-part", dialog).forEach(function (el) { el.hidden = true; el.classList.remove("is-in"); });
+    $("#hello-typed").textContent = ""; $("#hello-name").textContent = ""; $("#hello-said").textContent = "Hello.";
+    $("#hello-read").dataset.kinds = "";
+    if (!dialog.open) dialog.showModal();
+    $("#hello-words").focus();
+    dialog.addEventListener("pointerdown", onSkip);
+    dialog.addEventListener("keydown", onSkip);
+
+    async function read() {
+      try {
+        var r = await fetch("/api/setup/hello", { cache: "no-store" });
+        if (r.ok) latest = await r.json();
+      } catch (e) { /* the next poll tries again */ }
+      if (!gone()) refresh();
+    }
+    // Brings whatever is already showing up to date with the latest numbers
+    // and whether the WhatsApp message has gone.
+    function refresh() {
+      if (stage >= 1) showRead();
+      if (stage >= 3) showNext();
+    }
+    function showRead() {
+      var r = latest && latest.read, line = $("#hello-read");
+      if (!r) return;
+      var kinds = READ_KINDS.filter(function (k) { return r[k[0]] > 0; });
+      var shape = kinds.map(function (k) { return k[0] + (r[k[0]] === 1 ? "1" : ""); }).join();
+      if (line.dataset.kinds !== shape) {
+        var was = {};
+        $all(".hello-n", line).forEach(function (n) { was[n.dataset.kind] = n._motionValue || 0; });
+        line.dataset.kinds = shape;
+        line.textContent = "";
+        if (!kinds.length) line.append("I'm starting on your mail and calendar now. It all stays on your computer.");
+        else {
+          line.append("I've read ");
+          kinds.forEach(function (k, i) {
+            if (i) line.append(i === kinds.length - 1 ? " and " : ", ");
+            var n = document.createElement("b");
+            n.className = "hello-n"; n.dataset.kind = k[0];
+            n._motionValue = was[k[0]] || 0; n.textContent = new Intl.NumberFormat().format(n._motionValue);
+            line.append(n, " " + (r[k[0]] === 1 ? k[1] : k[2]));
+          });
+          line.append(" so far. It all stays on your computer.");
+        }
+      }
+      kinds.forEach(function (k) { M.tick($('.hello-n[data-kind="' + k[0] + '"]', line), r[k[0]]); });
+      if (line.hidden) show(line);
+    }
+    function showNext() {
+      var st = lastState || {}, line = $("#hello-next-line"), go = $("#hello-go");
+      var num = st.waLinked && st.waLinked.linked && st.waLinked.number;
+      if (num) {
+        var sent = latest && latest.whatsapp && latest.whatsapp.sent;
+        line.textContent = sent ? "I've just messaged you on WhatsApp. Let's carry on there."
+          : polls > 20 ? "My WhatsApp message is taking a little longer. It will be there soon."
+          : "I'm messaging you on WhatsApp…";
+        go.textContent = "Open WhatsApp"; go.href = "https://wa.me/" + num;
+      } else if (st.botUsername) {
+        line.textContent = "Message me on Telegram and let's carry on there.";
+        go.textContent = "Open Telegram"; go.href = "https://t.me/" + st.botUsername + "?start=hello";
+      }
+      var chatApp = !!(num || st.botUsername);
+      line.hidden = !chatApp; go.hidden = !chatApp; $("#hello-web").hidden = !chatApp;
+      $("#hello-say").hidden = chatApp;
+    }
+
+    read();
+    (async function () {
+      await pause(700);
+      await M.type($("#hello-typed"), "Hello", { skip: skip });
+      // The name comes with the first reading, usually long before "Hello"
+      // has finished typing.
+      for (var i = 0; !latest && i < 20 && !skip(); i++) await M.wait(100);
+      if (gone()) return;
+      var name = latest && latest.name;
+      $("#hello-said").textContent = name ? "Hello, " + name + "." : "Hello.";
+      await M.type($("#hello-name"), name ? ", " + name + "." : ".", { skip: skip });
+      await pause(500);
+      if (gone()) return;
+      dialog.classList.add("is-awake");
+      await pause(900);
+      stage = 1; showRead();
+      await pause(1800);
+      if (gone()) return;
+      if (latest && latest.url) {
+        var host = latest.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+        $("#hello-url-said").textContent = host + ".";
+        show($("#hello-where"));
+        await M.unscramble($("#hello-url"), host, { skip: skip });
+        await pause(600);
+      }
+      if (gone()) return;
+      stage = 3; showNext(); show($("#hello-next"));
+      dialog.removeEventListener("pointerdown", onSkip);
+      dialog.removeEventListener("keydown", onSkip);
+      ($("#hello-say").hidden ? $("#hello-go") : $("#hello-say-input")).focus();
+    })();
+    // Keeps reading while the screen is open: the counts climb as the first
+    // sync carries on, and the WhatsApp line changes once the message goes.
+    (function again() {
+      _helloPoll = setTimeout(function () {
+        if (gone() || ++polls > 200) return;
+        read().then(again);
+      }, 3000);
+    })();
   }
+  // With no chat app, the answer goes to the web chat as its first message,
+  // handed over in this tab only, never in the address.
+  $("#hello-say").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var words = $("#hello-say-input").value.trim();
+    try { if (words) sessionStorage.setItem("ch-first-words", words); } catch (err) {}
+    location.href = "/";
+  });
   $("#welcome-replay").addEventListener("click", celebrate);
-  $("#done-screen").addEventListener("close", function () { ++_welcomeRequest; clearTimeout(_welcomeTimer); });
+  $("#hello-screen").addEventListener("close", function () { ++_helloRun; clearTimeout(_helloPoll); });
 
   // Microsoft signs in by code: this page shows the code, the person enters
   // it on Microsoft's page, and the server hears back from Microsoft. The

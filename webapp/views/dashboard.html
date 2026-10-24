@@ -3022,12 +3022,12 @@
       });
       window.addEventListener('resize', positionWelcome);
       window.addEventListener('scroll', positionWelcome, true);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('welcome') === '1') {
-        // This parameter is an explicit request from setup. Reloads do not replay it.
-        url.searchParams.delete('welcome');
-        history.replaceState(null, '', url.pathname + url.search + url.hash);
-        showWelcomeStep(true);
+      // The first time the dashboard is opened plainly, the tour runs once in
+      // this browser. Opened for one thing (a hash), it waits for another time.
+      if (!window.location.hash) {
+        let toured = true;
+        try { toured = !!localStorage.getItem('ch-dashboard-toured'); localStorage.setItem('ch-dashboard-toured', '1'); } catch (e) {}
+        if (!toured) showWelcomeStep(true);
       }
     }
 
