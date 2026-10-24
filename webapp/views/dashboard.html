@@ -2174,8 +2174,11 @@
           .wallet-field .amount .clear { position:absolute; right:4px; width:22px; height:22px; display:none; align-items:center; justify-content:center; border:none; background:none; color:var(--muted); cursor:pointer; border-radius:6px; padding:0; }
           .wallet-field .amount .clear:hover { color:var(--fg); background:rgba(var(--fg-rgb),0.08); }
           .wallet-field .amount.has-value .clear { display:flex; }
-          .wallet-card-row { display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--raised); border:1px solid rgba(var(--fg-rgb),0.16); border-radius:10px; font-size:13px; color:var(--fg); }
-          .wallet-card-row .muted { color:var(--muted); font-size:12px; }
+          .wallet-card-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:8px 10px; background:var(--raised); border:1px solid rgba(var(--fg-rgb),0.16); border-radius:10px; font-size:13px; color:var(--fg); }
+          .wallet-card-row .muted { color:var(--muted); font-size:12px; min-width:0; }
+          .wallet-card-row .wallet-row-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:6px 10px; margin-left:auto; }
+          .wallet-card-row select { padding:3px 8px; background:var(--bg); border:1px solid rgba(var(--fg-rgb),0.16); border-radius:6px; color:var(--fg); font:inherit; font-size:12px; }
+          #wallet-cards .int-wrap, #wallet-addresses .int-wrap { margin-top:2px; }
           .mcp-pill { position: relative; border-radius: 18px; padding: 2px; overflow: hidden; }
           .mcp-pill::before {
             content: ''; position: absolute; top: 50%; left: 50%; width: 150%; height: 600%;
@@ -2601,7 +2604,7 @@
           <div class="settings-group" id="wallet-block" style="display:none;">
             <button type="button" class="settings-group-header furl-handle" id="wallet-handle" aria-expanded="false" aria-controls="wallet-body" onclick="toggleWallet()">
               <h2>Wallet <svg class="furl-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h2>
-              <p class="section-desc">Cards Closedhand may use at checkout. It asks you first unless your rules say otherwise.</p>
+              <p class="section-desc">Cards and addresses Closedhand may use at checkout. It asks you first unless your rules say otherwise.</p>
             </button>
             <div id="wallet-body" style="padding:12px 16px;" hidden>
               <p class="section-desc" data-railway="Card numbers are encrypted in your Railway account, and the LLM never sees them.">Card numbers are encrypted on your computer, and the LLM never sees them.</p>
@@ -2637,8 +2640,7 @@
 
                 <hr class="conn-divider" style="margin:20px 0;">
                 <div style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:10px;">Cards</div>
-                <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
-                <button class="account-action-btn" id="wallet-add-toggle" onclick="toggleAddCard()">Add a card</button>
+                <div id="wallet-cards" style="display:flex;flex-direction:column;gap:6px;"></div>
                 <div id="wallet-add" style="display:none;margin-top:14px;padding:14px;background:var(--bg);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:10px;">
                   
                   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
@@ -2647,13 +2649,38 @@
                     <label class="wallet-field"><span>Expiry year</span><input type="text" id="wc-exp-year" inputmode="numeric" placeholder="YY" maxlength="4"></label>
                     <label class="wallet-field"><span>Security code</span><input type="password" id="wc-cvc" inputmode="numeric" autocomplete="off" placeholder="CVC" maxlength="4"></label>
                     <label class="wallet-field"><span>Name on card</span><input type="text" id="wc-holder" placeholder="As printed"></label>
-                    <label class="wallet-field"><span>Billing postcode</span><input type="text" id="wc-postcode" placeholder="Optional"></label>
+                    <label class="wallet-field"><span>Billing address</span><select id="wc-billing"></select></label>
                     <label class="wallet-field"><span>Label</span><input type="text" id="wc-label" placeholder="e.g. Monzo virtual"></label>
                     <div style="grid-column:1/-1;margin-top:6px;"><div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Limits for this card alone.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;max-width:480px;"><label class="wallet-field"><span>Max per purchase</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-purchase" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label><label class="wallet-field"><span>Max per month</span><span class="amount"><span class="cur" data-spend-currency></span><input type="number" id="wc-per-month" min="0" step="0.01" placeholder="follows the rules above"><button type="button" class="clear" title="No limit" aria-label="Clear" onclick="clearAmount(this)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></span></label></div></div>
                   </div>
                   <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
                     <button class="account-action-btn" onclick="addWalletCard()">Save card</button>
+                    <button class="account-action-btn" onclick="toggleAddCard()">Cancel</button>
                     <span id="wc-status" style="font-size:12.5px;color:var(--muted);"></span>
+                  </div>
+                </div>
+
+                <hr class="conn-divider" style="margin:20px 0;">
+                <div style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px;">Addresses</div>
+                <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.5;">Cards are billed to your home address and orders go there, unless you choose another.</p>
+                <div id="wallet-addresses" style="display:flex;flex-direction:column;gap:6px;"></div>
+                <div id="wallet-addr-form" style="display:none;margin-top:14px;padding:14px;background:var(--bg);border:1px solid rgba(var(--fg-rgb),0.16);border-radius:10px;">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+                    <label class="wallet-field"><span>Name for it</span><input type="text" id="wa-label" maxlength="40" placeholder="Home"></label>
+                    <label class="wallet-field"><span>Who it's for</span><input type="text" id="wa-name" autocomplete="name" placeholder="Full name"></label>
+                    <label class="wallet-field" style="grid-column:1/-1;"><span>Address</span><input type="text" id="wa-line1" autocomplete="address-line1"></label>
+                    <label class="wallet-field" style="grid-column:1/-1;"><span>Flat, floor or building</span><input type="text" id="wa-line2" autocomplete="address-line2" placeholder="Optional"></label>
+                    <label class="wallet-field"><span>Town or city</span><input type="text" id="wa-city" autocomplete="address-level2"></label>
+                    <label class="wallet-field"><span>County or state</span><input type="text" id="wa-region" autocomplete="address-level1" placeholder="Optional"></label>
+                    <label class="wallet-field"><span>Postcode</span><input type="text" id="wa-postcode" autocomplete="postal-code"></label>
+                    <label class="wallet-field"><span>Country</span><select id="wa-country" autocomplete="country"></select></label>
+                    <label class="wallet-field"><span>Phone</span><input type="tel" id="wa-phone" autocomplete="tel" placeholder="Optional"></label>
+                  </div>
+                  <label id="wa-home-wrap" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg);cursor:pointer;margin:12px 0 0;"><input type="checkbox" id="wa-home" style="width:14px;height:14px;margin:0;accent-color:var(--accent-strong);"> This is my home address</label>
+                  <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+                    <button class="account-action-btn" onclick="saveWalletAddress()">Save address</button>
+                    <button class="account-action-btn" onclick="closeAddressForm()">Cancel</button>
+                    <span id="wa-status" style="font-size:12.5px;color:var(--muted);"></span>
                   </div>
                 </div>
 
@@ -5155,18 +5182,33 @@
         autoUnderToggle();
         syncAmountFields();
         var cards = w.cards || [];
-        document.getElementById('wallet-cards').innerHTML = cards.length ? cards.map(function(c) {
+        var addrs = w.addresses || [];
+        _walletAddresses = addrs;
+        document.getElementById('wallet-cards').innerHTML = (cards.length ? cards.map(function(c) {
+          var billedTo = c.billing && c.billing.address_id ? c.billing.address_id : '';
           var lim = [];
           if (c.limits && c.limits.per_purchase != null) lim.push('up to ' + money(c.limits.per_purchase, l.currency) + ' a purchase');
           if (c.limits && c.limits.per_month != null) lim.push(money(c.limits.per_month, l.currency) + ' a month');
           return '<div class="wallet-card-row">' +
             '<span style="font-weight:600;">' + escHtml(c.brand || 'Card') + ' •••• ' + escHtml(c.last4) + '</span>' +
             '<span class="muted">' + String(c.exp_month).padStart(2, '0') + '/' + String(c.exp_year).slice(-2) + (c.label ? ' · ' + escHtml(c.label) : '') + (c.is_default ? ' · default' : '') + (lim.length ? ' · ' + lim.join(', ') : '') + '</span>' +
-            '<span style="flex:1;"></span>' +
+            '<span class="wallet-row-actions">' +
+            (addrs.length > 1 ? '<label class="muted">Billed to <select onchange="setCardBilling(\'' + c.id + '\', this.value)">' + billingOptions(billedTo) + '</select></label>' : '') +
             (c.is_default ? '' : '<button class="conn-btn conn-btn-manage" onclick="setDefaultCard(\'' + c.id + '\')">Make default</button>') +
             '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletCard(\'' + c.id + '\', this)">Remove</button>' +
-            '</div>';
-        }).join('') : '<div style="font-size:13px;color:var(--muted);">No cards yet. Until you add one, Closedhand can only pay on sites that already have a card saved, and still asks you first.</div>';
+            '</span></div>';
+        }).join('') : '<div style="font-size:13px;color:var(--muted);">No cards yet. Until you add one, Closedhand can only pay on sites that already have a card saved, and still asks you first.</div>') + addCard('Add a card', 'toggleAddCard()');
+        document.getElementById('wallet-addresses').innerHTML = (addrs.length ? addrs.map(function(a) {
+          return '<div class="wallet-card-row">' +
+            '<span style="font-weight:600;">' + escHtml(a.label) + '</span>' +
+            '<span class="muted">' + escHtml(addressLine(a)) + (a.is_home ? ' · home' : '') + '</span>' +
+            '<span class="wallet-row-actions">' +
+            (a.is_home ? '' : '<button class="conn-btn conn-btn-manage" onclick="makeHomeAddress(\'' + a.id + '\')">Make home</button>') +
+            '<button class="conn-btn conn-btn-manage" onclick="openAddressForm(\'' + a.id + '\')">Edit</button>' +
+            '<button class="conn-btn conn-btn-disconnect" onclick="removeWalletAddress(\'' + a.id + '\', this)">Remove</button>' +
+            '</span></div>';
+        }).join('') : '<div style="font-size:13px;color:var(--muted);">No addresses yet. Until you add one, Closedhand asks where an order should go, unless the site already knows.</div>') + addCard('Add an address', 'openAddressForm()');
+        document.getElementById('wc-billing').innerHTML = billingOptions(document.getElementById('wc-billing').value);
         var led = w.ledger || [];
         document.getElementById('wallet-ledger').innerHTML = led.length ? led.slice(0, 15).map(function(r) {
           var when = new Date(r.created_at);
@@ -5236,6 +5278,95 @@
       el.style.display = el.style.display === 'none' ? 'block' : 'none';
       if (el.style.display === 'block') document.getElementById('wc-number').focus();
     }
+    // Addresses: one is home, where cards are billed and orders go unless a
+    // card or a purchase names another.
+    var _walletAddresses = [], _editingAddress = null;
+    function countryName(code) {
+      try { return new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }).of(code) || code; } catch (e) { return code; }
+    }
+    function addressLine(a) {
+      return [a.line1, a.line2, a.city, a.region, a.postcode, a.country ? countryName(a.country) : ''].filter(Boolean).join(', ');
+    }
+    // Every country the browser can name, by its two-letter code: codes that
+    // are not countries, and old codes that now mean another, are left out.
+    function fillCountries(sel) {
+      if (sel.options.length) return;
+      var names, list = [], L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      var notCountries = { EU: 1, EZ: 1, UN: 1, QO: 1, XA: 1, XB: 1, ZZ: 1, AC: 1, CP: 1, DG: 1, EA: 1, IC: 1, TA: 1 };
+      try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region', fallback: 'none' }); } catch (e) { return; }
+      for (var i = 0; i < 26; i++) for (var j = 0; j < 26; j++) {
+        var code = L[i] + L[j], name;
+        if (notCountries[code]) continue;
+        try { if (Intl.getCanonicalLocales('und-' + code)[0] !== 'und-' + code) continue; name = names.of(code); } catch (e) { continue; }
+        if (name && name !== code) list.push([code, name]);
+      }
+      list.sort(function (a, b) { return a[1].localeCompare(b[1]); });
+      sel.innerHTML = '<option value="">Choose</option>' + list.map(function (c) { return '<option value="' + c[0] + '">' + escHtml(c[1]) + '</option>'; }).join('');
+    }
+    function homeCountry() {
+      var home = _walletAddresses.filter(function (a) { return a.is_home; })[0];
+      if (home) return home.country;
+      var region = String(navigator.language || '').split('-')[1];
+      return region ? region.toUpperCase() : '';
+    }
+    function billingOptions(selected) {
+      var home = _walletAddresses.filter(function (a) { return a.is_home; })[0];
+      var homeText = !home ? 'Your home address' : /^home$/i.test(home.label) ? escHtml(home.label) : escHtml(home.label) + ' (home)';
+      return '<option value="">' + homeText + '</option>' + _walletAddresses.filter(function (a) { return !a.is_home; }).map(function (a) {
+        return '<option value="' + a.id + '"' + (a.id === selected ? ' selected' : '') + '>' + escHtml(a.label) + '</option>';
+      }).join('');
+    }
+    function openAddressForm(id) {
+      var form = document.getElementById('wallet-addr-form');
+      // The tile opens the form for a new address, and closes it again.
+      if (!id && form.style.display === 'block' && !_editingAddress) { closeAddressForm(); return; }
+      var a = id ? _walletAddresses.filter(function (x) { return x.id === id; })[0] : null;
+      _editingAddress = a ? a.id : null;
+      var first = !_walletAddresses.length;
+      ['label', 'name', 'line1', 'line2', 'city', 'region', 'postcode', 'phone'].forEach(function (k) { document.getElementById('wa-' + k).value = a ? (a[k] || '') : ''; });
+      document.getElementById('wa-label').placeholder = first ? 'Home' : 'e.g. Work';
+      var sel = document.getElementById('wa-country');
+      fillCountries(sel);
+      sel.value = (a && a.country) || homeCountry();
+      document.getElementById('wa-home').checked = false;
+      document.getElementById('wa-home-wrap').style.display = first || (a && a.is_home) ? 'none' : 'flex';
+      document.getElementById('wa-status').textContent = '';
+      form.style.display = 'block';
+      document.getElementById(a ? 'wa-line1' : 'wa-label').focus();
+    }
+    function closeAddressForm() {
+      document.getElementById('wallet-addr-form').style.display = 'none';
+      _editingAddress = null;
+    }
+    async function saveWalletAddress() {
+      var st = document.getElementById('wa-status'); st.textContent = 'Saving…';
+      var val = function (k) { return document.getElementById('wa-' + k).value; };
+      var body = { label: val('label'), name: val('name'), line1: val('line1'), line2: val('line2'), city: val('city'), region: val('region'),
+        postcode: val('postcode'), country: val('country'), phone: val('phone'), is_home: document.getElementById('wa-home').checked };
+      var editing = _editingAddress;
+      var res = await fetch(editing ? '/api/wallet/addresses/' + editing : '/api/wallet/addresses', { method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) { st.textContent = data.error || 'Could not save the address'; return; }
+      closeAddressForm();
+      showToast(editing ? 'Address saved' : 'Address added');
+      loadWallet();
+    }
+    async function makeHomeAddress(id) {
+      var res = await fetch('/api/wallet/addresses/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_home: true }) });
+      if (res.ok) loadWallet(); else showToast('Could not change it', true);
+    }
+    async function removeWalletAddress(id, btn) {
+      var a = _walletAddresses.filter(function (x) { return x.id === id; })[0];
+      var text = a && a.is_home && _walletAddresses.length > 1 ? 'Remove your home address? The oldest address left becomes home.'
+        : 'Remove this address from the Wallet? Cards billed there are billed to your home address instead.';
+      if (!(await askFirst(btn, { text: text, yes: 'Remove' }))) return;
+      var res = await fetch('/api/wallet/addresses/' + id, { method: 'DELETE' });
+      if (res.ok) { showToast('Removed'); loadWallet(); } else showToast('Could not remove it', true);
+    }
+    async function setCardBilling(id, addressId) {
+      var res = await fetch('/api/wallet/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ billing: { address_id: addressId } }) });
+      if (res.ok) { showToast('Saved'); loadWallet(); } else showToast('Could not change it', true);
+    }
     async function addWalletCard() {
       var st = document.getElementById('wc-status'); st.textContent = 'Saving…';
       var body = {
@@ -5244,7 +5375,7 @@
         exp_year: document.getElementById('wc-exp-year').value,
         cvc: document.getElementById('wc-cvc').value,
         holder: document.getElementById('wc-holder').value,
-        billing: { postcode: document.getElementById('wc-postcode').value },
+        billing: { address_id: document.getElementById('wc-billing').value },
         label: document.getElementById('wc-label').value,
         limits: { per_purchase: document.getElementById('wc-per-purchase').value, per_month: document.getElementById('wc-per-month').value },
       };
@@ -5252,7 +5383,7 @@
       var data = await res.json().catch(function() { return {}; });
       if (!res.ok) { st.textContent = data.error || 'Could not save the card'; return; }
       st.textContent = '';
-      ['wc-number','wc-exp-month','wc-exp-year','wc-cvc','wc-holder','wc-postcode','wc-label','wc-per-purchase','wc-per-month'].forEach(function(id) { document.getElementById(id).value = ''; });
+      ['wc-number','wc-exp-month','wc-exp-year','wc-cvc','wc-holder','wc-billing','wc-label','wc-per-purchase','wc-per-month'].forEach(function(id) { document.getElementById(id).value = ''; });
       syncAmountFields();
       document.getElementById('wallet-add').style.display = 'none';
       showToast('Card added');

@@ -1017,6 +1017,30 @@ function cleanLimits(l) {
   return out;
 }
 
+// Addresses Closedhand fills in at checkout (lib/wallet.js). One is home:
+// cards are billed there and orders go there unless something else is named.
+const ADDRESS_COLUMNS = "id, label, name, line1, line2, city, region, postcode, country, phone, is_home";
+function cleanAddress(b) {
+  const t = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
+  const a = {
+    label: t(b.label, 40), name: t(b.name, 80) || null, line1: t(b.line1, 120), line2: t(b.line2, 120) || null,
+    city: t(b.city, 80) || null, region: t(b.region, 80) || null, postcode: t(b.postcode, 16) || null,
+    country: t(b.country, 2).toUpperCase(), phone: t(b.phone, 30) || null,
+  };
+  if (!a.line1) return { error: "Enter the first line of the address." };
+  if (!a.city && !a.postcode) return { error: "Enter the town or the postcode." };
+  if (!/^[A-Z]{2}$/.test(a.country)) return { error: "Choose the country." };
+  return { address: a };
+}
+// A card's billing address: one of the person's own saved addresses, or
+// null for home.
+async function billingRef(userId, billing) {
+  const id = billing && billing.address_id ? String(billing.address_id) : "";
+  if (!id) return null;
+  const { data } = await supabase.from("wallet_addresses").select("id").eq("user_id", userId).eq("id", id).limit(1);
+  return data && data.length ? { address_id: id } : null;
+}
+
 app.get("/api/wallet", async (req, res) => {
   const userId = getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -1025,14 +1049,17 @@ app.get("/api/wallet", async (req, res) => {
   if (!walletAvailable()) return res.json({ available: false, reason: "no encryption key", cards: [], limits: {}, ledger: [] });
   try {
     const { data: cards, error } = await supabase.from("wallet_cards")
-      .select("id, label, brand, last4, exp_month, exp_year, holder, limits, is_default, created_at")
+      .select("id, label, brand, last4, exp_month, exp_year, holder, billing, limits, is_default, created_at")
       .eq("user_id", userId).order("is_default", { ascending: false }).order("created_at", { ascending: true });
     if (error) throw error;
+    const { data: addresses, error: e2 } = await supabase.from("wallet_addresses").select(ADDRESS_COLUMNS)
+      .eq("user_id", userId).order("is_home", { ascending: false }).order("created_at", { ascending: true });
+    if (e2) throw e2;
     const { data: profile } = await supabase.from("profiles").select("settings").eq("id", userId).single();
     const { data: ledger } = await supabase.from("spend_ledger")
       .select("id, merchant, host, title, amount, currency, amount_text, status, approved_via, source, card_id, created_at")
       .eq("user_id", userId).order("created_at", { ascending: false }).limit(30);
-    res.json({ available: true, cards: cards || [], limits: (profile && profile.settings && profile.settings.spend_limits) || {}, ledger: ledger || [] });
+    res.json({ available: true, cards: cards || [], addresses: addresses || [], limits: (profile && profile.settings && profile.settings.spend_limits) || {}, ledger: ledger || [] });
   } catch (e) {
     console.error("[wallet] list error:", e.message);
     res.status(500).json({ error: "Could not load the wallet" });
@@ -1069,11 +1096,11 @@ app.post("/api/wallet", async (req, res) => {
       holder: String(b.holder || "").trim().slice(0, 80) || null,
       enc_number: encryptString(number),
       enc_cvc: cvc ? encryptString(cvc) : null,
-      billing: b.billing && typeof b.billing === "object" ? { postcode: String(b.billing.postcode || "").slice(0, 16), country: String(b.billing.country || "").slice(0, 2).toUpperCase() } : null,
+      billing: await billingRef(userId, b.billing),
       limits: cleanLimits(b.limits),
       is_default: !count,
     };
-    const { data, error } = await supabase.from("wallet_cards").insert(row).select("id, label, brand, last4, exp_month, exp_year, holder, limits, is_default").single();
+    const { data, error } = await supabase.from("wallet_cards").insert(row).select("id, label, brand, last4, exp_month, exp_year, holder, billing, limits, is_default").single();
     if (error) throw error;
     res.json({ success: true, card: data });
   } catch (e) {
@@ -1090,6 +1117,7 @@ app.patch("/api/wallet/:id", async (req, res) => {
     const b = req.body || {};
     const patch = { updated_at: new Date().toISOString() };
     if (b.label !== undefined) patch.label = String(b.label || "").trim().slice(0, 60) || null;
+    if (b.billing !== undefined) patch.billing = await billingRef(userId, b.billing);
     if (b.limits !== undefined) {
       patch.limits = cleanLimits(b.limits);
       const { data: card } = await supabase.from("wallet_cards").select("limits").eq("id", req.params.id).eq("user_id", userId).maybeSingle();
@@ -1119,6 +1147,97 @@ app.delete("/api/wallet/:id", async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Could not remove the card" });
+  }
+});
+
+app.post("/api/wallet/addresses", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
+  if (!mcpClient.isSelfHost()) return res.status(400).json({ error: "The Wallet is for a Closedhand you run yourself." });
+  try {
+    const { address, error: bad } = cleanAddress(req.body || {});
+    if (bad) return res.status(400).json({ error: bad });
+    const { data: existing, error: e0 } = await supabase.from("wallet_addresses").select("id").eq("user_id", userId);
+    if (e0) throw e0;
+    const first = !existing || !existing.length;
+    if (!address.label) {
+      if (!first) return res.status(400).json({ error: "Give it a short name, such as Work." });
+      address.label = "Home";
+    }
+    const home = first || (req.body || {}).is_home === true;
+    if (home && !first) {
+      const { error: e1 } = await supabase.from("wallet_addresses").update({ is_home: false }).eq("user_id", userId);
+      if (e1) throw e1;
+    }
+    const { data, error } = await supabase.from("wallet_addresses").insert({ ...address, user_id: userId, is_home: home }).select(ADDRESS_COLUMNS).single();
+    if (error) throw error;
+    res.json({ success: true, address: data });
+  } catch (e) {
+    console.error("[wallet] address add error:", e.message);
+    res.status(500).json({ error: "Could not save the address" });
+  }
+});
+
+app.patch("/api/wallet/addresses/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
+  try {
+    const b = req.body || {};
+    const patch = { updated_at: new Date().toISOString() };
+    if (b.line1 !== undefined) {
+      const { address, error: bad } = cleanAddress(b);
+      if (bad) return res.status(400).json({ error: bad });
+      if (!address.label) return res.status(400).json({ error: "Give it a short name, such as Work." });
+      Object.assign(patch, address);
+    }
+    if (b.is_home === true) {
+      const { error: e0 } = await supabase.from("wallet_addresses").update({ is_home: false }).eq("user_id", userId);
+      if (e0) throw e0;
+      patch.is_home = true;
+    }
+    const { error } = await supabase.from("wallet_addresses").update(patch).eq("id", req.params.id).eq("user_id", userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    console.error("[wallet] address update error:", e.message);
+    res.status(500).json({ error: "Could not update the address" });
+  }
+});
+
+// Removing an address sends the cards billed there back to home, and when
+// home itself goes, the oldest address left becomes home.
+app.delete("/api/wallet/addresses/:id", async (req, res) => {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Not logged in" });
+  if (!(await requireSetupAccess(req, res))) return;
+  try {
+    const id = req.params.id;
+    const { data: gone, error: e0 } = await supabase.from("wallet_addresses").select("id, is_home").eq("id", id).eq("user_id", userId).maybeSingle();
+    if (e0) throw e0;
+    if (!gone) return res.json({ success: true });
+    const { data: cards, error: e1 } = await supabase.from("wallet_cards").select("id, billing").eq("user_id", userId);
+    if (e1) throw e1;
+    for (const c of cards || []) {
+      if (c.billing && c.billing.address_id === id) {
+        const { error: e2 } = await supabase.from("wallet_cards").update({ billing: null }).eq("id", c.id).eq("user_id", userId);
+        if (e2) throw e2;
+      }
+    }
+    const { error } = await supabase.from("wallet_addresses").delete().eq("id", id).eq("user_id", userId);
+    if (error) throw error;
+    if (gone.is_home) {
+      const { data: left } = await supabase.from("wallet_addresses").select("id").eq("user_id", userId).order("created_at", { ascending: true }).limit(1);
+      if (left && left.length) {
+        const { error: e3 } = await supabase.from("wallet_addresses").update({ is_home: true }).eq("id", left[0].id).eq("user_id", userId);
+        if (e3) throw e3;
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error("[wallet] address remove error:", e.message);
+    res.status(500).json({ error: "Could not remove the address" });
   }
 });
 

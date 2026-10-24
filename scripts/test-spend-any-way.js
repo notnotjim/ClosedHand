@@ -19,7 +19,7 @@ function guard() {
   };
   const stubs = {
     "./db": { supabase: { from: query } },
-    "./wallet": { lastCardFill: () => null, listCards: async () => [] },
+    "./wallet": { lastCardFill: () => null, lastAddressFill: () => null, listCards: async () => [] },
     "./fx": { convert: async (v) => v },
   };
   const context = { module: { exports: {} }, URL, console, Date, Map, Promise, Number, String, Math, require: (name) => stubs[name] || {} };

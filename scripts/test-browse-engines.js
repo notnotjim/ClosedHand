@@ -26,6 +26,7 @@ test("the job decides, sites that watch for automation always run visible, and a
   engines.ran("u", "visible", "https://tickets.example.com/basket");
   assert.equal(engines.choose("u", { action: "click", ref: 4 }), "visible", "a follow-up stays in the browser the job is in");
   assert.equal(engines.choose("u", { action: "fill_card" }), "visible", "the card goes where the checkout is");
+  assert.equal(engines.choose("u", { action: "fill_address" }), "visible", "so does the address");
   assert.equal(engines.carryOver("u", "headless"), "https://tickets.example.com/basket", "a switch picks up on the page the job was on");
   assert.equal(engines.carryOver("u", "visible"), null);
 });
@@ -68,7 +69,8 @@ test("the tool flips a read by itself, never an action, and keeps the probe to i
   assert.match(browse, /if \(!onlyReads\) \{[\s\S]{0,200}so nothing was done there\. It runs in the visible browser from now on: do the step again\./);
   assert.match(browse, /answer = await sandboxBrowse\(userId, \{ \.\.\.again, engine: "visible" \}, 60000\);/);
   assert.match(browse, /delete parsed\.probe;/);
-  assert.match(browse, /wallet\.fillScript\(secret, require\("\.\.\/browse-engine"\)\.choose\(userId, \{ action: "fill_card" \}\)\)/);
+  assert.match(browse, /wallet\.fillScript\(secret, require\("\.\.\/browse-engine"\)\.choose\(userId, \{ action: "fill_card" \}\), await wallet\.billingFor\(userId, secret\)\)/);
+  assert.match(browse, /wallet\.addressScript\(address, require\("\.\.\/browse-engine"\)\.choose\(userId, \{ action: "fill_address" \}\)\)/);
   // web_fetch hands what plain fetching cannot read to the browsers.
   assert.match(handlers, /if \(require\("\.\.\/blocked-page"\)\.looksBlocked\(body\)\) \{\n\s*return \(await inBrowser\(\)\) \|\|/);
   assert.match(handlers, /if \(text\.length < 300 && \/<script\/i\.test\(body\)\) \{/);
