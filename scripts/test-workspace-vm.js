@@ -1,6 +1,12 @@
 // Explicit Mac integration test. Uses its own disk, token and synthetic data,
 // never launches the app, Bridge, a real account or the user's database.
 // node scripts/test-workspace-vm.js PATH_TO_HOST_CHECK_OPTIONS
+// Swept up with the other tests it has no options file to run against, so it
+// says so and steps aside.
+if (!process.argv[2]) {
+  console.log('test-workspace-vm: skipped; run it on its own with a host check options file.');
+  process.exit(0);
+}
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');

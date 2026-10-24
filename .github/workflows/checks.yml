@@ -198,6 +198,13 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/mcp-test" --ignore-scripts --no-audit --no-fund @modelcontextprotocol/sdk@1.32.1
           NODE_PATH="$RUNNER_TEMP/mcp-test/node_modules" node --test scripts/test-connection-media.js scripts/test-mcp-setup.js scripts/test-mcp-discovery.js
 
+      # The web chat's connection: frames relayed, bad tokens and foreign
+      # origins refused.
+      - name: Web chat connection
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ws-test" --ignore-scripts --no-audit --no-fund ws@8.22.0
+          NODE_PATH="$RUNNER_TEMP/ws-test/node_modules" node --test scripts/test-chat-proxy.js
+
       # Every kind of file reads through the one reader, scans and iPhone
       # photos included, on Tesseract as in Docker.
       - name: File reader
