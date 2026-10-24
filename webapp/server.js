@@ -5053,7 +5053,7 @@ app.get("/api/agents", async (req, res) => {
     res.json((data || []).map(({ runtime, ...task }) => {
       const c = task.status === "awaiting_confirmation" ? runtime?.confirmation : null;
       return { ...task, report_id: reportOf.get(task.id) || null,
-        waiting: c ? { platform: c.asked?.platform || c.platform || null, since: c.asked?.at || c.pausedAt || null, question: c.asked?.text || null } : null };
+        waiting: c ? { platform: c.asked?.platform || c.platform || null, since: c.asked?.at || c.pausedAt || null, question: c.asked?.text || null, kind: c.kind || null } : null };
     }));
   } catch (err) {
     console.error("Agents list error:", err.message);

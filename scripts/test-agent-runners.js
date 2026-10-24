@@ -44,12 +44,12 @@ function harness(options = {}) {
   const db=database(options.tables), calls=[], sends=[], modules=new Map(), intervals=[];
   const store={ profile:{ settings:{llm_provider:"custom"},display_name:"Fixture" }, notes:{},connections:[], conversations:[], save:async()=>{}, markDirty(){} };
   const ctx={ store:{}, runWithInheritedContext:fn=>fn(), activeUserId:"user", pendingConfirmations:{} };
-  const tools=["get_tool_details","search_cache","sandbox_file_download","web_search"].map(name=>({name,description:name,input_schema:{type:"object",properties:{}}}));
+  const tools=["get_tool_details","search_cache","sandbox_file_download","web_search","sandbox_browse"].map(name=>({name,description:name,input_schema:{type:"object",properties:{}}}));
   const llm={ getUserLLMClient:()=>({client:{messages:{create:async p=>{calls.push(p);return options.model ? options.model(p,calls.length,db) : {stop_reason:"end_turn",content:[{type:"text",text:"The confirmed time is 20:00."}],usage:{input_tokens:100,output_tokens:20}};}}},model:"fixture"}),
     resolveUserModel:()=>"fixture", getInternalClient:()=>llm.getUserLLMClient() };
   const stubs={ "context":ctx,"db":{supabase:db},"../user-store":{UserStore:{load:async()=>structuredCloneStore()},supabase:db},
     "user-mutex":{acquireUserMutex:async(id,fn)=>fn()},"storage":{swapToCloudStore:s=>{ctx.activeUserStore=s;ctx.store=s;},syncAdapterBack(){},cleanupUserContext(){}},
-    "tools/handlers":{isInternalTool:()=>true,handleInternalTool:async(name,input)=>{sends.push({name,input});return {success:true,source:"fixture",time:"20:00"};}},
+    "tools/handlers":{isInternalTool:()=>true,handleInternalTool:async(name,input)=>{sends.push({name,input});return options.tool ? options.tool(name,input) : {success:true,source:"fixture",time:"20:00"};}},
     "mcp":{getMcpToolDefsFor:()=>[],warmUserMcp:async()=>{},callMCPTool:async()=>({})},
     "tools/definitions":{INTERNAL_TOOLS:tools,usable:()=>true},"messaging":{sendToPlatform:async(...args)=>options.send ? options.send(args, sends) : sends.push(args)},
     "skills":{getSkillsForPrompt:()=>""},"llm":llm,"spend-guard":{spendIntent:()=>null,refLabel:()=>""},"outbound-guard":{outboundIntent:()=>null},"user-mcp":{isUserMcpTool:()=>false,needsMcpConfirmation:()=>false,mcpQuestion:()=>""},"claims-check":{},
@@ -187,6 +187,31 @@ test("one-off runner answers in the originating chat without creating a schedule
   assert.equal(h.db.tables.automations?.length || 0, 0);
   assert.equal(h.sends.length, 0);
 });
+test("a job on a sign-in page asks in its chat, waits, and carries on from there once the person has signed in", async () => {
+  const h = harness({
+    tool: (name) => name === "sandbox_browse" ? { url: "https://shop.example.com/account/login", sign_in_needed: "This is a sign-in page (shop.example.com).", sign_in_site: "shop.example.com" } : { success: true },
+    model: (p, n) => n === 1 ? { stop_reason: "tool_use", content: [{ type: "tool_use", id: "b1", name: "sandbox_browse", input: { action: "outline", url: "https://shop.example.com/orders" } }], usage: { input_tokens: 10, output_tokens: 5 } }
+      : { stop_reason: "end_turn", content: [{ type: "text", text: "Order 1 arrives Monday." }], usage: { input_tokens: 10, output_tokens: 5 } },
+  });
+  const agents = h.load("agents");
+  await agents.startAgent("user", "whatsapp_linked", "self", "When does my shop.example.com order arrive?");
+  await until(() => h.db.tables.agent_tasks[0].status === "awaiting_confirmation");
+  const pending = h.ctx.pendingConfirmations.user;
+  assert.equal(pending.kind, "sign_in");
+  assert.equal(pending.site, "shop.example.com");
+  const asked = h.sends.filter((x) => Array.isArray(x) && /needs you signed in/.test(x[2]));
+  assert.equal(asked.length, 1, "asked once, in the chat it came from");
+  assert.equal(asked[0][1], "self");
+  assert.deepEqual(h.db.tables.agent_tasks[0].runtime.signInAsked, ["shop.example.com"]);
+  assert.equal(h.db.tables.agent_tasks[0].runtime.confirmation.kind, "sign_in", "the dashboard card knows what it waits for");
+  assert.equal(await agents.resumeAgentAfterConfirmation(pending, true, "self"), "Thanks, carrying on.");
+  await until(() => h.db.tables.agent_tasks[0].status === "completed");
+  const resumed = JSON.stringify(h.calls[1].messages.at(-1));
+  assert.match(resumed, /sign_in_site/, "the page it stopped on");
+  assert.match(resumed, /The person says they have signed in to shop\.example\.com on the sandbox computer\. Look at the page again/);
+  assert.equal(h.db.tables.agent_tasks[0].result, "Order 1 arrives Monday.");
+});
+
 test("an answer whose chat app is offline waits and goes once it is back, once", async () => {
   let online = false;
   const h = harness({ tables: { agent_tasks: [row({ platform: "whatsapp_linked", chat_id: "self", status: "completed", delivery_status: "pending", completed_at: new Date().toISOString(), result: "The train leaves at 20:00." })] },
