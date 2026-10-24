@@ -44,7 +44,7 @@ html { font-size: 100%; }
 /* The fist is drawn cream; on cream it takes the text colour. */
 :root[data-theme="light"] .ch-brand > img, :root[data-theme="light"] .ch-brand img { filter: brightness(0.11); }
 :root {
-  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-ui: 'DM Sans', system-ui, sans-serif;
   --font-brand: 'Fraunces', Georgia, serif;
   --ui-small: .8125rem;
   --ui-label: .875rem;
