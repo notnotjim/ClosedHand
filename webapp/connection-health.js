@@ -22,7 +22,7 @@ function split(rows) {
 // not be fetched and the old ones are kept.
 function cleared(metadata) {
   if (!metadata) return metadata;
-  const { reconnect_required, reconnect_reason, ...rest } = metadata;
+  const { reconnect_required, reconnect_reason, reconnect_told, ...rest } = metadata;
   return rest;
 }
 

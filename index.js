@@ -234,6 +234,8 @@ async function main() {
   require("./lib/bug-reports").start();
   // Pages archived three months ago are deleted (lib/page-expiry.js).
   require("./lib/page-expiry").start();
+  // A sign-in to do again that could not be told yet (lib/connection-alert.js).
+  require("./lib/connection-alert").start();
   await startPulse();
   // Warm the runtime-config cache before anything reads it synchronously.
   // getConfCached returns undefined on a cold cache, so an unwarmed read of

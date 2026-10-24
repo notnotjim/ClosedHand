@@ -605,16 +605,17 @@ class UserStore {
   async markConnectionReconnectRequired(service, reason = "dead refresh token") {
     const conn = this.connections[service];
     if (!conn || conn.metadata?.reconnect_required) return; // already flagged
-    conn.metadata = { ...(conn.metadata || {}), reconnect_required: true, reconnect_reason: reason };
+    conn.metadata = { ...(conn.metadata || {}), reconnect_required: true, reconnect_reason: reason, reconnect_told: false };
     await supabase
       .from("connections")
       .update({ metadata: conn.metadata })
       .eq("user_id", this.userId)
       .eq("service", service);
     console.log(`[connections] ${service} marked reconnect_required for ${this.userId} (${reason})`);
-    // Once per failure (the flag above returns early after this), tell the
-    // person where they get their updates, so it never dies unnoticed.
-    try { await require("./lib/connection-alert").tellOwner(this.userId, this, service); } catch (_) {}
+    // Once per failure, tell the person where they get their updates, so it
+    // never dies unnoticed; held in quiet hours or with no chat app chosen,
+    // it is told by the next sweep (lib/connection-alert.js start).
+    try { await require("./lib/connection-alert").tellOwnerOnce(this.userId, this, service); } catch (_) {}
   }
 
   // Delete a service connection (e.g. user says "disconnect Shopify")

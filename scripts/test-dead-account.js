@@ -28,7 +28,7 @@ test('flagging an account sends the alert, and only the first time', () => {
   const us = fs.readFileSync(path.join(root, 'user-store.js'), 'utf8');
   const body = us.slice(us.indexOf('async markConnectionReconnectRequired'), us.indexOf('async deleteConnection'));
   assert.match(body, /if \(!conn \|\| conn\.metadata\?\.reconnect_required\) return;/);
-  assert.match(body, /require\("\.\/lib\/connection-alert"\)\.tellOwner\(this\.userId, this, service\)/);
+  assert.match(body, /require\("\.\/lib\/connection-alert"\)\.tellOwnerOnce\(this\.userId, this, service\)/);
 });
 
 test('the dashboard, setup, chat and lookup all say it stopped working', () => {
