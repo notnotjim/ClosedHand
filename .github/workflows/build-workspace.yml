@@ -1,0 +1,48 @@
+name: Build the Mac sandbox computer
+
+# Closedhand for Mac runs the sandbox computer in a small Linux VM whose
+# kernel, initrd and disk are downloaded on first use, as
+# desktop/workspace/manifest.json lists them. This builds them from the
+# current sandbox image and code (desktop/workspace/build-runtime.sh) on an
+# arm64 Linux machine, publishes them as a workspace-<version> release, never
+# the latest one (the Mac download is the latest release), and leaves the new
+# manifest as an artifact to commit before tagging the app. Run by hand.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build kernel, initrd and disk
+        run: desktop/workspace/build-runtime.sh "$RUNNER_TEMP/workspace"
+
+      - name: Publish as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OUT="$RUNNER_TEMP/workspace"
+          VERSION=$(node -p "require('$OUT/manifest.json').version")
+          TAG="workspace-$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG is already published."
+          else
+            gh release create "$TAG" "$OUT/kernel" "$OUT/initrd" "$OUT/root.ext4.gz" \
+              --title "Mac sandbox computer $VERSION" \
+              --notes "The sandbox computer for Closedhand for Mac, built from ${GITHUB_SHA::7}. The app downloads it on first use." \
+              --prerelease --latest=false --target "$GITHUB_SHA"
+          fi
+          cat "$OUT/manifest.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace-manifest
+          path: ${{ runner.temp }}/workspace/manifest.json
