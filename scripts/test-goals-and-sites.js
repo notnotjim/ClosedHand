@@ -66,11 +66,11 @@ test("trusted sites live in chat, not in a list that reads like the only sites a
 });
 
 test("Pulse weighs what moves a goal forward", async () => {
-  const { triage } = require("../lib/pulse-triage");
+  const { notice } = require("../lib/pulse-triage");
   let system = "";
-  await triage({ items: ["EMAIL from a@example.com: venue confirmed"], level: "medium", goals: ["Run the Lisbon half marathon in April"], fallback: async (s) => { system = s; return '{"pulse":false,"flagged":[]}'; } });
-  assert.match(system, /The person is working towards: "Run the Lisbon half marathon in April"\. An item that moves one of these forward or puts one at risk is worth flagging\./);
-  await triage({ items: ["x"], level: "medium", fallback: async (s) => { system = s; return "{}"; } });
+  await notice({ items: ["[1] EMAIL from a@example.com: venue confirmed"], level: "medium", goals: ["Run the Lisbon half marathon in April"], ask: async (s) => { system = s; return '{"pulse":false,"flagged":[]}'; } });
+  assert.match(system, /They are working towards: "Run the Lisbon half marathon in April"; something that moves one forward or puts one at risk can clear the bar\./);
+  await notice({ items: ["[1] x"], level: "medium", ask: async (s) => { system = s; return "{}"; } });
   assert.doesNotMatch(system, /working towards/, "no goals, no line");
   assert.match(read("lib/pulse.js"), /const goals = \(store\.goals \|\| \[\]\)\.filter\(\(g\) => g\.status === "active"\)/, "active goals, each with its next step");
 });

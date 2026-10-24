@@ -38,12 +38,12 @@ test("what Closedhand did lately comes from its finished jobs", async () => {
 });
 
 test('the screen and the writer are both given it', async () => {
-  const { triage } = require('../lib/pulse-triage');
+  const { notice } = require('../lib/pulse-triage');
   let message = '';
-  await triage({ items: ['EMAIL from a@example.test: x'], level: 'medium', known: ['Reminder already set: dentist-fixture: reminder at 07:30, for 09:00'], fallback: async (s, m) => { message = m; return '{"pulse":false}'; } });
-  assert.match(message, /Already known \(an item these cover adds nothing unless it changes them\):\nReminder already set: dentist-fixture/);
+  await notice({ items: ['[1] EMAIL from a@example.test: x'], level: 'medium', known: ['Reminder already set: dentist-fixture: reminder at 07:30, for 09:00'], ask: async (s, m) => { message = m; return '{"pulse":false}'; } });
+  assert.match(message, /ALREADY KNOWN \(an item these cover adds nothing unless it changes them\):\nReminder already set: dentist-fixture/);
   const pulse = fs.readFileSync(path.join(__dirname, '..', 'lib', 'pulse.js'), 'utf8');
-  assert.match(pulse, /const upcomingEvents = \(soonEvents \|\| \[\]\)\.filter\(\(ev\) => ![^\n]*&& !pulseContext\.coveredByReminder\(ev\.received_at, reminders\)\);/);
+  assert.match(pulse, /pulseContext\.coveredByReminder\(r\.received_at, reminders\) \? " \(a reminder will tell them\)"/, 'what a reminder covers is marked, so only a change to it is news');
   assert.match(pulse, /WHAT CLOSEDHAND HAS ALREADY DONE for \$\{userName\} \(current, and newer than any email, draft or record that says otherwise/);
   assert.match(pulse, /REMINDERS ALREADY SET/);
   assert.match(pulse, /never call the entry wrong or "an hour off"/);

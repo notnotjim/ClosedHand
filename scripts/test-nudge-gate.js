@@ -34,7 +34,7 @@ test("a message goes only when the person's LLM clearly says so, and never when 
   assert.deepEqual(no, { send: false, problems: ["The evidence says Thursday"] });
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "x y z", evidence: "", modelFor: judge("I think it is fine") })).send, false, "an answer that is not a verdict");
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "Ravi moved dinner to 19:30.", evidence: "Ravi: 19:30", modelFor: judge('Checked it.\n{"send": true, "problems": []}') })).send, true, "words around the JSON");
-  assert.equal(seen[0].max_tokens, 4000, "room for a reasoning LLM to finish");
+  assert.equal(seen[0].max_tokens, 8000, "room for a reasoning LLM to finish");
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "x y z", evidence: "", modelFor: judge(new Error("provider down")) })).send, false, "fails closed");
   assert.equal((await gate.check({ userId: "u1", store: tokyo, message: "  ", evidence: "" })).send, false);
 });
@@ -126,9 +126,9 @@ test("a flight found at setup is told the way every found flight is", () => {
   assert.doesNotMatch(onboarding, /toLocaleDateString\("en-GB", \{ weekday: "short", day: "numeric", month: "short" \}\)/, "no date in the server's time zone");
 });
 
-test("a screening with no answer is tried again, not passed over", async () => {
-  const { triage } = require("../lib/pulse-triage");
-  const run = (raw) => triage({ items: ["[1] EMAIL from a@example.test: x"], level: "medium", fallback: async () => raw });
+test("a look with no answer is tried again, not passed over", async () => {
+  const { notice } = require("../lib/pulse-triage");
+  const run = (raw) => notice({ items: ["[1] EMAIL from a@example.test: x"], level: "medium", ask: async () => raw });
   assert.deepEqual(await run(null), { failed: true });
   assert.deepEqual(await run("sorry, busy"), { failed: true });
   assert.deepEqual(await run('{"pulse": false}'), { pulse: false });
@@ -139,8 +139,7 @@ test("a screening with no answer is tried again, not passed over", async () => {
 test("Pulse: new mail by when it arrived, local times, the chat lately, the check, and told only when delivered", () => {
   const pulse = read("lib/pulse.js");
   assert.match(pulse, /\.gt\("created_at", lookback\)\.gt\("received_at", new Date\(Date\.now\(\) - 3 \* 86400000\)\.toISOString\(\)\)/);
-  assert.match(pulse, /EVENT starting within 3h: \$\{ev\.summary \|\| "untitled"\}, \$\{require\("\.\/timezone"\)\.eventWhen\(ev\.start \|\| ev\.received_at, userTz\)\}/);
-  assert.match(pulse, /!\/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(String\(ev\.start \|\| ""\)\)/, "all-day events are not starting soon");
+  assert.match(pulse, /const line = \(r\) => watches\.itemText\(r, userTz\)/, "every item, coming ones included, in the person's time");
   assert.match(pulse, /\.\.\.recent\.map\(\(m\) => `Said in the chat lately/);
   const at = pulse.indexOf("const verdictToSend = await gate.check(");
   assert.ok(at > 0 && at < pulse.indexOf("await deliver(text);"), "checked before it goes");
@@ -152,8 +151,13 @@ test("Pulse reads what is new from every connection, not only mail and calendar,
   const pulse = read("lib/pulse.js");
   assert.match(pulse, /\.eq\("user_id", userId\)\.neq\("type", "email"\)\n\s*\.gt\("created_at", lookback\)/, "chats, bookings, pages, bank and the rest");
   assert.match(pulse, /const otherItems = \(newOther \|\| \[\]\)\.filter\(\(r\) => !watches\.ignored\(r\) && unclaimed\(r\)\)/, "never their own messages, nor what was told or is watched");
-  assert.match(pulse, /\.\.\.otherItems\.map\(\(r\) => watches\.itemText\(r, userTz\)/);
-  assert.match(pulse, /const numbered = \[\.\.\.realEmails, \.\.\.otherItems\];/, "and whatever it tells is recorded as told");
+  assert.match(pulse, /\.\.\.otherItems\.map\(line\),/);
+  assert.match(pulse, /const numbered = \[\.\.\.realEmails, \.\.\.otherItems, \.\.\.sentLines\.map\(\(\) => null\), \.\.\.coming, \.\.\.projectLines\.map\(\(\) => null\)\];/, "and whatever it tells is recorded as told, never what they sent");
+  assert.match(pulse, /\.eq\("type", "message"\)\.eq\("data->>sender", "me"\)/, "what they sent is in the picture, so an answered question is not called unanswered");
+  assert.match(pulse, /e\.labels\.includes\("SENT"\)/);
+  assert.match(pulse, /const evidence = \[citedItems\.join\("\\n"\), flaggedText,/, "the check gets what the message stands on");
+  assert.match(pulse, /Never hold back something that clears the bar\./);
+  assert.doesNotMatch(pulse, /is the RIGHT answer most of the time/, "usefulness is the bar, not rarity");
   const { itemText } = require("../lib/watches");
   const msg = { type: "message", source: "whatsapp", data: { chat_name: "Harbour group", sender: "Ana", date: "2026-10-23T18:42:00Z", text: "Still on for lunch?" } };
   assert.match(itemText(msg, "Asia/Tokyo"), /from Ana, Saturday,? 24 October at 03:42: Still on for lunch\?/, "Friday in UTC was Saturday in Tokyo");
