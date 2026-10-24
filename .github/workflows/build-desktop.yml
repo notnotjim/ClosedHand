@@ -52,6 +52,14 @@ jobs:
               echo "release=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            # This job's token may not tag a commit whose workflows differ
+            # from main's (GitHub counts that as changing workflows), so a
+            # workflow change still waiting on Checks waits a day.
+            if ! git diff --quiet "$SHA" "$GITHUB_SHA" -- .github/workflows; then
+              echo "A workflow change since ${SHA::7} has not passed Checks yet; released next time."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             V="${LAST#v}"
             VERSION="${V%.*}.$(( ${V##*.} + 1 ))"
           fi
