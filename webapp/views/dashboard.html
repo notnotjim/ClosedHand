@@ -7115,7 +7115,8 @@
         ? '<div class="agent-step agent-err">' + escapeHtml(couldNotFinish(a.error)) + '</div>' : '';
       if (asked && asked.question) errHtml += '<div class="agent-step">' + escapeHtml(String(asked.question)).replace(/\n/g, '<br>') + '</div>';
       // Raw tool names ("search_cache, sandbox_exec") are machinery leaking.
-      // Say where it looked, in words, deduplicated.
+      // Say where it looked, in words, deduplicated; a tool with no words here
+      // (get_tool_details) is not named at all.
       var toolAreas = {
         search_cache: 'mail and calendar', search_calendar: 'mail and calendar', semantic_search: 'your history',
         web_search: 'the web', web_fetch: 'the web', drive_search: 'Drive', drive_read: 'Drive', drive_list_recent: 'Drive',
@@ -7131,8 +7132,8 @@
       };
       var areas = [];
       (a.tools_used || []).forEach(function(t) {
-        var label = toolAreas[t] || String(t).replace(/_/g, ' ');
-        if (areas.indexOf(label) === -1) areas.push(label);
+        var label = toolAreas[t];
+        if (label && areas.indexOf(label) === -1) areas.push(label);
       });
       var toolsHtml = areas.length
         ? '<div class="agent-step">Worked across: ' + escapeHtml(areas.join(', ')) + '</div>' : '';

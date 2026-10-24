@@ -51,7 +51,7 @@ function harness(options = {}) {
     "user-mutex":{acquireUserMutex:async(id,fn)=>fn()},"storage":{swapToCloudStore:s=>{ctx.activeUserStore=s;ctx.store=s;},syncAdapterBack(){},cleanupUserContext(){}},
     "tools/handlers":{isInternalTool:()=>true,handleInternalTool:async(name,input)=>{sends.push({name,input});return {success:true,source:"fixture",time:"20:00"};}},
     "mcp":{getMcpToolDefsFor:()=>[],warmUserMcp:async()=>{},callMCPTool:async()=>({})},
-    "tools/definitions":{INTERNAL_TOOLS:tools,usable:()=>true},"messaging":{sendToPlatform:async(...args)=>sends.push(args)},
+    "tools/definitions":{INTERNAL_TOOLS:tools,usable:()=>true},"messaging":{sendToPlatform:async(...args)=>options.send ? options.send(args, sends) : sends.push(args)},
     "skills":{getSkillsForPrompt:()=>""},"llm":llm,"spend-guard":{spendIntent:()=>null,refLabel:()=>""},"outbound-guard":{outboundIntent:()=>null},"user-mcp":{isUserMcpTool:()=>false,needsMcpConfirmation:()=>false,mcpQuestion:()=>""},"claims-check":{},
     "verification":{prepareTask:async(...args)=> options.prepare ? options.prepare(...args) : {tier:"default",criteria:["Correct time"]},verifyCompletion:async()=> options.verdict || {passed:true,status:"passed"},retryNote:(a,m,f)=>`VERIFICATION (attempt ${a}/${m}): ${f}`},
     "task-delivery":{deliverFinished:async()=>{}},"response-presentation":{responsePresentation:()=>""},
@@ -187,6 +187,35 @@ test("one-off runner answers in the originating chat without creating a schedule
   assert.equal(h.db.tables.automations?.length || 0, 0);
   assert.equal(h.sends.length, 0);
 });
+test("an answer whose chat app is offline waits and goes once it is back, once", async () => {
+  let online = false;
+  const h = harness({ tables: { agent_tasks: [row({ platform: "whatsapp_linked", chat_id: "self", status: "completed", delivery_status: "pending", completed_at: new Date().toISOString(), result: "The train leaves at 20:00." })] },
+    send: (args, sends) => { if (!online) throw Object.assign(new Error("WhatsApp (linked) is not connected"), { notSent: true }); sends.push(args); } });
+  const delivery = h.load("task-delivery", true);
+  await delivery.deliverFinished();
+  assert.equal(h.db.tables.agent_tasks[0].delivery_status, "waiting");
+  assert.equal(h.db.tables.task_deliveries[0].status, "pending", "nothing left, so it can go again");
+  online = true;
+  await delivery.deliverFinished();
+  assert.equal(h.sends.length, 0, "it is tried again every half minute, out of the way of other answers");
+  const now = Date.now;
+  Date.now = () => now() + 31000;
+  try { await delivery.deliverFinished(); await delivery.deliverFinished(); } finally { Date.now = now; }
+  assert.equal(h.sends.length, 1);
+  assert.equal(h.sends[0][2], "The train leaves at 20:00.");
+  assert.equal(h.db.tables.agent_tasks[0].delivery_status, "sent");
+  assert.equal(h.store.conversations.length, 1, "and the conversation holds it");
+});
+
+test("an answer that could not go for a day, or that may have gone, is not sent again", async () => {
+  const dayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+  const h = harness({ tables: { agent_tasks: [row({ platform: "whatsapp_linked", chat_id: "self", status: "completed", delivery_status: "pending", completed_at: dayAgo, result: "Stale." }),
+    row({ id: "task2", platform: "telegram", chat_id: "phone", status: "completed", delivery_status: "pending", completed_at: new Date().toISOString(), result: "Maybe sent." })] },
+    send: (args) => { throw Object.assign(new Error(args[0] === "telegram" ? "socket hang up" : "not connected"), { notSent: args[0] !== "telegram" }); } });
+  await h.load("task-delivery", true).deliverFinished();
+  assert.deepEqual(h.db.tables.agent_tasks.map((t) => t.delivery_status), ["uncertain", "uncertain"]);
+});
+
 test("compact tables remain intact on web and are adapted for phone chat", async () => {
   const h = harness(), delivery = h.load("task-delivery", true);
   const table = "| Option | Cost |\n| A | 12 |";

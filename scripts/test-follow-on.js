@@ -26,6 +26,13 @@ test("parts are sent in order, one at a time", async () => {
   assert.deepEqual(first, { id: 1 }, "callers tracking the reply get the first message");
 });
 
+test("a part refused after others went out is never sent again from the start", async () => {
+  const offline = () => Object.assign(new Error("not connected"), { notSent: true });
+  await assert.rejects(sendParts(reply, async () => { throw offline(); }, 0), (e) => e.notSent === true, "nothing went out, so it may go again");
+  let n = 0;
+  await assert.rejects(sendParts(reply, async () => { if (++n === 2) throw offline(); }, 0), (e) => e.notSent === false);
+});
+
 test("Telegram's sender splits too, wherever it is called from", async () => {
   const sent = [];
   const bot = splitTelegram({ sendMessage: async (chat, text) => { sent.push([chat, text]); return { message_id: sent.length }; } });

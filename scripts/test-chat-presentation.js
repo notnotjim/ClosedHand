@@ -47,6 +47,7 @@ if (fs.existsSync(path.join(root, linkedFile))) test("linked WhatsApp previews r
   const sent = [];
   const send = loadFunction(linkedFile, "sendLinkedDocument", {
     _sock: { sendMessage: async (jid, payload) => { sent.push({ jid, payload }); return { id: "sent" }; } },
+    _open: true, notConnected: () => new Error("not connected"),
     _gateSelfChat: jid => { if (jid !== "self") throw Error("Wrong recipient"); return jid; },
     remember: value => value,
   });
