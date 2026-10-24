@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install the mail libraries for the draft tests
-        run: npm install --prefix "$RUNNER_TEMP/mail-test" --ignore-scripts --no-audit --no-fund imapflow@1.7.1 mailparser@3.9.37 nodemailer@10.0.16 cheerio@1.2.0
+        run: npm install --prefix "$RUNNER_TEMP/mail-test" --ignore-scripts --no-audit --no-fund imapflow@1.7.1 mailparser@3.9.47 nodemailer@10.1.7 cheerio@1.2.0
       - name: Drafts in every mailbox
         run: NODE_PATH="$RUNNER_TEMP/mail-test/node_modules" node --test scripts/test-imap-drafts.js scripts/test-draft-update-id.js
   # The closedhand.com service deploys from this repo, so its sign-in,
