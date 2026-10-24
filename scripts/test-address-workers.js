@@ -210,7 +210,7 @@ test('the route Worker reports when each computer was last connected, from its t
 test("everything that carries a person's data skips the relay", () => {
   const direct = JSON.parse(fs.readFileSync(path.join(workers, 'edge', 'direct-routes.json'), 'utf8'));
   const skips = (p) => direct.some((r) => (r.endsWith('*') ? p.startsWith(r.slice(0, -1)) : p === r));
-  for (const p of ['/api/', '/auth/', '/chat', '/mail', '/page/', '/report/', '/canvas/']) assert.ok(skips(p), p + ' skips the relay');
+  for (const p of ['/api/', '/auth/', '/chat', '/mail', '/page/', '/canvas/']) assert.ok(skips(p), p + ' skips the relay');
   const layouts = new Set(['/', '/dashboard', '/keep', '/login', '/logout', '/setup', '/setup-code', '/setup/google', '/privacy', '/terms',
     '/telegram-app', '/line-app', '/line-setup-complete', '/tg/open', '/bot-connect', '/closedhand-here', '/storage/logos/*']);
   const server = fs.readFileSync(path.join(__dirname, '..', 'webapp', 'server.js'), 'utf8');

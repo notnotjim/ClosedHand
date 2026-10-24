@@ -86,7 +86,7 @@ test("a report is made by judgement, only when it helps beyond the chat answer",
   const delivery = read("lib/task-delivery.js");
   assert.doesNotMatch(delivery, /isReportWorthy|report\|write-\?up\|document/, "no length or keyword test decides it");
   assert.match(delivery, /from\("reports"\)\.select\("id"\)\.eq\(table === "automation_runs" \? "automation_run_id" : "task_id", row\.id\)/, "delivery links the page the run made, if it made one");
-  assert.match(delivery, /new RegExp\(`\/\(\?:page\|report\)\/\$\{reportId\}`\)\.test\(String\(text\)\)/, "never linked twice");
+  assert.match(delivery, /new RegExp\(`\/page\/\$\{reportId\}`\)\.test\(String\(text\)\)/, "never linked twice");
 });
 
 test("save_report records the reason and the run, and answers with the link", () => {
@@ -106,9 +106,9 @@ test("the page and its files sit behind the login gate and are the report's own"
   }
   assert.match(server, /\.from\("reports"\)\n\s*\.select\("id, user_id, task_id, title, content, reason, created_at, updated_at"\)/);
   assert.doesNotMatch(server, /\/api\/agents\/:id\/\$\{kind\}/, "runs have no report files of their own");
-  assert.match(server, /app\.get\("\/report\/:id", \(req, res\) => res\.redirect\(301, `\/page\/\$\{encodeURIComponent\(req\.params\.id\)\}`\)\);/, "links sent before pages had their name still open");
+  assert.doesNotMatch(server, /\/report\//, "a page is at /page/ and nowhere else");
   assert.match(read("lib/dashboard-links.js"), /const path = `\/page\/\$\{encodeURIComponent\(id\)\}`;/);
-  assert.match(read("webapp/views/index.html"), /\\\/\(\?:dashboard\|canvas\|page\|report\)/, "the web chat links it");
+  assert.match(read("webapp/views/index.html"), /\\\/\(\?:dashboard\|canvas\|page\)\\b/, "the web chat links it");
 });
 
 test("the dashboard offers a report only for a run that made one, and deleting says what goes", () => {

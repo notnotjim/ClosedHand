@@ -1832,7 +1832,7 @@ const _usedTelegramProofs = new Map(); // sha256 of a proof -> when it would exp
 // Only pages Closedhand itself sends, and never another site.
 function telegramTarget(to) {
   const path = String(to || "");
-  return /^\/((?:page|report)\/[0-9a-f-]{36}|canvas\/[\w.~%-]+|dashboard)([?#][\w.~%&=+\/:,@?#-]*)?$/.test(path) ? path : "/";
+  return /^\/(page\/[0-9a-f-]{36}|canvas\/[\w.~%-]+|dashboard)([?#][\w.~%&=+\/:,@?#-]*)?$/.test(path) ? path : "/";
 }
 // A value written into an inline <script>. JSON alone leaves "</script>" able
 // to end the script early and start one of the caller's own.
@@ -5193,9 +5193,7 @@ const reportFileName = (r, kind) => {
 };
 
 // GET /page/:id: the page (webapp/report-page.js), with its downloads and a
-// way to delete it. /report/:id was its address before pages had their name,
-// and is in chats already sent, so it still leads here.
-app.get("/report/:id", (req, res) => res.redirect(301, `/page/${encodeURIComponent(req.params.id)}`));
+// way to delete it.
 app.get("/page/:id", async (req, res) => {
   try {
     const report = await ownReport(req, res);

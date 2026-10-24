@@ -41,10 +41,9 @@ test("only Closedhand's own pages open this way, never another site", () => {
   const box = {};
   vm.runInNewContext(fn("telegramTarget") + "\nthis.f = telegramTarget;", box);
   assert.equal(box.f("/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/page/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07");
-  assert.equal(box.f("/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07"), "/report/4f0c9a2e-7b1d-4e8a-9c3f-6a5b2d1e8f07", "buttons sent before pages had their name");
   assert.equal(box.f("/dashboard#tasks"), "/dashboard#tasks");
   assert.equal(box.f("/canvas/abc123"), "/canvas/abc123");
-  for (const bad of ["//evil.example/x", "https://evil.example", "/report/../../x", "/api/agents", "javascript:alert(1)", ""]) {
+  for (const bad of ["//evil.example/x", "https://evil.example", "/page/../../x", "/api/agents", "javascript:alert(1)", ""]) {
     assert.equal(box.f(bad), "/", bad);
   }
 });
@@ -103,8 +102,6 @@ test("a page link becomes an Open page button, and in-app buttons go through the
   assert.equal(sent[0].options.reply_markup, undefined, "no button on the part without the link");
   assert.equal(sent[1].text, "The full list is on the page.");
   assert.deepEqual(sent[1].options.reply_markup.inline_keyboard[0][0], { text: "Open page", web_app: { url: open(`/page/${SAIGON}`) } });
-  await bot.sendMessage(7, `Full report: ${BASE}/report/${SAIGON}`);
-  assert.deepEqual(sent.at(-1).options.reply_markup.inline_keyboard[0][0], { text: "Open page", web_app: { url: open(`/page/${SAIGON}`) } }, "a link from before pages had their name opens the page");
 
   await bot.sendMessage(7, "Flights", { reply_markup: { inline_keyboard: [[{ text: "View flights", web_app: { url: `${BASE}/dashboard#tasks` } }]] } });
   assert.equal(sent.at(-1).options.reply_markup.inline_keyboard[0][0].web_app.url, open("/dashboard#tasks"));
@@ -117,7 +114,7 @@ test("links written for the web chat open in Telegram, as buttons named after ea
   const { telegramInApp } = loadInApp(BASE, { [SAIGON]: "Lisbon move, Wednesday 7 October", [NEWCASTLE]: "Newcastle and the Champions League" });
   const sent = [];
   const bot = telegramInApp(fakeBot(sent));
-  await bot.sendMessage(7, `Two to pick from:\n\n**Lisbon move document** (flight, airport transfer): /report/${SAIGON}\n\n**Newcastle Champions League chances**: /report/${NEWCASTLE}\n\nWhich one were you after?`);
+  await bot.sendMessage(7, `Two to pick from:\n\n**Lisbon move document** (flight, airport transfer): /page/${SAIGON}\n\n**Newcastle Champions League chances**: /page/${NEWCASTLE}\n\nWhich one were you after?`);
   const { text, options } = sent[0];
   assert.equal(text, "Two to pick from:\n\n<b>Lisbon move document</b> (flight, airport transfer)\n\n<b>Newcastle Champions League chances</b>\n\nWhich one were you after?");
   assert.equal(options.parse_mode, "HTML");

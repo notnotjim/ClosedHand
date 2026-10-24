@@ -29,7 +29,6 @@
   "/novnc/*",
   "/page/*",
   "/phone-pair.js*",
-  "/report/*",
   "/style.css*",
   "/wordmark.png*"
 ]
