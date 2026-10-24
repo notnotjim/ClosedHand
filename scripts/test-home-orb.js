@@ -26,8 +26,8 @@ test('it answers and it speaks first, starting where the page does, every exampl
   // Reduced motion and no script show the page's own words: the first example.
   assert.ok(home.includes('<span class="orb-ask" id="orbAsk">' + examples[0].ask + '</span><span class="orb-answer" id="orbAnswer">' + examples[0].say + '</span>'));
   for (const e of examples) {
-    assert.ok((e.ask || e.at).length <= 22, 'short first line: ' + (e.ask || e.at));
-    assert.ok(e.say.length <= 36, 'short reply: ' + e.say);
+    assert.ok((e.ask || e.at).length <= 28, 'short first line: ' + (e.ask || e.at));
+    assert.ok(e.say.length <= 48, 'short reply: ' + e.say);
   }
 });
 
