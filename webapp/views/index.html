@@ -154,13 +154,14 @@
   .header-center .auth-row-ms:hover .wordmark { opacity: 0.8; }
 
   .header-right { display: flex; align-items: center; gap: 28px; }
-  .header-right a {
+  /* Plain links; Dashboard is a button, drawn by interface.css. */
+  .header-right a:not(.deep) {
     font-size: 16px;
     color: rgba(var(--fg-rgb),0.5);
     text-decoration: none;
     transition: color 0.2s;
   }
-  .header-right a:hover { color: var(--muted); }
+  .header-right a:not(.deep):hover { color: var(--muted); }
 
   /* Auth banner */
   .auth-banner {
@@ -1200,7 +1201,7 @@
     .header-center { font-size: 11px; }
     .feat-3d { display: none !important; }
     .header-right { gap: 14px; }
-    .header-right a { font-size: 13px; }
+    .header-right a:not(.deep) { font-size: 13px; }
 
     /* fitMobileHero follows the visible viewport as the browser chrome moves. */
     .page { min-height: 100svh !important; }
@@ -1852,7 +1853,7 @@
   .computers-view.active { display:block !important; }
   .computers-view.active .mon-area { opacity:1 !important; animation:none !important; }
   body.chat-active .page-tabs { display:none; }
-  @media (hover: hover) and (pointer: fine) { body.chat-active .header-right a { font-size: var(--chat-nav); } }
+  @media (hover: hover) and (pointer: fine) { body.chat-active .header-right a:not(.deep) { font-size: var(--chat-nav); } }
   body.chat-active .computers-view { display:none !important; }
   /* The list is exactly the space between its top and the floating input's
      top edge. --list-h is measured by the page and follows the box as it
@@ -2380,7 +2381,7 @@
         <span style="width:6px;height:6px;background:var(--accent-strong);border-radius:50%;display:inline-block;animation:typingBounce 1.4s ease-in-out infinite;"></span>
         <span id="agentCount">0</span> active
       </span>
-      <a href="#" id="dashboardLink" class="nav-cta" onclick="openDashSlide();return false;">Dashboard</a>
+      <a href="#" id="dashboardLink" class="deep" onclick="openDashSlide();return false;">Dashboard</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
     </div>

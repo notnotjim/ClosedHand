@@ -384,29 +384,30 @@ body.dashboard-page { display: block; background: var(--bg); color: var(--ui-tex
 .ask .ask-no:hover { background: rgba(var(--fg-rgb),0.08); }
 .ask-yes:focus-visible, .ask-no:focus-visible, .ask-check input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* One button system on every page. Ink: the one main action of a screen,
-   step or form, and the header's way to the dashboard, drawn as closedhand.com
-   draws "My Closedhand": its words over a swipe of the fist's brush, no box.
+   step or form, drawn as closedhand.com draws "My Closedhand": its words over
+   a swipe of the fist's brush, no box.
    On hover a fresh coat is painted over the stroke from left to right and the
    words lift a little; leaving takes the coat off the same way, so the stroke
    never flickers. Tinted: starting something new beside it ("+ New routine",
-   "+ Add source") or going somewhere ("Open the form"). Neutral outline
+   "+ Add source") or going somewhere ("Open the form", "Open WhatsApp", the
+   web chat's Dashboard). Neutral outline
    (.btn-quiet, .conn-btn-manage, .ask-no): everyday actions and Cancel. Red outline (.conn-btn-disconnect, .ask-yes): removing or turning
    something off. Pages set only where a button sits, never how it looks. */
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta) {
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]) {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 7px 2px 9px;
   border: 0; border-radius: 0; background: none; color: var(--fg);
   font: 500 var(--ui-label)/1.3 var(--font-ui); white-space: nowrap; text-decoration: none; cursor: pointer;
   transition: transform .3s cubic-bezier(.2, .8, .2, 1);
 }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta)::before, :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta)::after { content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta)::before { background: var(--accent); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta)::after { bottom: 0; height: 11px; background: color-mix(in srgb, var(--accent) 78%, var(--fg)); clip-path: inset(0 100% 0 0); transition: clip-path .45s cubic-bezier(.65, 0, .35, 1); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta):is(:hover, :focus-visible):not(:disabled) { transform: translateY(-1px); text-decoration: none; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta):is(:hover, :focus-visible):not(:disabled)::after { clip-path: inset(0 0 0 0); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta):active:not(:disabled) { transform: translateY(0); }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
-:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta):disabled { opacity: .5; cursor: default; }
-@media (prefers-reduced-motion: reduce) { :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta), :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit], .header-right a.nav-cta)::after { transition: none; } }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before, :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { content: ""; position: absolute; left: -5px; right: -6px; bottom: 1px; height: 9px; -webkit-mask: url(/brush-underline.svg) center / 100% 100% no-repeat; mask: url(/brush-underline.svg) center / 100% 100% no-repeat; pointer-events: none; }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::before { background: var(--accent); }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { bottom: 0; height: 11px; background: color-mix(in srgb, var(--accent) 78%, var(--fg)); clip-path: inset(0 100% 0 0); transition: clip-path .45s cubic-bezier(.65, 0, .35, 1); }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled) { transform: translateY(-1px); text-decoration: none; }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):is(:hover, :focus-visible):not(:disabled)::after { clip-path: inset(0 0 0 0); }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):active:not(:disabled) { transform: translateY(0); }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+:is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]):disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit]), :is(.ch-welcome-primary, .btn-modal-primary, .save-btn, .go, .g-signin, .cta, .rag-query-btn, .bridge-cta-dl, #goal-new button[type=submit], .project-form button[type=submit])::after { transition: none; } }
 .goals-new, .deep, .rag-upload-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 18px;
   border: 1px solid rgba(var(--accent-strong-rgb),0.45); border-radius: 8px; background: rgba(var(--accent-strong-rgb),0.08); color: var(--accent-link);
